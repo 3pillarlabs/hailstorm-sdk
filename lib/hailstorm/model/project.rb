@@ -78,7 +78,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     if current_execution_cycle.nil?
       build_current_execution_cycle(:status => :started).save!
       setup(false) if settings_modified?
-      Hailstorm::Model::TargetHost.monitor_all(self) unless command.deploy_only?
+      Hailstorm::Model::TargetHost.monitor_all(self)
       Hailstorm::Model::Cluster.generate_all_load(self)
       to_cluster_text_table()
       to_monitor_text_table()

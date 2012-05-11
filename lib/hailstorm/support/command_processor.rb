@@ -193,12 +193,6 @@ class Hailstorm::Support::CommandProcessor
       opts.separator ''
 			opts.separator 'Start Options'
 
-      opts.on('-d', '--deploy-only', 'Only deploy scripts and data files',
-                                     'Do not start the tests') do
-      
-        @deploy_only = true
-      end
-
 			opts.on('-r', '--re-deploy', 'Re-deploy ALL JMeter scripts to agents') do
 				@redeploy = true
 			end
@@ -315,10 +309,6 @@ class Hailstorm::Support::CommandProcessor
 
   def suspend_load_agents?
     @suspend_load_agents
-  end
-
-  def deploy_only?
-    @deploy_only
   end
 
   def redeploy?

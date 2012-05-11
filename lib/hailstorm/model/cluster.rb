@@ -98,10 +98,8 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     logger.debug { "#{self.class}##{__method__}" }
     clusterables.each do |cluster_instance|
       cluster_instance.before_generate_load()
-      unless command.deploy_only?
-        cluster_instance.start_slave_process() if self.project.master_slave_mode?
-        cluster_instance.start_master_process()
-      end
+      cluster_instance.start_slave_process() if self.project.master_slave_mode?
+      cluster_instance.start_master_process()
       cluster_instance.after_generate_load()
     end
   end
