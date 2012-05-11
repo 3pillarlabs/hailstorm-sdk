@@ -14,6 +14,8 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
   belongs_to :jmeter_plan
 
+  belongs_to :clusterable, :polymorphic => true
+
   has_many :page_stats, :dependent => :destroy
 
   # starting (minimum) timestamp of collected samples
@@ -28,7 +30,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   after_initialize :set_defaults
 
   def self.create_client_stats(execution_cycle, jmeter_plan_id,
-                                  clusterable_slug, stat_file_paths)
+                                  clusterable, stat_file_paths)
 
     # Collate statistics file if needed
     stat_file_path = nil
@@ -42,7 +44,8 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     jmeter_plan = Hailstorm::Model::JmeterPlan.find(jmeter_plan_id)
     client_stat = execution_cycle.client_stats()
                                  .where(:jmeter_plan_id => jmeter_plan.id,
-                                    :clusterable_slug => clusterable_slug,
+                                    :clusterable_id => clusterable.id,
+                                    :clusterable_type => clusterable.class.name,
                                     :threads_count => jmeter_plan.latest_threads_count)
                                  .first_or_create!()
 

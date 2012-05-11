@@ -40,7 +40,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     jmeter_plan_results_map.keys.sort.each do |jmeter_plan_id|
 
       Hailstorm::Model::ClientStat.create_client_stats(self, jmeter_plan_id,
-        cluster_instance.slug, jmeter_plan_results_map[jmeter_plan_id])
+        cluster_instance, jmeter_plan_results_map[jmeter_plan_id])
         
     end  
   end
@@ -87,7 +87,10 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
           execution_item.clusters do |cluster_item|
             cluster_item.name = cluster.slug
 
-            cluster.client_stats.each do |client_stat|
+            cluster.client_stats
+                   .where(:execution_cycle_id => execution_cycle.id)
+                   .each do |client_stat|
+
               cluster_item.client_stats do |client_stat_item|
                 client_stat_item.name = client_stat.jmeter_plan.plan_name
                 client_stat_item.threads_count = client_stat.threads_count
@@ -166,25 +169,17 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
   def clusters
 
-    if @clusters.nil?
-      @clusters = []
-      clusterable_slugs = self.client_stats()
-                              .select(:clusterable_slug)
-                              .group(:clusterable_slug)
-                              .order(:clusterable_slug)
-                              .collect(&:clusterable_slug)
-      clusterable_slugs.each do |slug|
-        cluster = OpenStruct.new()
-        cluster.slug = slug
-        cluster.client_stats = self.client_stats
-                                   .where(:clusterable_slug => slug)
-                                   .includes(:jmeter_plan)
-                                   .all()
-        @clusters.push(cluster)
-      end
-    end
+    @clusters ||= self.client_stats()
+                      .group(:clusterable_id, :clusterable_type)
+                      .select('clusterable_id, clusterable_type')
+                      .order(:clusterable_type)
+                      .collect {|cs| [cs.clusterable_id, cs.clusterable_type] }
+                      .collect do |cs_item|
 
-    @clusters
+      require(cs_item.last.underscore) # require path form of the type (eg. hailstorm/model/amazon_cloud)
+      clusterable_klass = cs_item.last.constantize()
+      clusterable_klass.find(cs_item.first) # find(id) method invoked
+    end
   end
 
   private

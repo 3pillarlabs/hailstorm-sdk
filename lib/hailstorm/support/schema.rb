@@ -127,7 +127,8 @@ class Hailstorm::Support::Schema
     ActiveRecord::Migration.create_table(:client_stats) do |t|
       t.references  :execution_cycle, :null => false
       t.references  :jmeter_plan, :null => false
-      t.string      :clusterable_slug, :null => false        
+      t.integer     :clusterable_id, :null => false
+      t.string      :clusterable_type, :null => false
       t.integer     :threads_count, :null => false
       t.float       :aggregate_ninety_percentile, :default => nil
       t.float       :aggregate_response_throughput, :default => nil
