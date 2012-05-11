@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.version     = Hailstorm::VERSION
   s.platform    = Gem::Platform::CURRENT
   s.authors     = ["BrickRed (TPG) TSG"]
-  s.email       = ["tsg@brickred.com"]
+  s.email       = %w{tsg@brickred.com}
   s.homepage    = "http://confluence.brickred.com/confluence/display/Performance/Performance+Application+User+Guide"
   s.summary     = %q{A cloud-aware library and embedded application for distributed load testing using JMeter and optional server monitoring}
   s.description = %q{Hailstorm uses JMeter to generate load on the system under test. You create your JMeter test plans/scripts using JMeter GUI interface and place the plans and the data files in a specific application directory. Hailstorm provides a console(shell) interface where you can configure your test environment, start tests, stop tests and generate reports. Behind the scenes, Hailstorm uses Amazon EC2 to create load agents. Each load agent is pre-installed with JMeter. The application executes your test plans in non-GUI mode using these load agents.
@@ -40,4 +40,5 @@ Hailstorm works in an offline mode by default, which means you can exit the appl
   s.add_dependency(%q<erubis>, ">= 2.7.0")
   s.add_dependency(%q<rubyzip>, ">= 0.9.6.1")
   s.add_dependency(%q<terminal-table>, ">= 1.4.5")
+
 end
