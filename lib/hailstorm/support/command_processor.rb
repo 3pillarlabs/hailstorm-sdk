@@ -170,13 +170,6 @@ class Hailstorm::Support::CommandProcessor
 			opts.on('-f', '--force', 'Force application setup') do
 				@force_setup = true
       end
-
-      opts.on('--show [ITEM]', [:jmeter, :cluster, :monitor],
-              'Show setup of ITEM if specified or all setup items',
-              'ITEM is one of jmeter|cluster|monitor or unspecified') do |item|
-        @show_setup = (item || :all).to_sym
-      end
-
     end
   end
 
@@ -299,12 +292,30 @@ class Hailstorm::Support::CommandProcessor
     end
   end
 
+  def show_options()
+
+    @show_options ||= OptionParser.new() do |opts|
+
+      opts.banner =<<-SHOW
+    Show how the environment is currently configured. Without any option,
+    it will show the current configuration for the environment variables.
+      SHOW
+
+      opts.separator ''
+      opts.separator 'Show Options'
+
+      opts.on('--jmeter', 'Show jmeter configuration') { @show_setup = :jmeter }
+      opts.on('--cluster', 'Show cluster configuration') { @show_setup = :cluster }
+      opts.on('--monitor', 'Show monitor configuration') { @show_setup = :monitor }
+    end
+  end
+
   def force_setup?
     @force_setup
   end
 
   def show_setup
-    @show_setup
+    @show_setup || :all
   end
 
   def suspend_load_agents?
@@ -372,6 +383,8 @@ Commands:
 
   purge           Purge databse of the current project and ALL data
 
+  show            Show the environment configuration
+
   help COMMAND    Show help on COMMAND
 
 HERE
@@ -381,24 +394,26 @@ HERE
 
   def save_history(command)
 
-    if File.exists?(saved_history_path)
-      command_history = []
-      File.open(saved_history_path, 'r') do |f|
-        f.each_line {|l| command_history.push(l.chomp) unless l.blank? }
-      end
+    unless File.exists?(saved_history_path)
+      FileUtils.touch(saved_history_path)
+    end
+
+    command_history = []
+    File.open(saved_history_path, 'r') do |f|
+      f.each_line {|l| command_history.push(l.chomp) unless l.blank? }
+    end
+    if command_history.size == 1000
+      command_history.shift()
+    end
+    if command_history.empty? or command_history.last != command
+      command_history.push(command.chomp)
       if command_history.size == 1000
-        command_history.shift()
-      end
-      if command_history.empty? or command_history.last != command
-        command_history.push(command.chomp)
-        if command_history.size == 1000
-          File.open(saved_history_path, 'w') do |f|
-            command_history.each {|c| f.puts(c)}
-          end
-        else
-          File.open(saved_history_path, 'a') do |f|
-            f.puts(command)
-          end
+        File.open(saved_history_path, 'w') do |f|
+          command_history.each {|c| f.puts(c)}
+        end
+      else
+        File.open(saved_history_path, 'a') do |f|
+          f.puts(command)
         end
       end
     end

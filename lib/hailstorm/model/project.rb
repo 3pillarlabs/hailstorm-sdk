@@ -24,19 +24,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   # Sets up the project for first time or subsequent use
   def setup(show_table_info = true)
 
-    if not command.show_setup.nil?
-      case command.show_setup
-        when :jmeter
-          to_jmeter_plan_text_table()
-        when :cluster
-          to_cluster_text_table()
-        when :monitor
-          to_monitor_text_table()
-        else
-          to_text_table()
-      end
-
-    elsif command.force_setup? or settings_modified?
+    if command.force_setup? or settings_modified?
       logger.info("Setting up the project...")
       updateable_attributes = {:serial_version => config.serial_version()}
       
@@ -168,6 +156,21 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       logger.info("Creating report for stopped tests...")
       report_path = Hailstorm::Model::ExecutionCycle.create_report(self)
       logger.info { "Report generated to: #{report_path}" }
+    end
+  end
+
+  # Implements the "show" command
+  def show()
+
+    case command.show_setup
+      when :jmeter
+        to_jmeter_plan_text_table()
+      when :cluster
+        to_cluster_text_table()
+      when :monitor
+        to_monitor_text_table()
+      else
+        to_text_table()
     end
   end
 

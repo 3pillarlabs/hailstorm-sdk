@@ -148,6 +148,10 @@ class Hailstorm::Application
     @current_project = nil
   end
 
+  def show()
+    current_project.show()
+  end
+
 ########################## PRIVATE METHODS ##################################
   private
   
