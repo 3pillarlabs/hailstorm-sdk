@@ -130,7 +130,7 @@ module Hailstorm::Behavior::Clusterable
   
     recipient.has_many(:slave_agents, :as => :clusterable)
 
-    recipient.has_many(:client_stats, :as => :clusterable, :dependent => :nullify,
+    recipient.has_many(:client_stats, :as => :clusterable, :dependent => :destroy,
                        :include => :jmeter_plan)
 
     recipient.after_commit(:provision_agents, :if => proc {|r| r.active?}, :on => :update)
