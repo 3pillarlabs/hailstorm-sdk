@@ -323,8 +323,13 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       security_group = ec2.security_groups.create(Defaults::SecurityGroup, 
                         :description => Defaults::SecurityGroupDesc)
       
-      security_group.authorize_ingress(:tcp, 22) # allow SSH
-      #FIXME: Add internal access rules for TCP, UDP and ICMP
+      security_group.authorize_ingress(:tcp, 22) # allow SSH from anywhere
+      # allow incoming TCP to any port within the group
+      security_group.authorize_ingress(:tcp, 0..65535, :group_id => security_group.id)
+      # allow incoming UDP to any port within the group
+      security_group.authorize_ingress(:udp, 0..65535, :group_id => security_group.id)
+      # allow ICMP from anywhere
+      security_group.allow_ping()
     end
     
     return security_group
@@ -421,9 +426,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   # EC2 default settings
   class Defaults
     
-    AmiId                   = "brickred-jmeter"
-    SecurityGroup           = "SSH"
-    SecurityGroupDesc       = "Allows traffic to port 22 from anywhere"
+    AmiId                   = "brickred-hailstorm"
+    SecurityGroup           = "Hailstorm"
+    SecurityGroupDesc       = "Allows traffic to port 22 from anywhere and internal TCP, UDP and ICMP traffic"
     BaseAMI                 = 'ami-714ba518'
     BucketName              = 'brickred-perftest'
     JavaDownloadFile        = 'jre-6u31-linux-i586.bin'
