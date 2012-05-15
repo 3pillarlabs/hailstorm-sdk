@@ -123,7 +123,10 @@ module Hailstorm::Behavior::Moniterable
   # If implementation downloads remote log files, it must implement this method
   # to analysze the log_file_paths for subsequent calls to calculate methods
   # for averages for CPU, memory and swap usage.
-  def analyze_log_files(log_file_paths)
+  # @param [Array] log_file_paths array of path to local log files
+  # @param [Time] start_time the start time of the test
+  # @param [Time] end_time the end time of the test
+  def analyze_log_files(log_file_paths, start_time, end_time)
     # override and do something appropriate
   end
 

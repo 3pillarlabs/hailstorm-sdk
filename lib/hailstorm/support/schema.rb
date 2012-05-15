@@ -119,7 +119,8 @@ class Hailstorm::Support::Schema
     ActiveRecord::Migration.create_table(:execution_cycles) do |t|
       t.references  :project, :null => false
       t.string      :status, :null => false, :default => "started"
-      t.timestamps
+      t.timestamp   :started_at, :null => false
+      t.timestamp   :stopped_at, :default => nil
     end
   end
   
@@ -132,6 +133,7 @@ class Hailstorm::Support::Schema
       t.integer     :threads_count, :null => false
       t.float       :aggregate_ninety_percentile, :default => nil
       t.float       :aggregate_response_throughput, :default => nil
+      t.long        :maximum_ts, :default => nil
     end
   end
 

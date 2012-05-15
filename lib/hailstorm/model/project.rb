@@ -19,7 +19,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   has_many :execution_cycles, :dependent => :destroy
   
   has_one  :current_execution_cycle, :class_name => 'Hailstorm::Model::ExecutionCycle',
-           :conditions => {:status => 'started'}, :order => "created_at DESC" 
+           :conditions => {:status => 'started'}, :order => "started_at DESC"
 
   # Sets up the project for first time or subsequent use
   def setup(show_table_info = true)
@@ -72,7 +72,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       to_monitor_text_table()
     else
       # if one exists, user must stop/abort it first
-      logger.warn("You have already started an execution cycle at #{current_execution_cycle.created_at}") 
+      logger.warn("You have already started an execution cycle at #{current_execution_cycle.started_at}")
       logger.info("Please stop or abort first!")
     end
   end
@@ -82,23 +82,30 @@ class Hailstorm::Model::Project < ActiveRecord::Base
    
     logger.debug { "#{self.class}##{__method__}" }
 
-    begin
-      Hailstorm::Model::Cluster.stop_load_generation(self)
-      Hailstorm::Model::TargetHost.stop_all_monitoring(self)
+    unless current_execution_cycle.nil?
+      begin
+        Hailstorm::Model::Cluster.stop_load_generation(self)
 
-      unless command.aborted?
-        current_execution_cycle.update_attribute(:status, :stopped)
-      else
-        current_execution_cycle.update_attribute(:status, :aborted)
+        # Update the stopped_at now, so that target monitoring
+        # statistics be collected from started_at to stopped_at
+        current_execution_cycle.set_stopped_at()
+        Hailstorm::Model::TargetHost.stop_all_monitoring(self)
+
+        unless command.aborted?
+          current_execution_cycle.update_attribute(:status, :stopped)
+        else
+          current_execution_cycle.update_attribute(:status, :aborted)
+        end
+        to_cluster_text_table()
+        to_monitor_text_table()
+
+      rescue Hailstorm::Exception
+        # raised by stop_load_generation if load generation could not be stopped
+        # on any agent
       end
-      to_cluster_text_table()
-      to_monitor_text_table()
-
-    rescue Hailstorm::Exception
-      # raised by stop_load_generation if load generation could not be stopped
-      # on any agent
+    else
+      logger.info "Nothing to stop... no tests running"
     end
-
   end
 
   # Aborts everything
@@ -131,8 +138,8 @@ class Hailstorm::Model::Project < ActiveRecord::Base
                                                         .collect do |execution_cycle|
         [
             execution_cycle.id,
-            execution_cycle.started_at,
-            execution_cycle.completed_at,
+            execution_cycle.formatted_started_at,
+            execution_cycle.formatted_stopped_at,
             execution_cycle.total_threads_count
         ]
       end

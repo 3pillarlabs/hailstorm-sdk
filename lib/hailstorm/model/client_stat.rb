@@ -73,6 +73,9 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     ninety_percentile_index = (aggregate_samples_count * 0.9).to_i - 1
     client_stat.aggregate_ninety_percentile = client_stat.sample_response_times[ninety_percentile_index]
 
+    # this is the duration of the last sample sent
+    client_stat.maximum_ts = client_stat.end_sample['ts'].to_i + client_stat.end_sample['t'].to_i
+
     client_stat.save!
 
     File.unlink(stat_file_path) # remove file

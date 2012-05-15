@@ -124,6 +124,8 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     clusterables.each do |cluster_instance|
       cluster_instance.before_stop_load_generation()
       cluster_instance.stop_master_process()
+      logger.info "Load generation stopped at #{cluster_instance.slug}"
+      logger.info "Fetching logs from  #{cluster_instance.slug}..."
       self.project.current_execution_cycle.collect_client_stats(cluster_instance)
       cluster_instance.after_stop_load_generation()
     end

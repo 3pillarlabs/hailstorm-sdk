@@ -104,6 +104,8 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
     begin
       stop_monitoring()
       self.save!()
+      logger.info "Monitoring stopped at #{self.host_name}"
+      logger.info "Collecting usage data from #{self.host_name}..."
       self.project.current_execution_cycle.collect_target_stats(self)      
       
     rescue StandardError => e
@@ -163,15 +165,16 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
     logger.debug { "#{self.class}.#{__method__}" }
 
     @current_execution_context = execution_cycle.id
-    analyze_log_files(log_file_paths)
+    analyze_log_files(log_file_paths, execution_cycle.started_at,
+                      execution_cycle.stopped_at)
 
     stat = OpenStruct.new()
-    stat.average_cpu_usage = average_cpu_usage(execution_cycle.created_at,
-                                               execution_cycle.updated_at)
-    stat.average_memory_usage = average_memory_usage(execution_cycle.created_at,
-                                                     execution_cycle.updated_at)
-    stat.average_swap_usage = average_swap_usage(execution_cycle.created_at,
-                                                 execution_cycle.updated_at)
+    stat.average_cpu_usage = average_cpu_usage(execution_cycle.started_at,
+                                               execution_cycle.stopped_at)
+    stat.average_memory_usage = average_memory_usage(execution_cycle.started_at,
+                                                     execution_cycle.stopped_at)
+    stat.average_swap_usage = average_swap_usage(execution_cycle.started_at,
+                                                 execution_cycle.stopped_at)
 
     yield(stat)
 

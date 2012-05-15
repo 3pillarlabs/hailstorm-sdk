@@ -108,11 +108,18 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
   # Note that every time this method is called, the average and
   # trends statistics are re-computed.
   # @param [Array] log_file_paths (String)
-  def analyze_log_files(log_file_paths)
+  def analyze_log_files(log_file_paths, start_time, end_time)
 
     logger.debug { "#{self.class}##{__method__}" }
 
     reset_counters()
+
+    # compute the count of samples collected and only collect same number of samples
+    # from log files
+    samples_count = ((end_time - start_time) / self.sampling_interval).to_i
+    cpu_samples_count = 0
+    memory_samples_count = 0
+
     # nmon will output a single log file per invocation
     log_file_path = log_file_paths.first
     cpu_rexp = Regexp.compile('^CPU_ALL')
@@ -129,7 +136,7 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
       file.each_line do |line|
         line.chomp!
 
-        if cpu_rexp.match(line)
+        if cpu_rexp.match(line) and cpu_samples_count < samples_count
           # this is the CPU_ALL line
           # 0       1                 2       3
           # CPU_ALL,CPU Total ubuntu,<User%>,<Sys%>,Wait%,Idle%,Busy,CPUs
@@ -137,9 +144,10 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
           cpu_tokens << average_cpu_usage(cpu_tokens.inject(0.0) {|s, e| s += e })
 
           cpu_trend_file.puts(cpu_tokens.join(','))
+          cpu_samples_count += 1
         end
 
-				if mem_rexp.match(line)
+				if mem_rexp.match(line) and memory_samples_count < samples_count
 					# this is the MEM line
 					mem_tokens = line.split(comma_rexp)
 
@@ -158,7 +166,10 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
 					swap_used = swap_total - swap_free
           swap_trend_file.puts average_swap_usage(swap_used)
 
-				end
+          memory_samples_count += 1
+        end
+
+        break if cpu_samples_count >= samples_count and memory_samples_count >= samples_count
       end
     end
 
