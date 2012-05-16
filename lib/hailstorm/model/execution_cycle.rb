@@ -185,11 +185,13 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   end
 
   def set_stopped_at()
-
-    max_ts = self.client_stats.maximum(:maximum_ts).to_i # milliseconds
-    self.update_attribute(:stopped_at, Time.at(max_ts/1000))
+    self.update_attribute(:stopped_at, self.client_stats.maximum(:last_sample_at))
   end
 
+  # @param [Time] time
+  def set_started_at(time = nil)
+    self.started_at = time || Time.now
+  end
   private
   
   def local_log_path
@@ -204,9 +206,6 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     File.join(Hailstorm.root, Hailstorm.reports_dir)
   end
 
-  def set_started_at()
-    self.started_at = Time.now
-  end
 
 
 end

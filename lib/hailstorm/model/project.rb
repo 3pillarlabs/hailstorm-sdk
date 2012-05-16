@@ -65,7 +65,12 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     # add an execution_cycle
     if current_execution_cycle.nil?
       build_current_execution_cycle(:status => :started).save!
-      setup(false) if settings_modified?
+      if settings_modified?
+        setup(false)
+        self.reload()
+      end
+      self.current_execution_cycle.set_started_at(Time.now)
+
       Hailstorm::Model::TargetHost.monitor_all(self)
       Hailstorm::Model::Cluster.generate_all_load(self)
       to_cluster_text_table()

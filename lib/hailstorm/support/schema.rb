@@ -133,7 +133,7 @@ class Hailstorm::Support::Schema
       t.integer     :threads_count, :null => false
       t.float       :aggregate_ninety_percentile, :default => nil
       t.float       :aggregate_response_throughput, :default => nil
-      t.long        :maximum_ts, :default => nil
+      t.timestamp   :last_sample_at, :default => nil
     end
   end
 

@@ -115,8 +115,8 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
     reset_counters()
 
     # compute the count of samples collected and only collect same number of samples
-    # from log files
-    samples_count = ((end_time - start_time) / self.sampling_interval).to_i
+    # from log files (adding 1 for millisecond correction)
+    samples_count = ((end_time - start_time) / self.sampling_interval).to_i + 1
     cpu_samples_count = 0
     memory_samples_count = 0
 
