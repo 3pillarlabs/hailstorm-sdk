@@ -13,8 +13,7 @@ class Hailstorm::Support::Thread
   def self.start(*args, &block)
     
     Hailstorm.logger.debug { "#{self}.#{__method__}" }
-    simulate = false # for debugging purpose
-    unless simulate
+    if Hailstorm.application.multi_threaded?
       thread = Thread.start(args) do |args|
         Thread.current[:connection] = ActiveRecord::Base.connection
         yield(*args)

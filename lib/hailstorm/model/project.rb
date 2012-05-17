@@ -66,7 +66,12 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     if current_execution_cycle.nil?
       build_current_execution_cycle(:status => :started).save!
       if settings_modified?
-        setup(false)
+        begin
+          setup(false)
+        rescue Exception
+          self.current_execution_cycle.update_attribute(:status, :broken)
+          raise
+        end
         self.reload()
       end
       self.current_execution_cycle.set_started_at(Time.now)

@@ -2,6 +2,8 @@
 # class acts as a "Controller" for the application.
 # @author Sayantam Dey
 
+require 'erubis/engine/eruby'
+
 require 'hailstorm'
 require 'hailstorm/exceptions'
 require 'hailstorm/support/configuration'
@@ -25,7 +27,6 @@ class Hailstorm::Application
     Hailstorm.root = File.expand_path("../..", boot_file_path)
     Hailstorm.application = self.new
     Hailstorm.application.load_config()
-    Hailstorm.application.mutex = Mutex.new()
     Hailstorm.application.connect_to_database()
   end
   
@@ -35,21 +36,15 @@ class Hailstorm::Application
     Hailstorm.application.command_processor.execute()
   end
 
-  ## Exposed Hailstorm::Configuration instance
-  #@@config = nil
-  #def self.config
-  #  @@config ||= Hailstorm::Support::Configuration.new
-  #end
-  
   attr_reader :command_processor
-  
-  attr_accessor :mutex
-  
+
+  def multi_threaded?
+    @multi_threaded
+  end
+
   def initialize
-    #@config = self.class.config
-    #@config.compute_serial_version()
-    #@config.freeze()
     @command_processor = Hailstorm::Support::CommandProcessor.new()
+    @multi_threaded = true
   end
 
   def config(&block)
@@ -64,33 +59,46 @@ class Hailstorm::Application
 
   def connect_to_database()
 
-    # Setup connection to the database
-    # unless database_exists?
-      # FileUtils.touch(database_name())
-    # end
     ActiveRecord::Base.logger = logger
-    
-    ActiveRecord::Base.establish_connection(connection_spec)
-    
+    fail_once = false
+    begin
+      ActiveRecord::Base.establish_connection(connection_spec) # this is lazy, does not fail!
+      # check if the database exists, create it otherwise - this will fail if database does not exist
+      ActiveRecord::Base.connection.execute("SELECT count(id) from projects")
+    rescue ActiveRecord::ActiveRecordError => e
+      unless fail_once
+        logger.debug "Database does not exist, creating..."
+        # database does not exist yet
+        create_database()
+
+        # create/update the schema
+        Hailstorm::Support::Schema.create_schema()
+
+        fail_once = true
+        retry
+      else
+        puts e.message()
+        exit 1
+      end
+    end
   end
   
-  # Initializes the application - creates directory structure and database
-  def init()
-    # TODO:
+  # Initializes the application - creates directory structure and support files
+  def init(invocation_path, arg_app_name)
+
+    root_path = File.join(invocation_path, arg_app_name)
+    FileUtils.mkpath(root_path)
+    puts "(in #{invocation_path})"
+    puts "  created directory: #{arg_app_name}"
+    create_app_structure(root_path, arg_app_name)
+    puts ""
+    puts "Done!"
   end
   
   # Sets up the load agents and targets. 
   # Creates the load agents as needed and pushes the Jmeter scripts to the agents.
   # Pushes the monitoring artifacts to targets.
-  # @note Currently a single cloud is supported, will not work across clouds in
-  # different geo zones.
   def setup()
-
-    # create/update the schema
-    Hailstorm::Support::Schema.create_schema()
-
-    # sqlite3_db_synchronization_patches()
-    
     # load/reload the configuration
     current_project.setup()
   end
@@ -143,9 +151,18 @@ class Hailstorm::Application
   end
   alias :reload :load_config
 
+  # Implements the purge commands as per options
   def purge()
-    current_project.destroy()
-    @current_project = nil
+
+    case command_processor.purge_item
+      when :tests
+        current_project.execution_cycles.each {|e| e.destroy()}
+        logger.info "Purged all data for tests"
+      else
+        current_project.destroy()
+        @current_project = nil
+        logger.info "Purged all project data"
+    end
   end
 
   def show()
@@ -172,116 +189,112 @@ class Hailstorm::Application
         .where(:project_code => Hailstorm.app_name)
         .first_or_create!()
   end
-  
-  def database_exists?
-    
-    # FIXME    
-    # File.exists?(database_name())
-  end
-  
+
   def database_name()
-    # @database_name ||= File.join(Hailstorm.root, Hailstorm.db_dir, 
-                                              # "#{Hailstorm.app_name}.sqlite3")
-    Hailstorm.app_name 
+    Hailstorm.app_name
   end
 
   def create_database()
-    # FIXME
-    # FileUtils.touch(database_name())
+
+    ActiveRecord::Base.establish_connection(connection_spec.merge(:database => nil))
+    ActiveRecord::Base.connection.create_database(connection_spec[:database])
+    ActiveRecord::Base.establish_connection(connection_spec)
   end
 
   def connection_spec
-    @connection_spec ||= {
-      :adapter => "jdbc",
-      :driver => "com.mysql.jdbc.Driver",
-      :url => "jdbc:mysql://localhost:3306/#{database_name}",
-      :username => 'hailstorm',
-      :password => 'hailstorm',
-      :pool => 10
-    }
-  end
 
-  def sqlite3_db_synchronization_patches()
-    ActiveRecord::Base.connection.class.class_eval do
+    if @connection_spec.nil?
+      @connection_spec = {}
 
-      alias :real_execute :execute
-      def execute(*args)
-        
-        Hailstorm.logger.debug { "#{self.class}##{__method__}^#{Hailstorm.application.mutex.object_id}" }
-        num_tries = 0
-        if Thread.list.size > 1
-          Hailstorm.application.mutex.lock()
-          Hailstorm.logger.debug { "ACQUIRED LOCK..." }
-        end
-        begin
-          real_execute(*args) 
-        rescue Exception => e
-          Hailstorm.logger.error { "#{e.class}: #{e.message}" }
-          if e.message =~ /SQLITE_BUSY/
-            logger.debug { "SQLITE_BUSY #{num_tries} times, trying again..." }
-            # num_tries < 12 ? (num_tries += 1; sleep(10); retry) : raise
-            num_tries < 12 ? (num_tries += 1; Thread.pass; retry) : raise
-          else
-            raise
-          end
+      # load the properties into a java.util.Properties instance
+      database_properties_file = java.io.File.new(File.join(Hailstorm.root,
+                                                            Hailstorm.config_dir,
+                                                            "database.properties"))
+      properties = java.util.Properties.new()
+      properties.load(java.io.FileInputStream.new(database_properties_file))
+
+      # load all properties without an empty value into the spec
+      properties.each do |key, value|
+        unless value.blank?
+          @connection_spec[key.to_sym] = value
         end
       end
-      
-      def select(*args)
-        real_execute(*args)
-      end
-      
-      alias :real_commit_db_transaction :commit_db_transaction
-      def commit_db_transaction(*args)
-        
-        Hailstorm.logger.debug { "#{self.class}##{__method__}^#{Hailstorm.application.mutex.object_id}" }
-        begin
-          retval = real_commit_db_transaction(*args)
-          if Thread.list.size > 1
-            Hailstorm.application.mutex.tap do |mtx|
-              if mtx.locked?
-                mtx.unlock()
-                Hailstorm.logger.debug { "RELEASED LOCK..." }
-              end
-            end
-          end
-          return retval
-        rescue Exception => e
-          Hailstorm.logger.error { "#{e.class}: #{e.message}" }
-          if e.message =~ /SQLITE_BUSY/
-            logger.debug { "SQLITE_BUSY #{num_tries} times, trying again..." }
-            # num_tries < 12 ? (num_tries += 1; sleep(10); retry) : raise
-            num_tries < 12 ? (num_tries += 1; Thread.pass; retry) : raise
-          else
-            raise
-          end
-        end
-      end
-      
-      alias :real_rollback_db_transaction :rollback_db_transaction
-      def rollback_db_transaction(*args)
-        
-        Hailstorm.logger.debug { "#{self.class}##{__method__}^#{Hailstorm.application.mutex.object_id}" }
-        begin
-          real_rollback_db_transaction(*args)
-        rescue Exception => e
-          if e.message =~ /SQLITE_BUSY/
-            logger.debug { "SQLITE_BUSY #{num_tries} times, trying again..." }
-            # num_tries < 12 ? (num_tries += 1; sleep(10); retry) : raise
-            num_tries < 12 ? (num_tries += 1; Thread.pass; retry) : raise
-          else
-            raise
-          end
-        ensure
-          if Thread.list.size > 1
-            Hailstorm.application.mutex.unlock()
-            Hailstorm.logger.debug { "RELEASED LOCK (ROLLBACK)..." }
-          end
-        end
+
+      # switch off multithread mode for sqlite & derby
+      if @connection_spec[:adapter] =~ /(?:sqlite|derby)/i
+        @multi_threaded = false
+        @connection_spec[:database] = File.join(Hailstorm.root, Hailstorm.db_dir,
+                                      "#{database_name}.db")
+      else
+        # set defaults which can be overridden
+        @connection_spec = {
+            :pool => 10,
+            :wait_timeout => 30
+        }.merge(@connection_spec).merge(:database => database_name)
       end
     end
-    
+
+    return @connection_spec
   end
-  
+
+  # Creates the application directory structure and adds files at appropriate
+  # directories
+  # @param [String] root_path the path this application will be rooted at
+  # @param [String] arg_app_name the argument provided for creating project
+  def create_app_structure(root_path, arg_app_name)
+
+    # create directory structure
+    dirs = [
+      Hailstorm.db_dir,
+      Hailstorm.app_dir,
+      Hailstorm.log_dir,
+      Hailstorm.tmp_dir,
+      Hailstorm.reports_dir,
+      Hailstorm.config_dir,
+      Hailstorm.vendor_dir,
+      Hailstorm.script_dir
+    ]
+
+    dirs.each do |dir|
+      FileUtils.mkpath(File.join(root_path, dir))
+      puts "    created directory: #{File.join(arg_app_name, dir)}"
+    end
+
+    skeleton_path = File.join(Hailstorm.templates_path, 'skeleton')
+
+    # Copy to Gemfile
+    FileUtils.copy(File.join(skeleton_path, 'Gemfile.erb'),
+                   File.join(root_path, 'Gemfile'))
+    puts "    wrote #{File.join(arg_app_name, 'Gemfile')}"
+
+    # Copy to script/hailstorm
+    hailstorm_script = File.join(root_path, Hailstorm.script_dir)
+    FileUtils.copy(File.join(skeleton_path, 'hailstorm'),
+                   hailstorm_script)
+    FileUtils.chmod(0775, hailstorm_script) # make it executable
+    puts "    wrote #{File.join(arg_app_name, Hailstorm.script_dir, 'hailstorm')}"
+
+    # Copy to config/environment.rb
+    FileUtils.copy(File.join(skeleton_path, 'environment.rb'),
+                   File.join(root_path, Hailstorm.config_dir))
+    puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'environment.rb')}"
+
+    # Copy to config/database.properties
+    FileUtils.copy(File.join(skeleton_path, 'database.properties'),
+                   File.join(root_path, Hailstorm.config_dir))
+    puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'database.properties')}"
+
+    # Process to config/boot.rb
+    cache_file_path = File.join(root_path, Hailstorm.tmp_dir,
+                          'boot.erb.cache')
+    engine = Erubis::Eruby.load_file(File.join(skeleton_path, 'boot.erb'),
+                                     :cachename => cache_file_path)
+    File.open(File.join(root_path, Hailstorm.config_dir, 'boot.rb'), 'w') do |f|
+      f.print(engine.evaluate(:app_name => arg_app_name))
+    end
+    File.unlink(cache_file_path) # only need it once
+
+    puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'boot.rb')}"
+  end
 
 end

@@ -107,8 +107,6 @@ class Hailstorm::Support::CommandProcessor
           end
         elsif :reload == command.to_sym
           application.reload()
-        elsif :purge == command.to_sym
-          application.purge()
         else
           begin
             app_cmd = command.split(/\s+/).first
@@ -129,8 +127,11 @@ class Hailstorm::Support::CommandProcessor
               puts ''
             end
             
-          rescue Object => e
+          rescue Hailstorm::Error, Hailstorm::Exception => e
             puts "[FAILED] #{e}"
+            logger.debug { "\n".concat(e.backtrace.join("\n")) }
+          rescue StandardError => e
+            puts "[#{e.class.name}] #{e.message}"
             logger.debug { "\n".concat(e.backtrace.join("\n")) }
           ensure
             self.instance_variables.each do |ivar|
@@ -310,6 +311,26 @@ class Hailstorm::Support::CommandProcessor
     end
   end
 
+  def purge_options()
+
+    @purge_options ||= OptionParser.new() do |opts|
+
+      opts.banner =<<-PURGE
+    Purge  (remove) all or specific data from the database. You can invoke this
+    commmand anytime you want to start over from scratch or remove data for old
+    tests. If executed without any options, will only remove data for tests.
+
+    WARNING: The data removed will be unrecoverable!
+      PURGE
+
+      opts.separator ''
+      opts.separator 'Purge Options'
+
+      opts.on('--tests', 'Purge the data for all tests') { @purge_item = :tests }
+      opts.on('--all', 'Purge all data') { @purge_item = :all }
+    end
+  end
+
   def force_setup?
     @force_setup
   end
@@ -358,6 +379,10 @@ class Hailstorm::Support::CommandProcessor
     @report_finalize
   end
 
+  def purge_item
+    @purge_item || :tests
+  end
+
   def application
     Hailstorm.application
   end
@@ -381,7 +406,7 @@ Commands:
 
   reload          Reload config/environment.rb
 
-  purge           Purge databse of the current project and ALL data
+  purge           Purge specific or ALL data from database
 
   show            Show the environment configuration
 

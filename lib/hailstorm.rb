@@ -77,9 +77,9 @@ module Hailstorm
     "db"
   end
 
-  # Directory name for application specific artifacts
+  # Directory name for application specific (JMeter) artifacts
   def self.app_dir
-    "app"
+    "jmeter"
   end
 
   def self.log_dir
@@ -104,6 +104,14 @@ module Hailstorm
 
   def self.config_dir
     'config'
+  end
+
+  def self.vendor_dir
+    'vendor'
+  end
+
+  def self.script_dir
+    'script'
   end
 
 end

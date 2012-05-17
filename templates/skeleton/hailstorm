@@ -1,0 +1,8 @@
+#!/usr/bin/env jruby
+#
+# Hailstorm executable
+# @author Sayantam Dey
+
+require File.expand_path('../../config/boot', __FILE__)
+
+Hailstorm::Application.process_commands()

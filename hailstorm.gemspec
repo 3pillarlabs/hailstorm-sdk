@@ -29,9 +29,7 @@ Hailstorm works in an offline mode by default, which means you can exit the appl
   # dependencies
   s.add_dependency(%q<i18n>, [">= 0.6.0"])
   s.add_dependency(%q<activerecord>, [">= 3.2.1"])
-  s.add_dependency(%q<jdbc-sqlite3>, [">= 3.7.2"])
   s.add_dependency(%q<activerecord-jdbc-adapter>, [">= 1.2.2"])
-  s.add_dependency(%q<activerecord-jdbcsqlite3-adapter>, [">= 1.2.2"])
   s.add_dependency(%q<jruby-openssl>, ">= 0.7.6.1")
   s.add_dependency(%q<net-ssh>, ">= 2.3.0")
   s.add_dependency(%q<net-sftp>, ">= 2.0.5")

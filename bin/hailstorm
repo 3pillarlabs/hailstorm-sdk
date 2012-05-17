@@ -1,3 +1,19 @@
-#!/usr/bin/env ruby
+#!/usr/bin/env jruby
 
-require "hailstorm"
+# Initialization script for Hailstorm application
+
+fail_once = false
+begin
+  require "hailstorm/application"
+
+  Hailstorm::Application.new.init(Dir.pwd, ARGV[0])
+
+rescue LoadError
+  unless fail_once
+    fail_once = true
+    hailstorm_path = File.expand_path('../../lib', __FILE__)
+    $LOAD_PATH.unshift(hailstorm_path)
+    retry
+  end
+end
+
