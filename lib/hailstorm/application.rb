@@ -67,7 +67,7 @@ class Hailstorm::Application
       ActiveRecord::Base.connection.execute("SELECT count(id) from projects")
     rescue ActiveRecord::ActiveRecordError => e
       unless fail_once
-        logger.debug "Database does not exist, creating..."
+        logger.info "Database does not exist, creating..."
         # database does not exist yet
         create_database()
 
@@ -77,7 +77,7 @@ class Hailstorm::Application
         fail_once = true
         retry
       else
-        puts e.message()
+        logger.error e.message()
         exit 1
       end
     end
@@ -268,9 +268,8 @@ class Hailstorm::Application
     puts "    wrote #{File.join(arg_app_name, 'Gemfile')}"
 
     # Copy to script/hailstorm
-    hailstorm_script = File.join(root_path, Hailstorm.script_dir)
-    FileUtils.copy(File.join(skeleton_path, 'hailstorm'),
-                   hailstorm_script)
+    hailstorm_script = File.join(root_path, Hailstorm.script_dir, 'hailstorm')
+    FileUtils.copy(File.join(skeleton_path, 'hailstorm'), hailstorm_script)
     FileUtils.chmod(0775, hailstorm_script) # make it executable
     puts "    wrote #{File.join(arg_app_name, Hailstorm.script_dir, 'hailstorm')}"
 

@@ -4,16 +4,49 @@
 
 fail_once = false
 begin
+  require "optparse"
+
   require "hailstorm/application"
 
-  Hailstorm::Application.new.init(Dir.pwd, ARGV[0])
+  options = OptionParser.new() do |opts|
+    opts.banner =<<-BANNER
+Initialization script for a Hailstorm application.
 
-rescue LoadError
+Usage
+    #{$0} <app-name>
+
+Example
+
+    hailstorm shopping_cart
+    BANNER
+
+    opts.separator ''
+    opts.separator 'Options'
+
+    opts.on_tail('-h', '--help', 'Show this help') do
+      puts options.to_s
+      exit 0
+    end
+  end
+
+  options.parse!
+
+  unless ARGV.empty?
+    Hailstorm::Application.new.init(Dir.pwd, ARGV.first)
+  else
+    puts options.to_s
+    puts ""
+    abort("unspecified argument!")
+  end
+
+rescue LoadError => e
   unless fail_once
     fail_once = true
     hailstorm_path = File.expand_path('../../lib', __FILE__)
     $LOAD_PATH.unshift(hailstorm_path)
     retry
+  else
+    puts e.message
   end
 end
 
