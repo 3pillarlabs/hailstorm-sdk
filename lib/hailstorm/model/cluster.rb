@@ -49,8 +49,9 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
 
     if cluster_instance.persisted?
       Hailstorm::Support::Thread.start(cluster_instance,
-      cluster_attributes.merge(
-      :active => cluster_config.active)) do |c, attr|
+                                       cluster_attributes.merge(
+                                           :active => cluster_config.active)
+      ) do |c, attr|
 
         c.setup(attr)
       end
@@ -168,6 +169,44 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     end
 
     Hailstorm::Support::Thread.join()
+  end
+
+  # Checks if JMeter is running on different clusters and returns array of
+  # MasterAgent instances where JMeter is running or empty array if JMeter
+  # is not running on any agent.
+  # @return [Array] of Hailstorm::Model::MasterAgent instances
+  def check_status()
+
+    logger.debug { "#{self.class}##{__method__}" }
+    running_agents = []
+    self.clusterables.each do |cluster_instance|
+      agents = cluster_instance.check_status()
+      unless agents.empty?
+        running_agents.push(*agents)
+      end
+    end
+    return running_agents
+  end
+
+  def self.check_status(project)
+
+    logger.debug { "#{self}.#{__method__}" }
+    mutex = Mutex.new()
+    running_agents = []
+    project.clusters.each do |cluster|
+      Hailstorm::Support::Thread.start(cluster) do |c|
+        agents = c.check_status()
+        unless agents.empty?
+          mutex.synchronize {
+            running_agents.push(*agents)
+          }
+        end
+      end
+    end
+
+    Hailstorm::Support::Thread.join()
+
+    return running_agents
   end
 
   # @param [Hailstorm::Model::Project] project

@@ -186,6 +186,23 @@ class Hailstorm::Model::Project < ActiveRecord::Base
         to_cluster_text_table()
       when :monitor
         to_monitor_text_table()
+      when :status
+        unless self.current_execution_cycle.nil?
+          running_agents = Hailstorm::Model::Cluster.check_status(self)
+          unless running_agents.empty?
+            logger.info "Load generation running on following load agents:"
+            text_table = Terminal::Table.new()
+            text_table.headings = ['Cluster', 'Agent', 'PID']
+            text_table.rows = running_agents.collect {|agent|
+              [agent.clusterable.slug, agent.public_ip_address, agent.jmeter_pid]
+            }
+            puts text_table.to_s
+          else
+            logger.info "Load generation finished on all load agents"
+          end
+        else
+          logger.info "No tests have been started"
+        end
       else
         to_text_table()
     end

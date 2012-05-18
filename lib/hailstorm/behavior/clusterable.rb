@@ -191,7 +191,8 @@ module Hailstorm::Behavior::Clusterable
               
         # abort if more than 1 master agent is present
         if query.all.count > 1
-          raise(StandardError, "You have switched on master slave mode, please terminate current cycle first")
+          raise(Hailstorm::Exception,
+                "You have switched on master slave mode, please terminate current cycle first")
         end
         
         # one master is necessary
@@ -206,7 +207,8 @@ module Hailstorm::Behavior::Clusterable
                                  .where(:jmeter_plan_id => jmeter_plan.id)
                                  .all.count()
         if slave_agents_count > 0
-          raise(StandardError, "You have switched off master slave mode, please terminate current cycle first")
+          raise(Hailstorm::Exception,
+                "You have switched off master slave mode, please terminate current cycle first")
         end
         
         provisoner.call(:master_agents)        
@@ -244,6 +246,7 @@ module Hailstorm::Behavior::Clusterable
         a.start_jmeter()  
       end
     end
+
     Hailstorm::Support::Thread.join()
   end
   
@@ -251,8 +254,12 @@ module Hailstorm::Behavior::Clusterable
 
     logger.debug { "#{self.class}##{__method__}" }
     self.master_agents.where(:active => true).each do |master|
-      master.stop_jmeter()
+      Hailstorm::Support::Thread.start(master) do |m|
+        m.stop_jmeter()
+      end
     end
+
+    Hailstorm::Support::Thread.join()
   end
 
   def destroy_all_agents()
@@ -265,6 +272,29 @@ module Hailstorm::Behavior::Clusterable
     end
 
     Hailstorm::Support::Thread.join()
+  end
+
+  # Checks status of JMeter execution on agents and returns array of MasterAgent
+  # instances where JMeter is still running. An empty array means JMeter is not
+  # running on any agent.
+  # @return [Array] of Hailstorm::Model::MasterAgent
+  def check_status()
+
+    logger.debug { "#{self.class}##{__method__}" }
+    mutex = Mutex.new()
+    running_agents = []
+    self.master_agents.where(:active => true).each do |master|
+      Hailstorm::Support::Thread.start(master) do |m|
+        agent = m.check_status()
+        unless agent.nil?
+          mutex.synchronize { running_agents.push(agent) }
+        end
+      end
+    end
+
+    Hailstorm::Support::Thread.join()
+
+    return running_agents
   end
 
 end

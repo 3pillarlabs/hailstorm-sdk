@@ -100,7 +100,24 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
     
     return local_file_name    
   end
-  
+
+  # Checks if JMeter is running or not.
+  # @return [Hailstorm::Model::MasterAgent] (self) if JMeter is running else nil
+  def check_status()
+
+    status = nil
+    unless self.jmeter_pid.nil?
+      Hailstorm::Support::SSH.start(self.public_ip_address,
+                                    self.clusterable.user_name,
+                                    self.clusterable.ssh_options) do |ssh|
+
+        status = self if ssh.process_running?(self.jmeter_pid)
+      end
+    end
+
+    return status
+  end
+
   private
 
   def slave_ip_addresses

@@ -308,6 +308,7 @@ class Hailstorm::Support::CommandProcessor
       opts.on('--jmeter', 'Show jmeter configuration') { @show_setup = :jmeter }
       opts.on('--cluster', 'Show cluster configuration') { @show_setup = :cluster }
       opts.on('--monitor', 'Show monitor configuration') { @show_setup = :monitor }
+      opts.on('--status', 'Show load generation status') { @show_setup = :status }
     end
   end
 
