@@ -163,16 +163,21 @@ module Hailstorm::Behavior::Clusterable
         activate_count = required_count - active_count
 
         activate_count.times do # block wont execute if activate_count <= 0
-          # is there an inactive agent? if yes, activate it, or, create new
-          agent = self.send(relation)
-                      .where(common_attributes.merge(:active => false))
-                      .first_or_initialize(:active => true)
-          if agent.new_record?
-            agent.save!
-          else
-            agent.update_column(:active, true)
+
+          Hailstorm::Support::Thread.start(common_attributes, relation) do |attr, rel|
+            # is there an inactive agent? if yes, activate it, or, create new
+            agent = self.send(rel)
+                        .where(attr.merge(:active => false))
+                        .first_or_initialize(:active => true)
+            if agent.new_record?
+              agent.save!
+            else
+              agent.update_column(:active, true)
+            end
           end
         end
+
+        Hailstorm::Support::Thread.join() # wait for agents to be created
   
         if activate_count < 0
           self.send(relation)
