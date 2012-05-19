@@ -192,7 +192,9 @@ class Hailstorm::Support::FileArray
   def each(&block)
     File.open(self.file_path, 'r') do |file|
       file.each_line do |line|
-        yield line
+        line.chomp!
+        element = type_convert(line)
+        yield element
       end
     end
   end
@@ -223,4 +225,3 @@ class Hailstorm::Support::FileArray
   end
 
 end
-
