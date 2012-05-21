@@ -7,6 +7,7 @@ require 'hailstorm/model'
 require 'hailstorm/model/execution_cycle'
 require 'hailstorm/model/jmeter_plan'
 require 'hailstorm/model/page_stat'
+require 'hailstorm/support/file_array'
 
 class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
@@ -28,6 +29,8 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   attr_accessor :sample_response_times
 
   after_initialize :set_defaults
+
+  after_commit :cleanup
 
   def self.create_client_stats(execution_cycle, jmeter_plan_id,
                                   clusterable, stat_file_paths)
@@ -253,7 +256,12 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   end
 
   def set_defaults()
-    self.sample_response_times = []
+    self.sample_response_times = Hailstorm::Support::FileArray.new(Float,
+                                                                   :path => Hailstorm.tmp_path)
+  end
+
+  def cleanup()
+    self.sample_response_times.unlink()
   end
 
 end

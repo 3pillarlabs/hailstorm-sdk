@@ -1,6 +1,7 @@
 
 require "hailstorm/model"
 require "hailstorm/model/client_stat"
+require 'hailstorm/support/file_array'
 
 class Hailstorm::Model::PageStat < ActiveRecord::Base
 
@@ -23,6 +24,8 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
   after_initialize :set_defaults
 
   before_create :calculate_aggregates
+
+  after_commit :cleanup
 
   # @param [Hash] sample keys same as httpSample attributes
   def collect(sample)
@@ -116,7 +119,8 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
     self.samples_count = 0
     self.cumulative_response_time = 0
     self.cumulative_squared_response_time = 0
-    self.page_sample_times = []
+    self.page_sample_times = Hailstorm::Support::FileArray.new(Fixnum,
+                                                               :path => Hailstorm.tmp_path)
     self.cumulative_bytes = 0
     self.errors_count = 0
   end
@@ -149,5 +153,8 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
     self.samples_breakup_json = self.samples_breakup.to_json()
   end
 
+  def cleanup()
+    self.page_sample_times.unlink()
+  end
 
 end

@@ -15,7 +15,7 @@ require 'hailstorm/support'
 
 class Hailstorm::Support::FileArray
 
-  MAX_PAGE_LEN = 100
+  MAX_PAGE_LEN = 1000
 
   # @return [Class]
   attr_reader :klass
