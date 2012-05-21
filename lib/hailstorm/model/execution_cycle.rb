@@ -30,7 +30,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     return if command.aborted?
         
     jmeter_plan_results_map = {}    
-    cluster_instance.master_agents(:active => true).each do |agent|
+    cluster_instance.master_agents.where(:active => true).each do |agent|
       result_file_name =  agent.result_for(self, local_log_path)
       result_file_path = File.join(local_log_path, result_file_name)
       unless jmeter_plan_results_map.key?(agent.jmeter_plan_id)
