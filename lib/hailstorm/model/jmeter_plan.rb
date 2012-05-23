@@ -326,6 +326,78 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     return terminal_table
   end
 
+  # Parses the associated test plan and returns the test plan comment
+  # @return [String]
+  def plan_description()
+
+    if @plan_description.nil?
+      jmeter_document() do |doc|
+        plan_description_node = doc.xpath('//TestPlan/stringProp[@name="TestPlan.comments"]')
+                                .first()
+        @plan_description = plan_description_node.nil? ? '' : plan_description_node.content()
+      end
+    end
+    @plan_description
+  end
+
+  # Parses the associated test plan and returns a definition of the thread groups
+  # using name: comments for thread groups and name-comments for associated samplers.
+  # If a comment is missing only name is present.
+  #
+  # Each "definition" is an OpenStruct instance with two keys: <b>thread_group</b> and <b>steps</b>,
+  # where thread_group is a String and steps is an Array of String.
+  #
+  # Sample:
+  #  [
+  #    #{OpenStruct: @thread_group="threadgroup1#name: comment", @samplers=["sampler1#name: comment, sampler2#name: comment"]},
+  #  ]
+  # @return [Array] see sample for structure
+  def scenario_definitions()
+
+    if @scenario_definitions.nil?
+      @scenario_definitions = []
+      jmeter_document() do |doc|
+        doc.xpath('//ThreadGroup[@enabled="true"]').each do |tg|
+          definition = OpenStruct.new()
+          tg_name = tg['testname']
+          tg_comment_node = doc.xpath("//ThreadGroup[@testname=\"#{tg_name}\"]/stringProp[@name=\"TestPlan.comments\"]")
+                               .first()
+          unless tg_comment_node.nil?
+            definition.thread_group = "#{tg_name}: #{tg_comment_node.content}"
+          else
+            definition.thread_group = "#{tg_name}"
+          end
+
+          # steps
+          definition.samplers = []
+
+          tg_xpath_expr_fmt = '//ThreadGroup[@testname="%s"]/../hashTree/hashTree'
+          steps_xpath_expr = sprintf(tg_xpath_expr_fmt, tg_name) +
+              '//*[contains(@testclass,"Sampler") and @enabled="true"]'
+          logger.debug(steps_xpath_expr)
+          doc.xpath(steps_xpath_expr).each do |step| # (Sampler element)
+            step_name = step['testname']
+            # xpath to the current step
+            current_step_xpath_expr = sprintf(tg_xpath_expr_fmt, tg_name) +
+                "//*[@testname=\"#{step_name}\" and contains(@testclass,\"Sampler\")]"
+            step_comment_xpath_expr = "#{current_step_xpath_expr}/stringProp[@name=\"TestPlan.comments\"]"
+            logger.debug(step_comment_xpath_expr)
+            step_comment_node = doc.xpath(step_comment_xpath_expr).first()
+            unless step_comment_node.nil?
+              definition.samplers << "#{step_name}: #{step_comment_node.content}"
+            else
+              definition.samplers << "#{step_name}"
+            end
+          end
+
+          @scenario_definitions.push(definition)
+        end
+      end
+    end
+
+    return @scenario_definitions
+  end
+
 ########################## PRIVATE METHODS ##################################
   private
   
@@ -485,7 +557,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     logger.debug { "#{self.class}##{__method__}" }
     if @threadgroups_threads_count_properties.nil?
       @threadgroups_threads_count_properties = []
-      xpath = '/jmeterTestPlan//ThreadGroup/stringProp[@name="ThreadGroup.num_threads"]'
+      xpath = '/jmeterTestPlan//ThreadGroup[@enabled="true"]/stringProp[@name="ThreadGroup.num_threads"]'
       jmeter_document() do |doc|
         doc.xpath(xpath).each do |element|
           property_name = extract_property_name(element.content)

@@ -10,6 +10,7 @@ require 'hailstorm/model/project'
 require 'hailstorm/model/master_agent'
 require 'hailstorm/model/client_stat'
 require 'hailstorm/model/target_stat'
+require 'hailstorm/model/jmeter_plan'
 require 'hailstorm/support/report_builder'
 
 class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
@@ -76,11 +77,12 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     builder.title = project.project_code.humanize
 
     reported_execution_cyles.each do |execution_cycle|
+      builder.jmeter_plans = execution_cycle.jmeter_plans()
       builder.test_summary_rows do |row|
-        row.started_at = execution_cycle.formatted_started_at
-        row.completed_at = execution_cycle.formatted_started_at
-        row.total_threads_count = execution_cycle.total_threads_count
-        row.target_hosts = execution_cycle.target_hosts
+        row.jmeter_plans = execution_cycle.jmeter_plans().collect(&:plan_name).join(', ')
+        row.test_duration = execution_cycle.execution_duration()
+        row.total_threads_count = execution_cycle.total_threads_count()
+        row.target_hosts = execution_cycle.target_hosts()
       end
 
       builder.execution_detail_items do |execution_item|
@@ -192,6 +194,36 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   def set_started_at(time = nil)
     self.started_at = time || Time.now
   end
+
+  # Name of all JMeter plans for this execution cycle
+  # @return [Array] (of Hailstorm::Model::JmeterPlan)
+  def jmeter_plans()
+
+    jmeter_plan_ids = self.client_stats()
+                          .collect(&:jmeter_plan_id)
+                          .uniq()
+    Hailstorm::Model::JmeterPlan.where(:id => jmeter_plan_ids)
+  end
+
+  # The duration of the execution cycle in HH:MM:SS format. If the cycle was
+  # aborted/terminated, nil is returned.
+  # @return [String]
+  def execution_duration
+
+    duration = nil
+    unless self.stopped_at.nil?
+      duration_seconds = self.stopped_at - self.started_at
+      dhc = duration_seconds / 3600 # hours component
+      dhc_mod = duration_seconds % 3600
+      dhm = dhc_mod / 60 # minutes component
+      dhs = dhc_mod % 60 # seconds component
+
+      duration = sprintf("%02d:%02d:%02d", dhc, dhm, dhs)
+    end
+
+    return duration
+  end
+
   private
   
   def local_log_path

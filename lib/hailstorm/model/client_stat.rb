@@ -189,7 +189,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     grapher.build() # <-- returns path to generated image
   end
 
-  def collect(sample)
+  def collect_sample(sample)
 
     sample_timestamp = sample['ts'].to_f
 
@@ -229,8 +229,8 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
           @page_stats_map[label] = @stat_klass.new(:page_label => label,
                                                    :client_stat_id => @client_stat.id)
         end
-        @client_stat.collect(attrs_map)
-        @page_stats_map[label].collect(attrs_map)
+        @client_stat.collect_sample(attrs_map)
+        @page_stats_map[label].collect_sample(attrs_map)
       end
       @level += 1
     end

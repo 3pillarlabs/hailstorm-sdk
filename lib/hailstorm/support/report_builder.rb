@@ -1,7 +1,6 @@
 # Report builder
 
 require 'nokogiri'
-require 'erubis/engine/eruby'
 require 'zip/zipfilesystem'
 
 require 'hailstorm/support'
@@ -10,12 +9,20 @@ class Hailstorm::Support::ReportBuilder
 
   attr_accessor :title
 
+  attr_accessor :jmeter_plans
+
   attr_reader :images
 
   attr_reader :current_report_path
 
-  def initialize()
+  attr_reader :report_type
+
+  attr_reader :report_format
+
+  def initialize(options = {})
     @images = []
+    @report_format = options[:format] || 'docx'
+    @report_type = options[:type] || 'standard'
   end
 
   def test_summary_rows(&block)
@@ -34,8 +41,8 @@ class Hailstorm::Support::ReportBuilder
   class TestSummaryRow
 
     attr_accessor :index
-    attr_accessor :started_at
-    attr_accessor :completed_at
+    attr_accessor :jmeter_plans
+    attr_accessor :test_duration
     attr_accessor :total_threads_count
 
     attr_writer :target_hosts
@@ -243,7 +250,8 @@ class Hailstorm::Support::ReportBuilder
   private
 
   def canned_doc_path
-    @canned_doc_path ||= File.join(Hailstorm.templates_path, 'docx', 'standard.docx')
+    @canned_doc_path ||= File.join(report_templates_path, report_format,
+                                   "#{report_type}.docx")
   end
 
   def extract_docx_template()
@@ -288,13 +296,18 @@ class Hailstorm::Support::ReportBuilder
 
     context_vars = {:report => self }
 
-    template_file_path = File.join(Hailstorm.templates_path, 'docx', 'document.xml.erb')
-    engine = Erubis::Eruby.load_file(template_file_path,
-                                     :cachename => File.join(Hailstorm.tmp_path,
-                                                             'document.xml.erb.cache'))
+    template_file_path = File.join(report_templates_path, report_format,
+                                   report_type, 'document') # document.xml.erb
+
+    engine = ActionView::Base.new()
+    engine.view_paths.push(File.dirname(template_file_path))
+    engine.assign(context_vars)
     File.open(File.join(current_report_path, 'word', 'document.xml'), 'w') do |docxml|
-      docxml.print(engine.evaluate(context_vars))
+      docxml.print(engine.render(:file => template_file_path,
+                                 :formats => [:xml],
+                                 :handlers => [:erb]))
     end
+
   end
 
   def zip_to_docx()
@@ -319,6 +332,10 @@ class Hailstorm::Support::ReportBuilder
     end
 
     return report_file_path
+  end
+
+  def report_templates_path
+    @report_templates_path ||= File.join(Hailstorm.templates_path, 'report')
   end
 
 end

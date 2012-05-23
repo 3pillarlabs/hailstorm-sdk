@@ -2,8 +2,6 @@
 # class acts as a "Controller" for the application.
 # @author Sayantam Dey
 
-require 'erubis/engine/eruby'
-
 require 'hailstorm'
 require 'hailstorm/exceptions'
 require 'hailstorm/support/configuration'
@@ -284,14 +282,11 @@ class Hailstorm::Application
     puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'database.properties')}"
 
     # Process to config/boot.rb
-    cache_file_path = File.join(root_path, Hailstorm.tmp_dir,
-                          'boot.erb.cache')
-    engine = Erubis::Eruby.load_file(File.join(skeleton_path, 'boot.erb'),
-                                     :cachename => cache_file_path)
+    engine = ActionView::Base.new()
+    engine.assign(:app_name => arg_app_name)
     File.open(File.join(root_path, Hailstorm.config_dir, 'boot.rb'), 'w') do |f|
-      f.print(engine.evaluate(:app_name => arg_app_name))
+      f.print(engine.render(:file => File.join(skeleton_path, 'boot')))
     end
-    File.unlink(cache_file_path) # only need it once
 
     puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'boot.rb')}"
   end

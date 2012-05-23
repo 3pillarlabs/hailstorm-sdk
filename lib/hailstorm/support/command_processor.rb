@@ -130,7 +130,7 @@ class Hailstorm::Support::CommandProcessor
           rescue Hailstorm::Error, Hailstorm::Exception => e
             puts "[FAILED] #{e}"
             logger.debug { "\n".concat(e.backtrace.join("\n")) }
-          rescue StandardError => e
+          rescue Exception => e
             puts "[#{e.class.name}] #{e.message}"
             logger.debug { "\n".concat(e.backtrace.join("\n")) }
           ensure

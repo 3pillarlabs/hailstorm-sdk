@@ -28,7 +28,7 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
   after_commit :cleanup
 
   # @param [Hash] sample keys same as httpSample attributes
-  def collect(sample)
+  def collect_sample(sample)
 
     self.increment(:samples_count)
 
@@ -66,12 +66,12 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
     if @samples_breakup.nil?
       ranges = []
       self.client_stat
-      .execution_cycle
-      .project
-      .samples_breakup_interval # example "1,3,5,10,20"
-      .split(/\s*,\s*/)
-      .collect(&:to_i)
-      .each do |boundary|
+          .execution_cycle
+          .project
+          .samples_breakup_interval # example "1,3,5,10,20"
+          .split(/\s*,\s*/)
+          .collect(&:to_i)
+          .each do |boundary|
 
         if ranges.empty?
           ranges.push(boundary, boundary)
