@@ -1,5 +1,6 @@
 package com.brickred.tsg.hailstorm;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -11,11 +12,12 @@ import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.CategoryAxis;
 import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.CombinedDomainCategoryPlot;
+import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.chart.renderer.category.LayeredBarRenderer;
+import org.jfree.chart.renderer.category.BarRenderer;
+import org.jfree.chart.renderer.category.LevelRenderer;
 import org.jfree.chart.renderer.category.StackedBarRenderer;
 import org.jfree.chart.renderer.category.StandardBarPainter;
 import org.jfree.data.category.CategoryDataset;
@@ -85,36 +87,50 @@ public class AggregateGraph {
 	
 	private CategoryPlot createPageResponseTimePlot() {
 			
-		String[] titles = new String[] {
-			"Minimum", "Maximum", "Average", "90 percentile" 	
+		String[] levelTitles = new String[] {
+			"Minimum", "Maximum", "Average" 	
 		};
 		
-		double[] titleWidths = new double[] {
-			1.0, 0.5, 0.45, 0.15	
+		Color[] levelColors = new Color[] {
+				minimumColor, maximumColor, averageColor	
 		};
 		
-		Color[] titleColors = new Color[] {
-				minimumColor, maximumColor, averageColor, ninetyPercentileColor	
-		};
+		CategoryPlot plot = new CategoryPlot();
+		plot.setRangeAxis(new NumberAxis("Response Times (ms)"));
 		
-		CategoryDataset pageStats = DatasetUtilities.createCategoryDataset(
-				titles, pages, responseTimeData);
+		// ninety percentile bar
+		CategoryDataset ninetyPercentile = DatasetUtilities.createCategoryDataset(
+				new String[] { "90 percentile" }, 
+				pages, 
+				new double[][] { responseTimeData[3] });
+		BarRenderer barRenderer = new BarRenderer();
+		barRenderer.setSeriesPaint(0, ninetyPercentileColor);
+		barRenderer.setShadowVisible(false);
+		barRenderer.setBarPainter(new StandardBarPainter());
+		plot.setDataset(0, ninetyPercentile);
+		plot.setRenderer(0, barRenderer);
 		
-		ValueAxis valueAxis = new NumberAxis("Response Times (ms)");
+		// level markers
+		CategoryDataset levels = DatasetUtilities.createCategoryDataset(
+				levelTitles,
+				pages,
+				new double[][] { responseTimeData[0], responseTimeData[1], responseTimeData[2] });
 		
-		LayeredBarRenderer renderer = new LayeredBarRenderer();
-		// set widths
-		for (int i = 0; i < titleWidths.length; i++) {
-			renderer.setSeriesBarWidth(i, titleWidths[i]);
-		}
+		LevelRenderer levelRenderer = new LevelRenderer();
+		levelRenderer.setItemMargin(0d);
 		// set colors
-		for (int i = 0; i < titleColors.length; i++) {
-			renderer.setSeriesPaint(i, titleColors[i]);
+		for (int i = 0; i < levelColors.length; i++) {
+			levelRenderer.setSeriesPaint(i, levelColors[i]);
 		}
+		// set widths
+		for (int i = 0; i < levelTitles.length; i++) {
+			levelRenderer.setSeriesStroke(i, new BasicStroke(2.0f));
+		}
+		plot.setDataset(1, levels);
+		plot.setRenderer(1, levelRenderer);
+				
+		plot.setDatasetRenderingOrder(DatasetRenderingOrder.FORWARD);
 		
-		CategoryPlot plot = new CategoryPlot(pageStats, null, 
-				valueAxis, renderer);
-
 		return plot;
 	}
 	
@@ -153,9 +169,9 @@ public class AggregateGraph {
 	}
 	
 	// response time metric colors
-	private static final Color minimumColor = new Color(185, 186, 124);
+	private static final Color minimumColor = Color.orange;
 	private static final Color maximumColor = new Color(171, 171, 171);
-	private static final Color averageColor = new Color(102, 255, 255);
+	private static final Color averageColor = Color.yellow;
 	private static final Color ninetyPercentileColor = new Color(0, 0, 255);
 	
 
