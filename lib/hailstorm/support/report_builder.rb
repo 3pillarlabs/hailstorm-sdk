@@ -64,6 +64,30 @@ class Hailstorm::Support::ReportBuilder
     end
   end
 
+  # Target names (Array) grouped by role across all execution_detail_items
+  # @return [Hash]
+  def targets_by_role()
+
+    self.execution_detail_items.inject({}) do |group, ex|
+      acc = ex.target_stats.inject({}) do |map, t|
+        map[t.role_name] ||= []
+        map[t.role_name] << t.host_name
+        map
+      end
+      acc.each_pair {|k, v| group[k].nil? ? group.merge!(k => v) : group[k].concat(v).uniq! }
+      acc
+    end
+  end
+
+  # ClusterItem with uniq names
+  # @return [Array]
+  def all_clusters()
+
+    self.execution_detail_items.inject([]) do |coll, ex|
+      coll.concat(ex.clusters).uniq {|e| e.name}
+    end
+  end
+
   class TocItem
 
     attr_accessor :builder

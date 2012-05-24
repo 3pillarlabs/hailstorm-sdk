@@ -105,6 +105,7 @@
 		</w:p>
 		<%= render :partial => 'workload_definition', :locals => {:jmeter_plans => @report.jmeter_plans} %>
         <%= render :partial => 'workload_iterations', :locals => {:test_summary_rows => @report.test_summary_rows} %>
+		<%= render :partial => 'test_environment', :locals => {:report => @report} %>
 		<%- @report.execution_detail_items.each do |execution_item| %>
 		<w:p w:rsidR="00B429FD" w:rsidRDefault="00406A64" w:rsidP="00406A64">
 			<w:pPr>
@@ -129,7 +130,7 @@
 			<w:pPr>
 				<w:pStyle w:val="Heading2" />
 			</w:pPr>
-			<w:bookmarkStart w:id="4" w:name="_Toc<%=cluster.toc_id%>" />
+			<w:bookmarkStart w:id="<%=cluster.toc_id%>" w:name="_Toc<%=cluster.toc_id%>" />
 			<w:r>
 				<w:lastRenderedPageBreak />
 				<w:t xml:space="preserve">Cluster </w:t>
@@ -137,14 +138,14 @@
 			<w:r w:rsidR="00FF7AE3">
 				<w:t><%= cluster.name %></w:t>
 			</w:r>
-			<w:bookmarkEnd w:id="4" />
+			<w:bookmarkEnd w:id="<%=cluster.toc_id%>" />
 		</w:p>
 		<%- cluster.client_stats.each do |client_stat| %>
 		<w:p w:rsidR="00A47ED7" w:rsidRDefault="00A47ED7" w:rsidP="00A47ED7">
 			<w:pPr>
 				<w:pStyle w:val="Heading3" />
 			</w:pPr>
-			<w:bookmarkStart w:id="5" w:name="_Toc<%=client_stat.toc_id%>" />
+			<w:bookmarkStart w:id="<%=client_stat.toc_id%>" w:name="_Toc<%=client_stat.toc_id%>" />
 			<w:proofErr w:type="spellStart" />
 			<w:r>
 				<w:t>JMeter</w:t>
@@ -162,7 +163,7 @@
 			<w:r w:rsidR="00FF7AE3">
 				<w:t><%= client_stat.threads_count %></w:t>
 			</w:r>
-			<w:bookmarkEnd w:id="5" />
+			<w:bookmarkEnd w:id="<%=client_stat.toc_id%>" />
 		</w:p>
 		<w:p w:rsidR="00A47ED7" w:rsidRDefault="00A47ED7" w:rsidP="00A47ED7">
 			<w:pPr>
