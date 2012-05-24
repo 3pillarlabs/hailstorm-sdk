@@ -102,6 +102,7 @@ class Hailstorm::Support::ReportBuilder
   class ExecutionDetail < TocItem
 
     attr_accessor :index
+    attr_accessor :total_threads_count
 
     def clusters(&block)
 
@@ -126,6 +127,11 @@ class Hailstorm::Support::ReportBuilder
         @target_stats
       end
     end
+
+    def multiple_cluster?
+      self.clusters.size > 1
+    end
+
   end
 
   def client_comparison_graph(&block)

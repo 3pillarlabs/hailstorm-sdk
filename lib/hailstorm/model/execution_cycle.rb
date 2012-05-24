@@ -86,6 +86,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
       end
 
       builder.execution_detail_items do |execution_item|
+        execution_item.total_threads_count = execution_cycle.total_threads_count()
         execution_cycle.clusters.each do |cluster|
 
           execution_item.clusters do |cluster_item|

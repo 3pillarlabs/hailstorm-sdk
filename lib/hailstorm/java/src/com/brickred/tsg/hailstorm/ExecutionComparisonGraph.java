@@ -18,7 +18,7 @@ public class ExecutionComparisonGraph {
 
 	private static final String responseRangeLabel = "Response Time (ms)";
 
-	private static final String throughputRangeLabel = "Requests/second";
+	private static final String throughputRangeLabel = "Transactions/second";
 
 	private static final String categoryKey = "Virtual Users";
 	

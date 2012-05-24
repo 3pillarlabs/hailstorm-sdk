@@ -1,0 +1,74 @@
+<w:p w:rsidR="00406A64" w:rsidRDefault="009F661C" w:rsidP="009F661C">
+    <w:pPr>
+        <w:pStyle w:val="Heading1" />
+    </w:pPr>
+    <w:bookmarkStart w:id="8" w:name="_Toc320986810" />
+    <w:r>
+        <w:t>CPU Utilization vs Workload Iterations</w:t>
+    </w:r>
+    <w:bookmarkEnd w:id="8" />
+</w:p>
+<w:p w:rsidR="00C35BE0" w:rsidRDefault="00C35BE0" w:rsidP="00C35BE0">
+    <w:r>
+        <w:t xml:space="preserve">The following graph compares the % CPU utilization on all monitored machines across all workload iterations. </w:t>
+    </w:r>
+    <w:r>
+        <w:rPr>
+            <w:i/>
+            <w:highlight w:val="yellow"/>
+        </w:rPr>
+        <w:t>
+        Add observations here on the nature of the graph, for example: The fourth iteration utilizes almost 90% CPU indicating indicating 250 users may be at the higher end of application infrastructure capacity.
+        </w:t>
+    </w:r>
+</w:p>
+<w:p w:rsidR="000F7A9B" w:rsidRDefault="000F7A9B" w:rsidP="000F7A9B">
+    <w:r>
+        <w:rPr>
+            <w:noProof />
+        </w:rPr>
+        <%=
+            render(:partial => 'drawing', :object => report.target_cpu_comparison_graph,
+            :locals => {
+                :cx => 5943600,
+                :cy => 2786063
+            })
+        %>
+    </w:r>
+</w:p>
+<w:p w:rsidR="00406A64" w:rsidRDefault="009F661C" w:rsidP="009F661C">
+    <w:pPr>
+        <w:pStyle w:val="Heading1" />
+    </w:pPr>
+    <w:bookmarkStart w:id="9" w:name="_Toc320986811" />
+    <w:r>
+        <w:t>Target Memory Utilization vs Workload Iterations</w:t>
+    </w:r>
+    <w:bookmarkEnd w:id="9" />
+</w:p>
+<w:p w:rsidR="00C35BE0" w:rsidRDefault="00C35BE0" w:rsidP="00C35BE0">
+    <w:r>
+        <w:t xml:space="preserve">The following graph compares the Memory utilization on all monitored machines across all workload iterations. </w:t>
+    </w:r>
+    <w:r>
+        <w:rPr>
+            <w:i/>
+            <w:highlight w:val="yellow"/>
+        </w:rPr>
+        <w:t> Add observations here on the nature of the graph. </w:t>
+    </w:r>
+</w:p>
+<w:p w:rsidR="000F7A9B" w:rsidRDefault="000F7A9B" w:rsidP="000F7A9B">
+    <w:r>
+        <w:rPr>
+            <w:noProof />
+        </w:rPr>
+        <%=
+            render(:partial => 'drawing', :object => report.target_memory_comparison_graph,
+            :locals => {
+                :cx => 5943600,
+                :cy => 2786063
+            })
+        %>
+    </w:r>
+</w:p>

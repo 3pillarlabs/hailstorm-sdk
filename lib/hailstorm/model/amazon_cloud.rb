@@ -134,7 +134,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   # (see Hailstorm::Behavior::Clusterable#slug)
   def slug()
-    @slug ||= "#{self.class.name.demodulize.titlecase}, region: #{self.region}"
+    @slug ||= "#{self.class.name.demodulize.titlecase}, region: #{self.region}, zone: #{self.zone}"
   end
 
   # (see Hailstorm::Behavior::Clusterable#public_properties)
