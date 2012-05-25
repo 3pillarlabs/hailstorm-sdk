@@ -45,11 +45,11 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     
     logger.debug { "#{self}.#{__method__}" }
     instances = []
-    config = Hailstorm.application.config.jmeter
+    jmeter_config = Hailstorm.application.config.jmeter
     
     test_plans = []
     # load/verify test plans from app/jmx
-    if config.test_plans.blank? # load
+    if jmeter_config.test_plans.blank? # load
       rexp = Regexp.new('^'.concat(File.join(Hailstorm.root, Hailstorm.app_dir))
                             .concat("/"))
       Dir[File.join(Hailstorm.root, Hailstorm.app_dir, "**", "*.jmx")].each do |jmx|
@@ -61,7 +61,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
       
     else # verify
       not_found = []
-      config.test_plans.each do |plan|
+      jmeter_config.test_plans.each do |plan|
         jmx = File.join(Hailstorm.root, Hailstorm.app_dir,
                           plan.gsub(/\.jmx$/, '').concat('.jmx'))
         if File.exists?(jmx)
@@ -82,7 +82,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     
     test_plans.each do |plan|
     
-      properties = config.properties(:test_plan => plan)
+      properties = jmeter_config.properties(:test_plan => plan)
       
       jmeter_plan = self.where(:test_plan_name => plan,
                                :project_id => project.id)
@@ -95,6 +95,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
       instances.push(jmeter_plan)
     end
     logger.debug("Validated all plans needed to execute")
+
     return instances
   end
   
