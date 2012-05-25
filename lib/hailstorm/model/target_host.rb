@@ -186,24 +186,30 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
 
   def self.to_text_table(project)
 
-    terminal_table = Terminal::Table.new()
-    terminal_table.title = 'Active Target Hosts'
-    terminal_table.headings = ['Host', 'Role', 'Monitor', 'Executable', 'PID',
-                               'Interval', 'SSH Identity', 'User']
-    project.target_hosts.where(:active => true).each do |target_host|
-      terminal_table.add_row([
-                                 target_host.host_name,
-                                 target_host.role_name,
-                                 target_host.class.name.demodulize.tableize.singularize,
-                                 target_host.executable_path,
-                                 target_host.executable_pid,
-                                 target_host.sampling_interval,
-                                 target_host.ssh_identity,
-                                 target_host.user_name
-                             ])
-    end
+    active_target_hosts = project.target_hosts.where(:active => true).all()
+    unless active_target_hosts.empty?
+      terminal_table = Terminal::Table.new()
+      terminal_table.title = 'Active Target Hosts'
+      terminal_table.headings = ['Host', 'Role', 'Monitor', 'Executable', 'PID',
+                                 'Interval', 'SSH Identity', 'User']
 
-    return terminal_table
+      active_target_hosts.each do |target_host|
+        terminal_table.add_row([
+                                   target_host.host_name,
+                                   target_host.role_name,
+                                   target_host.class.name.demodulize.tableize.singularize,
+                                   target_host.executable_path,
+                                   target_host.executable_pid,
+                                   target_host.sampling_interval,
+                                   target_host.ssh_identity,
+                                   target_host.user_name
+                               ])
+      end
+
+      terminal_table
+    else
+      ""
+    end
   end
 
   protected

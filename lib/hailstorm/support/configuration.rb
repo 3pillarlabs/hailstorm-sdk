@@ -151,7 +151,7 @@ class Hailstorm::Support::Configuration
   #                  Hailstorm::Support::Configuration::TargetHost instance for setup
   def monitors(monitor_type = nil, &block)
     
-    @monitors ||= []
+    @monitors ||= [] unless self.frozen?
     if block_given?
       monitor = TargetHost.new()
       monitor.monitor_type = monitor_type
@@ -169,7 +169,7 @@ class Hailstorm::Support::Configuration
       yield monitor
       @monitors.push(monitor)
     else
-      @monitors  
+      return (@monitors || [])
     end
   end
   
