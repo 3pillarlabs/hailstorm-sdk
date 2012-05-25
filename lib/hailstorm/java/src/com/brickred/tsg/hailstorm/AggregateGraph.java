@@ -61,8 +61,11 @@ public class AggregateGraph {
 		CategoryPlot prtPlot = createPageResponseTimePlot();
 		CategoryPlot pfPlot = createPageFiguresPlot();
 		
-		CombinedDomainCategoryPlot plot = new CombinedDomainCategoryPlot(
-				new CategoryAxis("Pages"));
+		CategoryAxis domainAxis = new CategoryAxis("Pages");
+		domainAxis.setUpperMargin(0.01);
+		domainAxis.setLowerMargin(0.01);
+		domainAxis.setCategoryMargin(0.4f);
+		CombinedDomainCategoryPlot plot = new CombinedDomainCategoryPlot(domainAxis);
 		
 		plot.add(prtPlot, 3);
 		plot.add(pfPlot, 1);
@@ -110,30 +113,31 @@ public class AggregateGraph {
 		plot.setDataset(0, ninetyPercentile);
 		plot.setRenderer(0, barRenderer);
 		
-		// level markers
-		CategoryDataset levels = DatasetUtilities.createCategoryDataset(
-				levelTitles,
-				pages,
-				new double[][] { responseTimeData[0], responseTimeData[1], responseTimeData[2] });
-		
-		LevelRenderer levelRenderer = new LevelRenderer();
-		levelRenderer.setItemMargin(0d);
-		// set colors
-		for (int i = 0; i < levelColors.length; i++) {
-			levelRenderer.setSeriesPaint(i, levelColors[i]);
-		}
-		// set widths
 		for (int i = 0; i < levelTitles.length; i++) {
-			levelRenderer.setSeriesStroke(i, new BasicStroke(2.0f));
+			addLevel(plot, i + 1, levelTitles[i], i, levelColors[i]);
 		}
-		plot.setDataset(1, levels);
-		plot.setRenderer(1, levelRenderer);
-				
+		
 		plot.setDatasetRenderingOrder(DatasetRenderingOrder.FORWARD);
 		
 		return plot;
 	}
 	
+	private void addLevel(CategoryPlot plot, int plotIndex, String title, 
+			int responseDataIndex, Color color) {
+
+		CategoryDataset dataset = DatasetUtilities.createCategoryDataset(
+				new String[] { title },
+				pages,
+				new double[][] { responseTimeData[responseDataIndex] });
+		
+		LevelRenderer renderer = new LevelRenderer();
+		renderer.setSeriesPaint(0, color);
+		renderer.setSeriesStroke(0, new BasicStroke(2.0f));
+		
+		plot.setDataset(plotIndex, dataset);
+		plot.setRenderer(plotIndex, renderer);
+	}
+
 	private CategoryPlot createPageFiguresPlot() {
 		
 		List<Color> thresholdColors = new ArrayList<Color>(thresholdTitles.length);
