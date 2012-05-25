@@ -13,7 +13,7 @@ class Hailstorm::Support::Configuration
   attr_accessor :max_threads_per_agent
   
   # Boolean value controls whether Jmeter is operated in master slave mode
-  # or simulatenous mode, defaults to true
+  # or simultaneous mode, defaults to true
   attr_accessor :master_slave_mode
 
   # Comma separated string of intervals, example 1,5,10. The samples will be
@@ -45,8 +45,7 @@ class Hailstorm::Support::Configuration
         end
       else
         if options.key?(:test_plan)
-          @properties[:test_plan][options[:test_plan]] ||= {}
-          @properties[:all].merge(@properties[:test_plan][options[:test_plan]])
+          @properties[:all].merge(@properties[:test_plan][options[:test_plan]] || {})
         else
           @properties[:all]
         end
