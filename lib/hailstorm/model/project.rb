@@ -233,7 +233,10 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   
   # @return [Boolean] true if configuration settings have been modified
   def settings_modified?
-    self.serial_version.nil? || self.serial_version != config.serial_version()
+    (self.serial_version.nil? ||
+        self.serial_version != config.serial_version()).tap do |modified|
+      Hailstorm.application.load_config() if modified
+    end
   end
   
   def config
