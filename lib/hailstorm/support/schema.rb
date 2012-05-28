@@ -49,6 +49,7 @@ class Hailstorm::Support::Schema
       t.integer :max_threads_per_agent, :null => false, :default => 50
       t.boolean :master_slave_mode, :null => false, :default => true
       t.string  :samples_breakup_interval, :null => false, :default => '1,3,5'
+      t.string  :jmeter_version, :null => false, :default => 2.4
       t.string  :serial_version, :default => nil
     end
   end

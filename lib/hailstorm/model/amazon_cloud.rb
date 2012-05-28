@@ -179,7 +179,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     logger.debug { "#{self.class}##{__method__}" }
     if self.active? and self.agent_ami.nil?
       
-      rexp = Regexp.compile(Defaults::AmiId)    
+      rexp = Regexp.compile(ami_id)
       # check if this region already has the AMI...
       logger.info { "Searching available AMI..."}
       ec2.images
@@ -196,6 +196,14 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       if self.agent_ami.nil?
         # AMI does not exist
         logger.info("Creating agent AMI for #{self.region}...")
+
+        # Check if required JMeter version is present in our bucket
+        begin
+          jmeter_s3_object.content_length() # will fail if object does not exist
+        rescue AWS::S3::Errors::NoSuchKey
+          raise(Hailstorm::Error,
+                "JMeter version #{self.project.jmeter_version} not found in #{Defaults::BucketName} bucket")
+        end
         
         # Check if the SSH security group exists, or create it
         security_group = find_or_create_security_group()
@@ -277,16 +285,16 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
             
             # install JMeter to self.user_home
             logger.info { "Installing JMeter..." }
-            ssh.exec!("wget -q '#{jmeter_download_url}' -O #{Defaults::JMeterDownloadFile}")
-            ssh.exec!("tar -xzf #{Defaults::JMeterDownloadFile}")
-            ssh.exec!("ln -s #{self.user_home}/#{Defaults::JMeterDirectory} #{self.user_home}/jmeter")
+            ssh.exec!("wget -q '#{jmeter_download_url}' -O #{jmeter_download_file}")
+            ssh.exec!("tar -xzf #{jmeter_download_file}")
+            ssh.exec!("ln -s #{self.user_home}/#{jmeter_directory} #{self.user_home}/jmeter")
             
           end # end ssh
           
           # create the AMI
           logger.info { "Finalizing changes..." } 
           new_ami = ec2.images.create(
-            :name => "ubuntu-10.04-lucid-server-i386-#{Defaults::AmiId}",
+            :name => ami_id,
             :instance_id => clean_instance.instance_id,
             :description => "AMI for distributed performance testing with JMeter (TSG)"
           )
@@ -415,14 +423,36 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   end
   
   def jmeter_download_url()
-    @jmeter_download_url ||= s3_bucket().objects[Defaults::JMeterDownloadFilePath]
-                                        .url_for(:read)    
+    @jmeter_download_url ||= jmeter_s3_object().url_for(:read)
   end
-  
+
+  def jmeter_s3_object()
+    s3_bucket().objects[jmeter_download_file_path]
+  end
+
   def s3_bucket()
     @s3_bucket ||= s3.buckets[Defaults::BucketName]
   end
-  
+
+  def jmeter_download_file()
+    "#{jmeter_directory}.tgz"
+  end
+
+  # Path relative to S3 bucket
+  def jmeter_download_file_path()
+    "open-source/#{jmeter_download_file}"
+  end
+
+  # Expanded JMeter directory
+  def jmeter_directory
+    "jakarta-jmeter-#{self.project.jmeter_version}"
+  end
+
+  # The AMI ID to search for and create
+  def ami_id
+    "#{Defaults::AmiId}-j#{self.project.jmeter_version}-i386"
+  end
+
   # EC2 default settings
   class Defaults
     
@@ -434,10 +464,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     JavaDownloadFile        = 'jre-6u31-linux-i586.bin'
     JavaDownloadFilePath    = "open-source/#{JavaDownloadFile}"
     JreDirectory            = 'jre1.6.0_31'
-    JMeterDownloadFile      = 'jakarta-jmeter-2.4.tgz'
-    JMeterDownloadFilePath  = "open-source/#{JMeterDownloadFile}"
-    JMeterDirectory         = 'jakarta-jmeter-2.4'
-    
+
   end
     
 end

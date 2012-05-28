@@ -22,7 +22,11 @@ class Hailstorm::Support::Configuration
   attr_accessor :samples_breakup_interval
 
   class JMeter
-  
+
+    # JMeter version used in project. The default is 2.4. Specify only the version
+    # component, example: 2.5 or 2.6
+    attr_accessor :version
+
     # JMeter scripts to setup and execute. If left unset all files in app/jmx will be processed
     # for load generation. Multiple files can be specified using an array. File extensions
     # are not needed. If only one test plan is present, this configuration is not needed.

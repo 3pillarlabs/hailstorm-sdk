@@ -61,6 +61,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   # Configures all clusters as per config.
   # @param [Hailstorm::Model::Project] project current project instance
   # @param [Hailstorm::Support::Configuration] config the configuration instance
+  # @raise [Hailstorm::Error] if one or more clusters could not be started
   def self.configure_all(project, config)
 
     logger.debug { "#{self}.#{__method__}" }
@@ -90,7 +91,9 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
       cluster.configure(cluster_config) if cluster.persisted?
     end
 
-    Hailstorm::Support::Thread.join()
+    unless Hailstorm::Support::Thread.join() # join returns true on success
+      raise(Hailstorm::Error, "Failed to setup one or more load clusters")
+    end
   end
 
   # start load generation on clusters of a specific cluster_type

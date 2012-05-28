@@ -39,6 +39,10 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       updateable_attributes.merge!(
           :samples_breakup_interval => config.samples_breakup_interval
       ) unless config.samples_breakup_interval.nil?
+
+      updateable_attributes.merge!(
+          :jmeter_version => config.jmeter.version
+      ) unless config.jmeter.version.nil?
       
       self.update_attributes!(updateable_attributes)
       
