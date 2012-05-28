@@ -115,6 +115,10 @@ module Hailstorm
     'script'
   end
 
+  def self.environment_file_path
+    File.join(self.root, self.config_dir, 'environment.rb')
+  end
+
 end
 
 # inject a logger method to Kernel so it's available everywhere

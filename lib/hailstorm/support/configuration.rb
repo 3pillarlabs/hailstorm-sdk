@@ -51,23 +51,7 @@ class Hailstorm::Support::Configuration
         end
       end
     end
-    
-    def serial_version()
 
-      digest = Digest::SHA2.new()
-      Dir[File.join(Hailstorm.root, Hailstorm.app_dir, '**', '*.jmx')].sort.each do |file|
-        digest.update(file)
-      end
-      raise(StandardError, "config.jmeter must be defined") if @properties.blank?
-      @properties[:test_plan].each_pair do |plan, plan_props|
-        digest.update(plan)
-        digest.update(plan_props.to_yaml)
-      end
-      digest.update(@properties[:all].to_yaml)
-
-      digest.hexdigest()
-    end
-    
   end
 
   # JMeter configuration
@@ -260,34 +244,26 @@ class Hailstorm::Support::Configuration
     return host_defs
   end
   
-  # Computes the serialized version of the config element and returns it
+  # Computes the SHA2 hash of the environment file and contents/structure of JMeter
+  # directory.
+  # @return [String]
   def serial_version()
 
     digest = Digest::SHA2.new()
-    config_attributes = self.instance_values().symbolize_keys()
 
-    digest.update(self.jmeter.serial_version())
-
-    (config_attributes.delete(:clusters) || []).each do |cluster_config|
-      digest.update(Base64.encode64(cluster_config.instance_values.to_yaml))
+    Dir[File.join(Hailstorm.root, Hailstorm.app_dir, '**', '*.jmx')].sort.each do |file|
+      digest.update(file)
     end
 
-    (config_attributes.delete(:monitors) || []).each do |monitor_config|
-      monitor_attributes = monitor_config.instance_values()
-      (monitor_attributes.delete(:groups) || []).each do |group|
-        group_attributes = group.instance_values()
-        (group_attributes.delete(:hosts) || []).each do |host|
-          digest.update(Base64.encode64(host.instance_values.to_yaml))
-        end
-        digest.update(Base64.encode64(group_attributes.to_yaml))
+    File.open(Hailstorm.environment_file_path, 'r') do |ef|
+      ef.each_line do |line|
+        digest.update(line)
       end
-      digest.update(Base64.encode64(monitor_attributes.to_yaml))
     end
-
-    digest.update(Base64.encode64(config_attributes.to_yaml))
 
     digest.hexdigest()
   end
   alias :compute_serial_version :serial_version
-  
+
+
 end
