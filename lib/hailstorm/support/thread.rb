@@ -28,8 +28,10 @@ class Hailstorm::Support::Thread
   end
   
   # Joins all threads spawned by current thread and clears active connections.
+  # @return [Boolean] true if all threads exited gracefully, false otherwise
   def self.join()
-    
+
+    graceful = true
     Hailstorm.logger.debug { "#{self}.#{__method__}" }
     spawned = Thread.current[:spawned]
     until spawned.blank?
@@ -37,12 +39,15 @@ class Hailstorm::Support::Thread
       begin
         t.join()
       rescue StandardError => e
+        graceful = false
         logger.warn(e.message())
         logger.debug { "\n".concat(e.backtrace().join("\n")) }
       ensure
         t[:connection].close() unless t[:connection].nil? 
       end
     end
+
+    return graceful
   end
   
   
