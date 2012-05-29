@@ -211,7 +211,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         
         # Launch base AMI
         clean_instance = ec2.instances.create(
-          :image_id => Defaults::BaseAMI,
+          :image_id => base_ami(),
           :availability_zone => self.zone,
           :key_name => self.ssh_identity,
           :security_groups => [security_group.name]
@@ -455,13 +455,55 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     "#{Defaults::AmiId}-j#{self.project.jmeter_version}-i386"
   end
 
+  # Base AMI to use to create Hailstorm AMI based on the region
+  # @return [String] Base AMI ID
+  def base_ami()
+    arch = '32-bit' # TODO: Make arch configurable
+    self.class.region_base_ami_map[self.region][arch]
+  end
+
+  # Static map of regions, architectures and AMI ID of latest stable Ubuntu LTS
+  # AMIs (Precise Pangolin - http://cloud-images.ubuntu.com/releases/precise/release/).
+  @@region_base_ami_map = nil
+  def self.region_base_ami_map()
+    @@region_base_ami_map ||= {
+      'ap-northeast-1' => {
+          '64-bit' => 'ami-60c77761',
+          '32-bit' => 'ami-5ec7775f'
+      },
+      'ap-southeast-1' => {
+          '64-bit' => 'ami-a4ca8df6',
+          '32-bit' => 'ami-a6ca8df4'
+      },
+      'eu-west-1' => {
+          '64-bit' => 'ami-e1e8d395',
+          '32-bit' => 'ami-e7e8d393'
+      },
+      'sa-east-1' => {
+          '64-bit' => 'ami-8cd80691',
+          '32-bit' => 'ami-92d8068f'
+      },
+      'us-east-1' => {
+          '64-bit' => 'ami-a29943cb',
+          '32-bit' => 'ami-ac9943c5'
+      },
+      'us-west-1' => {
+          '64-bit' => 'ami-87712ac2',
+          '32-bit' => 'ami-85712ac0'
+      },
+      'us-west-2' => {
+          '64-bit' => 'ami-20800c10',
+          '32-bit' => 'ami-3e800c0e'
+      }
+    }
+  end
+
   # EC2 default settings
   class Defaults
     
     AmiId                   = "brickred-hailstorm"
     SecurityGroup           = "Hailstorm"
     SecurityGroupDesc       = "Allows traffic to port 22 from anywhere and internal TCP, UDP and ICMP traffic"
-    BaseAMI                 = 'ami-714ba518'
     BucketName              = 'brickred-perftest'
     JavaDownloadFile        = 'jre-6u31-linux-i586.bin'
     JavaDownloadFilePath    = "open-source/#{JavaDownloadFile}"
