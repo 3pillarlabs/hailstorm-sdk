@@ -224,10 +224,15 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
 
     logger.debug { "#{self.class}##{__method__}" }
     @test_artifacts = []
+    # Do not upload files with ~, bk, bkp, backup in extension or starting with . (hidden)
+    hidden_file_rexp = Regexp.new('^\.')
+    backup_file_rexp = Regexp.new('(?:~|bk|bkp|backup|old|tmp)$')
     Dir[File.join(Hailstorm.root, Hailstorm.app_dir, '**', '*')].each do |entry|
       if File.file?(entry) # if its a regular file
-        # TODO: Do not upload files with ~, bk, bkp, backup in extension or starting with .
-        @test_artifacts.push(entry)
+        entry_name = File.basename(entry)
+        unless hidden_file_rexp.match(entry_name) or backup_file_rexp.match(entry_name)
+          @test_artifacts.push(entry)
+        end
       end
     end
     
