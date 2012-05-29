@@ -9,7 +9,7 @@ require 'hailstorm/model/target_host'
 require 'hailstorm/model/execution_cycle'
 
 class Hailstorm::Model::Project < ActiveRecord::Base
-  
+
   has_many :clusters, :dependent => :destroy
   
   has_many :jmeter_plans, :dependent => :destroy
@@ -20,6 +20,8 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   
   has_one  :current_execution_cycle, :class_name => 'Hailstorm::Model::ExecutionCycle',
            :conditions => {:status => 'started'}, :order => "started_at DESC"
+
+  before_create :set_defaults
 
   # Sets up the project for first time or subsequent use
   def setup(show_table_info = true)
@@ -68,12 +70,12 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     
     # add an execution_cycle
     if current_execution_cycle.nil?
-      build_current_execution_cycle(:status => :started).save!
+      build_current_execution_cycle.save! # buildABC is provided by has_one :ABC relation
       if settings_modified?
         begin
           setup(false)
         rescue Exception
-          self.current_execution_cycle.update_attribute(:status, :broken)
+          self.current_execution_cycle.aborted!
           raise
         end
         self.reload()
@@ -106,9 +108,9 @@ class Hailstorm::Model::Project < ActiveRecord::Base
         Hailstorm::Model::TargetHost.stop_all_monitoring(self)
 
         unless command.aborted?
-          current_execution_cycle.update_attribute(:status, :stopped)
+          current_execution_cycle.stopped!
         else
-          current_execution_cycle.update_attribute(:status, :aborted)
+          current_execution_cycle.aborted!
         end
         to_cluster_text_table()
         to_monitor_text_table()
@@ -135,7 +137,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     Hailstorm::Model::Cluster.terminate(self)
     Hailstorm::Model::TargetHost.terminate(self)
     unless current_execution_cycle.nil?
-      current_execution_cycle.update_attribute(:status, :terminated)
+      current_execution_cycle.terminated!
     end
     self.update_column(:serial_version, nil)
     to_cluster_text_table()
@@ -272,6 +274,21 @@ class Hailstorm::Model::Project < ActiveRecord::Base
 
   def to_load_agents_text_table()
     puts Hailstorm::Model::LoadAgent.to_text_table(self).to_s
+  end
+
+  def set_defaults()
+    self.max_threads_per_agent ||= Defaults::MAX_THREADS_PER_AGENT
+    self.master_slave_mode = Defaults::MASTER_SLAVE_MODE if self.master_slave_mode.nil?
+    self.samples_breakup_interval ||= Defaults::SAMPLES_BREAKUP_INTERVAL
+    self.jmeter_version ||= Defaults::JMETER_VERSION
+  end
+
+  # Default settings
+  class Defaults
+    MAX_THREADS_PER_AGENT = 50
+    MASTER_SLAVE_MODE = true
+    SAMPLES_BREAKUP_INTERVAL = '1,3,5'
+    JMETER_VERSION = 2.7
   end
 
 end

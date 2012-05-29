@@ -46,10 +46,10 @@ class Hailstorm::Support::Schema
   def create_projects
     ActiveRecord::Migration.create_table(:projects) do |t|
       t.string  :project_code, :null => false
-      t.integer :max_threads_per_agent, :null => false, :default => 50
-      t.boolean :master_slave_mode, :null => false, :default => true
-      t.string  :samples_breakup_interval, :null => false, :default => '1,3,5'
-      t.string  :jmeter_version, :null => false, :default => 2.4
+      t.integer :max_threads_per_agent, :null => false
+      t.boolean :master_slave_mode, :null => false
+      t.string  :samples_breakup_interval, :null => false
+      t.string  :jmeter_version, :null => false
       t.string  :serial_version, :default => nil
     end
   end
@@ -64,7 +64,7 @@ class Hailstorm::Support::Schema
       t.string      :zone, :null => false
       t.string      :agent_ami, :default => nil
       t.boolean     :active, :null => false, :default => false
-      t.string      :user_name, :null => false, :default => 'ubuntu'
+      t.string      :user_name, :null => false
       t.string      :security_group, :null => false
     end
   end
@@ -104,7 +104,7 @@ class Hailstorm::Support::Schema
       t.integer     :executable_pid, :default => nil
       t.string      :ssh_identity, :default => nil
       t.string      :user_name, :default => nil
-      t.integer     :sampling_interval, :null => false, :default => 10
+      t.integer     :sampling_interval, :null => false
       t.boolean     :active, :null => false, :default => false  
     end
   end
@@ -119,7 +119,7 @@ class Hailstorm::Support::Schema
   def create_execution_cycles
     ActiveRecord::Migration.create_table(:execution_cycles) do |t|
       t.references  :project, :null => false
-      t.string      :status, :null => false, :default => "started"
+      t.string      :status, :null => false
       t.timestamp   :started_at, :null => false
       t.timestamp   :stopped_at, :default => nil
     end
@@ -152,7 +152,7 @@ class Hailstorm::Support::Schema
       t.float       :response_throughput, :null => false
       t.float       :size_throughput, :null => false
       t.float       :standard_deviation, :null => false
-      t.string      :samples_breakup_json, :null => false, :default => '{}'
+      t.string      :samples_breakup_json, :null => false
     end
   end
 

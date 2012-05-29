@@ -164,6 +164,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   def set_defaults()
     self.security_group = Defaults::SecurityGroup if self.security_group.blank?
+    self.user_name ||= Defaults::SSH_USER
   end
 
   # checks if the region attribute is dirty, if so nils out the agent_mi.
@@ -445,7 +446,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   # Expanded JMeter directory
   def jmeter_directory
-    "jakarta-jmeter-#{self.project.jmeter_version}"
+    version = self.project.jmeter_version
+    "#{version == '2.4' ? 'jakarta' : 'apache'}-jmeter-#{version}"
   end
 
   # The AMI ID to search for and create
@@ -464,6 +466,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     JavaDownloadFile        = 'jre-6u31-linux-i586.bin'
     JavaDownloadFilePath    = "open-source/#{JavaDownloadFile}"
     JreDirectory            = 'jre1.6.0_31'
+    SSH_USER                = 'ubuntu'
 
   end
     
