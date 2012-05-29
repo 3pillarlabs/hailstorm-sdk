@@ -32,16 +32,16 @@ public class ExecutionComparisonGraph {
 		this.graphFilePath = graphFilePath;
 	}
 	
-	public void addResponseTimeDataItem(int threadsCount, double responseTime) {
+	public void addResponseTimeDataItem(String domainLabel, double responseTime) {
 		
 		((DefaultCategoryDataset) getResponsePlot().getDataset()).addValue(
-				responseTime, responseRangeLabel, Integer.valueOf(threadsCount).toString());
+				responseTime, responseRangeLabel, domainLabel);
 	}
 	
-	public void addThroughputDataItem(int threadsCount, double throughput) {
+	public void addThroughputDataItem(String domainLabel, double throughput) {
 		
 		((DefaultCategoryDataset) getThroughputPlot().getDataset()).addValue(
-				throughput, throughputRangeLabel, Integer.valueOf(threadsCount).toString());
+				throughput, throughputRangeLabel, domainLabel);
 	}
 	
 	public String build() throws IOException {

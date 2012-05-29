@@ -165,10 +165,16 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     grapher_klass = com.brickred.tsg.hailstorm.ExecutionComparisonGraph
     grapher = grapher_klass.new(execution_comparison_graph_path(execution_cyles))
 
+    # bug #Research-440
+    # store the total_threads_count in a map such that if it is repeated for a
+    # particular execution_cycle, the sequence Id is appended. This prevents the
+    # points from collapsing in the graph.
+    domain_labels = []
     execution_cyles.each do |execution_cycle|
       count_client_stats = 0
       total_ninety_percentile_response_time = 0.0
       total_transactions_per_second = 0.0
+
       execution_cycle.client_stats.each do |client_stat|
         count_client_stats += 1
         total_ninety_percentile_response_time += client_stat.aggregate_ninety_percentile
@@ -177,12 +183,19 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
       execution_cycle_response_time = (total_ninety_percentile_response_time.to_f /
           count_client_stats).round(2)
-      grapher.addResponseTimeDataItem(execution_cycle.total_threads_count(),
+
+      domain_label = execution_cycle.total_threads_count().to_s
+      if domain_labels.include?(domain_label) # repeated total_threads_count(domain_label)
+        domain_label.concat("-#{execution_cycle.id}")
+      end
+      domain_labels.push(domain_label)
+
+      grapher.addResponseTimeDataItem(domain_label,
                                       execution_cycle_response_time)
 
       execution_cycle_throughput = (total_transactions_per_second.to_f /
           count_client_stats).round(2)
-      grapher.addThroughputDataItem(execution_cycle.total_threads_count(),
+      grapher.addThroughputDataItem(domain_label,
                                     execution_cycle_throughput)
     end
 

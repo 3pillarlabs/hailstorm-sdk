@@ -60,11 +60,18 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
     grapher_klass = com.brickred.tsg.hailstorm.TargetComparisonGraph
     grapher = grapher_klass.getCpuComparisionBuilder(comparison_graph_path(:cpu,
                                                                            execution_cyles))
+    # repeated total_threads_count cause a collapsed graph - bug #Research-440
+    domain_labels = []
     execution_cyles.each do |execution_cycle|
+      domain_label = execution_cycle.total_threads_count().to_s
+      if domain_labels.include?(domain_label)
+        domain_label.concat("-#{execution_cycle.id}")
+      end
+      domain_labels.push(domain_label)
       execution_cycle.target_stats.includes(:target_host).each do |target_stat|
         grapher.addDataItem(target_stat.average_cpu_usage,
                             target_stat.target_host.host_name,
-                            execution_cycle.total_threads_count().to_s)
+                            domain_label)
       end
     end
 
@@ -76,11 +83,18 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
     grapher_klass = com.brickred.tsg.hailstorm.TargetComparisonGraph
     grapher = grapher_klass.getMemoryComparisionBuilder(comparison_graph_path(:memory,
                                                                               execution_cyles))
+    # repeated total_threads_count cause a collapsed graph - bug #Research-440
+    domain_labels = []
     execution_cyles.each do |execution_cycle|
+      domain_label = execution_cycle.total_threads_count().to_s
+      if domain_labels.include?(domain_label)
+        domain_label.concat("-#{execution_cycle.id}")
+      end
+      domain_labels.push(domain_label)
       execution_cycle.target_stats.includes(:target_host).each do |target_stat|
         grapher.addDataItem(target_stat.average_memory_usage,
                             target_stat.target_host.host_name,
-                            execution_cycle.total_threads_count().to_s)
+                            domain_label)
       end
     end
 
