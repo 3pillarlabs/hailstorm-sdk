@@ -405,8 +405,6 @@ Commands:
 
   report          Generates a report of stopped tests
 
-  reload          Reload config/environment.rb
-
   purge           Purge specific or ALL data from database
 
   show            Show the environment configuration
