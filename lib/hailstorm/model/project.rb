@@ -115,9 +115,10 @@ class Hailstorm::Model::Project < ActiveRecord::Base
         to_cluster_text_table()
         to_monitor_text_table()
 
-      rescue Hailstorm::Exception
+      rescue Hailstorm::Exception => ex
         # raised by stop_load_generation if load generation could not be stopped
         # on any agent
+        logger.warn(ex.message)
       end
     else
       logger.info "Nothing to stop... no tests running"
