@@ -74,6 +74,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
     client_stat.sample_response_times.sort!
     ninety_percentile_index = (aggregate_samples_count * 0.9).to_i - 1
+    ninety_percentile_index = 0 if ninety_percentile_index < 0
     client_stat.aggregate_ninety_percentile = client_stat.sample_response_times[ninety_percentile_index]
 
     # this is the duration of the last sample sent, it is in milliseconds, so
@@ -274,7 +275,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   end
 
   def cleanup()
-    self.sample_response_times.unlink()
+    self.sample_response_times.unlink() if self.sample_response_times.respond_to?(:unlink)
   end
 
 end

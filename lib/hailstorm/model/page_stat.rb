@@ -130,9 +130,8 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
     self.average_response_time = (self.cumulative_response_time.to_f / self.samples_count)
 
     self.page_sample_times.sort!
-    percentile_index = proc {|p| (self.samples_count * p.to_f/100).to_i - 1}
-    self.median_response_time = self.page_sample_times[percentile_index.call(50)]
-    self.ninety_percentile_response_time = self.page_sample_times[percentile_index.call(90)]
+    self.median_response_time = self.page_sample_times[percentile_index(50)]
+    self.ninety_percentile_response_time = self.page_sample_times[percentile_index(90)]
 
     self.size_throughput = (self.cumulative_bytes.to_f * 1000) /
         ((self.max_end_time - self.min_start_time) * 1024)
@@ -154,7 +153,16 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
   end
 
   def cleanup()
-    self.page_sample_times.unlink()
+    self.page_sample_times.unlink() if self.page_sample_times.respond_to?(:unlink)
+  end
+
+  # Calculates the array index for percentile
+  # @param [Fixnum] percentile example 50, 90
+  # @return [Fixnum]
+  def percentile_index(percentile)
+
+    index = (self.samples_count * percentile.to_f / 100).to_i
+    index == 0 ? index : index - 1
   end
 
 end
