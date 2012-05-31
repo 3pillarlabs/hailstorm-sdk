@@ -152,7 +152,7 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
 
     query = project.target_hosts
     if only_active
-      query.where(:active => true)
+      query = query.where(:active => true)
     end
     query
   end
