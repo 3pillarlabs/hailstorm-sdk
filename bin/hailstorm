@@ -32,7 +32,7 @@ Example
   options.parse!
 
   unless ARGV.empty?
-    Hailstorm::Application.new.init(Dir.pwd, ARGV.first)
+    Hailstorm::Application.new.create_project(Dir.pwd, ARGV.first)
   else
     puts options.to_s
     puts ""

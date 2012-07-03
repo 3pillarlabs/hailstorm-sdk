@@ -21,50 +21,36 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   has_one  :current_execution_cycle, :class_name => 'Hailstorm::Model::ExecutionCycle',
            :conditions => {:status => 'started'}, :order => "started_at DESC"
 
-  before_create :set_defaults
+  before_save :set_defaults
 
   # Sets up the project for first time or subsequent use
-  def setup(show_table_info = true)
+  def setup(force = false)
 
-    if command.force_setup? or settings_modified?
+    if force or settings_modified?
       logger.info("Setting up the project...")
-      updateable_attributes = {:serial_version => config.serial_version()}
-      
-      updateable_attributes.merge!(
-        :max_threads_per_agent => config.max_threads_per_agent
-      ) unless config.max_threads_per_agent.nil?
-      
-      updateable_attributes.merge!(
-        :master_slave_mode => config.master_slave_mode
-      ) unless config.master_slave_mode.nil?
 
-      updateable_attributes.merge!(
-          :samples_breakup_interval => config.samples_breakup_interval
-      ) unless config.samples_breakup_interval.nil?
-
-      updateable_attributes.merge!(
-          :jmeter_version => config.jmeter.version
-      ) unless config.jmeter.version.nil?
-      
-      self.update_attributes!(updateable_attributes)
+      self.update_attributes!(:serial_version => config.serial_version(),
+                              :max_threads_per_agent => config.max_threads_per_agent,
+                              :master_slave_mode => config.master_slave_mode,
+                              :samples_breakup_interval => config.samples_breakup_interval,
+                              :jmeter_version => config.jmeter.version)
       
       begin
         configure_jmeter_plans()
         configure_clusters()
         configure_targets()
-        to_text_table() if show_table_info
       rescue
         self.update_column(:serial_version, nil)
         raise
       end
 
     else
-      logger.info("No changes to project configuration detected.")
+      raise(Hailstorm::Exception, "No changes to project configuration detected.")
     end
   end
 
   # Starts the load generation and target monitoring tasks
-  def start()
+  def start(redeploy = false)
    
     logger.debug { "#{self.class}##{__method__}" }
     
@@ -73,7 +59,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       build_current_execution_cycle.save! # buildABC is provided by has_one :ABC relation
       if settings_modified?
         begin
-          setup(false)
+          setup(true) #(force)
         rescue Exception
           self.current_execution_cycle.aborted!
           raise
@@ -83,37 +69,33 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       self.current_execution_cycle.set_started_at(Time.now)
 
       Hailstorm::Model::TargetHost.monitor_all(self)
-      Hailstorm::Model::Cluster.generate_all_load(self)
-      to_cluster_text_table()
-      to_monitor_text_table()
+      Hailstorm::Model::Cluster.generate_all_load(self, redeploy)
     else
       # if one exists, user must stop/abort it first
-      logger.warn("You have already started an execution cycle at #{current_execution_cycle.started_at}")
-      logger.info("Please stop or abort first!")
+      raise(Hailstorm::Exception,
+            "You have already started an execution cycle at #{current_execution_cycle.started_at}. Please stop or abort first!")
     end
   end
 
   # Delegate to target_hosts and clusters
-  def stop()
+  def stop(wait = false, options = nil, aborted = false)
    
     logger.debug { "#{self.class}##{__method__}" }
 
     unless current_execution_cycle.nil?
       begin
-        Hailstorm::Model::Cluster.stop_load_generation(self)
+        Hailstorm::Model::Cluster.stop_load_generation(self, wait, options, aborted)
 
         # Update the stopped_at now, so that target monitoring
         # statistics be collected from started_at to stopped_at
         current_execution_cycle.set_stopped_at()
-        Hailstorm::Model::TargetHost.stop_all_monitoring(self)
+        Hailstorm::Model::TargetHost.stop_all_monitoring(self, aborted)
 
-        unless command.aborted?
+        unless aborted
           current_execution_cycle.stopped!
         else
           current_execution_cycle.aborted!
         end
-        to_cluster_text_table()
-        to_monitor_text_table()
 
       rescue Hailstorm::Exception => ex
         # raised by stop_load_generation if load generation could not be stopped
@@ -121,15 +103,15 @@ class Hailstorm::Model::Project < ActiveRecord::Base
         logger.warn(ex.message)
       end
     else
-      logger.info "Nothing to stop... no tests running"
+      raise(Hailstorm::Exception, "Nothing to stop... no tests running")
     end
   end
 
-  # Aborts everything
-  def abort()
+  # Aborts everything immediately
+  def abort(options = nil)
     
     logger.debug { "#{self.class}##{__method__}" }
-    stop()
+    stop(false, options, true)
   end
 
   def terminate()
@@ -141,78 +123,33 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       current_execution_cycle.terminated!
     end
     self.update_column(:serial_version, nil)
-    to_cluster_text_table()
-    to_monitor_text_table()
   end
 
-  def generate_report()
+  def results(operation, cycle_ids = nil)
 
     logger.debug { "#{self.class}##{__method__}" }
-    if command.report_show_tests?
-      text_table = Terminal::Table.new()
-      text_table.headings = ['Sequence', 'Started', 'Stopped', 'Threads']
-      text_table.rows = Hailstorm::Model::ExecutionCycle.execution_cycles_for_report(self)
-                                                        .collect do |execution_cycle|
-        [
-            execution_cycle.id,
-            execution_cycle.formatted_started_at,
-            execution_cycle.formatted_stopped_at,
-            execution_cycle.total_threads_count
-        ]
-      end
-      puts text_table.to_s
-    elsif command.report_exclude_sequence
-      self.execution_cycles
-          .find(command.report_exclude_sequence)
-          .update_column(:status, 'excluded')
 
-    elsif command.report_include_sequence
-      self.execution_cycles
-          .find(command.report_include_sequence)
-          .update_column(:status, 'stopped')
+    selected_execution_cycles =
+        Hailstorm::Model::ExecutionCycle.execution_cycles_for_report(self,
+                                                                     cycle_ids)
+    if operation == :show # show tests
+      return selected_execution_cycles
 
-    elsif command.report_sequence_list
-      self.execution_cycles
-          .find(command.report_sequence_list)
-          .each {|e| e.update_column(:status, 'stopped')}
+    elsif operation == :exclude # exclude
+      selected_execution_cycles.each {|ex| ex.excluded!}
 
-    else
+    elsif operation == :include # include
+      selected_execution_cycles.each {|ex| ex.stopped!}
+
+    else # generate report
       logger.info("Creating report for stopped tests...")
-      report_path = Hailstorm::Model::ExecutionCycle.create_report(self)
+      report_path = Hailstorm::Model::ExecutionCycle.create_report(self, cycle_ids)
       logger.info { "Report generated to: #{report_path}" }
     end
   end
 
-  # Implements the "show" command
-  def show()
-
-    case command.show_setup
-      when :jmeter
-        to_jmeter_plan_text_table()
-      when :cluster
-        to_cluster_text_table()
-      when :monitor
-        to_monitor_text_table()
-      when :status
-        unless self.current_execution_cycle.nil?
-          running_agents = Hailstorm::Model::Cluster.check_status(self)
-          unless running_agents.empty?
-            logger.info "Load generation running on following load agents:"
-            text_table = Terminal::Table.new()
-            text_table.headings = ['Cluster', 'Agent', 'PID']
-            text_table.rows = running_agents.collect {|agent|
-              [agent.clusterable.slug, agent.public_ip_address, agent.jmeter_pid]
-            }
-            puts text_table.to_s
-          else
-            logger.info "Load generation finished on all load agents"
-          end
-        else
-          logger.info "No tests have been started"
-        end
-      else
-        to_text_table()
-    end
+  def check_status()
+    Hailstorm::Model::Cluster.check_status(self)
   end
 
 ###################### PRIVATE METHODS #######################################
@@ -250,33 +187,6 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     Hailstorm.application.config
   end
 
-  def command
-    Hailstorm.application.command_processor
-  end
-
-  def to_text_table()
-    to_jmeter_plan_text_table()
-    to_cluster_text_table()
-    to_monitor_text_table()
-  end
-
-  def to_jmeter_plan_text_table()
-    puts Hailstorm::Model::JmeterPlan.to_text_table(self).to_s
-  end
-
-  def to_cluster_text_table()
-    puts Hailstorm::Model::Cluster.to_text_table(self).to_s
-    to_load_agents_text_table()
-  end
-
-  def to_monitor_text_table()
-    puts Hailstorm::Model::TargetHost.to_text_table(self).to_s
-  end
-
-  def to_load_agents_text_table()
-    puts Hailstorm::Model::LoadAgent.to_text_table(self).to_s
-  end
-
   def set_defaults()
     self.max_threads_per_agent ||= Defaults::MAX_THREADS_PER_AGENT
     self.master_slave_mode = Defaults::MASTER_SLAVE_MODE if self.master_slave_mode.nil?
@@ -287,7 +197,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   # Default settings
   class Defaults
     MAX_THREADS_PER_AGENT = 50
-    MASTER_SLAVE_MODE = true
+    MASTER_SLAVE_MODE = false
     SAMPLES_BREAKUP_INTERVAL = '1,3,5'
     JMETER_VERSION = 2.7
   end

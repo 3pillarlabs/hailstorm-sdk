@@ -19,7 +19,7 @@ class Hailstorm::Model::SlaveAgent < Hailstorm::Model::LoadAgent
     execute_jmeter_command(command)
   end
 
-  def stop_jmeter()
+  def stop_jmeter(wait = false, aborted = false)
 
     logger.debug { "#{self.class}##{__method__}" }
     if jmeter_running?()

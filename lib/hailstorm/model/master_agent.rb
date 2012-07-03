@@ -22,7 +22,7 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
   end
 
   # Stops JMeter execution if all stars are aligned correctly.
-  def stop_jmeter()
+  def stop_jmeter(wait = false, aborted = false)
 
     logger.debug { "#{self.class}##{__method__}" }
     if jmeter_running?()
@@ -33,7 +33,7 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
         update_pid = false
         unless self.jmeter_plan.loop_forever?
           if ssh.process_running?(self.jmeter_pid)
-            if command.wait_for_jmeter? # stop with --wait was issued
+            if wait # stop with wait was issued
               while ssh.process_running?(self.jmeter_pid)
                 logger.info("JMeter is still running, waiting as asked...")
                 sleep(60)
@@ -41,7 +41,7 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
               logger.info("JMeter has exited, proceeding...")
               update_pid = true
 
-            elsif command.aborted? # abort command was issued
+            elsif aborted # abort command was issued
               terminate_okay = true
 
             else

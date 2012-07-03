@@ -66,6 +66,7 @@ class Hailstorm::Support::Schema
       t.boolean     :active, :null => false, :default => false
       t.string      :user_name, :null => false
       t.string      :security_group, :null => false
+      t.string      :instance_type, :null => false
     end
   end
   

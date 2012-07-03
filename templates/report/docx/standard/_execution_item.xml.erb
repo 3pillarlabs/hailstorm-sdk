@@ -17,7 +17,7 @@
 <w:p w:rsidR="003B5215" w:rsidRDefault="00406A64" w:rsidP="00C35BF0">
     <w:r>
         <w:t>
-        The <%= execution_item.multiple_cluster? ? 'cluster-wise aggregate statistics' : 'page performance' %> and corresponding resource utilization on monitored servers is as follows.
+        The <%= execution_item.multiple_cluster? ? 'cluster-wise aggregate statistics' : 'page performance' %> for the test<%= execution_item.target_stats.empty? ? '' : ' and corresponding resource utilization on monitored servers' %> is as follows.
         </w:t>
     </w:r>
 </w:p>

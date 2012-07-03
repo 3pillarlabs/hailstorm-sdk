@@ -75,7 +75,7 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
       end
     end
 
-    grapher.build()
+    grapher.build() unless domain_labels.empty?
   end
 
   def self.memory_comparison_graph(execution_cyles)
@@ -98,7 +98,7 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
       end
     end
 
-    grapher.build()
+    grapher.build() unless domain_labels.empty?
   end
 
   private

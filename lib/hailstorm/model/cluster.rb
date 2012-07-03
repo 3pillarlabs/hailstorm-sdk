@@ -68,7 +68,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     # disable all clusters and then create/update as per configuration
     project.clusters.each do |cluster|
       cluster.cluster_klass()
-      .update_all({:active => false}, {:project_id => project.id})
+             .update_all({:active => false}, {:project_id => project.id})
     end
 
     config.clusters.each do |cluster_config|
@@ -97,50 +97,53 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   end
 
   # start load generation on clusters of a specific cluster_type
-  def generate_load
+  def generate_load(redeploy = false)
 
     logger.debug { "#{self.class}##{__method__}" }
     clusterables.each do |cluster_instance|
       cluster_instance.before_generate_load()
-      cluster_instance.start_slave_process() if self.project.master_slave_mode?
-      cluster_instance.start_master_process()
+      cluster_instance.start_slave_process(redeploy) if self.project.master_slave_mode?
+      cluster_instance.start_master_process(redeploy)
       cluster_instance.after_generate_load()
     end
   end
 
   # start load generation on all clusters in project
   # @param [Hailstorm::Model::Project] project current project instance
-  def self.generate_all_load(project)
+  def self.generate_all_load(project, redeploy = false)
 
     logger.debug { "#{self}.#{__method__}" }
     project.clusters.each do |cluster|
       Hailstorm::Support::Thread.start(cluster) do |c|
-        c.generate_load()
+        c.generate_load(redeploy)
       end
     end
 
     Hailstorm::Support::Thread.join()
   end
 
-  def stop_load_generation()
+  def stop_load_generation(wait = false, options = nil, aborted = false)
 
     logger.debug { "#{self.class}##{__method__}" }
+
     clusterables.each do |cluster_instance|
       cluster_instance.before_stop_load_generation()
-      cluster_instance.stop_master_process()
+      cluster_instance.stop_master_process(wait, aborted)
       logger.info "Load generation stopped at #{cluster_instance.slug}"
-      logger.info "Fetching logs from  #{cluster_instance.slug}..."
-      self.project.current_execution_cycle.collect_client_stats(cluster_instance)
-      cluster_instance.after_stop_load_generation()
+      unless aborted
+        logger.info "Fetching logs from  #{cluster_instance.slug}..."
+        self.project.current_execution_cycle.collect_client_stats(cluster_instance)
+      end
+      cluster_instance.after_stop_load_generation(options)
     end
   end
 
-  def self.stop_load_generation(project)
+  def self.stop_load_generation(project, wait = false, options = nil, aborted = false)
 
     logger.debug { "#{self}.#{__method__}" }
     project.clusters.each do |cluster|
       Hailstorm::Support::Thread.start(cluster) do |c|
-        c.stop_load_generation()
+        c.stop_load_generation(wait, options, aborted)
       end
     end
 
@@ -151,7 +154,6 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     unless Hailstorm::Model::LoadAgent.where("jmeter_pid IS NOT NULL").all.empty?
       raise(Hailstorm::Exception, "Jmeter could not be stopped on all agents")
     end
-
   end
 
   def terminate()
@@ -212,29 +214,9 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     return running_agents
   end
 
-  # @param [Hailstorm::Model::Project] project
-  # @retutn [Terminal::Table]
-  def self.to_text_table(project)
-
-    terminal_table = Terminal::Table.new()
-    terminal_table.title = 'Active Clusters'
-    terminal_table.headings = ['Type', 'Properties']
-    project.clusters.each do |cluster|
-      cluster.clusterables.each do |clusterable|
-        terminal_table.add_row([cluster.cluster_type.demodulize.tableize.singularize,
-                                clusterable.public_properties()])
-      end
-    end
-
-    return terminal_table
-  end
-
   def destroy_clusterables
     cluster_klass.where(:project_id => self.project.id).each {|e| e.destroy()}
   end
 
-  def command
-    Hailstorm.application.command_processor
-  end
 
 end

@@ -10,7 +10,7 @@
 </w:p>
 <w:p w:rsidR="00C35BF0" w:rsidRDefault="00C35BF0" w:rsidP="00C35BF0">
     <w:r>
-        <w:t>The test environment consisted of two main components - the load generation clusters and the application infrastructure. The Hailstorm application drove the load generation via the clusters and measured application performance metrics.</w:t>
+        <w:t>The test environment consisted of two main components - the load generation clusters and the application infrastructure. The Hailstorm application drove the load generation via the clusters<%= report.targets_by_role.empty? ? '' : ' and measured application performance metrics' %>.</w:t>
     </w:r>
 </w:p>
 <w:p w:rsidR="00C35BF0" w:rsidRDefault="00C35BF0" w:rsidP="00C35BF0">
@@ -42,6 +42,7 @@
   </w:r>
 </w:p>
 <%- end %>
+<%- unless report.targets_by_role.empty? %>
 <w:p w:rsidR="00C35BF0" w:rsidRDefault="00C35BF0" w:rsidP="00C35BF0">
     <w:pPr>
         <w:pStyle w:val="Heading2" />
@@ -70,5 +71,6 @@
     <w:t><%= role_name %>: <%= host_names.join(', ') %></w:t>
   </w:r>
 </w:p>
+<%- end %>
 <%- end %>
 

@@ -127,7 +127,17 @@ class Hailstorm::Support::Configuration
     
     # Agent AMI, if there already exists an AMI in same region
     attr_accessor :agent_ami
-    
+
+    # Instance type. Available instance types are -
+    #   * m1.small' (default)
+    #   * m1.large'
+    #   * m1.xlarge'
+    #   * c1.xlarge'
+    #   * cc1.4xlarge'
+    #   * cc2.8xlarge'
+    #
+    # m1.small is suitable for development and exploratory testing
+    attr_accessor :instance_type
   end
 
   # Settings for one more monitors. Multiple monitors of different types can

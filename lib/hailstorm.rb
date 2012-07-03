@@ -119,6 +119,10 @@ module Hailstorm
     File.join(self.root, self.config_dir, 'environment.rb')
   end
 
+  def self.env
+    (ENV['HAILSTORM_ENV'] || 'production').to_sym
+  end
+
 end
 
 # inject a logger method to Kernel so it's available everywhere

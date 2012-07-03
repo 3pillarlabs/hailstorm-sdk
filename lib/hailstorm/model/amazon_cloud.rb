@@ -12,10 +12,16 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   
   include Hailstorm::Behavior::Clusterable
 
-  validate :identity_file_exists, :if => proc {|r| r.active?}
-  
   before_validation :set_defaults
-  
+
+  validates_presence_of :access_key, :secret_key, :region
+
+  validate :identity_file_exists, :if => proc {|r| r.active?}
+
+  validate :instance_type_supported, :if => proc {|r| r.active?}
+
+  before_create :set_availability_zone, :if => proc {|r| r.zone.blank?}
+
   before_update :dirty_region_check, :create_agent_ami
   
   # Seconds between successive EC2 status checks 
@@ -51,7 +57,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
           :image_id => self.agent_ami,
           :availability_zone => self.zone,
           :key_name => self.ssh_identity,
-          :security_groups => self.security_group.split(/\s*,\s*/)
+          :security_groups => self.security_group.split(/\s*,\s*/),
+          :instance_type => self.instance_type
         )
         sleep(DozeTime) until agent_ec2_instance.status.eql?(:running)
       end
@@ -106,12 +113,14 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     end
   end
 
-  # process the suspend option
+  # Process the suspend option. Must be specified as {:suspend => true}
+  # @param [Hash] options
   # (see Hailstorm::Behavior::Clusterable#after_stop_load_generation)
-  def after_stop_load_generation()
+  def after_stop_load_generation(options = nil)
     
     logger.debug { "#{self.class}##{__method__}" }
-    if Hailstorm.application.command_processor.suspend_load_agents?
+    suspend = (options.nil? ? false : options[:suspend])
+    if suspend
       self.load_agents.where(:active => true).each do |agent|
         if agent.running?
           agent.stop_agent()
@@ -134,24 +143,35 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   # (see Hailstorm::Behavior::Clusterable#slug)
   def slug()
-    @slug ||= "#{self.class.name.demodulize.titlecase}, region: #{self.region}, zone: #{self.zone}"
+    @slug ||= "#{self.class.name.demodulize.titlecase}, region: #{self.region}"
   end
 
   # (see Hailstorm::Behavior::Clusterable#public_properties)
   def public_properties()
-    columns = [:access_key, :secret_key, :ssh_identity,
-    :region, :zone, :agent_ami, :user_name, :security_group]
-    self.attributes.symbolize_keys.slice(*columns).to_json
+    columns = [:region]
+    self.attributes.symbolize_keys.slice(*columns)
   end
 
 ######################### PRIVATE METHODS ####################################  
   private
   
   def identity_file_exists()
+
     unless File.exists?(identity_file_path)
-      errors.add(:ssh_identity, "not found at #{identity_file_path}")
+      key_pair = ec2.key_pairs[self.ssh_identity]
+      unless key_pair.exists? # check if the identity is already defined in EC2 region
+        logger.debug { "Creating #{self.ssh_identity} key_pair..." }
+        key_pair = ec2.key_pairs.create(self.ssh_identity)
+        File.open(identity_file_path(), 'w') do |file|
+          file.print(key_pair.private_key)
+        end
+      else
+        # can't get private_key of key_pair which has been created externally,
+        # user needs to place the file manually
+        errors.add(:ssh_identity, "not found at #{identity_file_path}")
+      end
     else
-      unless File.file?(identity_file_path) # regular file check
+      unless File.file?(identity_file_path) # is it a regular file?
         errors.add(:ssh_identity, "at #{identity_file_path} must be a regular file")
       end
     end
@@ -159,12 +179,18 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   
   def identity_file_path()
     @identity_file_path ||= File.join(Hailstorm.root, Hailstorm.db_dir,
-              self.ssh_identity.gsub(/\.pem/, '').concat('.pem'))
+                                      identity_file_name())
+  end
+
+  def identity_file_name()
+    [self.ssh_identity.gsub(/\.pem/, ''), self.region].join('_').concat('.pem')
   end
 
   def set_defaults()
-    self.security_group = Defaults::SecurityGroup if self.security_group.blank?
+    self.security_group = Defaults::SECURITY_GROUP if self.security_group.blank?
     self.user_name ||= Defaults::SSH_USER
+    self.instance_type ||= InstanceTypes::Hydrogen
+    self.ssh_identity ||= Defaults::SSH_IDENTITY
   end
 
   # checks if the region attribute is dirty, if so nils out the agent_mi.
@@ -180,10 +206,10 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     logger.debug { "#{self.class}##{__method__}" }
     if self.active? and self.agent_ami.nil?
       
-      rexp = Regexp.compile(ami_id)
+      rexp = Regexp.compile(ami_id())
       # check if this region already has the AMI...
       logger.info { "Searching available AMI..."}
-      ec2.images
+      ec2.images()
          .with_owner(:self)
          .inject({}) {|acc, e| acc.merge(e.name => e.id)}.each_pair do |name, id|
       
@@ -203,7 +229,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
           jmeter_s3_object.content_length() # will fail if object does not exist
         rescue AWS::S3::Errors::NoSuchKey
           raise(Hailstorm::Error,
-                "JMeter version #{self.project.jmeter_version} not found in #{Defaults::BucketName} bucket")
+                "JMeter version #{self.project.jmeter_version} not found in #{Defaults::BUCKET_NAME} bucket")
         end
         
         # Check if the SSH security group exists, or create it
@@ -214,7 +240,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
           :image_id => base_ami(),
           :availability_zone => self.zone,
           :key_name => self.ssh_identity,
-          :security_groups => [security_group.name]
+          :security_groups => [security_group.name],
+          :instance_type => self.instance_type
         )
         sleep(DozeTime) until clean_instance.status.eql?(:running)
         
@@ -227,26 +254,26 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
           Hailstorm::Support::SSH.start(clean_instance.public_ip_address,
             self.user_name, ssh_options) do |ssh|
               
-            # update APT packages          
-            logger.info { "Updating APT sources..." }
-            command = 'export DEBIAN_FRONTEND=noninteractive && sudo apt-get update -y && sudo apt-get upgrade -y'
-            stderr = ''  
-            ssh.exec!(command) do |channel, stream, data|
-              if :stderr == stream
-                stderr << data
-              else
-                print(data) if logger.debug?
-              end
-            end
-            unless stderr.blank?
-              logger.warn("Possible errors while updating APT sources, please review:\n#{stderr}")            
-            end
+            # update APT packages - deemed extraneous since we are not using any packaged software anyway!
+            #logger.info { "Updating APT sources..." }
+            #command = 'export DEBIAN_FRONTEND=noninteractive && sudo apt-get update -y && sudo apt-get upgrade -y'
+            #stderr = ''
+            #ssh.exec!(command) do |channel, stream, data|
+            #  if :stderr == stream
+            #    stderr << data
+            #  else
+            #    print(data) if logger.debug?
+            #  end
+            #end
+            #unless stderr.blank?
+            #  logger.warn("Possible errors while updating APT sources, please review:\n#{stderr}")
+            #end
             
             # install JAVA to /opt
             logger.info { "Installing Java..." }
-            ssh.exec!("wget -q '#{java_download_url}' -O #{Defaults::JavaDownloadFile}")
-            ssh.exec!("chmod +x #{Defaults::JavaDownloadFile}")
-            command = "cd /opt && sudo #{self.user_home}/#{Defaults::JavaDownloadFile}"
+            ssh.exec!("wget -q '#{java_download_url}' -O #{java_download_file()}")
+            ssh.exec!("chmod +x #{java_download_file}")
+            command = "cd /opt && sudo #{self.user_home}/#{java_download_file}"
             stderr = ''
             ssh.exec!(command) do |channel, stream, data|
               if :stderr == stream
@@ -256,7 +283,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
               end
             end
             raise(stderr) unless stderr.blank?
-            ssh.exec!("sudo ln -s /opt/#{Defaults::JreDirectory} /opt/jre")
+            ssh.exec!("sudo ln -s /opt/#{jre_directory()} /opt/jre")
             # modify /etc/environment
             ssh.download('/etc/environment', "#{Hailstorm.tmp_path}/environment~")
             File.open("#{Hailstorm.tmp_path}/environment~", 'r') do |envin|
@@ -325,12 +352,12 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
     logger.debug { "#{self.class}##{__method__}" }
     security_group = ec2.security_groups
-                        .filter('group-name', Defaults::SecurityGroup)
+                        .filter('group-name', Defaults::SECURITY_GROUP)
                         .first()     
     if security_group.nil?
-      logger.info("Creating #{Defaults::SecurityGroup} security group...")
-      security_group = ec2.security_groups.create(Defaults::SecurityGroup, 
-                        :description => Defaults::SecurityGroupDesc)
+      logger.info("Creating #{Defaults::SECURITY_GROUP} security group...")
+      security_group = ec2.security_groups.create(Defaults::SECURITY_GROUP,
+                        :description => Defaults::SECURITY_GROUP_DESC)
       
       security_group.authorize_ingress(:tcp, 22) # allow SSH from anywhere
       # allow incoming TCP to any port within the group
@@ -345,64 +372,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   end
 
   def ec2
-    
-    if @ec2.nil?
-      simulate = false # for debugging purpose
-      unless simulate
-        @ec2 = AWS::EC2.new(aws_config)
-                       .regions[self.region]
-      else
-        @ec2 = Object.new()
-        
-        def @ec2.instances
-          @instances = Object.new()
-          
-          def @instances.create(*args)
-            sleep(20)
-            dummy_instance()
-          end
-          
-          def @instances.[](id)
-            sleep(3)
-            dummy_instance()
-          end
-          
-          def @instances.dummy_instance()
-            @dummy = Object.new
-            
-            def @dummy.status
-              sleep(10)
-              :terminated
-            end
-            
-            def @dummy.start
-              sleep(20)
-            end
-            
-            def @dummy.instance_id
-              "i-89765"
-            end
-            
-            def @dummy.public_ip_address
-              "172.16.10.70"
-            end
-            
-            def @dummy.stop
-              sleep(10)
-            end
-            
-            def @dummy.terminate
-              sleep(5)
-            end
-          end
-          
-          @instances
-        end
-        
-      end 
-    end
-    
-    @ec2
+    @ec2 ||= AWS::EC2.new(aws_config)
+                   .regions[self.region]
   end
   
   def s3()
@@ -419,7 +390,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   end
   
   def java_download_url()
-    @java_download_url ||= s3_bucket().objects[Defaults::JavaDownloadFilePath]
+    @java_download_url ||= s3_bucket().objects[java_download_file_path()]
                                       .url_for(:read)    
   end
   
@@ -432,7 +403,19 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   end
 
   def s3_bucket()
-    @s3_bucket ||= s3.buckets[Defaults::BucketName]
+    @s3_bucket ||= s3.buckets[Defaults::BUCKET_NAME]
+  end
+
+  # Sets the first available zone based on configured region
+  def set_availability_zone()
+
+    logger.debug { "#{self.class}##{__method__}" }
+    ec2.availability_zones.each do |z|
+      if z.state == :available
+        self.zone = z.name
+        break
+      end
+    end
   end
 
   def jmeter_download_file()
@@ -450,66 +433,118 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     "#{version == '2.4' ? 'jakarta' : 'apache'}-jmeter-#{version}"
   end
 
-  # The AMI ID to search for and create
-  def ami_id
-    "#{Defaults::AmiId}-j#{self.project.jmeter_version}-i386"
+  # Architecture as per instance_type - i386 or x86_64, if internal is true,
+  # 32-bit or 64-bit. Everything other than m1.small instance_type is x86_64.
+  def arch(internal = false)
+
+    if self.instance_type == InstanceTypes::Hydrogen
+      internal ? '32-bit' : 'i386'
+    else
+      internal ? '64-bit' : 'x86_64'
+    end
   end
 
-  # Base AMI to use to create Hailstorm AMI based on the region
+  # The AMI ID to search for and create
+  def ami_id
+    "#{Defaults::AMI_ID}-j#{self.project.jmeter_version}-#{arch()}"
+  end
+
+  # Base AMI to use to create Hailstorm AMI based on the region and instance_type
   # @return [String] Base AMI ID
   def base_ami()
-    arch = '32-bit' # TODO: Make arch configurable
-    self.class.region_base_ami_map[self.region][arch]
+    region_base_ami_map[self.region][arch(true)]
   end
 
   # Static map of regions, architectures and AMI ID of latest stable Ubuntu LTS
   # AMIs (Precise Pangolin - http://cloud-images.ubuntu.com/releases/precise/release/).
-  @@region_base_ami_map = nil
-  def self.region_base_ami_map()
-    @@region_base_ami_map ||= {
-      'ap-northeast-1' => {
+  def region_base_ami_map()
+    @region_base_ami_map ||= {
+      'ap-northeast-1' => { # Asia Pacific (Tokyo)
           '64-bit' => 'ami-60c77761',
           '32-bit' => 'ami-5ec7775f'
       },
-      'ap-southeast-1' => {
+      'ap-southeast-1' => { # Asia Pacific (Singapore)
           '64-bit' => 'ami-a4ca8df6',
           '32-bit' => 'ami-a6ca8df4'
       },
-      'eu-west-1' => {
+      'eu-west-1' => {  # Europe West (Ireland)
           '64-bit' => 'ami-e1e8d395',
           '32-bit' => 'ami-e7e8d393'
       },
-      'sa-east-1' => {
+      'sa-east-1' => { # South America (Sao Paulo)
           '64-bit' => 'ami-8cd80691',
           '32-bit' => 'ami-92d8068f'
       },
-      'us-east-1' => {
+      'us-east-1' => { # US East (Virginia)
           '64-bit' => 'ami-a29943cb',
           '32-bit' => 'ami-ac9943c5'
       },
-      'us-west-1' => {
+      'us-west-1' => { # US West (N. California)
           '64-bit' => 'ami-87712ac2',
           '32-bit' => 'ami-85712ac0'
       },
-      'us-west-2' => {
+      'us-west-2' => { # US West (Oregon)
           '64-bit' => 'ami-20800c10',
           '32-bit' => 'ami-3e800c0e'
       }
     }
   end
 
+  def java_download_file()
+    @java_download_file ||= {
+        '32-bit' => 'jre-6u31-linux-i586.bin',
+        '64-bit' => 'jre-6u33-linux-x64.bin'
+    }[arch(true)]
+  end
+
+  def java_download_file_path()
+    "open-source/#{java_download_file()}"
+  end
+
+  def jre_directory()
+    @jre_directory ||= {
+        '32-bit' => 'jre1.6.0_31',
+        '64-bit' => 'jre1.6.0_33'
+    }[arch(true)]
+  end
+
+  def instance_type_supported()
+
+    unless InstanceTypes.valid?(self.instance_type)
+      errors.add(:instance_type,
+                 "not in supported list (#{InstanceTypes.allowed})")
+    end
+  end
+
   # EC2 default settings
   class Defaults
-    
-    AmiId                   = "brickred-hailstorm"
-    SecurityGroup           = "Hailstorm"
-    SecurityGroupDesc       = "Allows traffic to port 22 from anywhere and internal TCP, UDP and ICMP traffic"
-    BucketName              = 'brickred-perftest'
-    JavaDownloadFile        = 'jre-6u31-linux-i586.bin'
-    JavaDownloadFilePath    = "open-source/#{JavaDownloadFile}"
-    JreDirectory            = 'jre1.6.0_31'
-    SSH_USER                = 'ubuntu'
+    AMI_ID              = "brickred-hailstorm"
+    SECURITY_GROUP      = "Hailstorm"
+    SECURITY_GROUP_DESC = "Allows traffic to port 22 from anywhere and internal TCP, UDP and ICMP traffic"
+    BUCKET_NAME         = 'brickred-perftest'
+    SSH_USER            = 'ubuntu'
+    SSH_IDENTITY        = 'hailstorm'
+  end
+
+  class InstanceTypes
+    Hydrogen = 'm1.small'
+    Calcium  = 'm1.large'
+    Ebony    = 'm1.xlarge'
+    Steel    = 'c1.xlarge'
+    # HVM cluster compute instances are not supported due to limited availability
+    # (only on us-east-1), different operating system and creation strategy
+    # Titanium = 'cc1.4xlarge'
+    # Diamond  = 'cc2.8xlarge'
+
+    def self.valid?(instance_type)
+      self.allowed.include?(instance_type)
+    end
+
+    def self.allowed()
+      self.constants()
+          .collect {|c| eval("#{self.name}::#{c}") }
+    end
 
   end
-    
+
 end

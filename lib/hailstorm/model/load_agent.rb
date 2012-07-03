@@ -25,7 +25,9 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
   before_destroy :trigger_clusterable_before_destroy
   
   after_destroy :trigger_clusterable_after_destroy
-  
+
+  scope :active, where(:active => true)
+
   def first_use?
     @first_use
   end
@@ -51,7 +53,7 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
   end
 
   # This should be defined in the master and slave agent derived classes
-  def stop_jmeter()
+  def stop_jmeter(wait = false, aborted = false)
     raise(StandardError, "#{self.class}##{__method__} implementation not found.")
   end
 
@@ -99,30 +101,6 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
   # A load agent is neither a "slave" nor a "master"
   def master?
     false
-  end
-
-  def self.to_text_table(project)
-
-    terminal_table = Terminal::Table.new()
-    terminal_table.title = 'Active Load Agents'
-    terminal_table.headings = ['Cluster', 'JMeter Plan', 'IP Address', 'JMeter PID']
-    project.clusters.each do |cluster|
-      cluster.clusterables.each do |clusterable|
-        clusterable.load_agents
-                   .where(:active => true)
-                   .each do |load_agent|
-
-          terminal_table.add_row([
-              load_agent.clusterable.class.name.demodulize.tableize.singularize,
-              load_agent.jmeter_plan.test_plan_name,
-              load_agent.public_ip_address,
-              load_agent.jmeter_pid
-                                 ])
-        end
-      end
-    end
-
-    return terminal_table
   end
 
 #######################  PROTECTED METHODS #################################
@@ -198,9 +176,6 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
     self.clusterable.after_destroy_load_agent(self)
   end
 
-  def command
-    Hailstorm.application.command_processor
-  end
   
   
 end

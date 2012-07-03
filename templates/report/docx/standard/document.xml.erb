@@ -95,16 +95,18 @@
 			<w:r>
 				<w:lastRenderedPageBreak />
 				<w:t>Introduction</w:t>
-			</w:r>
+			</w:r>l
 			<w:bookmarkEnd w:id="1" />
 		</w:p>
 		<w:p w:rsidR="00C35BF0" w:rsidRDefault="00C35BF0" w:rsidP="00C35BF0">
 			<w:r>
-				<w:t xml:space="preserve">This report documents the performance characteristics of the <%= @report.title %> application. A comparison of response times and load metrics on application infrastructure for all tests is followed by a detailed analysis for each test.</w:t>
+				<w:t>
+				    <%= render :partial => 'introduction', :locals => {:report => @report}%>
+				</w:t>
 			</w:r>
 		</w:p>
 		<%= render :partial => 'workload_definition', :locals => {:jmeter_plans => @report.jmeter_plans} %>
-        <%= render :partial => 'workload_iterations', :locals => {:test_summary_rows => @report.test_summary_rows} %>
+        <%= render :partial => 'workload_iterations', :locals => {:report => @report} %>
 		<%= render :partial => 'test_environment', :locals => {:report => @report} %>
 		<%= render :partial => 'response_vs_users', :locals => {:report => @report} %>
 		<%= render :partial => 'app_infra_vs_users', :locals => {:report => @report} %>

@@ -28,17 +28,25 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   def collect_client_stats(cluster_instance)
     
     logger.debug { "#{self.class}.#{__method__}" }
-    return if command.aborted?
-        
-    jmeter_plan_results_map = {}    
+
+    jmeter_plan_results_map = {}
+    result_mutex = Mutex.new()
+    llp = local_log_path()
+
     cluster_instance.master_agents.where(:active => true).each do |agent|
-      result_file_name =  agent.result_for(self, local_log_path)
-      result_file_path = File.join(local_log_path, result_file_name)
-      unless jmeter_plan_results_map.key?(agent.jmeter_plan_id)
-        jmeter_plan_results_map[agent.jmeter_plan_id] = []
+      Hailstorm::Support::Thread.start(agent) do |master|
+        result_file_name = master.result_for(self, llp)
+        result_file_path = File.join(llp, result_file_name)
+        result_mutex.synchronize do
+          unless jmeter_plan_results_map.key?(master.jmeter_plan_id)
+            jmeter_plan_results_map[master.jmeter_plan_id] = []
+          end
+          jmeter_plan_results_map[master.jmeter_plan_id].push(result_file_path)
+        end
       end
-      jmeter_plan_results_map[agent.jmeter_plan_id].push(result_file_path)
     end
+
+    Hailstorm::Support::Thread.join()
 
     jmeter_plan_results_map.keys.sort.each do |jmeter_plan_id|
 
@@ -53,8 +61,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   def collect_target_stats(target_host)
     
     logger.debug { "#{self.class}.#{__method__}" }
-    return if command.aborted?
-        
+
     # collect the remote logs
     log_file_names = target_host.download_remote_log(local_log_path)
     log_file_paths = nil
@@ -66,9 +73,9 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   end
 
   # @param [Hailstorm::Model::Project] project
-  def self.create_report(project)
+  def self.create_report(project, cycle_ids)
 
-    reported_execution_cyles = self.execution_cycles_for_report(project)
+    reported_execution_cyles = self.execution_cycles_for_report(project, cycle_ids)
 
     start_id = reported_execution_cyles.first.id
     end_id = reported_execution_cyles.last.id
@@ -139,18 +146,21 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     reports_path = File.join(Hailstorm.root, Hailstorm.reports_dir)
     report_file_name = "#{project.project_code}-#{start_id}-#{end_id}" # minus extn
 
-    builder.build(reports_path, report_file_name).tap do |path|
-      if Hailstorm.application.command_processor.report_finalize?
-        reported_execution_cyles.each do |execution_cycle|
-          execution_cycle.update_column(:status, 'reported')
-        end
-      end
-    end # returns path to generated file
+    builder.build(reports_path, report_file_name) # returns path to generated file
   end
 
-  def self.execution_cycles_for_report(project)
-    project.execution_cycles
-           .where(:status => States::STOPPED)
+  def self.execution_cycles_for_report(project, cycle_ids = nil)
+
+    conditions = nil
+    report_sequence_list = cycle_ids
+    if report_sequence_list.blank?
+      conditions = {:status => States::STOPPED} # all stopped tests unless specific sequence is needed
+    else
+      conditions = {:id => report_sequence_list}
+    end
+
+    project.execution_cycles()
+           .where(conditions)
            .order(:started_at)
            .all()
   end
@@ -242,14 +252,18 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     self.update_attribute(:status, States::TERMINATED)
   end
 
+  def reported!()
+    self.update_column(:status, States::REPORTED)
+  end
+
+  def excluded!()
+    self.update_column(:status, States::EXCLUDED)
+  end
+
   private
   
   def local_log_path
     @local_log_path ||= File.join(Hailstorm.root, Hailstorm.log_dir)
-  end
-  
-  def command
-    Hailstorm.application.command_processor
   end
 
   def reports_path
@@ -266,6 +280,8 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     STOPPED = :stopped
     ABORTED = :aborted
     TERMINATED = :terminated
+    REPORTED = :reported
+    EXCLUDED = :excluded
   end
 
 end

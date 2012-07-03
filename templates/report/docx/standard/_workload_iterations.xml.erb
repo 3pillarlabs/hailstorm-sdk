@@ -10,7 +10,7 @@
 </w:p>
 <w:p w:rsidR="00C35BF0" w:rsidRDefault="00C35BF0" w:rsidP="00C35BF0">
     <w:r>
-        <w:t>The workload was applied <%= test_summary_rows.size %> times. The following table shows JMeter plans, the test duration, total number of virtual users and monitored servers for each iteration.</w:t>
+        <w:t>The workload was applied <%= report.test_summary_rows.size %> times. The following table shows JMeter plans, the test duration<%= report.targets_by_role.empty? ? ' and' : ',' %> total number of virtual users<%= report.targets_by_role.empty? ? '' : ' and monitored servers for each iteration' %>.</w:t>
     </w:r>
 </w:p>
 <w:tbl>
@@ -25,7 +25,9 @@
     <w:gridCol w:w="2160"/>
     <w:gridCol w:w="1860"/>
     <w:gridCol w:w="1530"/>
+    <%- unless report.targets_by_role.empty? %>
     <w:gridCol w:w="3258"/>
+    <%- end %>
   </w:tblGrid>
   <w:tr w:rsidR="005A2513" w:rsidTr="009E24B2">
     <w:tc>
@@ -112,6 +114,7 @@
         </w:r>
       </w:p>
     </w:tc>
+    <%- unless report.targets_by_role.empty? %>
     <w:tc>
       <w:tcPr>
         <w:tcW w:w="3258" w:type="dxa"/>
@@ -133,8 +136,9 @@
         </w:r>
       </w:p>
     </w:tc>
+    <%- end %>
   </w:tr>
-  <%- test_summary_rows.each do |row| %>
+  <%- report.test_summary_rows.each do |row| %>
   <w:tr w:rsidR="005A2513" w:rsidTr="009E24B2">
     <w:tc>
       <w:tcPr>
@@ -178,6 +182,7 @@
         </w:r>
       </w:p>
     </w:tc>
+    <%- unless report.targets_by_role.empty? %>
     <w:tc>
       <w:tcPr>
         <w:tcW w:w="3258" w:type="dxa"/>
@@ -188,6 +193,7 @@
         </w:r>
       </w:p>
     </w:tc>
+    <%- end %>
   </w:tr>
   <%- end %>
 </w:tbl>

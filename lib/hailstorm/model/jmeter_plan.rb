@@ -27,7 +27,9 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   before_save :set_content_hash, :if => proc {|r| r.active?}
   
   after_update :disable_load_agents, :unless => proc {|r| r.active?}
-  
+
+  scope :active, where(:active => true)
+
   PropertyNameRexp = Regexp.new('^\$\{__(?:P|property)\((?:\'|")?(.+?)(?:\'|")?\)\}$')
   
   JtlFileExtn = 'jtl'
@@ -318,20 +320,6 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     'jmeter'
   end
 
-  # Active Jmeter plans in project
-  # @param [Hailstorm::Model::Project] project
-  # @return [Terminal::Table]
-  def self.to_text_table(project)
-
-    terminal_table = Terminal::Table.new()
-    terminal_table.title = 'Active JMeter Plans'
-    terminal_table.headings = ['Name', 'Properties']
-    terminal_table.rows = project.jmeter_plans
-                                 .where(:active => true)
-                                 .collect {|e| [e.test_plan_name, e.properties]}
-    return terminal_table
-  end
-
   # Parses the associated test plan and returns the test plan comment
   # @return [String]
   def plan_description()
@@ -402,6 +390,10 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     end
 
     return @scenario_definitions
+  end
+
+  def properties_map
+    @properties_map ||= JSON.parse(self.properties)
   end
 
 ########################## PRIVATE METHODS ##################################
@@ -580,11 +572,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     rexp_matcher = PropertyNameRexp.match(property_content.strip)
     rexp_matcher.nil? ? nil : rexp_matcher[1]
   end
-  
-  def properties_map
-    @properties_map ||= JSON.parse(self.properties)
-  end
-  
+
   # extracts all property names from the file and returns Array
   def extracted_property_names
     

@@ -14,7 +14,11 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
   has_many :target_stats
 
   validates :host_name, :role_name, :presence => true, :if => proc {|r| r.active? }
- 
+
+  scope :active, where(:active => true)
+
+  scope :natural_order, order('role_name')
+
   # require & create the class
   # @param [String] monitor_type fully qualified type of monitor
   # @return [Class] class from monitor_type     
@@ -99,15 +103,17 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
 
   # Calls #stop_monitoring() and persists state changes. After changes are
   # persisted, calls ExecutionCycle#collect_target_stats.
-  def call_stop_monitoring()
+  def call_stop_monitoring(aborted = false)
     
     begin
       stop_monitoring()
       self.save!()
       logger.info "Monitoring stopped at #{self.host_name}"
-      logger.info "Collecting usage data from #{self.host_name}..."
-      self.project.current_execution_cycle.collect_target_stats(self)      
-      
+      unless aborted
+        logger.info "Collecting usage data from #{self.host_name}..."
+        self.project.current_execution_cycle.collect_target_stats(self)
+      end
+
     rescue StandardError => e
       logger.error(e.message)
       raise
@@ -116,11 +122,11 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
 
   # Stops monitoring on all target hosts. Each target_host is stopped in a new
   # thread. Blocks till all threads are done.
-  def self.stop_all_monitoring(project)
+  def self.stop_all_monitoring(project, aborted = false)
 
     logger.debug { "#{self}.#{__method__}" }
     moniterables(project).each do |target_host|
-      Hailstorm::Support::Thread.start(target_host) {|t| t.call_stop_monitoring()}
+      Hailstorm::Support::Thread.start(target_host) {|t| t.call_stop_monitoring(aborted)}
     end
 
     Hailstorm::Support::Thread.join()
@@ -184,34 +190,6 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
     end
   end
 
-  def self.to_text_table(project)
-
-    active_target_hosts = project.target_hosts.where(:active => true).all()
-    unless active_target_hosts.empty?
-      terminal_table = Terminal::Table.new()
-      terminal_table.title = 'Active Target Hosts'
-      terminal_table.headings = ['Host', 'Role', 'Monitor', 'Executable', 'PID',
-                                 'Interval', 'SSH Identity', 'User']
-
-      active_target_hosts.each do |target_host|
-        terminal_table.add_row([
-                                   target_host.host_name,
-                                   target_host.role_name,
-                                   target_host.class.name.demodulize.tableize.singularize,
-                                   target_host.executable_path,
-                                   target_host.executable_pid,
-                                   target_host.sampling_interval,
-                                   target_host.ssh_identity,
-                                   target_host.user_name
-                               ])
-      end
-
-      terminal_table
-    else
-      ""
-    end
-  end
-
   protected
 
   # Returns an identifier which is unique for current execution cycle. Can
@@ -230,5 +208,12 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
         "host_%s-%d", self.host_name.gsub(/\./, '_'),
         self.project.current_execution_cycle.id)
   end
+
+  private
+
+  def command
+    Hailstorm.application.command_processor
+  end
+
 
 end

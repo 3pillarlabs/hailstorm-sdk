@@ -44,7 +44,7 @@ module Hailstorm::Behavior::Clusterable
   end
 
   # Implement to return JSON of attributes to display in a report.
-  # @retutn [String] JSON of attributes
+  # @retutn [Hash] attributes
   # @abstract
   def public_properties()
     raise(StandardError, "#{self.class}##{__method__} implementation not found.")
@@ -78,7 +78,8 @@ module Hailstorm::Behavior::Clusterable
   end
   
   # Implement this method to perform additional tasks after stopping load generation.
-  def after_stop_load_generation()
+  # @param [Hash] options
+  def after_stop_load_generation(options = nil)
     # override and do something appropriate.
   end
   
@@ -137,113 +138,14 @@ module Hailstorm::Behavior::Clusterable
                            
     recipient.after_commit(:disable_agents, :unless => proc {|r| r.active?}, :on => :update)
   end  
-  
-  # Launch new instances or bring down instances based on number of instances needed
-  def provision_agents()
-    
-    logger.debug { "#{self.class}##{__method__}" }
-
-    self.project.jmeter_plans.where(:active => true).each do |jmeter_plan|
-
-      common_attributes = {
-        :jmeter_plan_id => jmeter_plan.id,
-        :active => true
-      }
-      
-      required_count = jmeter_plan.required_load_agent_count()
-      
-      # proc to handle common operations
-      provisoner = proc do |relation|
-        # count of active agents
-        active_count = self.send(relation)
-                           .where(common_attributes)
-                           .all()
-                           .count()
-        
-        activate_count = required_count - active_count
-
-        activate_count.times do # block wont execute if activate_count <= 0
-
-          # is there an inactive agent? if yes, activate it, or, create new
-          agent = self.send(relation)
-                      .where(common_attributes.merge(:active => false))
-                      .first_or_initialize(:active => true)
-          if agent.new_record?
-            agent.save!
-          else
-            agent.update_column(:active, true)
-          end
-          #Hailstorm::Support::Thread.start(common_attributes, relation) do |attr, rel|
-          #  # is there an inactive agent? if yes, activate it, or, create new
-          #  agent = self.send(rel)
-          #              .where(attr.merge(:active => false))
-          #              .first_or_initialize(:active => true)
-          #  if agent.new_record?
-          #    agent.save!
-          #  else
-          #    agent.update_column(:active, true)
-          #  end
-          #end
-        end
-
-        #Hailstorm::Support::Thread.join() # wait for agents to be created
-  
-        if activate_count < 0
-          self.send(relation)
-              .where(common_attributes)
-              .limit(activate_count.abs)
-              .each do |agent|
-          
-            agent.update_column(:active, false)
-          end 
-        end
-      end 
-      
-      if self.project.master_slave_mode?
-        query = self.master_agents
-                    .where(:jmeter_plan_id => jmeter_plan.id)
-              
-        # abort if more than 1 master agent is present
-        if query.all.count > 1
-          raise(Hailstorm::Exception,
-                "You have switched on master slave mode, please terminate current cycle first")
-        end
-        
-        # one master is necessary
-        query.first_or_create!()
-             .tap {|agent| agent.update_column(:active, true)}
-        
-        provisoner.call(:slave_agents) if required_count > 1 
-        
-      else # not operating in master-slave mode
-        # abort if slave agents are present
-        slave_agents_count = self.slave_agents
-                                 .where(:jmeter_plan_id => jmeter_plan.id)
-                                 .all.count()
-        if slave_agents_count > 0
-          raise(Hailstorm::Exception,
-                "You have switched off master slave mode, please terminate current cycle first")
-        end
-        
-        provisoner.call(:master_agents)        
-      end
-    end
-  end
-  
-  # disable all associated load_agents
-  def disable_agents
-
-    logger.debug { "#{self.class}##{__method__}" }
-    self.load_agents.each {|agent| agent.update_column(:active, false)}    
-  end
 
   # Start JMeter slaves on load agents
-  def start_slave_process()
+  def start_slave_process(redeploy = false)
     
     logger.debug { "#{self.class}##{__method__}" }
     self.slave_agents.where(:active => true).each do |agent|
       Hailstorm::Support::Thread.start(agent) do |a|
-        a.upload_scripts(Hailstorm.application.command_processor.redeploy?)
+        a.upload_scripts(redeploy)
         a.start_jmeter()
       end
     end
@@ -251,12 +153,12 @@ module Hailstorm::Behavior::Clusterable
   end
   
   # Start JMeter master on load agents
-  def start_master_process()
+  def start_master_process(redeploy = false)
     
     logger.debug { "#{self.class}##{__method__}" }
     self.master_agents.where(:active => true).each do |agent|
       Hailstorm::Support::Thread.start(agent) do |a|
-        a.upload_scripts(Hailstorm.application.command_processor.redeploy?)
+        a.upload_scripts(redeploy)
         a.start_jmeter()  
       end
     end
@@ -264,12 +166,12 @@ module Hailstorm::Behavior::Clusterable
     Hailstorm::Support::Thread.join()
   end
   
-  def stop_master_process()
+  def stop_master_process(wait = false, aborted = false)
 
     logger.debug { "#{self.class}##{__method__}" }
     self.master_agents.where(:active => true).each do |master|
       Hailstorm::Support::Thread.start(master) do |m|
-        m.stop_jmeter()
+        m.stop_jmeter(wait, aborted)
       end
     end
 
@@ -310,5 +212,97 @@ module Hailstorm::Behavior::Clusterable
 
     return running_agents
   end
+
+  private
+
+  # Launch new instances or bring down instances based on number of instances needed
+  def provision_agents()
+
+    logger.debug { "#{self.class}##{__method__}" }
+
+    self.project.jmeter_plans.where(:active => true).each do |jmeter_plan|
+
+      common_attributes = {
+          :jmeter_plan_id => jmeter_plan.id,
+          :active => true
+      }
+
+      required_count = jmeter_plan.required_load_agent_count()
+
+      if self.project.master_slave_mode?
+        query = self.master_agents
+        .where(:jmeter_plan_id => jmeter_plan.id)
+
+        # abort if more than 1 master agent is present
+        if query.all.count > 1
+          raise(Hailstorm::Exception,
+                "You have switched on master slave mode, please terminate current cycle first")
+        end
+
+        # one master is necessary
+        query.first_or_create!()
+        .tap {|agent| agent.update_column(:active, true)}
+
+        if required_count > 1
+          create_or_enable(common_attributes, required_count, :slave_agents)
+        end
+
+      else # not operating in master-slave mode
+           # abort if slave agents are present
+        slave_agents_count = self.slave_agents
+        .where(:jmeter_plan_id => jmeter_plan.id)
+        .all.count()
+        if slave_agents_count > 0
+          raise(Hailstorm::Exception,
+                "You have switched off master slave mode, please terminate current cycle first")
+        end
+
+        create_or_enable(common_attributes, required_count, :master_agents)
+      end
+    end
+  end
+
+  # Creates master/slave agents based on the relation
+  def create_or_enable(attributes, required_count, relation)
+
+    # count of active agents
+    active_count = self.send(relation).where(attributes).all().count()
+
+    activate_count = required_count - active_count
+
+    activate_count.times do # block wont execute if activate_count <= 0
+
+                            # is there an inactive agent? if yes, activate it, or, create new
+      agent = self.send(relation)
+      .where(attributes.merge(:active => false))
+      .first_or_initialize(:active => true)
+      if agent.new_record?
+        Hailstorm::Support::Thread.start(agent) do |agent_instance|
+          agent_instance.save!
+        end
+      else
+        agent.update_column(:active, true)
+      end
+    end
+
+    Hailstorm::Support::Thread.join() # wait for agents to be created
+
+    if activate_count < 0
+      self.send(relation)
+      .where(attributes)
+      .limit(activate_count.abs).each do |agent|
+
+        agent.update_column(:active, false)
+      end
+    end
+  end
+
+  # disable all associated load_agents
+  def disable_agents
+
+    logger.debug { "#{self.class}##{__method__}" }
+    self.load_agents.each {|agent| agent.update_column(:active, false)}
+  end
+
 
 end
