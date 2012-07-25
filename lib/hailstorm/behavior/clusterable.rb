@@ -103,7 +103,14 @@ module Hailstorm::Behavior::Clusterable
   def ssh_options()
     {} # override and do something appropriate.
   end
-  
+
+  # Implement this method to perform house keeping activities after
+  # all load agents have been destroyed. This method is call right after the
+  # call to <tt>destory_all_agents()</tt> method.
+  def cleanup()
+    # override and do something appropriate.
+  end
+
   # Assumes a standard Linux OS where user home is at /home. If the clusterable
   # uses a different OS or setting, override this method.
   # @return [String] user home directory

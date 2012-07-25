@@ -161,6 +161,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     logger.debug { "#{self.class}##{__method__}" }
     self.clusterables.each do |cluster_instance|
       cluster_instance.destroy_all_agents()
+      cluster_instance.cleanup()
     end
   end
 
