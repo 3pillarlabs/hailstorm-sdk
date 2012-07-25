@@ -30,7 +30,14 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
 
   scope :active, where(:active => true)
 
-  PropertyNameRexp = Regexp.new('^\$\{__(?:P|property)\((?:\'|")?(.+?)(?:\'|")?\)\}$')
+  # Regular expression to match property names, always only matching the name
+  # Examples of matches:
+  #   ${__property(a)}
+  #   ${_P(a)}
+  #   ${__property(a, 1)}
+  # In all cases above the regular expression will yield 'a' as the first (and only)
+  # subgroup.
+  PropertyNameRexp = Regexp.new('^\$\{__(?:P|property)\((.+?)(?:\)|\s*,\s*(?:.+?)\))\}$')
   
   JtlFileExtn = 'jtl'
   
@@ -573,18 +580,35 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     rexp_matcher.nil? ? nil : rexp_matcher[1]
   end
 
-  # extracts all property names from the file and returns Array
+  # extracts all property names from the file and returns Array.
+  # XPATH implementation: Search for all nodes with content the constains "${__".
+  # For each such node, check if content matches PropertyNameRexp, if it matches,
+  # traverse up the node hierarchy to find a parent ThreadGroup. If parent ThreadGroup
+  # is not found or parent Threadgroup is found with enabled attribute to true, add the
+  # property name to the @extracted_property_names array.
   def extracted_property_names
     
+    # Implemented XPATH lookup to fix Research-552
     if @extracted_property_names.nil?
-      rexp = Regexp.compile('\$\{__(?:P|property)\((?:\'|")?(.+?)(?:\'|")?\)\}')
       @extracted_property_names = []
-      File.read(test_plan_file_path).scan(rexp) do |match|
-        @extracted_property_names.push(match.first)
+      jmeter_document do |doc|
+        doc.xpath('//*[contains(text(),"${__")]').each do |prop_element|
+          match_data = PropertyNameRexp.match(prop_element.content)
+          unless match_data.nil?
+            property_name = match_data[1]
+            parent_thread_group = prop_element.ancestors('ThreadGroup')
+                                              .first()
+
+            if parent_thread_group.nil? or (eval(parent_thread_group["enabled"]) rescue false)
+              @extracted_property_names.push(property_name)
+            end
+          end
+        end
       end
     end
-    @extracted_property_names
+
+    return @extracted_property_names
   end
 
-  
+
 end
