@@ -2,6 +2,11 @@ Active JMeter Plans
 ===============================================================================
 <%- @jmeter_plans.each_with_index do |plan, index| %>
 <%= index + 1%>] <%= plan.name %>
-<%= plan.properties_table() %>
+  Properties (name = value)
+  --------------------------------------------------------------------------
+  <%- plan.properties.each do |name, value| %>
+  <%= name %> = <%= value %>
+  ..........................................................................
+  <%- end %>
 
 <%- end %>
