@@ -54,11 +54,12 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       else
         logger.info("Starting new agent on #{self.region}...")
         agent_ec2_instance = ec2.instances.create(
-          :image_id => self.agent_ami,
-          :availability_zone => self.zone,
+          {:image_id => self.agent_ami,
           :key_name => self.ssh_identity,
           :security_groups => self.security_group.split(/\s*,\s*/),
-          :instance_type => self.instance_type
+          :instance_type => self.instance_type}.merge(
+              self.zone.nil? ? {} : {:availability_zone => self.zone}
+          )
         )
         sleep(DozeTime) until agent_ec2_instance.status.eql?(:running)
       end
@@ -236,13 +237,12 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         security_group = find_or_create_security_group()
         
         # Launch base AMI
-        clean_instance = ec2.instances.create(
+        clean_instance = ec2.instances.create({
           :image_id => base_ami(),
-          :availability_zone => self.zone,
           :key_name => self.ssh_identity,
           :security_groups => [security_group.name],
           :instance_type => self.instance_type
-        )
+        }.merge(self.zone.nil? ? {} : {:availability_zone => self.zone}))
         sleep(DozeTime) until clean_instance.status.eql?(:running)
         
         begin
@@ -407,13 +407,16 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   end
 
   # Sets the first available zone based on configured region
+  # only if the project is configured in master slave mode
   def set_availability_zone()
 
     logger.debug { "#{self.class}##{__method__}" }
-    ec2.availability_zones.each do |z|
-      if z.state == :available
-        self.zone = z.name
-        break
+    if self.project.master_slave_mode?
+      ec2.availability_zones.each do |z|
+        if z.state == :available
+          self.zone = z.name
+          break
+        end
       end
     end
   end
