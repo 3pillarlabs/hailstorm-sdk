@@ -152,6 +152,14 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     Hailstorm::Model::Cluster.check_status(self)
   end
 
+  # Returns an array of load_agents as recorded in the database
+  def load_agents()
+
+    self.clusters()
+        .reduce([]) {|acc, e| acc.push(*e.clusterables(true))}
+        .reduce([]) {|acc, e| acc.push(*e.load_agents)}
+  end
+
 ###################### PRIVATE METHODS #######################################
   private
 

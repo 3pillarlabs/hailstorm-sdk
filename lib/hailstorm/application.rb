@@ -34,6 +34,7 @@ class Hailstorm::Application
   # Constructor
   def initialize
     @multi_threaded = true
+    @exit_command_counter = 0
   end
 
   # Initializes the application - creates directory structure and support files
@@ -60,7 +61,21 @@ class Hailstorm::Application
     # for IRB like shell, save state for later execution
     shell_binding = FreeShell.new.get_binding()
 
-    while command = Readline.readline("hs > ", true)
+    while @exit_command_counter >= 0
+
+      command = Readline.readline("hs > ", true)
+
+      # process EOF (Control+D)
+      if command.nil?
+        unless exit_ok?
+          @exit_command_counter += 1
+          puts "You have running load agents: terminate first or quit/exit explicitly"
+        else
+          puts "Bye"
+          @exit_command_counter = -1
+        end
+      end
+
       # skip empty lines
       if command.blank?
         Readline::HISTORY.pop
@@ -428,15 +443,27 @@ class Hailstorm::Application
     print self.send("#{help_on}_options")
   end
 
+  # Checks if there are no unterminated load_agents.
+  # @return [Boolean] true if there are no unterminated load_agents
+  def exit_ok?
+    current_project.load_agents().empty?
+  end
+
   # Interpret the command (parse & execute)
   # @param [String] command
   def interpret_command(command)
 
     if [:exit, :quit].include?(command.to_sym)
-      puts "Bye"
-      exit(0)
+      if @exit_command_counter == 0 and !exit_ok?
+        @exit_command_counter += 1
+        puts "You have running load agents: terminate first or #{command} again"
+      else
+        puts "Bye"
+        @exit_command_counter = -1 # "express" exit
+      end
 
     else
+      @exit_command_counter = 0 # reset exit intention
       match_data = nil
       grammar().each do |rule|
         match_data = rule.match(command)
@@ -529,12 +556,7 @@ class Hailstorm::Application
     current_project.jmeter_plans.active.each do |jmeter_plan|
       plan = OpenStruct.new
       plan.name = jmeter_plan.test_plan_name
-      plan.properties_table = Terminal::Table.new()
-      plan.properties_table.title = 'Properties'
-      plan.properties_table.headings = jmeter_plan.properties_map.keys
-      plan.properties_table.rows = [jmeter_plan.properties_map()
-                                              .keys()
-                                              .collect {|k| jmeter_plan.properties_map[k]}]
+      plan.properties = jmeter_plan.properties_map()
       jmeter_plans.push(plan)
     end
     render_view('jmeter_plan', :jmeter_plans => jmeter_plans)

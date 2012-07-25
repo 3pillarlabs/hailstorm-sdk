@@ -24,8 +24,13 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     @cluster_klass
   end
 
-  def clusterables()
-    cluster_klass.where(:project_id => self.project.id, :active => true)
+  # Pass all = true to get all clusterables, where active or inactive.
+  # Default value is false, which means only active clusterables are returned.
+  # @param [Boolean] all
+  # @return [Array]
+  def clusterables(all = false)
+    cluster_klass.where(
+        {:project_id => self.project.id}.merge(all ? {} : {:active => true}))
   end
 
   # Configures the cluster implementation for use
