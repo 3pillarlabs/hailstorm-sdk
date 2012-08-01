@@ -126,13 +126,6 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
     page_labels = self.page_stats()
                       .collect(&:page_label)
-                      .inject([]) do |acc, e|
-      # resolving duplicate page labels, fix for #Research-562
-      if acc.include?(e)
-        e = "#{e}-#{acc.grep(e).length}"
-      end
-      acc.push(e)
-    end
 
     response_times = self.page_stats.collect {|e|
       [e.minimum_response_time, e.maximum_response_time,
@@ -243,11 +236,14 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     end
 
     # @overrides Nokogiri::XML::SAX::Document#start_element()
+    # @param [String] name
+    # @param [Array] attrs
     def start_element(name, attrs = [])
 
-      if @level == 1 and name == 'httpSample' # don't collect sub-samples
+      # check for level 1 because we don't collect sub-samples
+      if @level == 1 and %w(httpSample sample).include?(name)
         attrs_map = Hash[attrs] # convert array of 2 element arrays to Hash
-        label = attrs_map['lb']
+        label = attrs_map['lb'].strip()
         unless @page_stats_map.has_key?(label)
           @page_stats_map[label] = @stat_klass.new(:page_label => label,
                                                    :client_stat_id => @client_stat.id)
