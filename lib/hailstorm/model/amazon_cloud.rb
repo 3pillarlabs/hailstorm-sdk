@@ -136,10 +136,14 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   def before_destroy_load_agent(load_agent)
     
     logger.debug { "#{self.class}##{__method__}" }
-    logger.info("Terminating agent##{load_agent.identifier}...")
     agent_ec2_instance = ec2.instances[load_agent.identifier]
-    agent_ec2_instance.terminate()
-    sleep(DozeTime) until agent_ec2_instance.status.eql?(:terminated)
+    if agent_ec2_instance.exists?
+      logger.info("Terminating agent##{load_agent.identifier}...")
+      agent_ec2_instance.terminate()
+      sleep(DozeTime) until agent_ec2_instance.status.eql?(:terminated)
+    else
+      logger.warn("Agent ##{load_agent.identifier} does not exist on EC2")
+    end
   end
 
   # Delete SSH key-pair and identity once all load agents have been terminated
