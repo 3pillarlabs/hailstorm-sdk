@@ -84,7 +84,8 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
     client_stat.save!
 
-    File.unlink(stat_file_path) # remove file
+    # remove file
+    File.unlink(stat_file_path) if Hailstorm.env == :production
   end
 
   # Combines two or more JTL files to create new JTL file with combined stats.
@@ -123,7 +124,15 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   # @return [String] path to generated image
   def aggregate_graph()
 
-    page_labels = self.page_stats.collect(&:page_label)
+    page_labels = self.page_stats()
+                      .collect(&:page_label)
+                      .inject([]) do |acc, e|
+      # resolving duplicate page labels, fix for #Research-562
+      if acc.include?(e)
+        e = "#{e}-#{acc.grep(e).length}"
+      end
+      acc.push(e)
+    end
 
     response_times = self.page_stats.collect {|e|
       [e.minimum_response_time, e.maximum_response_time,
