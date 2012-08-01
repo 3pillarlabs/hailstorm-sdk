@@ -186,7 +186,9 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
 
     # remove log files
     unless log_file_paths.nil?
-      log_file_paths.each {|f| File.unlink(f) }
+      if Hailstorm.env == :production
+        log_file_paths.each {|f| File.unlink(f) }
+      end
     end
   end
 
