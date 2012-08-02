@@ -259,6 +259,10 @@ class Hailstorm::Support::ReportBuilder
       builder.images.push(self)
     end
 
+    def exists?
+      self.image_path.blank? ? false : true
+    end
+
   end
 
   def build(reports_path, report_file_name)
