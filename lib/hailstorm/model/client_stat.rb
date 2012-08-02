@@ -96,21 +96,26 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   # @return [String] path to new file
   def self.combine_stats(stat_file_paths, execution_cycle_id, jmeter_plan_id)
 
+    xml_decl = '<?xml version="1.0" encoding="UTF-8"?>'
+    test_results_start_tag = '<testResults version="1.2">'
+    test_results_end_tag = '</testResults>'
     combined_file_path = File.join(Hailstorm.root, Hailstorm.log_dir,
       "results-#{execution_cycle_id}-#{jmeter_plan_id}-all.jtl")
     File.open(combined_file_path, 'w') do |combined_file|
-      combined_file.puts '<?xml version="1.0" encoding="UTF-8"?>'
-      combined_file.puts '<testResults version="1.2">'
+      combined_file.puts xml_decl
+      combined_file.puts test_results_start_tag
 
       stat_file_paths.each do |file_path|
         File.open(file_path, 'r') do |file|
           file.each_line do |line|
-            combined_file.print(line) unless line['httpSample'].nil?
+            if line[xml_decl].nil? and line[test_results_start_tag].nil? and line[test_results_end_tag].nil?
+              combined_file.print(line)
+            end
           end
         end
       end
 
-      combined_file.puts '</testResults>'
+      combined_file.puts test_results_end_tag
     end
 
     # remove individual files
