@@ -68,8 +68,14 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       end
       self.current_execution_cycle.set_started_at(Time.now)
 
-      Hailstorm::Model::TargetHost.monitor_all(self)
-      Hailstorm::Model::Cluster.generate_all_load(self, redeploy)
+      begin
+        Hailstorm::Model::TargetHost.monitor_all(self)
+        Hailstorm::Model::Cluster.generate_all_load(self, redeploy)
+      rescue
+        self.current_execution_cycle.aborted!
+        raise
+      end
+
     else
       # if one exists, user must stop/abort it first
       raise(Hailstorm::Exception,
@@ -97,10 +103,9 @@ class Hailstorm::Model::Project < ActiveRecord::Base
           current_execution_cycle.aborted!
         end
 
-      rescue Hailstorm::Exception => ex
-        # raised by stop_load_generation if load generation could not be stopped
-        # on any agent
-        logger.warn(ex.message)
+      rescue
+        current_execution_cycle.aborted!
+        raise
       end
     else
       raise(Hailstorm::Exception, "Nothing to stop... no tests running")
