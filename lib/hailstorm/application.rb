@@ -5,6 +5,7 @@
 # @author Sayantam Dey
 
 require 'readline'
+require 'terminal-table'
 
 require 'hailstorm'
 require 'hailstorm/exceptions'
