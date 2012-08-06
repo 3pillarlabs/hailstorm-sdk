@@ -417,11 +417,11 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   
   def java_download_url()
     @java_download_url ||= s3_bucket().objects[java_download_file_path()]
-                                      .url_for(:read)    
+                                      .public_url(:secure => false)
   end
   
   def jmeter_download_url()
-    @jmeter_download_url ||= jmeter_s3_object().url_for(:read)
+    @jmeter_download_url ||= jmeter_s3_object().public_url(:secure => false)
   end
 
   def jmeter_s3_object()
