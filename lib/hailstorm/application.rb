@@ -28,7 +28,7 @@ class Hailstorm::Application
     Hailstorm.app_name = app_name
     Hailstorm.root = File.expand_path("../..", boot_file_path)
     Hailstorm.application = self.new
-    Hailstorm.application.load_config()
+    Hailstorm.application.load_config(true)
     Hailstorm.application.connect_to_database()
   end
 
@@ -168,10 +168,19 @@ class Hailstorm::Application
     end
   end
 
-  def load_config()
-    @config = nil
-    load(File.join(Hailstorm.root, Hailstorm.config_dir, 'environment.rb'))
-    @config.freeze()
+  def load_config(handle_load_error = false)
+
+    begin
+      @config = nil
+      load(File.join(Hailstorm.root, Hailstorm.config_dir, 'environment.rb'))
+      @config.freeze()
+    rescue Object => e
+      if handle_load_error
+        logger.error("[FAILED] #{e.message()}")
+      else
+        raise(Hailstorm::Exception, e.message())
+      end
+    end
   end
   alias :reload :load_config
 
