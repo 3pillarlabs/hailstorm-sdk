@@ -160,11 +160,15 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
                          .collect {|json| JSON.parse(json).collect {|e| e['p'].to_f}}
                          .transpose()
 
+    error_percentages = self.page_stats()
+                            .collect(&:percentage_errors)
+
     grapher = com.brickred.tsg.hailstorm.AggregateGraph.new(aggregate_graph_path)
     grapher.setPages(page_labels)
            .setResponseTimes(response_times)
            .setThresholdTitles(threshold_titles)
            .setThresholdData(threshold_data)
+           .setErrorPercentages(error_percentages)
            .create() # <-- returns path to generated image
   end
 
