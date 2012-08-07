@@ -74,7 +74,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
         jmx = File.join(Hailstorm.root, Hailstorm.app_dir,
                           plan.gsub(/\.jmx$/, '').concat('.jmx'))
         if File.exists?(jmx)
-          test_plans.push(plan)
+          test_plans.push(plan.gsub(/\.jmx$/, ''))
         else
           not_found.push(jmx)
         end
