@@ -23,7 +23,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   before_create :set_availability_zone, :if => proc {|r| r.zone.blank?}
 
   before_update :dirty_region_check, :create_agent_ami
-  
+
+  after_destroy :cleanup
+
   # Seconds between successive EC2 status checks 
   DozeTime = 5
   
