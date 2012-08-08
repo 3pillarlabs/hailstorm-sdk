@@ -42,8 +42,9 @@ class Hailstorm::Support::Configuration
       
       if block_given?
         if options.key?(:test_plan)
-          @properties[:test_plan][options[:test_plan]] = {}
-          yield @properties[:test_plan][options[:test_plan]]
+          test_plan_name = options[:test_plan].gsub(/\.jmx$/, '')
+          @properties[:test_plan][test_plan_name] = {}
+          yield @properties[:test_plan][test_plan_name]
         else
           yield @properties[:all]
         end
