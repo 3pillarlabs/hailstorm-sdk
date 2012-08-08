@@ -80,7 +80,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
         end
       end
       unless not_found.empty?
-        raise(StandardError, "not all test plans found:\n#{not_found.join("\n")}")
+        raise(Hailstorm::Exception, "not all test plans found:\n#{not_found.join("\n")}")
       end
     end
     
