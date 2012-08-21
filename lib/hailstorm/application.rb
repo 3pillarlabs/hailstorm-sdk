@@ -27,6 +27,21 @@ class Hailstorm::Application
     
     Hailstorm.app_name = app_name
     Hailstorm.root = File.expand_path("../..", boot_file_path)
+    # set JAVA classpath
+    # Add config/log4j.xml if it exists
+    custom_log4j = File.join(Hailstorm.root, Hailstorm.config_dir, 'log4j.xml')
+    if File.exists?(custom_log4j)
+      $CLASSPATH << custom_log4j
+    end
+    # Add all Java Jars to classpath
+    java_lib = File.expand_path('../java/lib', __FILE__)
+    $CLASSPATH << java_lib
+    Dir[File.join(java_lib, '*.jar')].each do |jar|
+      require(jar)
+    end
+    java.lang.System.setProperty("hailstorm.log.dir",
+                                 File.join(Hailstorm.root, Hailstorm.log_dir))
+
     Hailstorm.application = self.new
     Hailstorm.application.load_config(true)
     Hailstorm.application.connect_to_database()
@@ -53,6 +68,7 @@ class Hailstorm::Application
   # Processes the user commands and options
   def process_commands
 
+    logger.debug { ["\n", '*' * 80, "Application started at #{Time.now.to_s}", '-' * 80].join("\n") }
     # reload commands from saved history if such file exists
     reload_saved_history()
 
@@ -112,20 +128,21 @@ class Hailstorm::Application
         end
 
       rescue Hailstorm::Exception => hailstorm_exception
-        puts "[FAILED] #{hailstorm_exception.message}"
+        logger.error hailstorm_exception.message()
 
       rescue Hailstorm::Error => hailstorm_error
-        puts "[FAILED] #{hailstorm_error.cause.message}"
+        logger.error hailstorm_error.cause.message()
         logger.debug { "\n".concat(hailstorm_error.cause.backtrace.join("\n")) }
 
       rescue StandardError => uncaught
-        puts uncaught.message
-        puts "\n".concat(uncaught.backtrace.join("\n"))
+        logger.error uncaught.message
+        logger.debug { "\n".concat(uncaught.backtrace.join("\n")) }
       end
 
       save_history(command)
     end
     puts ""
+    logger.debug { ["\n", '-' * 80, "Application ended at #{Time.now.to_s}", '*' * 80].join("\n") }
   end
 
   def multi_threaded?
@@ -176,7 +193,7 @@ class Hailstorm::Application
       @config.freeze()
     rescue Object => e
       if handle_load_error
-        logger.error("[FAILED] #{e.message()}")
+        logger.fatal(e.message())
       else
         raise(Hailstorm::Exception, e.message())
       end
@@ -486,16 +503,8 @@ class Hailstorm::Application
                                 .slice(2, match_data.length - 1)
                                 .compact()
                                 .collect(&:strip)
-        if method_name == :verbose
-          if 'on' == method_args.first
-            Hailstorm.logger.level = Logger::DEBUG
-          else
-            Hailstorm.logger.level = Logger::INFO
-          end
-        else
-          # defer to application for further processing
-          self.send(method_name, *method_args)
-        end
+        # defer to application for further processing
+        self.send(method_name, *method_args)
       else
         raise(UnknownCommandException, "#{command} is unknown")
       end
@@ -514,7 +523,6 @@ class Hailstorm::Application
         Regexp.new('^(results)(\s+show|\s+exclude|\s+include|\s+report)?(\s+[\d,\-]+)?$'),
         Regexp.new('^(purge)(\s+tests|\s+all)?$'),
         Regexp.new('^(show)(\s+jmeter|\s+cluster|\s+monitor|\s+all)?$'),
-        Regexp.new('^(verbose)\s+(on|off)$'),
         Regexp.new('^(terminate)$'),
         Regexp.new('^(status)$')
     ]

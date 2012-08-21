@@ -6,6 +6,7 @@ require 'active_record'
 require 'action_view'
 
 require "hailstorm/version"
+require "hailstorm/behavior/loggable"
 
 # Defines the namespace and module static accessors.
 # @author Sayantam Dey
@@ -25,52 +26,6 @@ module Hailstorm
   mattr_accessor :app_name
 
   mattr_accessor :application
-
-  # Global logger object.
-  # Can be set by <tt>Hailstorm.logger = ...</tt>.
-  # This logger is injected into the Kernel module, so it is accessible to any
-  # instance method.
-  @@logger = nil
-
-  # Creates and returns the global logger. The default is to use the Ruby Logger.
-  # INFO, WARN messages are intended for end user, so the log message does not
-  # include the caller string (point at which the logger method was invoked), other
-  # levels carry this information.
-  # @return [Logger]
-  def self.logger()
-
-    if @@logger.nil?
-      @@logger = Logger.new(STDERR)
-      @@logger.level = Logger::INFO
-      @@logger.formatter = proc {|severity, datetime, progname, msg|
-        msg.chomp! if msg.respond_to?(:chomp!)
-        if %{INFO WARN}.include?(severity)
-          "#{Thread.current.object_id}: #{datetime.strftime("%H:%M:%S")} [#{severity}] #{msg}\n"
-        else
-          "#{Thread.current.object_id}: #{datetime.strftime("%H:%M:%S")} [#{severity}] #{caller[4]} - #{msg}\n"
-        end
-
-      }
-    end
-    return @@logger
-  end
-  mattr_writer :logger #:nodoc:
-
-  # :nodoc:
-  @@subsystem_logger = nil
-  def self.subsystem_logger()
-    # Logger for subsystems - use this for noisy subsystems, meant for internal
-    # use.
-    if @@subsystem_logger.nil?
-      @@subsystem_logger = Logger.new(STDERR)
-      @@subsystem_logger.level = Logger::WARN
-      @@subsystem_logger.formatter = proc {|severity, datetime, progname, msg|
-        msg.chomp! if msg.respond_to?(:chomp!)
-        "#{datetime.strftime("%H:%M:%S")} [#{severity}] #{msg}\n"
-      }
-    end
-    return @@subsystem_logger
-  end
 
   # Directory name used to store database and other files.
   def self.db_dir
@@ -126,21 +81,12 @@ end
 
 # inject a logger method to Kernel so it's available everywhere
 # TODO: Developer doc
-Kernel.class_eval() do #:nodoc:
-  def logger
-    Hailstorm.logger
-  end
+class Object
+  include Hailstorm::Behavior::Loggable
 end
-
-# Add all Java Jars to classpath
-java_lib = File.expand_path('../hailstorm/java/lib', __FILE__)
-Dir[File.join(java_lib, '*.jar')].each do |jar|
-  require(jar)
-end
-
 
 # after_commit methods simply log an error on exception and do not raise it
-# monkey-patch to atleast log an additional backtrace,
+# monkey-patch to at least log an additional backtrace,
 # active_record/connection_adapters/abstract/database_statements.rb
 module ActiveRecord
   module ConnectionAdapters

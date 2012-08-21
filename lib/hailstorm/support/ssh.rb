@@ -7,8 +7,6 @@ require 'hailstorm/support'
 
 class Hailstorm::Support::SSH
   
-  Simulate = false # for debugging purpose
-  
   # Starts a new SSH connection. When a block is provided, the connection
   # is closed when the block terminates, otherwise the connection will be
   # returned.
@@ -19,35 +17,26 @@ class Hailstorm::Support::SSH
   #   Hailstorm::Support::SSH::ConnectionSessionInstanceMethods added
   def self.start(host, user, options = {}, &block)
     
-    Hailstorm.logger.debug { "#{self}.#{__method__}" }
+    logger.debug { "#{self}.#{__method__}" }
     if block_given?
-      unless Simulate
-        Net::SSH.start(host, user, options) do |ssh|
-          ssh.extend(ConnectionSessionInstanceMethods)
-          ssh.logger = Hailstorm.subsystem_logger
-          ssh.class_eval do
-            alias :net_ssh_exec :exec
-            include AliasedMethods    
-          end
-          yield ssh
-        end
-      else
-        yield simulated_ssh_instance()
-      end
-      # yield Object.new.extend(ConnectionSessionInstanceMethods)
-    else
-      unless Simulate
-        ssh = Net::SSH.start(host, user, options)
+      Net::SSH.start(host, user, options) do |ssh|
         ssh.extend(ConnectionSessionInstanceMethods)
-        ssh.logger = Hailstorm.subsystem_logger
+        ssh.logger = logger
         ssh.class_eval do
           alias :net_ssh_exec :exec
-          include AliasedMethods    
+          include AliasedMethods
         end
-        return ssh
-      else
-        return simulated_ssh_instance()
+        yield ssh
       end
+    else
+      ssh = Net::SSH.start(host, user, options)
+      ssh.extend(ConnectionSessionInstanceMethods)
+      ssh.logger = logger
+      ssh.class_eval do
+        alias :net_ssh_exec :exec
+        include AliasedMethods
+      end
+      return ssh
     end
   end
   
@@ -60,8 +49,7 @@ class Hailstorm::Support::SSH
   # @return [Boolean] true if connection was finally obtained, false otherwise
   def self.ensure_connection(host, user, options = {})
 
-    Hailstorm.logger.debug { "#{self}.#{__method__}" }
-    return true if Simulate
+    logger.debug { "#{self}.#{__method__}" }
     connection_obtained = false
     num_tries = 0
     doze_time = 1
@@ -72,7 +60,7 @@ class Hailstorm::Support::SSH
           connection_obtained = true
         end
       rescue Errno::ECONNREFUSED, Net::SSH::ConnectionTimeout
-        Hailstorm.logger.debug { "Failed #{num_tries + 1} times, trying again in #{doze_time} seconds..." }
+        logger.debug { "Failed #{num_tries + 1} times, trying again in #{doze_time} seconds..." }
         sleep(doze_time)
         doze_time *= 3
         num_tries += 1
@@ -80,30 +68,14 @@ class Hailstorm::Support::SSH
     end
     
     unless connection_obtained
-      Hailstorm.logger.error("Giving up after trying #{num_tries + 1} times")
+      logger.error("Giving up after trying #{num_tries + 1} times")
     end
     
     return connection_obtained
   end
   
-  #:nodoc:
-  def self.simulated_ssh_instance()
-    
-    ssh = Object.new()
-    def ssh.method_missing(method_name, *args, &block)
-      sleep(3)
-    end
-    
-    ssh
-  end
-  
-  # Instance methods added to Net::SSH::Connection::Session  
+  # Instance methods added to Net::SSH::Connection::Session
   module ConnectionSessionInstanceMethods
-    
-    #:nodoc:
-    def app_logger
-      Hailstorm.logger
-    end
     
     # @param [String] full path to file on remote system
     # @return [Boolean] true if the file exists
@@ -157,12 +129,12 @@ class Hailstorm::Support::SSH
     end
     
     def upload(local, remote)
-      app_logger.debug { "uploading... #{local} -> #{remote}" }
+      logger.debug { "uploading... #{local} -> #{remote}" }
       self.sftp.upload!(local, remote)
     end
     
     def download(remote, local)
-      app_logger.debug { "downloading... #{remote} -> #{local}" }
+      logger.debug { "downloading... #{remote} -> #{local}" }
       self.sftp.download!(remote, local)
     end
     
@@ -215,7 +187,7 @@ class Hailstorm::Support::SSH
 
     #:nodoc:
     def exec(command, &block)
-      app_logger.debug { command }
+      logger.debug { command }
       net_ssh_exec(command, &block)
     end
   end
