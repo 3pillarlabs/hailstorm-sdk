@@ -105,11 +105,11 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   def generate_load(redeploy = false)
 
     logger.debug { "#{self.class}##{__method__}" }
-    clusterables.each do |cluster_instance|
-      cluster_instance.before_generate_load()
-      cluster_instance.start_slave_process(redeploy) if self.project.master_slave_mode?
-      cluster_instance.start_master_process(redeploy)
-      cluster_instance.after_generate_load()
+    visit_clusterables do |ci|
+      ci.before_generate_load()
+      ci.start_slave_process(redeploy) if self.project.master_slave_mode?
+      ci.start_master_process(redeploy)
+      ci.after_generate_load()
     end
   end
 
@@ -118,41 +118,32 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   def self.generate_all_load(project, redeploy = false)
 
     logger.debug { "#{self}.#{__method__}" }
-    project.clusters.each do |cluster|
-      Hailstorm::Support::Thread.start(cluster) do |c|
-        c.generate_load(redeploy)
-      end
+    self.visit_clusters(project) do |c|
+      c.generate_load(redeploy)
     end
-
-    Hailstorm::Support::Thread.join()
   end
 
   def stop_load_generation(wait = false, options = nil, aborted = false)
 
     logger.debug { "#{self.class}##{__method__}" }
-
-    clusterables.each do |cluster_instance|
-      cluster_instance.before_stop_load_generation()
-      cluster_instance.stop_master_process(wait, aborted)
-      logger.info "Load generation stopped at #{cluster_instance.slug}"
+    visit_clusterables do |ci|
+      ci.before_stop_load_generation()
+      ci.stop_master_process(wait, aborted)
+      logger.info "Load generation stopped at #{ci.slug}"
       unless aborted
-        logger.info "Fetching logs from  #{cluster_instance.slug}..."
-        self.project.current_execution_cycle.collect_client_stats(cluster_instance)
+        logger.info "Fetching logs from  #{ci.slug}..."
+        self.project.current_execution_cycle.collect_client_stats(ci)
       end
-      cluster_instance.after_stop_load_generation(options)
+      ci.after_stop_load_generation(options)
     end
   end
 
   def self.stop_load_generation(project, wait = false, options = nil, aborted = false)
 
     logger.debug { "#{self}.#{__method__}" }
-    project.clusters.each do |cluster|
-      Hailstorm::Support::Thread.start(cluster) do |c|
-        c.stop_load_generation(wait, options, aborted)
-      end
+    self.visit_clusters(project) do |c|
+      c.stop_load_generation(wait, options, aborted)
     end
-
-    Hailstorm::Support::Thread.join()
 
     # check if load generation is not stopped on any load agent and raise
     # exception accordingly
@@ -164,22 +155,18 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   def terminate()
 
     logger.debug { "#{self.class}##{__method__}" }
-    self.clusterables.each do |cluster_instance|
-      cluster_instance.destroy_all_agents()
-      cluster_instance.cleanup()
+    visit_clusterables do |ci|
+      ci.destroy_all_agents()
+      ci.cleanup()
     end
   end
 
   def self.terminate(project)
 
     logger.debug { "#{self}.#{__method__}" }
-    project.clusters.each do |cluster|
-      Hailstorm::Support::Thread.start(cluster) do |c|
-        c.terminate()
-      end
+    self.visit_clusters(project) do |c|
+      c.terminate()
     end
-
-    Hailstorm::Support::Thread.join()
   end
 
   # Checks if JMeter is running on different clusters and returns array of
@@ -189,11 +176,12 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   def check_status()
 
     logger.debug { "#{self.class}##{__method__}" }
+    mutex = Mutex.new()
     running_agents = []
-    self.clusterables.each do |cluster_instance|
+    self.visit_clusterables do |cluster_instance|
       agents = cluster_instance.check_status()
       unless agents.empty?
-        running_agents.push(*agents)
+        mutex.synchronize { running_agents.push(*agents) }
       end
     end
     return running_agents
@@ -204,25 +192,50 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     logger.debug { "#{self}.#{__method__}" }
     mutex = Mutex.new()
     running_agents = []
-    project.clusters.each do |cluster|
-      Hailstorm::Support::Thread.start(cluster) do |c|
-        agents = c.check_status()
-        unless agents.empty?
-          mutex.synchronize {
-            running_agents.push(*agents)
-          }
-        end
+    self.visit_clusters(project) do |c|
+      agents = c.check_status()
+      unless agents.empty?
+        mutex.synchronize {
+          running_agents.push(*agents)
+        }
       end
     end
-
-    Hailstorm::Support::Thread.join()
 
     return running_agents
   end
 
   def destroy_clusterables
-    cluster_klass.where(:project_id => self.project.id).each {|e| e.destroy()}
+    clusterables(true).each {|e| e.destroy()}
   end
 
+  def visit_clusterables(all = false, &block)
+
+    self_clusterables = self.clusterables(all)
+    if self_clusterables.count == 1
+      yield self_clusterables.first
+    else
+      self_clusterables.each do |cluster_instance|
+        Hailstorm::Support::Thread.start(cluster_instance) do |ci|
+          yield ci
+        end
+      end
+      Hailstorm::Support::Thread.join()
+    end
+  end
+
+  def self.visit_clusters(project, &block)
+
+    project_clusters = project.clusters().all()
+    if project_clusters.count == 1
+      yield project_clusters.first
+    else
+      project_clusters.each do |cluster|
+        Hailstorm::Support::Thread.start(cluster) do |c|
+          yield c
+        end
+      end
+      Hailstorm::Support::Thread.join()
+    end
+  end
 
 end
