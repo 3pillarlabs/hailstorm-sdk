@@ -282,21 +282,6 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
           Hailstorm::Support::SSH.start(clean_instance.public_ip_address,
             self.user_name, ssh_options) do |ssh|
               
-            # update APT packages - deemed extraneous since we are not using any packaged software anyway!
-            #logger.info { "Updating APT sources..." }
-            #command = 'export DEBIAN_FRONTEND=noninteractive && sudo apt-get update -y && sudo apt-get upgrade -y'
-            #stderr = ''
-            #ssh.exec!(command) do |channel, stream, data|
-            #  if :stderr == stream
-            #    stderr << data
-            #  else
-            #    print(data) if logger.debug?
-            #  end
-            #end
-            #unless stderr.blank?
-            #  logger.warn("Possible errors while updating APT sources, please review:\n#{stderr}")
-            #end
-            
             # install JAVA to /opt
             logger.info { "Installing Java..." }
             ssh.exec!("wget -q '#{java_download_url}' -O #{java_download_file()}")
@@ -313,9 +298,11 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
             raise(stderr) unless stderr.blank?
             ssh.exec!("sudo ln -s /opt/#{jre_directory()} /opt/jre")
             # modify /etc/environment
-            ssh.download('/etc/environment', "#{Hailstorm.tmp_path}/environment~")
-            File.open("#{Hailstorm.tmp_path}/environment~", 'r') do |envin|
-              File.open("#{Hailstorm.tmp_path}/environment", 'w') do |envout|
+            env_local_copy = File.join(Hailstorm.tmp_path, current_env_file_name)
+            ssh.download('/etc/environment', env_local_copy)
+            new_env_copy = File.join(Hailstorm.tmp_path, new_env_file_name)
+            File.open(env_local_copy, 'r') do |envin|
+              File.open(new_env_copy, 'w') do |envout|
                 envin.each_line do |linein|
                   lineout = nil
                   linein.strip!
@@ -334,9 +321,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
                 envout.puts "export CLASSPATH=/opt/jre/lib:."
               end
             end
-            ssh.upload("#{Hailstorm.tmp_path}/environment", "#{self.user_home}/environment")
-            File.unlink("#{Hailstorm.tmp_path}/environment")
-            File.unlink("#{Hailstorm.tmp_path}/environment~")
+            ssh.upload(new_env_copy, "#{self.user_home}/environment")
+            File.unlink(new_env_copy)
+            File.unlink(env_local_copy)
             ssh.exec!("sudo mv -f #{self.user_home}/environment /etc/environment")
             
             # install JMeter to self.user_home
@@ -545,6 +532,17 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       errors.add(:instance_type,
                  "not in supported list (#{InstanceTypes.allowed})")
     end
+  end
+
+  # @return [String] thead-safe name for the downloaded environment file
+  def current_env_file_name()
+    "environment-#{self.id}~"
+  end
+
+  # @return [String] thread-safe name for environment file to be written locally
+  # for upload to agent.
+  def new_env_file_name()
+    "environment-#{self.id}"
   end
 
   # EC2 default settings
