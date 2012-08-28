@@ -73,7 +73,7 @@ class Hailstorm::Application
     reload_saved_history()
 
     puts "Welcome to the Hailstorm shell. Type help to get started..."
-    trap("INT", proc { puts "Type [quit|exit|ctrl+D] to exit shell" } )
+    trap("INT", proc { logger.warn("Type [quit|exit|ctrl+D] to exit shell") } )
 
     # for IRB like shell, save state for later execution
     shell_binding = FreeShell.new.get_binding()
@@ -86,7 +86,7 @@ class Hailstorm::Application
       if command.nil?
         unless exit_ok?
           @exit_command_counter += 1
-          puts "You have running load agents: terminate first or quit/exit explicitly"
+          logger.warn {"You have running load agents: terminate first or quit/exit explicitly"}
         else
           puts "Bye"
           @exit_command_counter = -1
@@ -124,7 +124,7 @@ class Hailstorm::Application
             logger.debug { "\n".concat(irb_exception.backtrace.join("\n")) }
           end
         else
-          puts "Unknown command: #{command}"
+          logger.error {"Unknown command: #{command}"}
         end
 
       rescue Hailstorm::Exception => hailstorm_exception
@@ -483,7 +483,7 @@ class Hailstorm::Application
     if [:exit, :quit].include?(command.to_sym)
       if @exit_command_counter == 0 and !exit_ok?
         @exit_command_counter += 1
-        puts "You have running load agents: terminate first or #{command} again"
+        logger.warn {"You have running load agents: terminate first or #{command} again"}
       else
         puts "Bye"
         @exit_command_counter = -1 # "express" exit
