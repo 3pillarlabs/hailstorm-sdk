@@ -26,23 +26,23 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   after_destroy :cleanup
 
-  # Seconds between successive EC2 status checks 
-  DozeTime = 5
-  
+  # Seconds between successive EC2 status checks
+  DOZE_TIME = 5
+
   # Creates an load agent AMI with all required packages pre-installed and
   # starts requisite number of instances
   def setup(config_attributes)
-    
+
     logger.debug { "#{self.class}##{__method__}" }
     self.update_attributes!(config_attributes)
     if active?
-      File.chmod(0400, identity_file_path())  
-    end    
+      File.chmod(0400, identity_file_path())
+    end
   end
-  
+
   # start the agent and update agent ip_address and identifier
   def start_agent(load_agent)
-    
+
     logger.debug { load_agent.attributes.inspect }
     unless load_agent.running?
       agent_ec2_instance = nil
@@ -51,7 +51,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         if :stopped == agent_ec2_instance.status
           logger.info("Restarting agent##{load_agent.identifier}...")
           agent_ec2_instance.start()
-          sleep(DozeTime) until agent_ec2_instance.status.eql?(:running)
+          timeout_message("#{agent_ec2_instance.id} to restart") do
+            wait_until { agent_ec2_instance.status.eql?(:running) }
+          end
         end
       else
         logger.info("Starting new agent on #{self.region}...")
@@ -63,24 +65,26 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
               self.zone.nil? ? {} : {:availability_zone => self.zone}
           )
         )
-        sleep(DozeTime) until agent_ec2_instance.status.eql?(:running)
+        timeout_message("#{agent_ec2_instance.id} to start") do
+          wait_until { agent_ec2_instance.status.eql?(:running) }
+        end
       end
-      
+
       # update attributes
       load_agent.identifier = agent_ec2_instance.instance_id
       load_agent.public_ip_address = agent_ec2_instance.public_ip_address
       load_agent.private_ip_address = agent_ec2_instance.private_ip_address
-      
+
       # SSH is available a while later even though status may be running
       logger.info { "agent##{load_agent.identifier} is running, ensuring SSH access..." }
       sleep(120)
       logger.debug { "sleep over..."}
       Hailstorm::Support::SSH.ensure_connection(load_agent.public_ip_address,
         self.user_name, ssh_options)
-      
+
     end
   end
-  
+
   # stop the load agent
   def stop_agent(load_agent)
 
@@ -90,13 +94,15 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       if :running == agent_ec2_instance.status
         logger.info("Stopping agent##{load_agent.identifier}...")
         agent_ec2_instance.stop()
-        sleep(DozeTime) until agent_ec2_instance.status.eql?(:stopped)
+        timeout_message("#{agent_ec2_instance.id} to stop") do
+          wait_until { agent_ec2_instance.status.eql?(:stopped) }
+        end
       end
     else
       logger.warn("Could not stop agent as identifier is not available")
     end
   end
-  
+
   # @return [Hash] of SSH options
   # (see Hailstorm::Behavior::Clusterable#ssh_options)
   def ssh_options()
@@ -106,7 +112,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   # Start load agents if not started
   # (see Hailstorm::Behavior::Clusterable#before_generate_load)
   def before_generate_load()
-    
+
     logger.debug { "#{self.class}##{__method__}" }
     self.load_agents.where(:active => true).each do |agent|
       unless agent.running?
@@ -120,7 +126,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   # @param [Hash] options
   # (see Hailstorm::Behavior::Clusterable#after_stop_load_generation)
   def after_stop_load_generation(options = nil)
-    
+
     logger.debug { "#{self.class}##{__method__}" }
     suspend = (options.nil? ? false : options[:suspend])
     if suspend
@@ -130,19 +136,21 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
           agent.save!
         end
       end
-    end    
+    end
   end
-  
+
   # Terminate load agent
   # (see Hailstorm::Behavior::Clusterable#before_destroy_load_agent)
   def before_destroy_load_agent(load_agent)
-    
+
     logger.debug { "#{self.class}##{__method__}" }
     agent_ec2_instance = ec2.instances[load_agent.identifier]
     if agent_ec2_instance.exists?
       logger.info("Terminating agent##{load_agent.identifier}...")
       agent_ec2_instance.terminate()
-      sleep(DozeTime) until agent_ec2_instance.status.eql?(:terminated)
+      timeout_message("#{agent_ec2_instance.id} to terminate") do
+        wait_until { agent_ec2_instance.status.eql?(:terminated) }
+      end
     else
       logger.warn("Agent ##{load_agent.identifier} does not exist on EC2")
     end
@@ -175,9 +183,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     self.attributes.symbolize_keys.slice(*columns)
   end
 
-######################### PRIVATE METHODS ####################################  
+######################### PRIVATE METHODS ####################################
   private
-  
+
   def identity_file_exists()
 
     unless File.exists?(identity_file_path)
@@ -199,7 +207,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       end
     end
   end
-  
+
   def identity_file_path()
     @identity_file_path ||= File.join(Hailstorm.root, Hailstorm.db_dir,
                                       identity_file_name())
@@ -226,29 +234,29 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   def dirty_region_check()
 
     logger.debug { "#{self.class}##{__method__}" }
-    self.agent_ami = nil if self.region_changed? 
+    self.agent_ami = nil if self.region_changed?
   end
-  
+
   # creates the agent ami
   def create_agent_ami()
 
     logger.debug { "#{self.class}##{__method__}" }
     if self.active? and self.agent_ami.nil?
-      
+
       rexp = Regexp.compile(ami_id())
       # check if this region already has the AMI...
       logger.info { "Searching available AMI..."}
       ec2.images()
          .with_owner(:self)
          .inject({}) {|acc, e| acc.merge(e.name => e.id)}.each_pair do |name, id|
-      
+
         if rexp.match(name)
           self.agent_ami = id
           logger.info("Using AMI #{self.agent_ami} for agents...")
-          break          
-        end 
+          break
+        end
       end
-      
+
       if self.agent_ami.nil?
         # AMI does not exist
         logger.info("Creating agent AMI for #{self.region}...")
@@ -260,10 +268,10 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
           raise(Hailstorm::Error,
                 "JMeter version #{self.project.jmeter_version} not found in #{Defaults::BUCKET_NAME} bucket")
         end
-        
+
         # Check if the SSH security group exists, or create it
         security_group = find_or_create_security_group()
-        
+
         # Launch base AMI
         clean_instance = ec2.instances.create({
           :image_id => base_ami(),
@@ -271,8 +279,11 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
           :security_groups => [security_group.name],
           :instance_type => self.instance_type
         }.merge(self.zone.nil? ? {} : {:availability_zone => self.zone}))
-        sleep(DozeTime) until clean_instance.status.eql?(:running)
-        
+        timeout_message("#{clean_instance.id} to start") do
+          wait_until { clean_instance.status.eql?(:running) }
+        end
+        #sleep(DOZE_TIME) until clean_instance.status.eql?(:running)
+
         begin
           logger.info { "Clean instance running, ensuring SSH access..." }
           sleep(120)
@@ -281,7 +292,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
           Hailstorm::Support::SSH.start(clean_instance.public_ip_address,
             self.user_name, ssh_options) do |ssh|
-              
+
             # install JAVA to /opt
             logger.info { "Installing Java..." }
             ssh.exec!("wget -q '#{java_download_url}' -O #{java_download_file()}")
@@ -292,10 +303,10 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
               if :stderr == stream
                 stderr << data
               else
-                print(data) if logger.debug?
+                logger.debug { "\n#{data}" }
               end
             end
-            raise(stderr) unless stderr.blank?
+            raise(Hailstorm::Error, stderr) unless stderr.blank?
             ssh.exec!("sudo ln -s /opt/#{jre_directory()} /opt/jre")
             # modify /etc/environment
             env_local_copy = File.join(Hailstorm.tmp_path, current_env_file_name)
@@ -310,11 +321,11 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
                     components = /^PATH="(.+?)"/.match(linein)[1].split(':')
                     components.unshift('/opt/jre/bin') # trying to get it in the beginning
                     lineout = "PATH=\"#{components.join(':')}\""
-                  
+
                   else
                     lineout = linein
                   end
-                  
+
                   envout.puts(lineout) unless lineout.blank?
                 end
                 envout.puts "export JRE_HOME=/opt/jre"
@@ -325,40 +336,40 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
             File.unlink(new_env_copy)
             File.unlink(env_local_copy)
             ssh.exec!("sudo mv -f #{self.user_home}/environment /etc/environment")
-            
+
             # install JMeter to self.user_home
             logger.info { "Installing JMeter..." }
             ssh.exec!("wget -q '#{jmeter_download_url}' -O #{jmeter_download_file}")
             ssh.exec!("tar -xzf #{jmeter_download_file}")
             ssh.exec!("ln -s #{self.user_home}/#{jmeter_directory} #{self.user_home}/jmeter")
-            
+
           end # end ssh
-          
+
           # create the AMI
-          logger.info { "Finalizing changes..." } 
+          logger.info { "Finalizing changes..." }
           new_ami = ec2.images.create(
             :name => ami_id,
             :instance_id => clean_instance.instance_id,
             :description => "AMI for distributed performance testing with JMeter (TSG)"
           )
-          sleep(DozeTime*12) while new_ami.state == :pending
-          
+          sleep(DOZE_TIME*12) while new_ami.state == :pending
+
           if new_ami.state == :available
             self.agent_ami = new_ami.id
-            logger.info { "New AMI created successfully, cleaning up..."} 
+            logger.info { "New AMI created successfully, cleaning up..."}
           else
             raise(StandardError, "AMI could not be created, reason unknown")
-          end 
-          
+          end
+
         rescue
           logger.error("Failed to create instance, terminating temporary instance...")
           raise
         ensure
           # ensure to terminate running instance
           clean_instance.terminate()
-          sleep(DozeTime) until clean_instance.status.eql?(:terminated)
+          sleep(DOZE_TIME) until clean_instance.status.eql?(:terminated)
         end
-        
+
       end # self.agent_ami.nil?
     end # self.active? and self.agent_ami.nil?
   end
@@ -368,12 +379,12 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     logger.debug { "#{self.class}##{__method__}" }
     security_group = ec2.security_groups
                         .filter('group-name', Defaults::SECURITY_GROUP)
-                        .first()     
+                        .first()
     if security_group.nil?
       logger.info("Creating #{Defaults::SECURITY_GROUP} security group...")
       security_group = ec2.security_groups.create(Defaults::SECURITY_GROUP,
                         :description => Defaults::SECURITY_GROUP_DESC)
-      
+
       security_group.authorize_ingress(:tcp, 22) # allow SSH from anywhere
       # allow incoming TCP to any port within the group
       security_group.authorize_ingress(:tcp, 0..65535, :group_id => security_group.id)
@@ -382,7 +393,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       # allow ICMP from anywhere
       security_group.allow_ping()
     end
-    
+
     return security_group
   end
 
@@ -390,11 +401,11 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     @ec2 ||= AWS::EC2.new(aws_config)
                    .regions[self.region]
   end
-  
+
   def s3()
     @s3 ||= AWS::S3.new(aws_config)
   end
-  
+
   def aws_config()
     @aws_config ||= {
       :access_key_id => self.access_key,
@@ -403,12 +414,12 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       :logger => logger
     }
   end
-  
+
   def java_download_url()
     @java_download_url ||= s3_bucket().objects[java_download_file_path()]
                                       .public_url(:secure => false)
   end
-  
+
   def jmeter_download_url()
     @jmeter_download_url ||= jmeter_s3_object().public_url(:secure => false)
   end
@@ -543,6 +554,27 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   # for upload to agent.
   def new_env_file_name()
     "environment-#{self.id}"
+  end
+
+  # Waits for <tt>timeout_sec</tt> seconds for condition in <tt>block</tt>
+  # to return true, else throws a Timeout::Error
+  # @param [Integer] timeout_sec
+  # @param [Proc] block
+  # @throws [Timeout::Error] if block does not return true within timeout_sec
+  def wait_until(timeout_sec = 300, &block)
+    # make the timeout configurable by an environment variable
+    timeout_sec = ENV['HAILSTORM_EC2_TIMEOUT'] || timeout_sec
+    Timeout.timeout(timeout_sec) do
+      sleep(DOZE_TIME) until block.call()
+    end
+  end
+
+  def timeout_message(message, &block)
+    begin
+      yield
+    rescue Timeout::Error
+      raise(Hailstorm::Error, "Timeout while waiting for #{message}")
+    end
   end
 
   # EC2 default settings
