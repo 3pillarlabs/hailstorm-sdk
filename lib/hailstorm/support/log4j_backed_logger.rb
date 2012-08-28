@@ -116,12 +116,10 @@ class Hailstorm::Support::Log4jBackedLogger
 
   def with_context
     logger_mdc_impl.put("caller", caller(3).first)
-    logger_mdc_impl.put("thread", Thread.current.inspect.split(/\s+/).first.split(':').last)
     begin
       yield
     ensure
       logger_mdc_impl.remove("caller")
-      logger_mdc_impl.remove("thread")
     end
   end
 
