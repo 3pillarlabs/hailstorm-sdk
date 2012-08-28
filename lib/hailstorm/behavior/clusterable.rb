@@ -150,51 +150,36 @@ module Hailstorm::Behavior::Clusterable
   def start_slave_process(redeploy = false)
     
     logger.debug { "#{self.class}##{__method__}" }
-    self.slave_agents.where(:active => true).each do |agent|
-      Hailstorm::Support::Thread.start(agent) do |a|
-        a.upload_scripts(redeploy)
-        a.start_jmeter()
-      end
+    visit_collection(self.slave_agents.where(:active => true)) do |agent|
+      agent.upload_scripts(redeploy)
+      agent.start_jmeter()
     end
-    Hailstorm::Support::Thread.join()
   end
   
   # Start JMeter master on load agents
   def start_master_process(redeploy = false)
     
     logger.debug { "#{self.class}##{__method__}" }
-    self.master_agents.where(:active => true).each do |agent|
-      Hailstorm::Support::Thread.start(agent) do |a|
-        a.upload_scripts(redeploy)
-        a.start_jmeter()  
-      end
+    visit_collection(self.master_agents.where(:active => true)) do |agent|
+      agent.upload_scripts(redeploy)
+      agent.start_jmeter()
     end
-
-    Hailstorm::Support::Thread.join()
   end
   
   def stop_master_process(wait = false, aborted = false)
 
     logger.debug { "#{self.class}##{__method__}" }
-    self.master_agents.where(:active => true).each do |master|
-      Hailstorm::Support::Thread.start(master) do |m|
-        m.stop_jmeter(wait, aborted)
-      end
+    visit_collection(self.master_agents.where(:active => true)) do |master|
+      master.stop_jmeter(wait, aborted)
     end
-
-    Hailstorm::Support::Thread.join()
   end
 
   def destroy_all_agents()
     
     logger.debug { "#{self.class}##{__method__}" }
-    self.load_agents.each do |agent|
-        Hailstorm::Support::Thread.start(agent) do |a|
-          a.destroy()
-        end
+    visit_collection(self.load_agents) do |agent|
+      agent.destroy()
     end
-
-    Hailstorm::Support::Thread.join()
   end
 
   # Checks status of JMeter execution on agents and returns array of MasterAgent
@@ -206,16 +191,12 @@ module Hailstorm::Behavior::Clusterable
     logger.debug { "#{self.class}##{__method__}" }
     mutex = Mutex.new()
     running_agents = []
-    self.master_agents.where(:active => true).each do |master|
-      Hailstorm::Support::Thread.start(master) do |m|
-        agent = m.check_status()
-        unless agent.nil?
-          mutex.synchronize { running_agents.push(agent) }
-        end
+    visit_collection(self.master_agents.where(:active => true)) do |master|
+      agent = master.check_status()
+      unless agent.nil?
+        mutex.synchronize { running_agents.push(agent) }
       end
     end
-
-    Hailstorm::Support::Thread.join()
 
     return running_agents
   end
@@ -238,7 +219,7 @@ module Hailstorm::Behavior::Clusterable
 
       if self.project.master_slave_mode?
         query = self.master_agents
-        .where(:jmeter_plan_id => jmeter_plan.id)
+                    .where(:jmeter_plan_id => jmeter_plan.id)
 
         # abort if more than 1 master agent is present
         if query.all.count > 1
@@ -248,7 +229,7 @@ module Hailstorm::Behavior::Clusterable
 
         # one master is necessary
         query.first_or_create!()
-        .tap {|agent| agent.update_column(:active, true)}
+             .tap {|agent| agent.update_column(:active, true)}
 
         if required_count > 1
           create_or_enable(common_attributes, required_count, :slave_agents)
@@ -257,8 +238,8 @@ module Hailstorm::Behavior::Clusterable
       else # not operating in master-slave mode
            # abort if slave agents are present
         slave_agents_count = self.slave_agents
-        .where(:jmeter_plan_id => jmeter_plan.id)
-        .all.count()
+                                 .where(:jmeter_plan_id => jmeter_plan.id)
+                                 .all.count()
         if slave_agents_count > 0
           raise(Hailstorm::Exception,
                 "You have switched off master slave mode, please terminate current cycle first")
@@ -281,23 +262,26 @@ module Hailstorm::Behavior::Clusterable
 
                             # is there an inactive agent? if yes, activate it, or, create new
       agent = self.send(relation)
-      .where(attributes.merge(:active => false))
-      .first_or_initialize(:active => true)
+                  .where(attributes.merge(:active => false))
+                  .first_or_initialize(:active => true)
       if agent.new_record?
-        Hailstorm::Support::Thread.start(agent) do |agent_instance|
-          agent_instance.save!
+        if activate_count > 1
+          Hailstorm::Support::Thread.start(agent) do |agent_instance|
+            agent_instance.save!
+          end
+        else
+          agent.save!
         end
       else
         agent.update_column(:active, true)
       end
     end
-
-    Hailstorm::Support::Thread.join() # wait for agents to be created
+    Hailstorm::Support::Thread.join() if activate_count > 1# wait for agents to be created
 
     if activate_count < 0
       self.send(relation)
-      .where(attributes)
-      .limit(activate_count.abs).each do |agent|
+          .where(attributes)
+          .limit(activate_count.abs).each do |agent|
 
         agent.update_column(:active, false)
       end
@@ -311,5 +295,18 @@ module Hailstorm::Behavior::Clusterable
     self.load_agents.each {|agent| agent.update_column(:active, false)}
   end
 
+  def visit_collection(collection, &block)
+
+    if collection.count == 1
+      yield collection.first
+    else
+      collection.each do |element|
+        Hailstorm::Support::Thread.start(element) do |e|
+          yield element
+        end
+      end
+      Hailstorm::Support::Thread.join()
+    end
+  end
 
 end

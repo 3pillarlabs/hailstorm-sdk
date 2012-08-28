@@ -33,20 +33,16 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     result_mutex = Mutex.new()
     llp = local_log_path()
 
-    cluster_instance.master_agents.where(:active => true).each do |agent|
-      Hailstorm::Support::Thread.start(agent) do |master|
-        result_file_name = master.result_for(self, llp)
-        result_file_path = File.join(llp, result_file_name)
-        result_mutex.synchronize do
-          unless jmeter_plan_results_map.key?(master.jmeter_plan_id)
-            jmeter_plan_results_map[master.jmeter_plan_id] = []
-          end
-          jmeter_plan_results_map[master.jmeter_plan_id].push(result_file_path)
+    visit_collection(cluster_instance.master_agents.where(:active => true)) do |master|
+      result_file_name = master.result_for(self, llp)
+      result_file_path = File.join(llp, result_file_name)
+      result_mutex.synchronize do
+        unless jmeter_plan_results_map.key?(master.jmeter_plan_id)
+          jmeter_plan_results_map[master.jmeter_plan_id] = []
         end
+        jmeter_plan_results_map[master.jmeter_plan_id].push(result_file_path)
       end
     end
-
-    Hailstorm::Support::Thread.join()
 
     jmeter_plan_results_map.keys.sort.each do |jmeter_plan_id|
 
@@ -273,6 +269,20 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   def set_defaults()
     set_started_at()
     self.status ||= States::STARTED
+  end
+
+  def visit_collection(collection, &block)
+
+    if collection.count == 1
+      yield collection.first
+    else
+      collection.each do |element|
+        Hailstorm::Support::Thread.start(element) do |e|
+          yield element
+        end
+      end
+      Hailstorm::Support::Thread.join()
+    end
   end
 
   class States
