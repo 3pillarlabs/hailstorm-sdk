@@ -23,10 +23,20 @@
   <appender name="FILE" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${hailstorm.log.dir}/hailstorm.log" />
     <param name="MaxBackupIndex" value="10" />
-    <param name="MaxFileSize" value="10MB" />
+    <param name="MaxFileSize" value="5MB" />
     <layout class="org.apache.log4j.PatternLayout">
-      <param name="ConversionPattern" value="%-5p %d t(%X{thread}) %X{caller} - %m%n" />
+      <param name="ConversionPattern" value="%-5p %d %t %X{caller} - %m%n" />
     </layout>
+    <filter class="com.brickred.tsg.hailstorm.MDCMatchFilter">
+      <param name="KeyToMatch" value="caller" />
+      <param name="ValueToMatch" value="aws-sdk" />
+      <param name="ThresholdLevel" value="INFO" />
+    </filter>
+    <filter class="com.brickred.tsg.hailstorm.MDCMatchFilter">
+      <param name="KeyToMatch" value="caller" />
+      <param name="ValueToMatch" value="net-ssh" />
+      <param name="ThresholdLevel" value="INFO" />
+    </filter>
   </appender>
 
   <root>
