@@ -50,14 +50,11 @@ module Hailstorm::Behavior::Clusterable
     raise(StandardError, "#{self.class}##{__method__} implementation not found.")
   end
 
-  # Implementation should essentially perform all tasks including creating
-  # and starting load agents. For example, if Amazon EC2 is used,
-  # the implementation should bundle the AMI and start/stop instances as required.
-  # @param [Hash] config_attributes configuration attributes specfic to 
-  #               Hailstorm::Configuration::ClusterBase derived class attributes and
-  #               Hailstorm::Configuration::ClusterBase#active attribute   
-  def setup(config_attributes)
-    # override and do something appropriate.
+  # Implementation should essentially perform validation, persistence and state
+  # management tasks. This method may be called on a new or existing instance,
+  # the implementation will have to check and take appropriate actions.
+  def setup()
+    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
   end
   
   # Implement this method to perform additional tasks before starting load generation,
@@ -141,9 +138,9 @@ module Hailstorm::Behavior::Clusterable
     recipient.has_many(:client_stats, :as => :clusterable, :dependent => :destroy,
                        :include => :jmeter_plan)
 
-    recipient.after_commit(:provision_agents, :if => proc {|r| r.active?}, :on => :update)
+    recipient.after_commit(:provision_agents, :if => proc {|r| r.active?})
                            
-    recipient.after_commit(:disable_agents, :unless => proc {|r| r.active?}, :on => :update)
+    recipient.after_commit(:disable_agents, :unless => proc {|r| r.active?})
   end  
 
   # Start JMeter slaves on load agents
@@ -206,6 +203,7 @@ module Hailstorm::Behavior::Clusterable
   # Launch new instances or bring down instances based on number of instances needed
   def provision_agents()
 
+    return if self.destroyed?
     logger.debug { "#{self.class}##{__method__}" }
 
     self.project.jmeter_plans.where(:active => true).each do |jmeter_plan|
@@ -291,6 +289,7 @@ module Hailstorm::Behavior::Clusterable
   # disable all associated load_agents
   def disable_agents
 
+    return if self.destroyed?
     logger.debug { "#{self.class}##{__method__}" }
     self.load_agents.each {|agent| agent.update_column(:active, false)}
   end

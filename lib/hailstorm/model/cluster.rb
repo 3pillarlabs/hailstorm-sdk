@@ -43,23 +43,13 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     cluster_attributes = cluster_config.instance_values
                                        .symbolize_keys
                                        .except(:active, :cluster_type)
+                                       .merge(:project_id => self.project.id)
     # find the cluster or create it
-    cluster_instance = cluster_klass.where(cluster_attributes.merge(
-                                        :project_id => self.project.id))
-                                    .first_or_initialize(:active => cluster_config.active)
-
-    if cluster_instance.new_record? and cluster_instance.active?
-      cluster_instance.save!()
-    end
-
-    if cluster_instance.persisted?
-      Hailstorm::Support::Thread.start(cluster_instance,
-                                       cluster_attributes.merge(
-                                           :active => cluster_config.active)
-      ) do |c, attr|
-
-        c.setup(attr)
-      end
+    cluster_instance = cluster_klass.where(cluster_attributes)
+                                    .first_or_initialize()
+    cluster_instance.active = cluster_config.active
+    Hailstorm::Support::Thread.start(cluster_instance) do |c|
+      c.setup()
     end
   end
 

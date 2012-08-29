@@ -20,9 +20,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   validate :instance_type_supported, :if => proc {|r| r.active?}
 
-  before_create :set_availability_zone, :if => proc {|r| r.zone.blank?}
+  before_create :set_availability_zone, :if => proc {|r| r.active?}
 
-  before_update :dirty_region_check, :create_agent_ami
+  before_create :create_agent_ami, :if => proc {|r| r.active?}
 
   after_destroy :cleanup
 
@@ -31,12 +31,14 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   # Creates an load agent AMI with all required packages pre-installed and
   # starts requisite number of instances
-  def setup(config_attributes)
+  def setup()
 
     logger.debug { "#{self.class}##{__method__}" }
-    self.update_attributes!(config_attributes)
-    if active?
+    if self.active?
+      self.save!()
       File.chmod(0400, identity_file_path())
+    else
+      self.update_column(:active, false)
     end
   end
 
@@ -230,13 +232,6 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   end
 
-  # checks if the region attribute is dirty, if so nils out the agent_mi.
-  def dirty_region_check()
-
-    logger.debug { "#{self.class}##{__method__}" }
-    self.agent_ami = nil if self.region_changed?
-  end
-
   # creates the agent ami
   def create_agent_ami()
 
@@ -245,14 +240,14 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
       rexp = Regexp.compile(ami_id())
       # check if this region already has the AMI...
-      logger.info { "Searching available AMI..."}
+      logger.info { "Searching available AMI on #{self.region}..."}
       ec2.images()
          .with_owner(:self)
          .inject({}) {|acc, e| acc.merge(e.name => e.id)}.each_pair do |name, id|
 
         if rexp.match(name)
           self.agent_ami = id
-          logger.info("Using AMI #{self.agent_ami} for agents...")
+          logger.info("Using AMI #{self.agent_ami} for #{self.region}...")
           break
         end
       end
@@ -279,13 +274,13 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
           :security_groups => [security_group.name],
           :instance_type => self.instance_type
         }.merge(self.zone.nil? ? {} : {:availability_zone => self.zone}))
+
         timeout_message("#{clean_instance.id} to start") do
           wait_until { clean_instance.status.eql?(:running) }
         end
-        #sleep(DOZE_TIME) until clean_instance.status.eql?(:running)
 
         begin
-          logger.info { "Clean instance running, ensuring SSH access..." }
+          logger.info { "Clean instance at #{self.region} running, ensuring SSH access..." }
           sleep(120)
           Hailstorm::Support::SSH.ensure_connection(clean_instance.public_ip_address,
             self.user_name, ssh_options)
@@ -294,7 +289,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
             self.user_name, ssh_options) do |ssh|
 
             # install JAVA to /opt
-            logger.info { "Installing Java..." }
+            logger.info { "Installing Java for #{self.region} AMI..." }
             ssh.exec!("wget -q '#{java_download_url}' -O #{java_download_file()}")
             ssh.exec!("chmod +x #{java_download_file}")
             command = "cd /opt && sudo #{self.user_home}/#{java_download_file}"
@@ -303,7 +298,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
               if :stderr == stream
                 stderr << data
               else
-                logger.debug { "\n#{data}" }
+                logger.debug { data }
               end
             end
             raise(Hailstorm::Error, stderr) unless stderr.blank?
@@ -338,7 +333,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
             ssh.exec!("sudo mv -f #{self.user_home}/environment /etc/environment")
 
             # install JMeter to self.user_home
-            logger.info { "Installing JMeter..." }
+            logger.info { "Installing JMeter for #{self.region} AMI..." }
             ssh.exec!("wget -q '#{jmeter_download_url}' -O #{jmeter_download_file}")
             ssh.exec!("tar -xzf #{jmeter_download_file}")
             ssh.exec!("ln -s #{self.user_home}/#{jmeter_directory} #{self.user_home}/jmeter")
@@ -346,7 +341,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
           end # end ssh
 
           # create the AMI
-          logger.info { "Finalizing changes..." }
+          logger.info { "Finalizing changes for #{self.region} AMI..." }
           new_ami = ec2.images.create(
             :name => ami_id,
             :instance_id => clean_instance.instance_id,
@@ -356,13 +351,13 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
           if new_ami.state == :available
             self.agent_ami = new_ami.id
-            logger.info { "New AMI created successfully, cleaning up..."}
+            logger.info { "New AMI##{self.agent_ami} on #{self.region} created successfully, cleaning up..."}
           else
-            raise(StandardError, "AMI could not be created, reason unknown")
+            raise(StandardError, "AMI could not be created on #{self.region}, reason unknown")
           end
 
         rescue
-          logger.error("Failed to create instance, terminating temporary instance...")
+          logger.error("Failed to create instance on #{self.region}, terminating temporary instance...")
           raise
         ensure
           # ensure to terminate running instance
@@ -381,7 +376,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
                         .filter('group-name', Defaults::SECURITY_GROUP)
                         .first()
     if security_group.nil?
-      logger.info("Creating #{Defaults::SECURITY_GROUP} security group...")
+      logger.info("Creating #{Defaults::SECURITY_GROUP} security group on #{self.region}...")
       security_group = ec2.security_groups.create(Defaults::SECURITY_GROUP,
                         :description => Defaults::SECURITY_GROUP_DESC)
 
@@ -437,7 +432,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   def set_availability_zone()
 
     logger.debug { "#{self.class}##{__method__}" }
-    if self.project.master_slave_mode?
+    if self.zone.blank? and self.project.master_slave_mode?
       ec2.availability_zones.each do |z|
         if z.state == :available
           self.zone = z.name
