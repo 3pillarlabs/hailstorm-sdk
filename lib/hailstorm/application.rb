@@ -264,7 +264,7 @@ class Hailstorm::Application
       else
         # set defaults which can be overridden
         @connection_spec = {
-            :pool => 10,
+            :pool => 50,
             :wait_timeout => 30.minutes
         }.merge(@connection_spec).merge(:database => database_name)
       end
