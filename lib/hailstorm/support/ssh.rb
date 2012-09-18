@@ -134,7 +134,7 @@ class Hailstorm::Support::SSH
     end
     
     def download(remote, local)
-      logger.debug { "downloading... #{remote} -> #{local}" }
+      logger.debug { "downloading... #{local} <- #{remote}" }
       self.sftp.download!(remote, local)
     end
     
