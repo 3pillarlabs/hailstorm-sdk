@@ -44,13 +44,14 @@ class Hailstorm::Application
 
     Hailstorm.application = self.new
     Hailstorm.application.load_config(true)
-    Hailstorm.application.connect_to_database()
+    Hailstorm.application.check_database()
   end
 
   # Constructor
   def initialize
     @multi_threaded = true
     @exit_command_counter = 0
+    ActiveRecord::Base.logger = logger
   end
 
   # Initializes the application - creates directory structure and support files
@@ -137,6 +138,8 @@ class Hailstorm::Application
       rescue StandardError => uncaught
         logger.error uncaught.message
         logger.debug { "\n".concat(uncaught.backtrace.join("\n")) }
+      ensure
+        ActiveRecord::Base.clear_all_connections!
       end
 
       save_history(command)
@@ -159,9 +162,8 @@ class Hailstorm::Application
     end
   end
 
-  def connect_to_database()
+  def check_database()
 
-    ActiveRecord::Base.logger = logger
     fail_once = false
     begin
       ActiveRecord::Base.establish_connection(connection_spec) # this is lazy, does not fail!
@@ -180,8 +182,10 @@ class Hailstorm::Application
         retry
       else
         logger.error e.message()
-        exit 1
+        raise
       end
+    ensure
+      ActiveRecord::Base.clear_all_connections!
     end
   end
 
@@ -261,7 +265,7 @@ class Hailstorm::Application
         # set defaults which can be overridden
         @connection_spec = {
             :pool => 10,
-            :wait_timeout => 30
+            :wait_timeout => 30.minutes
         }.merge(@connection_spec).merge(:database => database_name)
       end
     end
