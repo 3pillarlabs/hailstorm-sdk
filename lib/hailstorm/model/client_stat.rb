@@ -40,7 +40,8 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     if stat_file_paths.size == 1
       stat_file_path = stat_file_paths.first
     else
-      stat_file_path = combine_stats(stat_file_paths, execution_cycle.id, jmeter_plan_id)
+      stat_file_path = combine_stats(stat_file_paths, execution_cycle.id,
+                                     jmeter_plan_id, clusterable.id)
     end
 
     # create 1 record for client_stats if it does not exist yet
@@ -85,7 +86,10 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     client_stat.save!
 
     # remove file
-    File.unlink(stat_file_path) if Hailstorm.env == :production
+    if Hailstorm.env == :production
+      logger.debug { "Going to unlink #{stat_file_path}..." }
+      File.unlink(stat_file_path)
+    end
   end
 
   # Combines two or more JTL files to create new JTL file with combined stats.
@@ -93,14 +97,16 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   # @param [Array] stat_file_paths path to JTL files
   # @param [Integer] execution_cycle_id
   # @param [Integer]jmeter_plan_id
+  # @param [Integer] clusterable ID
   # @return [String] path to new file
-  def self.combine_stats(stat_file_paths, execution_cycle_id, jmeter_plan_id)
+  def self.combine_stats(stat_file_paths, execution_cycle_id,
+      jmeter_plan_id, clusterable_id)
 
     xml_decl = '<?xml version="1.0" encoding="UTF-8"?>'
     test_results_start_tag = '<testResults version="1.2">'
     test_results_end_tag = '</testResults>'
     combined_file_path = File.join(Hailstorm.root, Hailstorm.log_dir,
-      "results-#{execution_cycle_id}-#{jmeter_plan_id}-all.jtl")
+      "results-#{execution_cycle_id}-#{jmeter_plan_id}-#{clusterable_id}-all.jtl")
     File.open(combined_file_path, 'w') do |combined_file|
       combined_file.puts xml_decl
       combined_file.puts test_results_start_tag
