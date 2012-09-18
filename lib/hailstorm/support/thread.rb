@@ -15,8 +15,15 @@ class Hailstorm::Support::Thread
     Hailstorm.logger.debug { "#{self}.#{__method__}" }
     if Hailstorm.application.multi_threaded?
       thread = Thread.start(args) do |args|
-        Thread.current[:connection] = ActiveRecord::Base.connection
-        yield(*args)
+        begin
+          yield(*args)
+        rescue Object => e
+          logger.error(e.message())
+          logger.debug { "\n".concat(e.backtrace().join("\n")) }
+          raise()
+        ensure
+          ActiveRecord::Base.connection.close()
+        end
       end
       Thread.current[:spawned] ||= []
       Thread.current[:spawned].push(thread)
@@ -33,6 +40,10 @@ class Hailstorm::Support::Thread
 
     graceful = true
     Hailstorm.logger.debug { "#{self}.#{__method__}" }
+    # Give up the current threads connection, so that a child thread waiting
+    # on it will get the connection
+    ActiveRecord::Base.connection_pool.release_connection()
+
     spawned = Thread.current[:spawned]
     until spawned.blank?
       t = spawned.shift()
@@ -40,10 +51,6 @@ class Hailstorm::Support::Thread
         t.join()
       rescue StandardError => e
         graceful = false
-        logger.warn(e.message())
-        logger.debug { "\n".concat(e.backtrace().join("\n")) }
-      ensure
-        t[:connection].close() unless t[:connection].nil? 
       end
     end
 
