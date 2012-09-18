@@ -38,7 +38,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       self.save!()
       File.chmod(0400, identity_file_path())
     else
-      self.update_column(:active, false)
+      self.update_column(:active, false) if self.persisted?
     end
   end
 
@@ -68,7 +68,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
           )
         )
         timeout_message("#{agent_ec2_instance.id} to start") do
-          wait_until { agent_ec2_instance.status.eql?(:running) }
+          wait_until { agent_ec2_instance.exists? && agent_ec2_instance.status.eql?(:running) }
         end
       end
 
@@ -276,7 +276,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         }.merge(self.zone.nil? ? {} : {:availability_zone => self.zone}))
 
         timeout_message("#{clean_instance.id} to start") do
-          wait_until { clean_instance.status.eql?(:running) }
+          wait_until { clean_instance.exists? && clean_instance.status.eql?(:running) }
         end
 
         begin
@@ -559,8 +559,16 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   def wait_until(timeout_sec = 300, &block)
     # make the timeout configurable by an environment variable
     timeout_sec = ENV['HAILSTORM_EC2_TIMEOUT'] || timeout_sec
-    Timeout.timeout(timeout_sec) do
-      sleep(DOZE_TIME) until block.call()
+    total_elapsed = 0
+    while total_elapsed <= (timeout_sec * 1000)
+      before_yield_time = Time.now.to_i
+      result = yield
+      if result
+        break
+      else
+        sleep(DOZE_TIME)
+        total_elapsed += (Time.now.to_i - before_yield_time)
+      end
     end
   end
 
@@ -568,7 +576,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     begin
       yield
     rescue Timeout::Error
-      raise(Hailstorm::Error, "Timeout while waiting for #{message}")
+      raise(Hailstorm::Error, "Timeout while waiting for #{message} on #{self.region}")
     end
   end
 
