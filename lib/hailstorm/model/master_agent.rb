@@ -6,6 +6,7 @@ require 'hailstorm/model/load_agent'
 
 class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
 
+  GZ_READ_LEN_BYTES = 2 * 1024 * 1024 # 2MB
 
   # Executes JMeter command appropriate to a master agent
   def start_jmeter()
@@ -91,13 +92,25 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
                                       
     remote_file_path = [self.jmeter_plan.remote_log_dir, remote_file_name].join('/')
     local_file_path = File.join(local_log_path, local_file_name)
+    local_compressed_file_path = "#{local_file_path}.gz"
 
     Hailstorm::Support::SSH.start(self.public_ip_address, self.clusterable.user_name,
       self.clusterable.ssh_options) do |ssh|
-    
-      ssh.download(remote_file_path, local_file_path)        
+
+      ssh.exec!("gzip -q #{remote_file_path}") # Research-604
+      ssh.download("#{remote_file_path}.gz", local_compressed_file_path)
     end
-    
+    File.open(local_file_path, 'w') do |uncompressed_file|
+      File.open(local_compressed_file_path, 'r') do |compressed_file|
+        gz = Zlib::GzipReader.new(compressed_file)
+        until ((bytes = gz.read(GZ_READ_LEN_BYTES))).nil?
+          uncompressed_file.print(bytes)
+        end
+        gz.close()
+      end
+    end
+    File.unlink(local_compressed_file_path)
+
     return local_file_name    
   end
 
