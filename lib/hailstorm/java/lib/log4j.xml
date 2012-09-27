@@ -35,7 +35,7 @@
     <filter class="com.brickred.tsg.hailstorm.MDCMatchFilter">
       <param name="KeyToMatch" value="caller" />
       <param name="ValueToMatch" value="net-ssh" />
-      <param name="ThresholdLevel" value="INFO" />
+      <param name="ThresholdLevel" value="WARN" />
     </filter>
   </appender>
 
