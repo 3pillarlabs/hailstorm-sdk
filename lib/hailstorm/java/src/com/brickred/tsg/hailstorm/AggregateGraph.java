@@ -119,7 +119,10 @@ public class AggregateGraph {
 		plot.setRenderer(0, barRenderer);
 
 		for (int i = 0; i < levelTitles.length; i++) {
-			addLevel(plot, i + 1, levelTitles[i], i, levelColors[i]);
+			// exclude maximum
+			if (i != 1) {
+				addLevel(plot, i + 1, levelTitles[i], i, levelColors[i]);
+			}
 		}
 
 		plot.setDatasetRenderingOrder(DatasetRenderingOrder.FORWARD);
