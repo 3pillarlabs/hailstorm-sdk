@@ -1,7 +1,7 @@
 
 require "hailstorm/model"
 require "hailstorm/model/client_stat"
-require 'hailstorm/support/file_array'
+require 'hailstorm/support/quantile'
 
 class Hailstorm::Model::PageStat < ActiveRecord::Base
 
@@ -24,8 +24,6 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
   after_initialize :set_defaults
 
   before_create :calculate_aggregates
-
-  after_commit :cleanup
 
   # @param [Hash] sample keys same as httpSample attributes
   def collect_sample(sample)
@@ -119,8 +117,7 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
     self.samples_count = 0
     self.cumulative_response_time = 0
     self.cumulative_squared_response_time = 0
-    self.page_sample_times = Hailstorm::Support::FileArray.new(Fixnum,
-                                                               :path => Hailstorm.tmp_path)
+    self.page_sample_times = Hailstorm::Support::Quantile.new()
     self.cumulative_bytes = 0
     self.errors_count = 0
   end
@@ -129,9 +126,11 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
 
     self.average_response_time = (self.cumulative_response_time.to_f / self.samples_count)
 
-    self.page_sample_times.sort!
-    self.median_response_time = self.page_sample_times[percentile_index(50)]
-    self.ninety_percentile_response_time = self.page_sample_times[percentile_index(90)]
+    logger.debug { "Calculating median_response_time for #{self.page_label}..." }
+    self.median_response_time = self.page_sample_times.quantile(50)
+    logger.debug { "Calculating ninety_percentile_response_time for #{self.page_label}..." }
+    self.ninety_percentile_response_time = self.page_sample_times.quantile(90)
+    logger.debug { "... finished calculating quantiles" }
 
     self.size_throughput = (self.cumulative_bytes.to_f * 1000) /
         ((self.max_end_time - self.min_start_time) * 1024)
@@ -150,10 +149,6 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
       partition[:p] = sprintf('%2.2f', (partition[:c].to_f * 100) / self.samples_count)
     end
     self.samples_breakup_json = self.samples_breakup.to_json()
-  end
-
-  def cleanup()
-    self.page_sample_times.unlink() if self.page_sample_times.respond_to?(:unlink)
   end
 
   # Calculates the array index for percentile

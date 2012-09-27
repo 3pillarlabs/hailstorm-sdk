@@ -7,7 +7,7 @@ require 'hailstorm/model'
 require 'hailstorm/model/execution_cycle'
 require 'hailstorm/model/jmeter_plan'
 require 'hailstorm/model/page_stat'
-require 'hailstorm/support/file_array'
+require 'hailstorm/support/quantile'
 
 class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
@@ -29,8 +29,6 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   attr_accessor :sample_response_times
 
   after_initialize :set_defaults
-
-  after_commit :cleanup
 
   def self.create_client_stats(execution_cycle, jmeter_plan_id,
                                   clusterable, stat_file_paths)
@@ -73,10 +71,9 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
     client_stat.aggregate_response_throughput = (aggregate_samples_count.to_f / test_duration)
 
-    client_stat.sample_response_times.sort!
-    ninety_percentile_index = (aggregate_samples_count * 0.9).to_i - 1
-    ninety_percentile_index = 0 if ninety_percentile_index < 0
-    client_stat.aggregate_ninety_percentile = client_stat.sample_response_times[ninety_percentile_index]
+    logger.debug { "Calculating aggregate_ninety_percentile..." }
+    client_stat.aggregate_ninety_percentile = client_stat.sample_response_times.quantile(90)
+    logger.debug { "... finished calculating aggregate_ninety_percentile" }
 
     # this is the duration of the last sample sent, it is in milliseconds, so
     # we divide it by 1000
@@ -234,7 +231,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
       self.end_sample = sample
     end
 
-    self.sample_response_times.push(sample['t'].to_f)
+    self.sample_response_times.push(sample['t'])
   end
 
   # Receives event callbacks as XML is parsed
@@ -290,12 +287,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   end
 
   def set_defaults()
-    self.sample_response_times = Hailstorm::Support::FileArray.new(Float,
-                                                                   :path => Hailstorm.tmp_path)
-  end
-
-  def cleanup()
-    self.sample_response_times.unlink() if self.sample_response_times.respond_to?(:unlink)
+    self.sample_response_times = Hailstorm::Support::Quantile.new()
   end
 
 end
