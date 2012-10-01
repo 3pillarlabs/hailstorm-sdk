@@ -175,6 +175,11 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
            .create() # <-- returns path to generated image
   end
 
+  def aggregate_stats()
+    self.page_stats()
+        .collect(&:stat_item)
+  end
+
   def self.execution_comparison_graph(execution_cyles)
 
     grapher_klass = com.brickred.tsg.hailstorm.ExecutionComparisonGraph

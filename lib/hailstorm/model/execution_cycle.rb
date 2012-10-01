@@ -102,6 +102,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
               cluster_item.client_stats do |client_stat_item|
                 client_stat_item.name = client_stat.jmeter_plan.plan_name
                 client_stat_item.threads_count = client_stat.threads_count
+                client_stat_item.aggregate_stats = client_stat.aggregate_stats
                 client_stat_item.aggregate_graph do |g|
                   g.image_path = client_stat.aggregate_graph()
                 end

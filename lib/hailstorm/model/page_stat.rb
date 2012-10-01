@@ -110,11 +110,17 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
     @samples_breakup
   end
 
+  def stat_item()
+    OpenStruct.new(self.attributes()
+                       .symbolize_keys()
+                       .except(:id, :client_stat_id, :samples_breakup_json))
+  end
+
   private
 
   def set_defaults()
 
-    self.samples_count = 0
+    self.samples_count = 0 if self.new_record?
     self.cumulative_response_time = 0
     self.cumulative_squared_response_time = 0
     self.page_sample_times = Hailstorm::Support::Quantile.new()

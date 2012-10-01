@@ -197,6 +197,7 @@ class Hailstorm::Support::ReportBuilder
 
       attr_accessor :name
       attr_accessor :threads_count
+      attr_accessor :aggregate_stats
 
       def aggregate_graph(&block)
         @aggregate_graph ||= Hailstorm::Support::ReportBuilder::Graph.new()

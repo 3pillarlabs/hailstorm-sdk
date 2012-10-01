@@ -62,7 +62,7 @@
 </w:p>
 <w:p w:rsidR="003B5315" w:rsidRDefault="00306A64" w:rsidP="00C35CF0">
     <w:r>
-        <w:t>The following graph shows the response time of all the pages and a breakup of percentage requests within different thresholds.</w:t>
+        <w:t>The following graph shows the response time of all the pages and a breakup of percentage requests within different thresholds, followed by the aggregate summary of the requests in the tests grouped by same page label.</w:t>
     </w:r>
 </w:p>
 <w:p w:rsidR="00DE1740" w:rsidRPr="00DE1740" w:rsidRDefault="00DE1740"
@@ -77,6 +77,17 @@
                 :cx => 5943600,
                 :cy => 7429500
             })
+        %>
+    </w:r>
+</w:p>
+<w:p w:rsidR="00DE1712" w:rsidRPr="00DE1712" w:rsidRDefault="00DE1712"
+    w:rsidP="00DE1712">
+    <w:r>
+        <w:rPr>
+            <w:noProof />
+        </w:rPr>
+        <%=
+            render(:partial => 'aggregate_table', :object => client_stat.aggregate_stats)
         %>
     </w:r>
 </w:p>
