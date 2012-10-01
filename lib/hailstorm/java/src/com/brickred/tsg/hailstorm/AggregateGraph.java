@@ -30,10 +30,14 @@ public class AggregateGraph {
 
 	private final String graphFilePath;
 	private String[] pages;
-	private double[][] responseTimeData;
 	private String[] thresholdTitles;
 	private double[][] thresholdData;
 	private double[] errorPercentages;
+	private double[] minResponseTimes;
+	private double[] avgResponseTimes;
+	private double[] medianResponseTimes;
+	private double[] ninetyCentileResponseTimes;
+	private double[] maxResponseTimes;
 
 	public AggregateGraph(String graphFilePath) {
 		this.graphFilePath = graphFilePath;
@@ -44,8 +48,29 @@ public class AggregateGraph {
 		return this;
 	}
 
-	public AggregateGraph setResponseTimes(double[][] responseTimes) {
-		this.responseTimeData = responseTimes;
+	public AggregateGraph setMinResponseTimes(double[] minResponseTimes) {
+		this.minResponseTimes = minResponseTimes;
+		return this;
+	}
+
+	public AggregateGraph setAvgResponseTimes(double[] avgResponseTimes) {
+		this.avgResponseTimes = avgResponseTimes;
+		return this;
+	}
+
+	public AggregateGraph setMedianResponseTimes(double[] medianResponseTimes) {
+		this.medianResponseTimes = medianResponseTimes;
+		return this;
+	}
+
+	public AggregateGraph setNinetyCentileResponseTimes(
+			double[] ninetyCentileResponseTimes) {
+		this.ninetyCentileResponseTimes = ninetyCentileResponseTimes;
+		return this;
+	}
+
+	public AggregateGraph setMaxResponseTimes(double[] maxResponseTimes) {
+		this.maxResponseTimes = maxResponseTimes;
 		return this;
 	}
 
@@ -99,18 +124,13 @@ public class AggregateGraph {
 
 	private CategoryPlot createPageResponseTimePlot() {
 
-		String[] levelTitles = new String[] { "Minimum", "Maximum", "Average" };
-
-		Color[] levelColors = new Color[] { minimumColor, maximumColor,
-				averageColor };
-
 		CategoryPlot plot = new CategoryPlot();
 		plot.setRangeAxis(new NumberAxis("Response Times (ms)"));
 
 		// ninety percentile bar
 		CategoryDataset ninetyPercentile = DatasetUtilities
 				.createCategoryDataset(new String[] { "90 percentile" }, pages,
-						new double[][] { responseTimeData[3] });
+						new double[][] { ninetyCentileResponseTimes });
 		BarRenderer barRenderer = new BarRenderer();
 		barRenderer.setSeriesPaint(0, ninetyPercentileColor);
 		barRenderer.setShadowVisible(false);
@@ -118,31 +138,50 @@ public class AggregateGraph {
 		plot.setDataset(0, ninetyPercentile);
 		plot.setRenderer(0, barRenderer);
 
-		for (int i = 0; i < levelTitles.length; i++) {
-			// exclude maximum
-			if (i != 1) {
-				addLevel(plot, i + 1, levelTitles[i], i, levelColors[i]);
-			}
+		List<String> levelTitles = new ArrayList<String>();
+		List<Color> levelColors = new ArrayList<Color>();
+		List<double[]> responseTimeData = new ArrayList<double[]>();
+
+		if (minResponseTimes != null) {
+			levelTitles.add("Minimum");
+			levelColors.add(minimumColor);
+			responseTimeData.add(minResponseTimes);
+		}
+
+		if (avgResponseTimes != null) {
+			levelTitles.add("Average");
+			levelColors.add(averageColor);
+			responseTimeData.add(avgResponseTimes);
+		}
+
+		if (maxResponseTimes != null) {
+			levelTitles.add("Maximum");
+			levelColors.add(maximumColor);
+			responseTimeData.add(maxResponseTimes);
+		}
+
+		if (medianResponseTimes != null) {
+			levelTitles.add("Median");
+			levelColors.add(medianColor);
+			responseTimeData.add(medianResponseTimes);
+		}
+
+		for (int i = 0; i < levelTitles.size(); i++) {
+			CategoryDataset dataset = DatasetUtilities.createCategoryDataset(
+					new String[] { levelTitles.get(i) }, pages,
+					new double[][] { responseTimeData.get(i) });
+
+			LevelRenderer renderer = new LevelRenderer();
+			renderer.setSeriesPaint(0, levelColors.get(i));
+			renderer.setSeriesStroke(0, new BasicStroke(2.0f));
+
+			plot.setDataset(i + 1, dataset);
+			plot.setRenderer(i + 1, renderer);
 		}
 
 		plot.setDatasetRenderingOrder(DatasetRenderingOrder.FORWARD);
 
 		return plot;
-	}
-
-	private void addLevel(CategoryPlot plot, int plotIndex, String title,
-			int responseDataIndex, Color color) {
-
-		CategoryDataset dataset = DatasetUtilities.createCategoryDataset(
-				new String[] { title }, pages,
-				new double[][] { responseTimeData[responseDataIndex] });
-
-		LevelRenderer renderer = new LevelRenderer();
-		renderer.setSeriesPaint(0, color);
-		renderer.setSeriesStroke(0, new BasicStroke(2.0f));
-
-		plot.setDataset(plotIndex, dataset);
-		plot.setRenderer(plotIndex, renderer);
 	}
 
 	private CategoryPlot createPageFiguresPlot() {
@@ -186,7 +225,8 @@ public class AggregateGraph {
 		}
 		LineAndShapeRenderer errorRenderer = new LineAndShapeRenderer(true,
 				false);
-		errorRenderer.setSeriesStroke(0, new BasicStroke(2f));
+		errorRenderer.setSeriesStroke(0, new BasicStroke(4f));
+		errorRenderer.setSeriesPaint(0, Color.black);
 		plot.setDataset(1, errorDataset);
 		plot.setRenderer(1, errorRenderer);
 
@@ -197,6 +237,7 @@ public class AggregateGraph {
 	private static final Color minimumColor = Color.orange;
 	private static final Color maximumColor = new Color(171, 171, 171);
 	private static final Color averageColor = Color.yellow;
+	private static final Color medianColor = Color.MAGENTA;
 	private static final Color ninetyPercentileColor = new Color(0, 0, 255);
 
 }

@@ -137,7 +137,8 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
     response_times = self.page_stats.collect {|e|
       [e.minimum_response_time, e.maximum_response_time,
-        e.average_response_time, e.ninety_percentile_response_time]
+        e.average_response_time, e.ninety_percentile_response_time,
+        e.median_response_time]
     }.transpose()
 
     threshold_titles = []
@@ -168,11 +169,15 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
     grapher = com.brickred.tsg.hailstorm.AggregateGraph.new(aggregate_graph_path)
     grapher.setPages(page_labels)
-           .setResponseTimes(response_times)
+           .setNinetyCentileResponseTimes(response_times[3])
            .setThresholdTitles(threshold_titles)
            .setThresholdData(threshold_data)
            .setErrorPercentages(error_percentages)
            .create() # <-- returns path to generated image
+                     #.setMinResponseTimes(response_times[0])
+                     #.setMaxResponseTimes(response_times[1])
+                     #.setAvgResponseTimes(response_times[2])
+                     #.setMedianResponseTimes(response_times[4])
   end
 
   def aggregate_stats()
