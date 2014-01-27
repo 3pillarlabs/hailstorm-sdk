@@ -24,21 +24,26 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   before_save :set_defaults
 
   # Sets up the project for first time or subsequent use
-  def setup(force = false)
+  def setup(force = false, invoked_from_start = false)
 
-    if force or settings_modified?
+    if invoked_from_start or settings_modified? or force
       logger.info("Setting up the project...")
 
       self.update_attributes!(:serial_version => config.serial_version(),
-                              :max_threads_per_agent => config.max_threads_per_agent,
                               :master_slave_mode => config.master_slave_mode,
                               :samples_breakup_interval => config.samples_breakup_interval,
                               :jmeter_version => config.jmeter.version)
       
       begin
-        configure_jmeter_plans()
-        configure_clusters()
-        configure_targets()
+        logger.info("Reading and validating JMeter plans...")
+        Hailstorm::Model::JmeterPlan.setup(self)
+
+        logger.info("Setting up clusters...")
+        Hailstorm::Model::Cluster.configure_all(self, config, force)
+
+        logger.info("Setting up targets...")
+        Hailstorm::Model::TargetHost.configure_all(self, config)
+
       rescue
         self.update_column(:serial_version, nil)
         raise
@@ -59,7 +64,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       build_current_execution_cycle.save! # buildABC is provided by has_one :ABC relation
       if settings_modified?
         begin
-          setup(true) #(force)
+          setup(false, true) #(force, invoked_from_start)
         rescue Exception
           self.current_execution_cycle.aborted!
           raise
@@ -87,14 +92,16 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   def stop(wait = false, options = nil, aborted = false)
    
     logger.debug { "#{self.class}##{__method__}" }
-
     unless current_execution_cycle.nil?
+      load_gen_stopped = false
       begin
         Hailstorm::Model::Cluster.stop_load_generation(self, wait, options, aborted)
+        load_gen_stopped = true
 
         # Update the stopped_at now, so that target monitoring
         # statistics be collected from started_at to stopped_at
         current_execution_cycle.set_stopped_at()
+
         Hailstorm::Model::TargetHost.stop_all_monitoring(self, aborted)
 
         unless aborted
@@ -104,6 +111,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
         end
 
       rescue
+        Hailstorm::Model::TargetHost.stop_all_monitoring(self, true) unless load_gen_stopped
         current_execution_cycle.aborted!
         raise
       end
@@ -141,10 +149,18 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       return selected_execution_cycles
 
     elsif operation == :exclude # exclude
+      raise(Hailstorm::Exception, "missing argument") if cycle_ids.blank?
       selected_execution_cycles.each {|ex| ex.excluded!}
 
     elsif operation == :include # include
+      raise(Hailstorm::Exception, "missing argument") if cycle_ids.blank?
       selected_execution_cycles.each {|ex| ex.stopped!}
+
+    elsif operation == :export
+      selected_execution_cycles.each do |ex|
+        export_paths = ex.export_results()
+        logger.info { "Results exported to:\n#{export_paths.join("\n")}" }
+      end
 
     else # generate report
       logger.info("Creating report for stopped tests...")
@@ -165,29 +181,16 @@ class Hailstorm::Model::Project < ActiveRecord::Base
         .reduce([]) {|acc, e| acc.push(*e.load_agents)}
   end
 
+  # Purges all clusters in the project
+  def purge_clusters()
+    self.clusters().each do |cluster|
+      cluster.purge()
+    end
+  end
+
 ###################### PRIVATE METHODS #######################################
   private
 
-  def configure_jmeter_plans()
-    
-    logger.info("Reading and validating JMeter plans...")
-    Hailstorm::Model::JmeterPlan.setup(self)
-  end
-
-  # Persist the cluster configuration  
-  def configure_clusters()
-    
-    logger.info("Setting up clusters...")
-    Hailstorm::Model::Cluster.configure_all(self, config)
-  end
-  
-  # Sets up targets for monitoring
-  def configure_targets()
-
-    logger.info("Setting up targets...")
-    Hailstorm::Model::TargetHost.configure_all(self, config)
-  end
-  
   # @return [Boolean] true if configuration settings have been modified
   def settings_modified?
     (self.serial_version.nil? ||
@@ -201,7 +204,6 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   end
 
   def set_defaults()
-    self.max_threads_per_agent ||= Defaults::MAX_THREADS_PER_AGENT
     self.master_slave_mode = Defaults::MASTER_SLAVE_MODE if self.master_slave_mode.nil?
     self.samples_breakup_interval ||= Defaults::SAMPLES_BREAKUP_INTERVAL
     self.jmeter_version ||= Defaults::JMETER_VERSION
@@ -209,7 +211,6 @@ class Hailstorm::Model::Project < ActiveRecord::Base
 
   # Default settings
   class Defaults
-    MAX_THREADS_PER_AGENT = 50
     MASTER_SLAVE_MODE = false
     SAMPLES_BREAKUP_INTERVAL = '1,3,5'
     JMETER_VERSION = 2.7

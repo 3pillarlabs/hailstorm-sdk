@@ -15,38 +15,42 @@ import org.jfree.data.category.DefaultCategoryDataset;
 
 public class TargetComparisonGraph {
 
-	private enum Mode { cpu, memory };
+	private enum Mode {
+		cpu, memory
+	};
 
 	private Mode mode;
 	private String graphFilePath;
 	private DefaultCategoryDataset dataSet;
-	
-	public static TargetComparisonGraph getCpuComparisionBuilder(String graphPath) {
-		
+
+	public static TargetComparisonGraph getCpuComparisionBuilder(
+			String graphPath) {
+
 		TargetComparisonGraph builder = new TargetComparisonGraph();
 		builder.setMode(Mode.cpu);
 		builder.setGraphPath(graphPath);
-		
+
 		return builder;
 	}
 
-	public static TargetComparisonGraph getMemoryComparisionBuilder(String graphPath) {
-		
+	public static TargetComparisonGraph getMemoryComparisionBuilder(
+			String graphPath) {
+
 		TargetComparisonGraph builder = new TargetComparisonGraph();
 		builder.setMode(Mode.memory);
 		builder.setGraphPath(graphPath);
-		
+
 		return builder;
 	}
-	
+
 	public void addDataItem(double value, String rowKey, String columnKey) {
-		
+
 		getDataSet().addValue(value, rowKey, columnKey);
 	}
-	
-	public String build() throws IOException {
 
-		String valueKey = null; 
+	public ChartModel build(int width, int height) throws IOException {
+
+		String valueKey = null;
 		switch (mode) {
 		case cpu:
 			valueKey = "CPU Usage (%)";
@@ -56,26 +60,25 @@ public class TargetComparisonGraph {
 			break;
 
 		}
-		
+
 		NumberAxis rangeAxis = new NumberAxis(valueKey);
 		rangeAxis.setAutoRangeIncludesZero(false);
-		
-		CategoryPlot plot = new CategoryPlot(getDataSet(), 
-				new CategoryAxis("Virtual Users"), 
-				rangeAxis, 
-				new LineAndShapeRenderer(true, true));
-		
+
+		CategoryPlot plot = new CategoryPlot(getDataSet(), new CategoryAxis(
+				"Virtual Users"), rangeAxis, new LineAndShapeRenderer(true,
+				true));
+
 		JFreeChart chart = new JFreeChart(plot);
 		chart.setBackgroundPaint(Color.white);
-		
+
 		String outFilePath = String.format("%s.png", graphFilePath);
 		OutputStream outStream = new FileOutputStream(outFilePath);
-		ChartUtilities.writeChartAsPNG(outStream, chart, 640, 300);
+		ChartUtilities.writeChartAsPNG(outStream, chart, width, height);
 		outStream.close();
-		
-		return outFilePath;
+
+		return new ChartModel(outFilePath, width, height);
 	}
-	
+
 	private void setMode(Mode mode) {
 		this.mode = mode;
 	}
@@ -85,11 +88,11 @@ public class TargetComparisonGraph {
 	}
 
 	private DefaultCategoryDataset getDataSet() {
-		
+
 		if (dataSet == null) {
 			dataSet = new DefaultCategoryDataset();
 		}
-		
+
 		return dataSet;
 	}
 

@@ -46,7 +46,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   #
   # Before creating a JmeterPlan instance, the associated script is read
   # and validated for required properties; if one or more can not be
-  # determined, a StandardError is raised.
+  # determined, a Hailstorm::Exception is raised.
   # 
   # @param [Hailstorm::Model::Project] project
   # @return [Array] of Hailstorm::Model::JmeterPlan instances
@@ -65,7 +65,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
         test_plans.push(jmx.gsub(rexp, '').gsub(/\.jmx$/, ''))
       end
       if test_plans.blank?
-        raise(StandardError, "no test plans in #{Hailstorm.app_dir}!")
+        raise(Hailstorm::Exception, "No test plans in #{Hailstorm.app_dir}.")
       end
       
     else # verify
@@ -80,7 +80,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
         end
       end
       unless not_found.empty?
-        raise(Hailstorm::Exception, "not all test plans found:\n#{not_found.join("\n")}")
+        raise(Hailstorm::Exception, "Not all test plans found:\n#{not_found.join("\n")}")
       end
     end
     
@@ -111,14 +111,11 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   # Looks up the number of threads configured in the backing test plan
   # and returns the number of load agents needed.
   #
-  # Uses Hailstorm::Model::Project#max_threads_per_agent to determine number of
-  # agents needed 
+  # @param [Hailstorm::Behavior::Clusterable]
   # @return [Fixnum]
-  def required_load_agent_count()
-    
-    logger.debug { "#{self.class}##{__method__}" }
-    if num_threads > self.project.max_threads_per_agent
-      (num_threads.to_f / self.project.max_threads_per_agent).ceil()
+  def required_load_agent_count(clusterable)
+    if clusterable.respond_to?(:max_threads_per_agent) and num_threads() > clusterable.max_threads_per_agent
+      (num_threads.to_f / clusterable.max_threads_per_agent).ceil()
     else
       1      
     end 
@@ -137,9 +134,10 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
       "#{self.test_plan_name}.jmx")
   end
   
-  # @param [String] IP address (String) of the slave agent
+  # @param [String] slave_ip_address IP address (String) of the slave agent
+  # @param [Hailstorm::Behavior::Clusterable] clusterable
   # @return [String] command to be executed on slave agent
-  def slave_command(slave_ip_address)
+  def slave_command(slave_ip_address, clusterable)
     
     logger.debug { "#{self.class}##{__method__}" }
     command_components = [
@@ -150,15 +148,17 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
         "-Djava.rmi.server.hostname=#{slave_ip_address}",
         "-j <%= @user_home %>/#{remote_log_dir}/#{remote_log_file(true)}"
     ]
-    command_components.push(*property_options())
+    command_components.push(*property_options(clusterable))
     command_components.push('1>/dev/null 2>&1 </dev/null &')
 
     command_components.join(' ')
   end
-  
-  # @param [Array] of remote IP addresses (String)
+
+  # @param [String] master_ip_address master IP address
+  # @param [Array] slave_ip_addresses remote IP addresses (String)
+  # @param [Hailstorm::Behavior::Clusterable] clusterable
   # @return [String] command to be executed on master agent
-  def master_command(master_ip_address, slave_ip_addresses)
+  def master_command(master_ip_address, slave_ip_addresses, clusterable)
 
     logger.debug { "#{self.class}##{__method__}" }
     
@@ -175,13 +175,20 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
       command_components.push("-Djava.rmi.server.hostname=#{master_ip_address}")
       command_components.push('-X')
     else
-      command_components.push(*property_options())
+      command_components.push(*property_options(clusterable))
     end
     command_components.push('1>/dev/null 2>&1 </dev/null &')
 
     command_components.join(' ')
   end
-  
+
+  # The command to stop a running JMeter instance. The command will have ERB
+  # placeholders for the master agent to interpolate.
+  # @@return [String] the command
+  def stop_command()
+    "<%= @jmeter_home %>/bin/shutdown.sh"
+  end
+
   # Directory hierarchy is expressed as an Hash. The key is the directory name,
   # value is either nil or another Hash. When value is Hash, it represents a
   # subdirectory within the keyed parent.
@@ -259,14 +266,24 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
       unknown.push(name) if properties_map[name].blank?
     end
     unless unknown.empty?
-      self.errors.add(:test_plan_name, "Unknown properties: #{unknown.join(',')}")
+      self.errors.add(:test_plan_name, "Unknown properties: #{unknown.join(',')}. Please add these properties to config/environment.rb")
     end 
-        
+
+    # reverse check for unused properties
+    unused_properties = []
+    properties_map.keys.each do |name|
+      unused_properties.push(name) unless extracted_property_names.include?(name)
+    end
+    unless unused_properties.empty?
+      logger.warn(
+          "Unused #{'property'.send(unused_properties.size == 1 ? :singularize : :pluralize)}: #{unused_properties.collect {|e| "'#{e}'"}.join(', ')}; detected in plan [#{File.join(Hailstorm.app_dir,"#{self.test_plan_name}.jmx")}]")
+    end
+
     # check presence of simple data writer
     xpath = '//ResultCollector[@guiclass="SimpleDataWriter"][@enabled="true"]'
     jmeter_document() do |doc|
       if doc.xpath(xpath).first.nil?
-        self.errors.add(:test_plan_name, "Missing Simple Data Writer")
+        self.errors.add(:test_plan_name, "Missing 'Simple Data Writer' JMeter listener, please add to your test plan(s).")
       end
     end
     
@@ -535,14 +552,14 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   
   # -J<name>=<value>
   # For threads_count properties, redistributes the load across agents
-  def property_options()
+  def property_options(clusterable)
     
     if @property_options.nil?
       @property_options = []
       
       properties_map.each_pair do |name, value|
         if threadgroups_threads_count_properties.include?(name)
-          value = value.to_f / required_load_agent_count()
+          value = value.to_f / required_load_agent_count(clusterable)
           if value < 1
             value = 1
           else

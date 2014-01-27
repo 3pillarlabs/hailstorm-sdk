@@ -7,6 +7,7 @@ require 'hailstorm/model'
 require 'hailstorm/model/execution_cycle'
 require 'hailstorm/model/jmeter_plan'
 require 'hailstorm/model/page_stat'
+require 'hailstorm/model/jtl_file'
 require 'hailstorm/support/quantile'
 
 class Hailstorm::Model::ClientStat < ActiveRecord::Base
@@ -18,6 +19,8 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   belongs_to :clusterable, :polymorphic => true
 
   has_many :page_stats, :dependent => :destroy
+
+  has_many :jtl_files, :dependent => :delete_all
 
   # starting (minimum) timestamp of collected samples
   attr_accessor :start_timestamp
@@ -82,11 +85,10 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
     client_stat.save!
 
-    # remove file
-    if Hailstorm.env == :production
-      logger.debug { "Going to unlink #{stat_file_path}..." }
-      File.unlink(stat_file_path)
-    end
+    # persist file to DB and remove file from FS
+    logger.info { "Persisting #{stat_file_path} to DB..." }
+    Hailstorm::Model::JtlFile.persist_file(client_stat, stat_file_path)
+    File.unlink(stat_file_path)
   end
 
   # Combines two or more JTL files to create new JTL file with combined stats.
@@ -94,36 +96,45 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   # @param [Array] stat_file_paths path to JTL files
   # @param [Integer] execution_cycle_id
   # @param [Integer]jmeter_plan_id
-  # @param [Integer] clusterable ID
+  # @param [Integer] clusterable_id ID
+  # @param [Boolean] unlink_stat_files remove the stat files after combining them
   # @return [String] path to new file
   def self.combine_stats(stat_file_paths, execution_cycle_id,
-      jmeter_plan_id, clusterable_id)
+      jmeter_plan_id = nil, clusterable_id = nil, unlink_stat_files = true)
 
     xml_decl = '<?xml version="1.0" encoding="UTF-8"?>'
     test_results_start_tag = '<testResults version="1.2">'
     test_results_end_tag = '</testResults>'
-    combined_file_path = File.join(Hailstorm.root, Hailstorm.log_dir,
-      "results-#{execution_cycle_id}-#{jmeter_plan_id}-#{clusterable_id}-all.jtl")
-    File.open(combined_file_path, 'w') do |combined_file|
-      combined_file.puts xml_decl
-      combined_file.puts test_results_start_tag
+    file_unique_ids = [execution_cycle_id]
+    file_unique_ids.push(jmeter_plan_id) unless jmeter_plan_id.nil?
+    file_unique_ids.push(clusterable_id) unless clusterable_id.nil?
+    combined_file_path = File.join(Hailstorm.tmp_path,
+      "results-#{file_unique_ids.join('-')}-all.jtl")
 
-      stat_file_paths.each do |file_path|
-        File.open(file_path, 'r') do |file|
-          file.each_line do |line|
-            if line[xml_decl].nil? and line[test_results_start_tag].nil? and line[test_results_end_tag].nil?
-              combined_file.print(line)
+    unless File.exists?(combined_file_path)
+      File.open(combined_file_path, 'w') do |combined_file|
+        combined_file.puts xml_decl
+        combined_file.puts test_results_start_tag
+
+        stat_file_paths.each do |file_path|
+          File.open(file_path, 'r') do |file|
+            file.each_line do |line|
+              if line[xml_decl].nil? and line[test_results_start_tag].nil? and line[test_results_end_tag].nil?
+                combined_file.print(line)
+              end
             end
           end
         end
+
+        combined_file.puts test_results_end_tag
       end
 
-      combined_file.puts test_results_end_tag
-    end
-
-    # remove individual files
-    stat_file_paths.each do |file_path|
-      File.unlink(file_path)
+      # remove individual files
+      if unlink_stat_files
+        stat_file_paths.each do |file_path|
+          File.unlink(file_path)
+        end
+      end
     end
 
     return combined_file_path
@@ -224,7 +235,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
                                     execution_cycle_throughput)
     end
 
-    grapher.build() # <-- returns path to generated image
+    grapher.build(640, 600) # <-- returns path to generated image
   end
 
   def collect_sample(sample)
@@ -242,6 +253,184 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     end
 
     self.sample_response_times.push(sample['t'])
+  end
+
+  # @param [String] export_dir directory for exported files
+  # @return [String] path to exported file
+  def write_jtl(export_dir, append_id = false)
+    require(self.clusterable_type.underscore)
+    file_name = [self.clusterable.slug.gsub(/[\W\s]+/, '_'),
+                 self.jmeter_plan.test_plan_name.gsub(/[\W\s]+/, '_')].join('-')
+    file_name.concat("-#{self.id}") if append_id
+    file_name.concat(".jtl")
+
+    export_file = File.join(export_dir, file_name)
+    Hailstorm::Model::JtlFile.export_file(self, export_file) unless File.exists?(export_file)
+    return export_file
+  end
+
+  # Generates a hits per second graph
+  def self.hits_per_second_graph(execution_cycle)
+    sax_document = Nokogiri::XML::SAX::Document.new()
+    sax_document.class_eval do
+      attr_reader :hit_matrix
+      attr_reader :start_time
+
+      def start_document()
+        @level = 0
+        @hit_matrix = {} if @hit_matrix.nil?
+      end
+
+      def start_element(name, attrs = [])
+        if %w(httpSample sample).include?(name)
+          @level += 1
+          attrs_map = Hash[attrs]
+          tms = attrs_map['ts'].to_i # ms
+          ts = tms / 1000 # sec
+          if @parent_ts.nil? or @parent_ts != ts
+            @hit_matrix[ts] = @hit_matrix[ts].to_i + 1
+          end
+          @parent_ts = ts if @level == 1
+          @start_time = tms if @start_time.nil? or @start_time > tms
+        end
+      end
+
+      def end_element(name)
+        if %w(httpSample sample).include?(name)
+          @level -= 1
+          @parent_ts = nil if @level == 0
+        end
+      end
+    end
+    sax_parser = Nokogiri::XML::SAX::Parser.new(sax_document)
+    execution_cycle.client_stats.each do |client_stat|
+      export_file = client_stat.write_jtl(Hailstorm.tmp_path, true)
+      File.open(export_file, 'r') do |file|
+        sax_parser.parse(file)
+      end
+    end
+
+    grapher = com.brickred.tsg.hailstorm.TimeSeriesGraph.new("Requests/second",
+                                                             "Requests",
+                                                             sax_document.start_time)
+    sax_document.hit_matrix.each do |key, value|
+      grapher.addDataPoint(key, value)
+    end
+
+    grapher.build(File.join(Hailstorm.root, Hailstorm.reports_dir,
+                            "hits_per_second_graph_#{execution_cycle.id}"), 640, 300)
+  end
+
+  def self.active_threads_over_time_graph(execution_cycle)
+    sax_document = Nokogiri::XML::SAX::Document.new()
+    sax_document.class_eval do
+      attr_reader :vusers_matrix
+      attr_reader :start_time
+
+      def start_document()
+        @vusers_matrix = {} if @vusers_matrix.nil?
+        @start_time = nil
+        @host_matrix = {} if @host_matrix.nil?
+      end
+
+      def start_element(name, attrs = [])
+        if %w(httpSample sample).include?(name)
+          attrs_map = Hash[attrs]
+          tms = attrs_map['ts'].to_i # ms
+          ts = tms / 1000 # sec
+          num_active_threads = attrs_map['na'].to_i
+
+          if num_active_threads > 0
+            host_name = attrs_map['hn']
+            @host_matrix[ts] = [] if @host_matrix[ts].nil?
+            if !@host_matrix[ts].include?(host_name)
+              @vusers_matrix[ts] = @vusers_matrix[ts].to_i + num_active_threads
+            elsif @vusers_matrix[ts].to_i < num_active_threads
+              @vusers_matrix[ts] = num_active_threads
+            end
+            @host_matrix[ts].push(host_name) unless @host_matrix[ts].include?(host_name)
+          end
+
+          @start_time = tms if @start_time.nil? or @start_time > tms
+        end
+      end
+
+    end
+    sax_parser = Nokogiri::XML::SAX::Parser.new(sax_document)
+
+    execution_cycle.client_stats.each do |client_stat|
+      export_file = client_stat.write_jtl(Hailstorm.tmp_path, true)
+      File.open(export_file, 'r') do |file|
+        sax_parser.parse(file)
+      end
+    end
+
+    grapher = com.brickred.tsg.hailstorm.TimeSeriesGraph.new("Virtual Users / Second",
+                                                             "Virtual Users",
+                                                             sax_document.start_time)
+    ts_keys = sax_document.vusers_matrix.keys.sort {|a,b| a.to_i <=> b.to_i}
+    ts_keys.each_with_index do |ts, index|
+      previous_index = index > 1 ? index - 1 : index
+      next_index = index < ts_keys.size - 1 ? index + 1 : index
+      previous_count = sax_document.vusers_matrix[ts_keys[previous_index]]
+      threads_count = sax_document.vusers_matrix[ts]
+      next_count = sax_document.vusers_matrix[ts_keys[next_index]]
+      if previous_count == next_count and previous_count > threads_count
+        threads_count = previous_count # dip correction
+      end
+      grapher.addDataPoint(ts, threads_count)
+    end
+    grapher.build(File.join(Hailstorm.root, Hailstorm.reports_dir,
+                            "vusers_per_second_graph_#{execution_cycle.id}"), 640, 300)
+  end
+
+  def self.throughput_over_time_graph(execution_cycle)
+    sax_document = Nokogiri::XML::SAX::Document.new()
+    sax_document.class_eval do
+      attr_reader :byte_matrix
+      attr_reader :start_time
+
+      def start_document()
+        @level = 0
+        @byte_matrix = {} if @byte_matrix.nil?
+      end
+
+      def start_element(name, attrs = [])
+        if %w(httpSample sample).include?(name)
+          if @level == 0
+            attrs_map = Hash[attrs]
+            tms = attrs_map['ts'].to_i # ms
+            ts = tms / 1000 # sec
+            @byte_matrix[ts] = @byte_matrix[ts].to_i + attrs_map['by'].to_i
+            @start_time = tms if @start_time.nil? or @start_time > tms
+          end
+          @level += 1
+        end
+      end
+
+      def end_element(name)
+        if %w(httpSample sample).include?(name)
+          @level -= 1
+        end
+      end
+    end
+    sax_parser = Nokogiri::XML::SAX::Parser.new(sax_document)
+    execution_cycle.client_stats.each do |client_stat|
+      export_file = client_stat.write_jtl(Hailstorm.tmp_path, true)
+      File.open(export_file, 'r') do |file|
+        sax_parser.parse(file)
+      end
+    end
+
+    grapher = com.brickred.tsg.hailstorm.TimeSeriesGraph.new("Throughput over time",
+                                                             "Bytes Transferred",
+                                                             sax_document.start_time)
+    sax_document.byte_matrix.each do |key, value|
+      grapher.addDataPoint(key, value)
+    end
+
+    grapher.build(File.join(Hailstorm.root, Hailstorm.reports_dir,
+                            "throughput_per_second_graph_#{execution_cycle.id}"), 640, 300)
   end
 
   # Receives event callbacks as XML is parsed

@@ -35,26 +35,25 @@ class Hailstorm::Support::Thread
   end
   
   # Joins all threads spawned by current thread and clears active connections.
-  # @return [Boolean] true if all threads exited gracefully, false otherwise
+  # @raise [Hailstorm::Exception] if not all threads finished gracefully.
   def self.join()
 
-    graceful = true
     Hailstorm.logger.debug { "#{self}.#{__method__}" }
     # Give up the current threads connection, so that a child thread waiting
     # on it will get the connection
     ActiveRecord::Base.connection_pool.release_connection()
-
+    thread_exceptions = []
     spawned = Thread.current[:spawned]
     until spawned.blank?
       t = spawned.shift()
       begin
         t.join()
-      rescue StandardError => e
-        graceful = false
+      rescue Object => e
+        thread_exceptions.push(e)
       end
     end
 
-    return graceful
+    raise(Hailstorm::ThreadJoinException.new(thread_exceptions)) unless thread_exceptions.empty?
   end
   
   

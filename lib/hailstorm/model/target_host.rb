@@ -73,7 +73,7 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
       Hailstorm::Support::Thread.start(monitor) {|t| t.call_setup()}
     end
 
-    Hailstorm::Support::Thread.join()
+    Hailstorm::Support::Thread.join() rescue raise(Hailstorm::Exception, "One or more target hosts could not be setup for monitoring.")
   end
 
   # Calls #start_monitoring().

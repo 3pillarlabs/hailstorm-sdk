@@ -7,7 +7,7 @@ require 'hailstorm/support/log4j_backed_logger'
 module Hailstorm::Behavior::Loggable
 
   # Callback function which gets called when this module is included in a class
-  # Add a static logger and an instance logger method to recipeint
+  # Add a static logger and an instance logger method to recipient
   def self.included(recipient)
 
     # add the static logger

@@ -1,4 +1,8 @@
+source '<%= @gem_source %>'
 source :rubygems
 
 gem "hailstorm"
 gem "activerecord-jdbcmysql-adapter"
+<%- if @jruby_pageant %>
+gem "jruby-pageant", "= 1.1.1"
+<%- end %>

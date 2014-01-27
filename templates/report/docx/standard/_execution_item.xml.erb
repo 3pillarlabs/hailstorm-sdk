@@ -72,12 +72,16 @@
             <w:noProof />
         </w:rPr>
         <%=
-            render(:partial => 'drawing', :object => client_stat.aggregate_graph,
-            :locals => {
-                :cx => 5943600,
-                :cy => 7429500
-            })
+            render(:partial => 'drawing', :object => client_stat.aggregate_graph)
         %>
+    </w:r>
+</w:p>
+<w:p w:rsidR="00406A64" w:rsidRDefault="00406A64" w:rsidP="00406A64">
+    <w:pPr>
+        <w:pStyle w:val="Heading<%= execution_item.multiple_cluster? ? 4 : 3 %>" />
+    </w:pPr>
+    <w:r>
+        <w:t xml:space="preserve">Detailed Metrics</w:t>
     </w:r>
 </w:p>
 <w:p w:rsidR="00DE1712" w:rsidRPr="00DE1712" w:rsidRDefault="00DE1712"
@@ -93,9 +97,84 @@
 </w:p>
         <%- end %> <!-- jmeter -->
     <%- end %> <!-- cluster -->
+
+<w:p w:rsidR="00406A65" w:rsidRDefault="00406A65" w:rsidP="00406A65">
+    <w:pPr>
+        <w:pStyle w:val="Heading2" />
+    </w:pPr>
+    <w:r>
+        <w:t xml:space="preserve">Requests/Second Graph </w:t>
+    </w:r>
+</w:p>
+<w:p w:rsidR="003B5316" w:rsidRDefault="003B5316" w:rsidP="003B5316">
+    <w:r>
+        <w:t>The following graph shows the hits (requests) per second for the duration of the test.</w:t>
+    </w:r>
+</w:p>
+<w:p w:rsidR="00DE1741" w:rsidRPr="00DE1741" w:rsidRDefault="00DE1741"
+    w:rsidP="00DE1741">
+    <w:r>
+        <w:rPr>
+            <w:noProof />
+        </w:rPr>
+        <%=
+            render(:partial => 'drawing', :object => execution_item.hits_per_second_graph)
+        %>
+    </w:r>
+</w:p>
+
+<w:p w:rsidR="00406A64" w:rsidRDefault="00406A64" w:rsidP="00406A64">
+    <w:pPr>
+        <w:pStyle w:val="Heading2" />
+    </w:pPr>
+    <w:r>
+        <w:t xml:space="preserve">Virtual Users/Second Graph </w:t>
+    </w:r>
+</w:p>
+<w:p w:rsidR="003B5317" w:rsidRDefault="003B5317" w:rsidP="003B5317">
+    <w:r>
+        <w:t>The following graph shows the virtual users (threads) per second for the duration of the test.</w:t>
+    </w:r>
+</w:p>
+<w:p w:rsidR="00DE1742" w:rsidRPr="00DE1742" w:rsidRDefault="00DE1742"
+    w:rsidP="00DE1742">
+    <w:r>
+        <w:rPr>
+            <w:noProof />
+        </w:rPr>
+        <%=
+            render(:partial => 'drawing', :object => execution_item.active_threads_over_time_graph)
+        %>
+    </w:r>
+</w:p>
+
+<w:p w:rsidR="00406A68" w:rsidRDefault="00406A68" w:rsidP="00406A68">
+    <w:pPr>
+        <w:pStyle w:val="Heading2" />
+    </w:pPr>
+    <w:r>
+        <w:t xml:space="preserve">Bytes/Second Graph </w:t>
+    </w:r>
+</w:p>
+<w:p w:rsidR="003B5327" w:rsidRDefault="003B5327" w:rsidP="003B5327">
+    <w:r>
+        <w:t>The following graph shows the bytes transferred per second for the duration of the test.</w:t>
+    </w:r>
+</w:p>
+<w:p w:rsidR="00DE1748" w:rsidRPr="00DE1748" w:rsidRDefault="00DE1748" w:rsidP="00DE1748">
+    <w:r>
+        <w:rPr>
+            <w:noProof />
+        </w:rPr>
+        <%=
+            render(:partial => 'drawing', :object => execution_item.throughput_over_time_graph)
+        %>
+    </w:r>
+</w:p>
+
     <%- execution_item.target_stats.each do |target_stat| %>
 <w:p w:rsidR="00A47ED7" w:rsidRDefault="00A47ED7" w:rsidP="00A47ED7" />
-<w:p w:rsidR="00DE1740" w:rsidRDefault="00FF7AE3" w:rsidP="00DE1740">
+<w:p w:rsidR="00DE1743" w:rsidRDefault="00FF7AE3" w:rsidP="00DE1743">
     <w:pPr>
         <w:pStyle w:val="Heading2" />
     </w:pPr>
@@ -112,23 +191,19 @@
     </w:r>
     <w:bookmarkEnd w:id="6" />
 </w:p>
-<w:p w:rsidR="003B5315" w:rsidRDefault="00306A64" w:rsidP="00C35CF0">
+<w:p w:rsidR="003B5318" w:rsidRDefault="003B5318" w:rsidP="003B5318">
     <w:r>
         <w:t>The following graph shows the % total CPU used (across all CPUs in the system), the memory (RAM) usage and swap space usage for the duration of the test.</w:t>
     </w:r>
 </w:p>
-<w:p w:rsidR="00DE1740" w:rsidRPr="00DE1740" w:rsidRDefault="00DE1740"
-    w:rsidP="00DE1740">
+<w:p w:rsidR="00DE1744" w:rsidRPr="00DE1744" w:rsidRDefault="00DE1744"
+    w:rsidP="00DE1744">
     <w:r>
         <w:rPr>
             <w:noProof />
         </w:rPr>
         <%=
-            render(:partial => 'drawing', :object => target_stat.utilization_graph,
-            :locals => {
-                :cx => 5943600,
-                :cy => 5572125
-            })
+            render(:partial => 'drawing', :object => target_stat.utilization_graph)
         %>
     </w:r>
 </w:p>

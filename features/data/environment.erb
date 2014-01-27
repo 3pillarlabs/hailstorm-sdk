@@ -1,0 +1,38 @@
+# Hailstorm configuration
+Hailstorm.application.config do |config|
+
+    # This is the JMeter configuration
+    config.jmeter do |jmeter|
+        # default properties for all app/**/*.jmx files
+        jmeter.properties() do |map|
+        <%- @properties.each do |p| %>
+            map['<%= p.property %>'] = <%= p.value =~ /[a-zA-Z]/ ? "'#{p.value}'" : p.value %>
+        <%- end %>
+        end
+    end
+
+    # EC2 configuration
+    <%- @clusters.each do |p| %>
+    config.clusters(:<%= p.cluster_type %>) do |cluster|
+        cluster.access_key  = '<%= p.access_key %>'
+        cluster.secret_key  = '<%= p.secret_key %>'
+        cluster.region      = '<%= p.region %>'
+        <%- unless p.max_threads_per_agent.blank? %>
+        cluster.max_threads_per_agent = <%= p.max_threads_per_agent %>
+        <%- end %>
+    end
+    <%- end %>
+
+    # Target configuration
+    config.monitors(:nmon) do |monitor|
+        monitor.executable_path   = '/usr/bin/nmon'
+        monitor.ssh_identity      = 'testroid_identity'
+        monitor.user_name         = 'brickred'
+        monitor.sampling_interval = 5
+
+        monitor.groups('Application Server') do |group|
+            group.hosts('qa.brickred.com')
+        end
+    end
+
+end

@@ -12,7 +12,7 @@ class Hailstorm::Model::SlaveAgent < Hailstorm::Model::LoadAgent
   def start_jmeter()
     
     logger.debug { "#{self.class}##{__method__}" }
-    command_template = self.jmeter_plan.slave_command(self.private_ip_address)
+    command_template = self.jmeter_plan.slave_command(self.private_ip_address, self.clusterable)
     logger.debug(command_template)
     command = evaluate_command(command_template)
     logger.debug(command)
@@ -26,7 +26,18 @@ class Hailstorm::Model::SlaveAgent < Hailstorm::Model::LoadAgent
       Hailstorm::Support::SSH.start(self.public_ip_address,
                                     self.clusterable.user_name, self.clusterable.ssh_options) do |ssh|
 
-        ssh.terminate_process(self.jmeter_pid)
+        # Since the master is configured to send the slaves a shutdown message,
+        # we wait for graceful shutdown.
+        tries = 0
+        until tries >= 3
+          sleep(60)
+          break unless ssh.process_running?(self.jmeter_pid)
+          tries += 1
+        end
+        if tries >= 3
+          # graceful shutdown is not happening
+          ssh.terminate_process_tree(self.jmeter_pid)
+        end
         self.update_column(:jmeter_pid, nil)
       end
     end

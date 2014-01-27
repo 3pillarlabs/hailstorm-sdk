@@ -132,6 +132,36 @@ class Hailstorm::Support::ReportBuilder
       self.clusters.size > 1
     end
 
+    def hits_per_second_graph(&block)
+      @hits_per_second_graph ||= Hailstorm::Support::ReportBuilder::Graph.new()
+      if block_given?
+        yield @hits_per_second_graph
+        @hits_per_second_graph.enlist(builder)
+      else
+        @hits_per_second_graph
+      end
+    end
+
+    def active_threads_over_time_graph(&block)
+      @active_threads_over_time_graph ||= Hailstorm::Support::ReportBuilder::Graph.new()
+      if block_given?
+        yield @active_threads_over_time_graph
+        @active_threads_over_time_graph.enlist(builder)
+      else
+        @active_threads_over_time_graph
+      end
+    end
+
+    def throughput_over_time_graph(&block)
+      @throughput_over_time_graph ||= Hailstorm::Support::ReportBuilder::Graph.new()
+      if block_given?
+        yield @throughput_over_time_graph
+        @throughput_over_time_graph.enlist(builder)
+      else
+        @throughput_over_time_graph
+      end
+    end
+
   end
 
   def client_comparison_graph(&block)
@@ -239,8 +269,8 @@ class Hailstorm::Support::ReportBuilder
   end
 
   class Graph
-    
-    attr_accessor :image_path
+
+    attr_accessor :chart_model
 
     # internal attributes
     attr_reader :docpr_id
@@ -248,20 +278,23 @@ class Hailstorm::Support::ReportBuilder
     attr_reader :cnvpr_id
     attr_reader :cnvpr_name
     attr_reader :embed_id
+    attr_reader :cx
+    attr_reader :cy
 
     def enlist(builder)
 
       @docpr_id = self.object_id
       @docpr_name = "Picture #{@docpr_id}"
-      @cnvpr_id = @image_path.object_id
-      @cnvpr_name = File.basename(@image_path)
+      @cnvpr_id = @chart_model.object_id
+      @cnvpr_name = File.basename(@chart_model.getFilePath())
       @embed_id = "rId#{self.object_id}"
-
+      @cx = (@chart_model.getWidth() * 9286.875).to_i
+      @cy = (@chart_model.getHeight() * 9286.875).to_i
       builder.images.push(self)
     end
 
     def exists?
-      self.image_path.blank? ? false : true
+      self.chart_model.blank? ? false : true
     end
 
   end
@@ -321,9 +354,9 @@ class Hailstorm::Support::ReportBuilder
       relationship = Nokogiri::XML::Element.new('Relationship', rels_doc_xml)
       relationship['Id'] = graph.embed_id
       relationship['Type'] = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image'
-      relationship['Target'] = "media/#{File.basename(graph.image_path)}"
+      relationship['Target'] = "media/#{File.basename(graph.chart_model.getFilePath())}"
       rels_doc_xml.elements.first.add_child(relationship)
-      FileUtils.move(graph.image_path, media_path)
+      FileUtils.move(graph.chart_model.getFilePath(), media_path)
     end
     File.open(rels_xml, 'w') do |io|
       rels_doc_xml.write_xml_to(io)

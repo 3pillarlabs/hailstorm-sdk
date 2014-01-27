@@ -1,6 +1,6 @@
 <w:drawing>
     <wp:inline distT="0" distB="0" distL="0" distR="0">
-        <wp:extent cx="<%= cx %>" cy="<%= cy %>" />
+        <wp:extent cx="<%= drawing.cx %>" cy="<%= drawing.cy %>" />
         <wp:effectExtent l="0" t="0" r="0" b="0" />
         <wp:docPr id="<%= drawing.docpr_id %>" name="<%= drawing.docpr_name %>" />
         <wp:cNvGraphicFramePr>
@@ -34,7 +34,7 @@
                     <pic:spPr>
                         <a:xfrm>
                             <a:off x="0" y="0" />
-                            <a:ext cx="<%= cx %>" cy="<%= cy %>" />
+                            <a:ext cx="<%= drawing.cx %>" cy="<%= drawing.cy %>" />
                         </a:xfrm>
                         <a:prstGeom prst="rect">
                             <a:avLst />

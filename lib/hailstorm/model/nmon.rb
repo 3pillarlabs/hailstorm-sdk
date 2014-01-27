@@ -29,8 +29,8 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
           self.executable_pid = nil
         end
       else
-        logger.warn("nmon not found at #{target.executable_path} on #{target.host_name}, disabling target...")
-        self.active = false
+        raise(Hailstorm::Exception,
+              "nmon not found at #{target.executable_path} on #{target.host_name}.")
       end
     end # ssh
   end
@@ -69,7 +69,7 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
           unless ssh.process_running?(self.executable_pid)
             self.executable_pid = nil
           else
-            logger.warn("nmon could not be stopped on #{self.host_name} (#{self.role_name})")
+            raise(Hailstorm::Exception, "nmon could not be stopped on #{self.host_name} (#{self.role_name})")
           end
         end
       end # ssh

@@ -77,6 +77,10 @@ module Hailstorm
     (ENV['HAILSTORM_ENV'] || 'production').to_sym
   end
 
+  def self.gem_source
+    'http://labs.3pillarglobal.com:8808'
+  end
+
 end
 
 # inject a logger method to Kernel so it's available everywhere
@@ -85,32 +89,3 @@ class Object
   include Hailstorm::Behavior::Loggable
 end
 
-# after_commit methods simply log an error on exception and do not raise it
-# monkey-patch to at least log an additional backtrace,
-# active_record/connection_adapters/abstract/database_statements.rb
-module ActiveRecord
-  module ConnectionAdapters
-    module DatabaseStatements
-
-      protected
-
-      def commit_transaction_records
-        records = @_current_transaction_records.flatten
-        @_current_transaction_records.clear
-        unless records.blank?
-          records.uniq.each do |record|
-            begin
-              record.committed!
-            rescue Exception => e
-              if record.respond_to?(:logger) && record.logger
-                record.logger.error("#{e.class}: #{e.message}")
-                logger.debug { "\n".concat(e.backtrace().join("\n")) }
-              end
-            end
-          end
-        end
-      end
-
-    end
-  end
-end

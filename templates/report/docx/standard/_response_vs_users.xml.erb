@@ -31,11 +31,7 @@
             <w:noProof />
         </w:rPr>
         <%=
-            render(:partial => 'drawing', :object => report.client_comparison_graph,
-            :locals => {
-                :cx => 5943600,
-                :cy => 5572125
-            })
+            render(:partial => 'drawing', :object => report.client_comparison_graph)
         %>
     </w:r>
 </w:p>

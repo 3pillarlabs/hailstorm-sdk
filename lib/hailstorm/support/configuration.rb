@@ -6,12 +6,6 @@ require 'hailstorm/support'
 
 class Hailstorm::Support::Configuration
   
-  # Set the maximum number of threads spawned by a single load agent. If
-  # unspecified, the default is 50. If the number of threads in the JMeter thread
-  # group is higher than this value, multiple load agents will be spawned with
-  # equal thread distribution.
-  attr_accessor :max_threads_per_agent
-  
   # Boolean value controls whether Jmeter is operated in master slave mode
   # or simultaneous mode, defaults to true
   attr_accessor :master_slave_mode
@@ -61,12 +55,12 @@ class Hailstorm::Support::Configuration
 
   # JMeter configuration
   def jmeter(&block)
-    
-    @jmeter ||= JMeter.new
+
+    @jmeter ||= JMeter.new unless self.frozen?
     if block_given? 
       yield(@jmeter)
     else
-      return @jmeter
+      return (@jmeter || JMeter.new)
     end
   end
   
@@ -77,7 +71,7 @@ class Hailstorm::Support::Configuration
   # @return [Object] array or config object if block is given
   def clusters(cluster_type = nil, &block)
     
-    @clusters ||= []
+    @clusters ||= [] unless self.frozen?
     if block_given?
       cluster_config_klass = "Hailstorm::Support::Configuration::#{cluster_type.to_s.camelize}"
                               .constantize()
@@ -86,7 +80,7 @@ class Hailstorm::Support::Configuration
       yield cluster_config
       @clusters.push(cluster_config) 
     else
-      @clusters
+      @clusters || []
     end
   end
 
@@ -139,6 +133,11 @@ class Hailstorm::Support::Configuration
     #
     # m1.small is suitable for development and exploratory testing
     attr_accessor :instance_type
+
+    # Set the maximum number of threads spawned by a single load agent.
+    # If the number of threads in the JMeter thread group is higher than this
+    # value, multiple load agents will be spawned with equal thread distribution.
+    attr_accessor :max_threads_per_agent
   end
 
   # Settings for one more monitors. Multiple monitors of different types can

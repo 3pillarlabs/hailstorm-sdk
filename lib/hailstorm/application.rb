@@ -42,7 +42,10 @@ class Hailstorm::Application
     java.lang.System.setProperty("hailstorm.log.dir",
                                  File.join(Hailstorm.root, Hailstorm.log_dir))
 
+    ActiveRecord::Base.logger = logger
     Hailstorm.application = self.new
+    Hailstorm.application.clear_tmp_dir()
+    Hailstorm.application.check_for_updates()
     Hailstorm.application.load_config(true)
     Hailstorm.application.check_database()
   end
@@ -51,7 +54,6 @@ class Hailstorm::Application
   def initialize
     @multi_threaded = true
     @exit_command_counter = 0
-    ActiveRecord::Base.logger = logger
   end
 
   # Initializes the application - creates directory structure and support files
@@ -73,18 +75,20 @@ class Hailstorm::Application
     # reload commands from saved history if such file exists
     reload_saved_history()
 
-    puts "Welcome to the Hailstorm shell. Type help to get started..."
+    puts %{Welcome to the Hailstorm (version #{Hailstorm::VERSION}) shell.
+Type help to get started...
+}
     trap("INT", proc { logger.warn("Type [quit|exit|ctrl+D] to exit shell") } )
 
     # for IRB like shell, save state for later execution
     shell_binding = FreeShell.new.get_binding()
-
+    prompt = 'hs > '
     while @exit_command_counter >= 0
 
-      command = Readline.readline("hs > ", true)
+      command_line = Readline.readline(prompt, true)
 
       # process EOF (Control+D)
-      if command.nil?
+      if command_line.nil?
         unless exit_ok?
           @exit_command_counter += 1
           logger.warn {"You have running load agents: terminate first or quit/exit explicitly"}
@@ -95,15 +99,23 @@ class Hailstorm::Application
       end
 
       # skip empty lines
-      if command.blank?
+      if command_line.blank?
         Readline::HISTORY.pop
         next
       end
-      command.chomp!
-      command.strip!
+      command_line.chomp!
+      command_line.strip!
 
       begin
-        interpret_command(command)
+        command = interpret_command(command_line)
+        unless command.nil?
+          case command
+            when :start
+              prompt.gsub!(/\s$/, '*  ')
+            when :stop, :abort
+              prompt.gsub!(/\*\s{2}$/, ' ')
+          end
+        end
 
       rescue IncorrectCommandException => incorrect_command
         puts incorrect_command.message()
@@ -112,7 +124,7 @@ class Hailstorm::Application
         unless Hailstorm.env == :production
           # execute the command as-is like IRB
           begin
-            out = shell_binding.eval(command)
+            out = shell_binding.eval(command_line)
             print '=> '
             if out.nil? or not out.is_a?(String)
               print out.inspect
@@ -125,15 +137,14 @@ class Hailstorm::Application
             logger.debug { "\n".concat(irb_exception.backtrace.join("\n")) }
           end
         else
-          logger.error {"Unknown command: #{command}"}
+          logger.error {"Unknown command: #{command_line}"}
         end
+
+      rescue Hailstorm::ThreadJoinException
+        logger.error "'#{command_line}' command failed."
 
       rescue Hailstorm::Exception => hailstorm_exception
         logger.error hailstorm_exception.message()
-
-      rescue Hailstorm::Error => hailstorm_error
-        logger.error hailstorm_error.cause.message()
-        logger.debug { "\n".concat(hailstorm_error.cause.backtrace.join("\n")) }
 
       rescue StandardError => uncaught
         logger.error uncaught.message
@@ -142,7 +153,7 @@ class Hailstorm::Application
         ActiveRecord::Base.clear_all_connections!
       end
 
-      save_history(command)
+      save_history(command_line)
     end
     puts ""
     logger.debug { ["\n", '-' * 80, "Application ended at #{Time.now.to_s}", '*' * 80].join("\n") }
@@ -162,23 +173,20 @@ class Hailstorm::Application
     end
   end
 
-  def check_database()
+  def check_database
 
     fail_once = false
     begin
       ActiveRecord::Base.establish_connection(connection_spec) # this is lazy, does not fail!
-      # check if the database exists, create it otherwise - this will fail if database does not exist
-      ActiveRecord::Base.connection.execute("SELECT count(id) from projects")
+      # create/update the schema
+      Hailstorm::Support::Schema.create_schema()
+
     rescue ActiveRecord::ActiveRecordError => e
       unless fail_once
-        logger.info "Database does not exist, creating..."
+        fail_once = true
+        logger.info 'Database does not exist, creating...'
         # database does not exist yet
         create_database()
-
-        # create/update the schema
-        Hailstorm::Support::Schema.create_schema()
-
-        fail_once = true
         retry
       else
         logger.error e.message()
@@ -205,22 +213,78 @@ class Hailstorm::Application
   end
   alias :reload :load_config
 
-  private
-  
-  # single point for executing all commands, for exception handling.
-  def execute(&block)
-    
-    begin
-      yield
-    rescue Hailstorm::Exception
-      raise
-    rescue StandardError => e
-      error = Hailstorm::Error.new
-      error.cause = e
-      raise(error, e.message())
+  def check_for_updates
+    return unless Hailstorm.env == :production
+    logger.debug 'Checking for updates...'
+    new_version = Gem.latest_version_for('hailstorm')
+    unless new_version.nil? or new_version.prerelease?
+      current_version = Gem::Version.new(Hailstorm::VERSION)
+      if current_version < new_version
+        printf %{A new version of Hailstorm is available:
+  Current version: #{current_version} (old)
+  New version    : #{new_version}
+
+Execute 'jruby -S bundle update' to install the updates.
+
+Continue using old version?
+(anything other than 'yes' will exit) > }
+        prompt = $stdin.gets
+        unless prompt.chomp == 'yes'
+          exit(0)
+        end
+      end
     end
   end
-  
+
+  # Interpret the command (parse & execute)
+  # @param [String] command
+  # @return [String] command or nil if help is invoked
+  def interpret_command(command)
+
+    if [:exit, :quit].include?(command.to_sym)
+      if @exit_command_counter == 0 and !exit_ok?
+        @exit_command_counter += 1
+        logger.warn {"You have running load agents: terminate first or #{command} again"}
+      else
+        puts "Bye"
+        @exit_command_counter = -1 # "express" exit
+      end
+
+    else
+      @exit_command_counter = 0 # reset exit intention
+      match_data = nil
+      grammar().each do |rule|
+        match_data = rule.match(command)
+        break unless match_data.nil?
+      end
+
+      unless match_data.nil?
+        method_name = match_data[1].to_sym()
+        method_args = match_data.to_a
+        .slice(2, match_data.length - 1)
+        .compact()
+        .collect(&:strip)
+        if method_args.length == 1 and method_args.first == "help"
+          help(method_name)
+        else
+          # defer to application for further processing
+          self.send(method_name, *method_args)
+          return method_name
+        end
+      else
+        raise(UnknownCommandException, "#{command} is unknown")
+      end
+    end
+  end
+
+  def clear_tmp_dir()
+    Dir["#{Hailstorm.tmp_path}/*"].each do |e|
+      File.directory?(e) ? FileUtils.rmtree(e) : File.unlink(e)
+    end
+  end
+
+  private
+
   def current_project
     Hailstorm::Model::Project.where(:project_code => Hailstorm.app_name)
                              .first_or_create!()
@@ -298,9 +362,13 @@ class Hailstorm::Application
 
     skeleton_path = File.join(Hailstorm.templates_path, 'skeleton')
 
-    # Copy to Gemfile
-    FileUtils.copy(File.join(skeleton_path, 'Gemfile.erb'),
-                   File.join(root_path, 'Gemfile'))
+    # Process Gemfile - add additional platform specific gems
+    engine = ActionView::Base.new()
+    engine.assign({:jruby_pageant => !File::ALT_SEPARATOR.nil?,  # File::ALT_SEPARATOR is nil on non-windows
+                   :gem_source => Hailstorm.gem_source})
+    File.open(File.join(root_path, 'Gemfile'), 'w') do |f|
+      f.print(engine.render(:file => File.join(skeleton_path, 'Gemfile')))
+    end
     puts "    wrote #{File.join(arg_app_name, 'Gemfile')}"
 
     # Copy to script/hailstorm
@@ -325,7 +393,6 @@ class Hailstorm::Application
     File.open(File.join(root_path, Hailstorm.config_dir, 'boot.rb'), 'w') do |f|
       f.print(engine.render(:file => File.join(skeleton_path, 'boot')))
     end
-
     puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'boot.rb')}"
   end
 
@@ -334,105 +401,95 @@ class Hailstorm::Application
   # Pushes the monitoring artifacts to targets.
   def setup(*args)
 
-    # load/reload the configuration
-    execute do
-      force = (args.empty? ? false : true)
-      current_project.setup(force)
+    force = (args.empty? ? false : true)
+    current_project.setup(force)
 
-      # output
-      show_jmeter_plans()
-      show_load_agents()
-      show_target_hosts()
-    end
+    # output
+    show_jmeter_plans()
+    show_load_agents()
+    show_target_hosts()
   end
 
   # Starts the load generation and monitoring on targets
   def start(*args)
 
-    execute do
-      logger.info("Starting load generation and monitoring on targets...")
-      redeploy = (args.empty? ? false : true)
-      current_project.start(redeploy)
+    logger.info("Starting load generation and monitoring on targets...")
+    redeploy = (args.empty? ? false : true)
+    current_project.start(redeploy)
 
-      show_load_agents()
-      show_target_hosts()
-    end
+    show_load_agents()
+    show_target_hosts()
   end
 
   # Stops the load generation and monitoring on targets and collects all logs
   def stop(*args)
 
-    execute do
-      logger.info("Stopping load generation and monitoring on targets...")
-      wait = args.include?('wait')
-      options = (args.include?('suspend') ? {:suspend => true} : nil)
-      current_project.stop(wait, options)
+    logger.info("Stopping load generation and monitoring on targets...")
+    wait = args.include?('wait')
+    options = (args.include?('suspend') ? {:suspend => true} : nil)
+    current_project.stop(wait, options)
 
-      show_load_agents()
-      show_target_hosts()
-    end
+    show_load_agents()
+    show_target_hosts()
   end
 
   def abort(*args)
 
-    execute do
-      logger.info("Aborting load generation and monitoring on targets...")
-      options = (args.include?('suspend') ? {:suspend => true} : nil)
-      current_project.abort(options)
+    logger.info("Aborting load generation and monitoring on targets...")
+    options = (args.include?('suspend') ? {:suspend => true} : nil)
+    current_project.abort(options)
 
-      show_load_agents()
-      show_target_hosts()
-    end
+    show_load_agents()
+    show_target_hosts()
   end
 
   def terminate(*args)
 
-    execute do
-      logger.info("Terminating test cycle...")
-      current_project.terminate()
+    logger.info("Terminating test cycle...")
+    current_project.terminate()
 
-      show_load_agents()
-      show_target_hosts()
-    end
+    show_load_agents()
+    show_target_hosts()
   end
 
   def results(*args)
-
-    execute do
-      operation = (args.first || 'show').to_sym
-      sequences = args[1]
-      unless sequences.nil?
-        if sequences.match(/^(\d+)\-(\d+)$/)
-          sequences = ($1..$2).to_a.collect(&:to_i)
-        else
-          sequences = sequences.split(/\s*,\s*/).collect(&:to_i)
-        end
+    operation = (args.first || 'show').to_sym
+    sequences = args[1]
+    unless sequences.nil?
+      if sequences.match(/^(\d+)\-(\d+)$/)
+        sequences = ($1..$2).to_a.collect(&:to_i)
+      else
+        sequences = sequences.split(/\s*,\s*/).collect(&:to_i)
       end
-      rval = current_project.results(operation, sequences)
-      if :show == operation
-        text_table = Terminal::Table.new()
-        text_table.headings = ['Sequence', 'Started', 'Stopped', 'Threads']
-        text_table.rows = rval.collect do |execution_cycle|
-          [
-              execution_cycle.id,
-              execution_cycle.formatted_started_at,
-              execution_cycle.formatted_stopped_at,
-              execution_cycle.total_threads_count
-          ]
-        end
-        puts text_table.to_s
+    end
+    rval = current_project.results(operation, sequences)
+    if :show == operation
+      text_table = Terminal::Table.new()
+      text_table.headings = ['TEST', 'Threads', '90 %tile', 'TPS', 'Started', 'Stopped']
+      text_table.rows = rval.collect do |execution_cycle|
+        [
+            execution_cycle.id,
+            execution_cycle.total_threads_count,
+            execution_cycle.avg_90_percentile,
+            execution_cycle.avg_tps.round(2),
+            execution_cycle.formatted_started_at,
+            execution_cycle.formatted_stopped_at
+        ]
       end
+      puts text_table.to_s
     end
   end
 
   # Implements the purge commands as per options
   def purge(*args)
-
     option = args.first || :tests
     case option.to_sym
       when :tests
         current_project.execution_cycles.each {|e| e.destroy()}
         logger.info "Purged all data for tests"
+      when :clusters
+        current_project.purge_clusters()
+        logger.info "Purged all clusters"
       else
         current_project.destroy()
         logger.info "Purged all project data"
@@ -440,7 +497,6 @@ class Hailstorm::Application
   end
 
   def show(*args)
-
     what = (args.first || 'all').to_sym
     show_jmeter_plans() if [:jmeter, :all].include?(what)
     show_load_agents()  if [:cluster, :all].include?(what)
@@ -480,55 +536,21 @@ class Hailstorm::Application
     current_project.load_agents().empty?
   end
 
-  # Interpret the command (parse & execute)
-  # @param [String] command
-  def interpret_command(command)
-
-    if [:exit, :quit].include?(command.to_sym)
-      if @exit_command_counter == 0 and !exit_ok?
-        @exit_command_counter += 1
-        logger.warn {"You have running load agents: terminate first or #{command} again"}
-      else
-        puts "Bye"
-        @exit_command_counter = -1 # "express" exit
-      end
-
-    else
-      @exit_command_counter = 0 # reset exit intention
-      match_data = nil
-      grammar().each do |rule|
-        match_data = rule.match(command)
-        break unless match_data.nil?
-      end
-
-      unless match_data.nil?
-        method_name = match_data[1].to_sym()
-        method_args = match_data.to_a
-                                .slice(2, match_data.length - 1)
-                                .compact()
-                                .collect(&:strip)
-        # defer to application for further processing
-        self.send(method_name, *method_args)
-      else
-        raise(UnknownCommandException, "#{command} is unknown")
-      end
-    end
-  end
 
   # Defines the grammar for the rules
   def grammar()
 
     @grammar ||= [
         Regexp.new('^(help)(\s+setup|\s+start|\s+stop|\s+abort|\s+terminate|\s+results|\s+purge|\s+show|\s+status)?$'),
-        Regexp.new('^(setup)(\s+force)?$'),
-        Regexp.new('^(start)(\s+redeploy)?$'),
-        Regexp.new('^(stop)(\s+suspend|\s+wait|\s+suspend\s+wait|\s+wait\s+suspend)?$'),
-        Regexp.new('^(abort)(\s+suspend)?$'),
-        Regexp.new('^(results)(\s+show|\s+exclude|\s+include|\s+report)?(\s+[\d,\-]+)?$'),
-        Regexp.new('^(purge)(\s+tests|\s+all)?$'),
-        Regexp.new('^(show)(\s+jmeter|\s+cluster|\s+monitor|\s+all)?$'),
-        Regexp.new('^(terminate)$'),
-        Regexp.new('^(status)$')
+        Regexp.new('^(setup)(\s+force|\s+help)?$'),
+        Regexp.new('^(start)(\s+redeploy|\s+help)?$'),
+        Regexp.new('^(stop)(\s+suspend|\s+wait|\s+suspend\s+wait|\s+wait\s+suspend|\s+help)?$'),
+        Regexp.new('^(abort)(\s+suspend|\s+help)?$'),
+        Regexp.new('^(results)(\s+show|\s+exclude|\s+include|\s+report|\s+export|\s+help)?(\s+[\d,\-]+)?$'),
+        Regexp.new('^(purge)(\s+tests|\s+clusters|\s+all|\s+help)?$'),
+        Regexp.new('^(show)(\s+jmeter|\s+cluster|\s+monitor|\s+all|\s+help)?$'),
+        Regexp.new('^(terminate)(\s+help)?$'),
+        Regexp.new('^(status)(\s+help)?$')
     ]
   end
 
@@ -663,6 +685,7 @@ class Hailstorm::Application
     status          Show status of load generation across all agents
 
     help COMMAND    Show help on COMMAND
+                    COMMAND help will also show help on COMMAND
     HELP
   end
 
@@ -672,9 +695,8 @@ class Hailstorm::Application
 
     Boot load agents and target monitors.
     Creates the load generation agents, sets up the monitors on the configured
-    targets and deploys the JMeter scripts in the project app folder to the
-    load agents. This task should only be executed after the config
-    task is executed.
+    targets and deploys the JMeter scripts in the project "jmeter" directory
+    to the load agents.
 
 Options
 
@@ -687,11 +709,11 @@ Options
 
     @start_options ||=<<-START
 
-    Starts load generation and target monitoring. This will automatically trigger
-    setup actions if you have modified the configuration. Additionally, if any
-    JMeter plan is altered, the altered plans will be re-processed. However, modified
-    datafiles and other support files (such as custom plugins) will not be re-deployed
-    unless the redeploy option is specified.
+    Starts load generation and target monitoring. This will automatically
+    trigger setup actions if you have modified the configuration. Additionally,
+    if any JMeter plan is altered, the altered plans will be re-processed.
+    However, modified datafiles and other support files (such as custom plugins)
+    will not be re-deployed unless the redeploy option is specified.
 
 Options
 
@@ -747,21 +769,24 @@ Options
     @results_options ||=<<-RESULTS
 
     Show, include, exclude or generate report for one or more tests. Without any
-    options, all successfully stopped tests are displayed. All options accept an
-    optional SEQUENCE, which can be a single sequence ID or a comma separated list
-    of sequence IDs(4,7) or a hyphen separated list(1-3). The hyphen separated list
-    is equivalent to explicity mentioning all IDs in comma separated form.
+    argument, all successfully stopped tests are operated on. The optional TEST
+    argument can be a single test ID or a comma separated list of test IDs(4,7)
+    or a hyphen separated list(1-3). The hyphen separated list is equivalent to
+    explicity mentioning all IDs in comma separated form.
 
 Options
 
-      show    [SEQUENCE]  Displays successfully stopped tests (default).
-      exclude [SEQUENCE]  Exclude SEQUENCE tests.
-                          Without a sequence, all tests will be excluded.
-      include [SEQUENCE]  Include SEQUENCE tests.
-                          Without a sequence, all tests will be included.
-      report  [SEQUENCE]  Generate report for sequence.
-                          Without a sequence, all succefully stopped tests will
-                          be reported.
+      show    [TEST]  Displays successfully stopped tests (default).
+      exclude [TEST]  Exclude TEST from reports.
+                      Without a TEST argument, no tests will be excluded.
+      include [TEST]  Include TEST in reports.
+                      Without a TEST, no tests will be included.
+      report  [TEST]  Generate report for TEST.
+                      Without a TEST argument, all succefully stopped tests will
+                      be reported.
+      export  [TEST]  Export the results as one or more JTL files.
+                      Without a TEST argument, all successfully stopped tests
+                      will be exported.
     RESULTS
   end
 
@@ -794,7 +819,14 @@ Options
 Options
 
     tests         Purge the data for all tests (default)
-    all           Purge all data
+    clusters      Purge the cluster information and artifacts.
+                  Outcome depends on the type of the cluster, for Amazon,
+                  this means ALL Hailstorm related infrastructure for the
+                  account will be deleted. This is a bad idea if you are using
+                  a shared account, harmless otherwise, since all required
+                  infrastructure is created on-demand. It is recommended to
+                  use this command _only_ when suggested by diagnostic messages.
+    all           Purge ALL data
     PURGE
   end
 
@@ -802,8 +834,8 @@ Options
 
     @status_options ||=<<-STATUS
 
-    Show the current state of load generation across all agents. If load generation
-    is currently executing on any agent, such agents are displayed.
+    Show the current state of load generation across all agents. If load
+    generation is currently executing on any agent, such agents are displayed.
     STATUS
   end
 

@@ -527,7 +527,7 @@
             <w:sz w:val="18"/>
             <w:szCs w:val="18"/>
           </w:rPr>
-          <w:t><%= row.minimum_response_time %></w:t>
+          <w:t><%= row.minimum_response_time.to_i %></w:t>
         </w:r>
       </w:p>
     </w:tc>
@@ -548,7 +548,7 @@
             <w:sz w:val="18"/>
             <w:szCs w:val="18"/>
           </w:rPr>
-          <w:t><%= row.average_response_time %></w:t>
+          <w:t><%= row.average_response_time.to_i %></w:t>
         </w:r>
       </w:p>
     </w:tc>
@@ -569,7 +569,7 @@
             <w:sz w:val="18"/>
             <w:szCs w:val="18"/>
           </w:rPr>
-          <w:t><%= row.median_response_time %></w:t>
+          <w:t><%= row.median_response_time.to_i %></w:t>
         </w:r>
       </w:p>
     </w:tc>
@@ -590,7 +590,7 @@
             <w:sz w:val="18"/>
             <w:szCs w:val="18"/>
           </w:rPr>
-          <w:t><%= row.ninety_percentile_response_time %></w:t>
+          <w:t><%= row.ninety_percentile_response_time.to_i %></w:t>
         </w:r>
       </w:p>
     </w:tc>
@@ -611,7 +611,7 @@
             <w:sz w:val="18"/>
             <w:szCs w:val="18"/>
           </w:rPr>
-          <w:t><%= row.maximum_response_time %></w:t>
+          <w:t><%= row.maximum_response_time.to_i %></w:t>
         </w:r>
       </w:p>
     </w:tc>

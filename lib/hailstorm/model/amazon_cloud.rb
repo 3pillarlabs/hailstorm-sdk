@@ -7,6 +7,7 @@ require 'hailstorm'
 require 'hailstorm/model'
 require 'hailstorm/behavior/clusterable'
 require 'hailstorm/support/ssh'
+require 'hailstorm/support/amazon_account_cleaner'
 
 class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   
@@ -20,9 +21,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   validate :instance_type_supported, :if => proc {|r| r.active?}
 
-  before_create :set_availability_zone, :if => proc {|r| r.active?}
+  before_save :set_availability_zone, :if => proc {|r| r.active?}
 
-  before_create :create_agent_ami, :if => proc {|r| r.active?}
+  before_save :create_agent_ami, :if => proc {|r| r.active? and r.agent_ami.nil?}
 
   after_destroy :cleanup
 
@@ -31,11 +32,13 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   # Creates an load agent AMI with all required packages pre-installed and
   # starts requisite number of instances
-  def setup()
+  def setup(force = false)
 
     logger.debug { "#{self.class}##{__method__}" }
     if self.active?
+      self.agent_ami = nil if force
       self.save!()
+      provision_agents()
       File.chmod(0400, identity_file_path())
     else
       self.update_column(:active, false) if self.persisted?
@@ -118,7 +121,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     logger.debug { "#{self.class}##{__method__}" }
     self.load_agents.where(:active => true).each do |agent|
       unless agent.running?
-        agent.start_agent()
+        start_agent(agent)
         agent.save!
       end
     end
@@ -134,7 +137,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     if suspend
       self.load_agents.where(:active => true).each do |agent|
         if agent.running?
-          agent.stop_agent()
+          stop_agent(agent)
+          agent.public_ip_address = nil
           agent.save!
         end
       end
@@ -185,6 +189,25 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     self.attributes.symbolize_keys.slice(*columns)
   end
 
+  # Purges the Amazon accounts used of Hailstorm related artifacts
+  def self.purge()
+    self.group(:access_key, :secret_key)
+        .select("access_key, secret_key")
+        .each do |item|
+      cleaner = Hailstorm::Support::AmazonAccountCleaner.new(
+          :access_key_id => item.access_key,
+          :secret_access_key => item.secret_key
+      )
+      regions = []
+      self.where(:access_key => item.access_key, :secret_key => item.secret_key)
+          .each do |record|
+        record.update_column(:agent_ami, nil)
+        regions.push(record.region)
+      end
+      cleaner.cleanup(false, regions)
+    end
+  end
+
 ######################### PRIVATE METHODS ####################################
   private
 
@@ -224,6 +247,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     self.security_group = Defaults::SECURITY_GROUP if self.security_group.blank?
     self.user_name ||= Defaults::SSH_USER
     self.instance_type ||= InstanceTypes::Hydrogen
+    self.max_threads_per_agent ||= default_max_threads_per_agent()
 
     if self.ssh_identity.nil?
       self.ssh_identity = [Defaults::SSH_IDENTITY, Hailstorm.app_name].join('_')
@@ -243,7 +267,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       logger.info { "Searching available AMI on #{self.region}..."}
       ec2.images()
          .with_owner(:self)
-         .inject({}) {|acc, e| acc.merge(e.name => e.id)}.each_pair do |name, id|
+         .inject({}) {|acc, e| e.state == :available ? acc.merge(e.name => e.id) : acc}.each_pair do |name, id|
 
         if rexp.match(name)
           self.agent_ami = id
@@ -260,8 +284,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         begin
           jmeter_s3_object.content_length() # will fail if object does not exist
         rescue AWS::S3::Errors::NoSuchKey
-          raise(Hailstorm::Error,
-                "JMeter version #{self.project.jmeter_version} not found in #{Defaults::BUCKET_NAME} bucket")
+          raise(Hailstorm::JMeterVersionNotFound.new(self.project.jmeter_version,
+                                                     Defaults::BUCKET_NAME))
         end
 
         # Check if the SSH security group exists, or create it
@@ -292,16 +316,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
             logger.info { "Installing Java for #{self.region} AMI..." }
             ssh.exec!("wget -q '#{java_download_url}' -O #{java_download_file()}")
             ssh.exec!("chmod +x #{java_download_file}")
-            command = "cd /opt && sudo #{self.user_home}/#{java_download_file}"
-            stderr = ''
-            ssh.exec!(command) do |channel, stream, data|
-              if :stderr == stream
-                stderr << data
-              else
-                logger.debug { data }
-              end
-            end
-            raise(Hailstorm::Error, stderr) unless stderr.blank?
+            ssh.exec!("cd /opt && sudo #{self.user_home}/#{java_download_file}")
             ssh.exec!("sudo ln -s /opt/#{jre_directory()} /opt/jre")
             # modify /etc/environment
             env_local_copy = File.join(Hailstorm.tmp_path, current_env_file_name)
@@ -353,7 +368,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
             self.agent_ami = new_ami.id
             logger.info { "New AMI##{self.agent_ami} on #{self.region} created successfully, cleaning up..."}
           else
-            raise(StandardError, "AMI could not be created on #{self.region}, reason unknown")
+            raise(Hailstorm::AmiCreationFailure.new(self.region, new_ami.state_reason))
           end
 
         rescue
@@ -555,7 +570,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   # to return true, else throws a Timeout::Error
   # @param [Integer] timeout_sec
   # @param [Proc] block
-  # @throws [Timeout::Error] if block does not return true within timeout_sec
+  # @raise [Timeout::Error] if block does not return true within timeout_sec
   def wait_until(timeout_sec = 300, &block)
     # make the timeout configurable by an environment variable
     timeout_sec = ENV['HAILSTORM_EC2_TIMEOUT'] || timeout_sec
@@ -576,8 +591,18 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     begin
       yield
     rescue Timeout::Error
-      raise(Hailstorm::Error, "Timeout while waiting for #{message} on #{self.region}")
+      raise(Hailstorm::Exception, "Timeout while waiting for #{message} on #{self.region}.")
     end
+  end
+
+  def default_max_threads_per_agent()
+    @default_max_threads_per_agent ||= {
+        InstanceTypes::Hydrogen => 50,
+        InstanceTypes::Calcium => 200,
+        InstanceTypes::Ebony => 800,
+        InstanceTypes::Steel => 1000
+    }
+    @default_max_threads_per_agent[self.instance_type]
   end
 
   # EC2 default settings

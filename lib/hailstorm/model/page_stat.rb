@@ -32,7 +32,7 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
 
     sample_response_time = sample['t'].to_i
     self.cumulative_response_time += sample_response_time
-    self.cumulative_squared_response_time += (sample_response_time ** 2)
+    self.cumulative_squared_response_time += (sample_response_time**2)
     self.page_sample_times.push(sample_response_time)
 
     if self.minimum_response_time.nil? or sample_response_time < self.minimum_response_time
@@ -148,7 +148,7 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
     self.percentage_errors = (self.errors_count.to_f / self.samples_count) * 100
 
     self.standard_deviation = ((self.cumulative_squared_response_time.to_f / self.samples_count) -
-        (self.average_response_time ** 2)) ** 0.5
+        (self.average_response_time**2)) ** 0.5
 
     # calculate percentage for @samples_breakup
     self.samples_breakup.each do |partition|

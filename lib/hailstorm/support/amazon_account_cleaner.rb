@@ -23,9 +23,9 @@ class Hailstorm::Support::AmazonAccountCleaner
     @default_security_group = Hailstorm::Model::AmazonCloud::Defaults::SECURITY_GROUP
   end
 
-  def cleanup(remove_key_pairs = false)
+  def cleanup(remove_key_pairs = false, given_regions = nil)
 
-    regions.each do |region_code|
+    (given_regions || regions).each do |region_code|
       ec2 = ec2_map(region_code)
 
       logger.info { "Scanning #{region_code} for running instances..." }

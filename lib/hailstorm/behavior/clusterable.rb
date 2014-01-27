@@ -24,7 +24,7 @@ module Hailstorm::Behavior::Clusterable
   # @return [Hash] load agent attributes for persistence
   # @abstract   
   def start_agent(load_agent)
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
   
   # Implement this method to stop the load agent and update load_agent
@@ -33,28 +33,29 @@ module Hailstorm::Behavior::Clusterable
   # @return [Hash] load agent attributes for persistence
   # @abstract   
   def stop_agent(load_agent)
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 
   # Implement this method to return a description of the clusterable instance
   # @return [String]
   # @abstract
   def slug()
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 
   # Implement to return JSON of attributes to display in a report.
   # @retutn [Hash] attributes
   # @abstract
   def public_properties()
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 
   # Implementation should essentially perform validation, persistence and state
   # management tasks. This method may be called on a new or existing instance,
   # the implementation will have to check and take appropriate actions.
-  def setup()
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+  # @param [Boolean] force Implementation may redo actions even if already done.
+  def setup(force = false)
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
   
   # Implement this method to perform additional tasks before starting load generation,
@@ -138,8 +139,6 @@ module Hailstorm::Behavior::Clusterable
     recipient.has_many(:client_stats, :as => :clusterable, :dependent => :destroy,
                        :include => :jmeter_plan)
 
-    recipient.after_commit(:provision_agents, :if => proc {|r| r.active?})
-                           
     recipient.after_commit(:disable_agents, :unless => proc {|r| r.active?})
   end  
 
@@ -175,7 +174,11 @@ module Hailstorm::Behavior::Clusterable
     
     logger.debug { "#{self.class}##{__method__}" }
     visit_collection(self.load_agents) do |agent|
-      agent.destroy()
+      before_destroy_load_agent(agent)
+      agent.transaction do
+        agent.destroy()
+        after_destroy_load_agent(agent)
+      end
     end
   end
 
@@ -198,7 +201,7 @@ module Hailstorm::Behavior::Clusterable
     return running_agents
   end
 
-  private
+  protected
 
   # Launch new instances or bring down instances based on number of instances needed
   def provision_agents()
@@ -213,7 +216,7 @@ module Hailstorm::Behavior::Clusterable
           :active => true
       }
 
-      required_count = jmeter_plan.required_load_agent_count()
+      required_count = jmeter_plan.required_load_agent_count(self)
 
       if self.project.master_slave_mode?
         query = self.master_agents
@@ -221,8 +224,7 @@ module Hailstorm::Behavior::Clusterable
 
         # abort if more than 1 master agent is present
         if query.all.count > 1
-          raise(Hailstorm::Exception,
-                "You have switched on master slave mode, please terminate current cycle first")
+          raise(Hailstorm::MasterSlaveSwitchOnConflict)
         end
 
         # one master is necessary
@@ -239,14 +241,21 @@ module Hailstorm::Behavior::Clusterable
                                  .where(:jmeter_plan_id => jmeter_plan.id)
                                  .all.count()
         if slave_agents_count > 0
-          raise(Hailstorm::Exception,
-                "You have switched off master slave mode, please terminate current cycle first")
+          raise(Hailstorm::MasterSlaveSwitchOffConflict)
         end
 
-        create_or_enable(common_attributes, required_count, :master_agents)
+        begin
+          create_or_enable(common_attributes, required_count, :master_agents)
+        rescue Exception => e
+          logger.error(e.message)
+          logger.debug { "\n".concat(e.backtrace().join("\n")) }
+          raise(Hailstorm::AgentCreationFailure)
+        end
       end
     end
   end
+
+  private
 
   # Creates master/slave agents based on the relation
   def create_or_enable(attributes, required_count, relation)
@@ -265,9 +274,11 @@ module Hailstorm::Behavior::Clusterable
       if agent.new_record?
         if activate_count > 1
           Hailstorm::Support::Thread.start(agent) do |agent_instance|
+            start_agent(agent_instance)
             agent_instance.save!
           end
         else
+          start_agent(agent)
           agent.save!
         end
       else

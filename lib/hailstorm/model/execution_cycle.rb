@@ -96,46 +96,57 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
             cluster_item.name = cluster.slug
 
             cluster.client_stats
-                   .where(:execution_cycle_id => execution_cycle.id)
-                   .each do |client_stat|
+            .where(:execution_cycle_id => execution_cycle.id)
+            .each do |client_stat|
 
               cluster_item.client_stats do |client_stat_item|
                 client_stat_item.name = client_stat.jmeter_plan.plan_name
                 client_stat_item.threads_count = client_stat.threads_count
                 client_stat_item.aggregate_stats = client_stat.aggregate_stats
                 client_stat_item.aggregate_graph do |g|
-                  g.image_path = client_stat.aggregate_graph()
+                  g.chart_model = client_stat.aggregate_graph()
                 end
               end
             end
           end
+        end
 
-          execution_cycle.target_stats.each do |target_stat|
-            execution_item.target_stats do |target_stat_item|
-              target_stat_item.role_name = target_stat.target_host.role_name
-              target_stat_item.host_name = target_stat.target_host.host_name
-              target_stat_item.utilization_graph do |g|
-                g.image_path = target_stat.utilization_graph()
-              end
+        execution_item.hits_per_second_graph do |g|
+          g.chart_model = Hailstorm::Model::ClientStat.hits_per_second_graph(execution_cycle)
+        end
+        execution_item.active_threads_over_time_graph do |g|
+          g.chart_model = Hailstorm::Model::ClientStat.active_threads_over_time_graph(execution_cycle)
+        end
+        execution_item.throughput_over_time_graph do |g|
+          g.chart_model = Hailstorm::Model::ClientStat.throughput_over_time_graph(execution_cycle)
+        end
+
+        execution_cycle.target_stats.each do |target_stat|
+          execution_item.target_stats do |target_stat_item|
+            target_stat_item.role_name = target_stat.target_host.role_name
+            target_stat_item.host_name = target_stat.target_host.host_name
+            target_stat_item.utilization_graph do |g|
+              g.chart_model = target_stat.utilization_graph()
             end
           end
         end
+
       end
     end
 
     # adding aggregate graphs over all reported_execution_cyles
     unless reported_execution_cyles.size == 1
       builder.client_comparison_graph do |graph|
-        graph.image_path = Hailstorm::Model::ClientStat.execution_comparison_graph(
+        graph.chart_model = Hailstorm::Model::ClientStat.execution_comparison_graph(
             reported_execution_cyles)
       end
 
       builder.target_cpu_comparison_graph do |graph|
-        graph.image_path = Hailstorm::Model::TargetStat.cpu_comparison_graph(
+        graph.chart_model = Hailstorm::Model::TargetStat.cpu_comparison_graph(
             reported_execution_cyles)
       end
       builder.target_memory_comparison_graph do |graph|
-        graph.image_path = Hailstorm::Model::TargetStat.memory_comparison_graph(
+        graph.chart_model = Hailstorm::Model::TargetStat.memory_comparison_graph(
             reported_execution_cyles)
       end
     end
@@ -162,19 +173,29 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
            .all()
   end
 
-  # @return [String] started_at in YYYY-MM-DD HH:MM:SS format
+  # @return [String] started_at in YYYY-MM-DD HH:MM format
   def formatted_started_at()
-    self.started_at.strftime('%Y-%m-%d %H:%M:%S')
+    self.started_at.strftime('%Y-%m-%d %H:%M')
   end
 
-  # @return [String] stopped_at in YYYY-MM-DD HH:MM:SS format
+  # @return [String] stopped_at in YYYY-MM-DD HH:MM format
   def formatted_stopped_at
-    self.stopped_at.strftime('%Y-%m-%d %H:%M:%S')
+    self.stopped_at.strftime('%Y-%m-%d %H:%M')
   end
 
   # @return [Integer] sum of thread_counts in client_stats for this execution_cycle
   def total_threads_count
     @total_threads_count ||= self.client_stats().sum(:threads_count)
+  end
+
+  # @return [Float] a rough cut average of 90 %tile response time across all client cycles
+  def avg_90_percentile
+    self.client_stats().average(:aggregate_ninety_percentile)
+    #self.status == States::STOPPED ? self.client_stats().average(:aggregate_ninety_percentile) : ""
+  end
+
+  def avg_tps
+    self.client_stats().average(:aggregate_response_throughput)
   end
 
   def target_hosts
@@ -255,6 +276,22 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
   def excluded!()
     self.update_column(:status, States::EXCLUDED)
+  end
+
+  # Exports the results as one or more JTL files
+  # @@return [Array] path to the files
+  def export_results()
+    paths = []
+    export_dir = File.join(Hailstorm.root, Hailstorm.reports_dir,
+                            "SEQUENCE-#{self.id}")
+    FileUtils.rm_rf(export_dir)
+    FileUtils.mkpath(export_dir)
+    self.client_stats.each do |cs|
+      export_file_path = cs.write_jtl(export_dir)
+      paths.push(export_file_path)
+    end
+
+    return paths
   end
 
   private

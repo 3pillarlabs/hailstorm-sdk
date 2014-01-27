@@ -36,28 +36,29 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   # Configures the cluster implementation for use
   # @param [Hailstorm::Support::Configuration::ClusterBase] cluster_config cluster
   #   specific configuration instance
-  def configure(cluster_config)
+  def configure(cluster_config, force = false)
 
     logger.debug { "#{self.class}##{__method__}" }
     # cluster specific attributes
     cluster_attributes = cluster_config.instance_values
                                        .symbolize_keys
-                                       .except(:active, :cluster_type)
+                                       .except(:active, :cluster_type, :max_threads_per_agent)
                                        .merge(:project_id => self.project.id)
     # find the cluster or create it
     cluster_instance = cluster_klass.where(cluster_attributes)
                                     .first_or_initialize()
     cluster_instance.active = cluster_config.active
-    Hailstorm::Support::Thread.start(cluster_instance) do |c|
-      c.setup()
+    if cluster_instance.respond_to?(:max_threads_per_agent)
+      cluster_instance.max_threads_per_agent = cluster_config.max_threads_per_agent
     end
+    cluster_instance.setup(force)
   end
 
   # Configures all clusters as per config.
   # @param [Hailstorm::Model::Project] project current project instance
   # @param [Hailstorm::Support::Configuration] config the configuration instance
-  # @raise [Hailstorm::Error] if one or more clusters could not be started
-  def self.configure_all(project, config)
+  # @raise [Hailstorm::Exception] if one or more clusters could not be started
+  def self.configure_all(project, config, force = false)
 
     logger.debug { "#{self}.#{__method__}" }
     # disable all clusters and then create/update as per configuration
@@ -66,6 +67,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
              .update_all({:active => false}, {:project_id => project.id})
     end
 
+    cluster_line_items = []
     config.clusters.each do |cluster_config|
       cluster_config.active = true if cluster_config.active.nil?
       if :amazon_cloud == cluster_config.cluster_type
@@ -83,12 +85,21 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
       if cluster.new_record? and cluster_config.active
         cluster.save!()
       end
-      cluster.configure(cluster_config) if cluster.persisted?
+      cluster_line_items.push([cluster, cluster_config, force]) if cluster.persisted?
     end
 
-    unless Hailstorm::Support::Thread.join() # join returns true on success
-      raise(Hailstorm::Error, "Failed to setup one or more load clusters")
+    if cluster_line_items.size == 1
+      cluster, cluster_config, force = cluster_line_items.first
+      cluster.configure(cluster_config, force)
+    elsif cluster_line_items.size > 1 # nothing to do if 0
+      cluster_line_items.each do |line_item|
+        Hailstorm::Support::Thread.start(line_item) do |cluster, cluster_config, force|
+          cluster.configure(cluster_config, force)
+        end
+      end
+      Hailstorm::Support::Thread.join()
     end
+
   end
 
   # start load generation on clusters of a specific cluster_type
@@ -138,14 +149,14 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     # check if load generation is not stopped on any load agent and raise
     # exception accordingly
     unless Hailstorm::Model::LoadAgent.where("jmeter_pid IS NOT NULL").all.empty?
-      raise(Hailstorm::Exception, "Jmeter could not be stopped on all agents")
+      raise(Hailstorm::Exception, "Load generation could not be stopped on all agents")
     end
   end
 
   def terminate()
 
     logger.debug { "#{self.class}##{__method__}" }
-    visit_clusterables do |ci|
+    visit_clusterables(true) do |ci|
       ci.destroy_all_agents()
       ci.cleanup()
     end
@@ -225,6 +236,13 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
         end
       end
       Hailstorm::Support::Thread.join()
+    end
+  end
+
+  def purge()
+    # TODO: Developer documentation
+    if cluster_klass.respond_to?(:purge)
+      cluster_klass.purge()
     end
   end
 

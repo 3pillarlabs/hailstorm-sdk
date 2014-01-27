@@ -13,7 +13,8 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
     
     logger.debug { "#{self.class}##{__method__}" }
     command_template = self.jmeter_plan.master_command(self.private_ip_address,
-                                                       slave_ip_addresses())
+                                                       slave_ip_addresses(),
+                                                       self.clusterable)
     unless command_template.nil?
       logger.debug(command_template)
       command = evaluate_command(command_template)
@@ -46,7 +47,7 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
               terminate_okay = true
 
             else
-              logger.warn("Jmeter is still running! Please abort if you really mean to stop.")
+              raise(Hailstorm::Exception, "Jmeter is still running! Run 'abort' if you really mean to stop.")
             end
           else
             update_pid = true
@@ -57,7 +58,18 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
         end
 
         if terminate_okay
-          ssh.terminate_process(self.jmeter_pid)
+          ssh.exec!(evaluate_command(self.jmeter_plan.stop_command()))
+          # wait a bit for graceful shutdown
+          tries = 0
+          until tries >= 3
+            sleep(60)
+            break unless ssh.process_running?(self.jmeter_pid)
+            tries += 1
+          end
+          if tries >= 3
+            # graceful shutdown is not happening
+            ssh.terminate_process_tree(self.jmeter_pid)
+          end
           update_pid = true
         end
 
@@ -67,7 +79,7 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
         slaves.each {|slave| slave.stop_jmeter() }
       end
     else
-      logger.warn("Jmeter is not running on #{self.identifier}##{self.public_ip_address}")
+      raise(Hailstorm::Exception, "Jmeter is not running on #{self.identifier}##{self.public_ip_address}")
     end
   end
 

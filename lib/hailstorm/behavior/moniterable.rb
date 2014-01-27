@@ -10,14 +10,14 @@ module Hailstorm::Behavior::Moniterable
   # monitoring on the target host.
   # @abstract
   def start_monitoring()
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
   
   # An "abstract" method definition. Implementation should stop resource
   # monitoring on the target host.
   # @abstract
   def stop_monitoring()
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 
   # An "abstract" method definition. Implementation should calculate and return the
@@ -29,7 +29,7 @@ module Hailstorm::Behavior::Moniterable
   # @return [Float]
   # @abstract
   def average_cpu_usage(start_time, end_time)
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 
   # An "abstract" method definition. Implementation should calculate and return the
@@ -41,7 +41,7 @@ module Hailstorm::Behavior::Moniterable
   # @return [Float]
   # @abstract
   def average_memory_usage(start_time, end_time)
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 
   # An "abstract" method definition. Implementation should calculate and return the
@@ -53,7 +53,7 @@ module Hailstorm::Behavior::Moniterable
   # @return [Float]
   # @abstract
   def average_swap_usage(start_time, end_time)
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 
   # An "abstract" method definition. Implementation should yield or return an
@@ -63,17 +63,17 @@ module Hailstorm::Behavior::Moniterable
   # execution context will apply.
   # @abstract
   def cpu_usage_trend(&block)
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 
   # (see #cpu_usage_trend)
   def memory_usage_trend(&block)
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 
   # (see #cpu_usage_trend)
   def swap_usage_trend(&block)
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 
   # Implement this method to parse the CPU usage file and return/yield each sample
@@ -82,21 +82,21 @@ module Hailstorm::Behavior::Moniterable
   # @param [String] cpu_usage_file_path path to usage file
   # @abstract
   def each_cpu_usage_sample(cpu_usage_file_path, &block)
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 
   # Same as #each_cpu_usage_sample, but this is for memory usage.
   # @param [String] memory_usage_file_path path to usage file
   # @abstract
   def each_memory_usage_sample(memory_usage_file_path, &block)
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 
   # Same as #each_cpu_usage_sample, but this is for swap usage.
   # @param [String] swap_usage_file_path path to usage file
   # @abstract
   def each_swap_usage_sample(swap_usage_file_path, &block)
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 
   # Implementation should download the remote log file(s) to local_log_path, if

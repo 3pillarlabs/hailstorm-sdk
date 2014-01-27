@@ -52,7 +52,7 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
       grapher.addSwapUsageSample(sample.to_f)
     end
 
-    grapher.finish() # returns path to graph file
+    grapher.finish(640, 600) # returns path to graph file
   end
 
   def self.cpu_comparison_graph(execution_cyles)
@@ -75,7 +75,7 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
       end
     end
 
-    grapher.build() unless domain_labels.empty?
+    grapher.build(640, 300) unless domain_labels.empty?
   end
 
   def self.memory_comparison_graph(execution_cyles)
@@ -98,7 +98,7 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
       end
     end
 
-    grapher.build() unless domain_labels.empty?
+    grapher.build(640, 300) unless domain_labels.empty?
   end
 
   private

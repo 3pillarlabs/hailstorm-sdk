@@ -18,43 +18,23 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
     self.first_use = agent.new_record?
   end
   
-  before_create :start_agent
-  
   after_commit :upload_scripts, :if => proc {|r| r.active? && !r.public_ip_address.nil?}, :on => :create
-  
-  before_destroy :trigger_clusterable_before_destroy
-  
-  after_destroy :trigger_clusterable_after_destroy
 
   scope :active, where(:active => true)
 
   def first_use?
     @first_use
   end
-  
-  # Starts the load agent.
-  def start_agent()
-    logger.debug { "#{self.class}##{__method__}" }
-    self.clusterable.start_agent(self)
-  end
-
-  # Stops a load agent
-  def stop_agent()
-    
-    logger.debug { "#{self.class}##{__method__}" }
-    self.clusterable.stop_agent(self)
-    self.public_ip_address = nil
-  end
 
   # This should be defined in the master and slave agent derived classes
   # @abstract
   def start_jmeter()
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 
   # This should be defined in the master and slave agent derived classes
   def stop_jmeter(wait = false, aborted = false)
-    raise(StandardError, "#{self.class}##{__method__} implementation not found.")
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 
   def jmeter_running?
@@ -132,7 +112,7 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
       unless remote_pid.nil?
         self.update_column(:jmeter_pid, remote_pid)
       else
-        raise(StandardError, "Could not start jmeter on #{self.identifier}##{self.public_ip_address}")
+        raise(Hailstorm::Exception, "Could not start jmeter on #{self.identifier}##{self.public_ip_address}. Please report this issue.")
       end
     end
   end
@@ -164,18 +144,5 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
     end
   end
 
-  def trigger_clusterable_before_destroy()
-
-    logger.debug { "#{self.class}##{__method__}" }
-    self.clusterable.before_destroy_load_agent(self)
-  end
-  
-  def trigger_clusterable_after_destroy()
-
-    logger.debug { "#{self.class}##{__method__}" }
-    self.clusterable.after_destroy_load_agent(self)
-  end
-
-  
   
 end

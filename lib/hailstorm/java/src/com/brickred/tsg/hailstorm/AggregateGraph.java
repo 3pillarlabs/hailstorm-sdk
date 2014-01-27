@@ -89,7 +89,7 @@ public class AggregateGraph {
 		return this;
 	}
 
-	public String create() throws IOException {
+	public ChartModel create() throws IOException {
 
 		CategoryPlot prtPlot = createPageResponseTimePlot();
 		CategoryPlot pfPlot = createPageFiguresPlot();
@@ -119,7 +119,7 @@ public class AggregateGraph {
 				chartHeight);
 		outputStream.close();
 
-		return outFile;
+		return new ChartModel(outFile, chartWidth, chartHeight);
 	}
 
 	private CategoryPlot createPageResponseTimePlot() {

@@ -110,7 +110,7 @@ class Hailstorm::Support::Log4jBackedLogger
     else
       logger_message = msg
     end
-    logger_message.chomp!
+    logger_message.chomp! unless logger_message.frozen?
     with_context { @log4j_logger.send(log_method_sym, logger_message) }
   end
 
