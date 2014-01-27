@@ -21,8 +21,8 @@ Hailstorm works in an offline mode by default, which means you can exit the appl
 
   gem.license = 'Proprietary License (Three Pillar Global)'
 
-  sensitive_files   = `svn ls -R features/data`.split("\n")
-  gem.files         = `svn ls -R`.split("\n") - sensitive_files
+  excluded_files   = `git ls-files features/data`.split("\n").push('Gemfile.lock', '.gitignore')
+  gem.files         = `git ls-files`.split("\n") - excluded_files
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/\b})
   gem.executables   = gem.files.grep(%r{^bin/\b}).map{ |f| File.basename(f) }
   gem.require_paths = %w(lib)
@@ -41,6 +41,7 @@ Hailstorm works in an offline mode by default, which means you can exit the appl
   gem.add_dependency(%q<terminal-table>, '= 1.4.5')
   gem.add_dependency(%q<bundler>, '= 1.1.5')
   gem.add_dependency(%q<bouncy-castle-java>, '= 1.5.0146.1')
+  gem.add_dependency(%q<httparty>, '= 0.10.2')
 
   gem.add_development_dependency(%q<rspec>, '~> 2.13.0')
   gem.add_development_dependency(%q<cucumber>, '~> 1.2.3')

@@ -1,2 +1,4 @@
 lib/hailstorm/java/bin
 tmp/*
+.idea
+.ruby-version
