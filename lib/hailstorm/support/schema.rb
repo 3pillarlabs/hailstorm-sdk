@@ -71,6 +71,17 @@ class Hailstorm::Support::Schema
       t.integer     :max_threads_per_agent, :null => false
     end
   end
+
+  def create_local_datacenters
+    ActiveRecord::Migration.create_table(:local_datacenters) do |t|
+      t.references  :project, :null => false
+      t.string      :user_name, :null => false
+      t.string      :password, :null => false
+      t.string      :ip_address, :null => false
+      t.boolean     :active, :null => false, :default => false
+      t.integer     :max_threads_per_machine, :null => false
+    end
+  end
   
   def create_jmeter_plans
     ActiveRecord::Migration.create_table(:jmeter_plans) do |t|
