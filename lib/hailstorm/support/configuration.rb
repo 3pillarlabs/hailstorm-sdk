@@ -145,42 +145,21 @@ class Hailstorm::Support::Configuration
   # in Hailstorm::Model namespace. Select this using the :data_center clusters
   # parameter.
   class DataCenter < ClusterBase
-    # Amazon EC2 access key
-    attr_accessor :access_key
+    # Datacenter access password
+    attr_accessor :password
 
-    # Amazon EC2 secret key
-    attr_accessor :secret_key
+    # IP Address of datacenter
+    attr_accessor :ip_address
 
-    # Name of ssh_identity file. The file should be present in application db directory.
-    attr_accessor :ssh_identity
+    # Datacenter machine type Available machine types are -
+    #   * 64-bit' (default)
+    #   * 32-bit'
+    attr_accessor :machine_type
 
-    # Amazon EC2 region for creating the AMI
-    attr_accessor :region
-
-    # Amazon EC2 zone ID specific to region used
-    attr_accessor :zone
-
-    # Amazon EC2 security groups. Separate multiple groups with comma
-    attr_accessor :security_group
-
-    # Agent AMI, if there already exists an AMI in same region
-    attr_accessor :agent_ami
-
-    # Instance type. Available instance types are -
-    #   * m1.small' (default)
-    #   * m1.large'
-    #   * m1.xlarge'
-    #   * c1.xlarge'
-    #   * cc1.4xlarge'
-    #   * cc2.8xlarge'
-    #
-    # m1.small is suitable for development and exploratory testing
-    attr_accessor :instance_type
-
-    # Set the maximum number of threads spawned by a single load agent.
+    # Set the maximum number of threads spawned by a single machine.
     # If the number of threads in the JMeter thread group is higher than this
-    # value, multiple load agents will be spawned with equal thread distribution.
-    attr_accessor :max_threads_per_agent
+    # value, multiple machines will be spawned with equal thread distribution.
+    attr_accessor :max_threads_per_machine
   end
 
   # Settings for one more monitors. Multiple monitors of different types can
