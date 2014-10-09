@@ -9,6 +9,7 @@ class Hailstorm::Support::Schema
   SchemaTables = [
     :projects,
     :amazon_clouds,
+    :data_centers,
     :jmeter_plans,
     :load_agents,
     :target_hosts,
@@ -72,13 +73,14 @@ class Hailstorm::Support::Schema
     end
   end
 
-  def create_local_datacenters
+  def create_data_centers
     ActiveRecord::Migration.create_table(:data_centers) do |t|
       t.references  :project, :null => false
       t.string      :user_name, :null => false
-      t.string      :password, :null => false
+      t.string      :ssh_identity, :null => false
       t.string      :ip_address, :null => false
       t.string      :machine_type, :null => false
+      t.string      :datacenter_name, :null => false, :default => 'Hailstorm'
       t.boolean     :active, :null => false, :default => false
       t.integer     :max_threads_per_machine, :null => false
     end
