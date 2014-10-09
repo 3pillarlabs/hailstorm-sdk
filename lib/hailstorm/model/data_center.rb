@@ -13,7 +13,10 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   before_validation :set_defaults
 
-  before_save :check_machine_status, :if => proc {|r| r.active? and r.agent_ami.nil?}
+  validates_presence_of :user_name, :ip_address, :ssh_identity
+  validate :ip_address, format:{ with:/^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/}
+
+  before_save :provision_datacenter_agents, :if => proc {|r| r.active? and r.ip_address.nil?}
 
   after_destroy :cleanup
 
@@ -24,13 +27,17 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   # starts requisite number of instances
   def setup(force = false)
     logger.debug { "#{self.class}##{__method__}" }
-    if self.active?
-      self.agent_ami = nil if force
-      self.save!()
-      provision_agents()
-      File.chmod(0400, identity_file_path())
-    else
-      self.update_column(:active, false) if self.persisted?
+    unless self.ssh_identity.nil?
+      if identity_file_exists?
+        if self.active?
+          self.save!()
+          provision_agents()
+        else
+          self.update_column(:active, false) if self.persisted?
+        end
+      else
+        logger.warn("identity file :#{identity_file_path} not accessible")
+      end
     end
   end
 
@@ -38,43 +45,16 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   def start_agent(load_agent)
     logger.debug { load_agent.attributes.inspect }
     unless load_agent.running?
-      agent_data_center_instance = nil
-      unless load_agent.identifier.nil?
-        agent_data_center_instance = data_center.instances[load_agent.identifier]
-        if :stopped == agent_data_center_instance.status
-          logger.info("Restarting agent##{load_agent.identifier}...")
-          agent_data_center_instance.start()
-          timeout_message("#{agent_data_center_instance.id} to restart") do
-            wait_until { agent_data_center_instance.status.eql?(:running) }
-          end
-        end
-      else
-        logger.info("Starting new agent on #{self.region}...")
-        agent_data_center_instance = ec2.instances.create(
-            {:image_id => self.agent_ami,
-             :key_name => self.ssh_identity,
-             :security_groups => self.security_group.split(/\s*,\s*/),
-             :instance_type => self.instance_type}.merge(
-                self.zone.nil? ? {} : {:availability_zone => self.zone}
-            )
-        )
-        timeout_message("#{agent_data_center_instance.id} to start") do
-          wait_until { agent_data_center_instance.exists? && agent_data_center_instance.status.eql?(:running) }
-        end
-      end
-
       # update attributes
-      load_agent.identifier = agent_data_center_instance.instance_id
-      load_agent.public_ip_address = agent_data_center_instance.public_ip_address
-      load_agent.private_ip_address = agent_data_center_instance.private_ip_address
-
+      load_agent.identifier = self.datacenter_name
+      load_agent.public_ip_address = self.ip_address
+      load_agent.private_ip_address = self.ip_address
       # SSH is available a while later even though status may be running
       logger.info { "agent##{load_agent.identifier} is running, ensuring SSH access..." }
       sleep(120)
       logger.debug { "sleep over..."}
       Hailstorm::Support::SSH.ensure_connection(load_agent.public_ip_address,
                                                 self.user_name, ssh_options)
-
     end
   end
 
@@ -82,7 +62,6 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   def stop_agent(load_agent)
     logger.debug { "#{self.class}##{__method__}" }
     unless load_agent.identifier.nil?
-      agent_data_center_instance = data_center.instances[load_agent.identifier]
       if :running == agent_data_center_instance.status
         logger.info("Stopping agent##{load_agent.identifier}...")
         agent_data_center_instance.stop()
@@ -98,7 +77,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   # @return [Hash] of SSH options
   # (see Hailstorm::Behavior::Clusterable#ssh_options)
   def ssh_options()
-    @ssh_options ||= {:keys => identity_file_path()}
+    @ssh_options ||= {:password => 'ubuntu' }
   end
 
   # Start load agents if not started
@@ -117,9 +96,8 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   # Terminate load agent
   # (see Hailstorm::Behavior::Clusterable#before_destroy_load_agent)
   def before_destroy_load_agent(load_agent)
-
     logger.debug { "#{self.class}##{__method__}" }
-    agent_data_center_instance = data_center.instances[load_agent.identifier]
+    agent_data_center_instance = data_center.instances[load_agent.identiiffier]
     if agent_data_center_instance.exists?
       logger.info("Terminating agent##{load_agent.identifier}...")
       agent_data_center_instance.terminate()
@@ -154,33 +132,22 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   # (see Hailstorm::Behavior::Clusterable#slug)
   def slug()
-    @slug ||= "#{self.class.name.demodulize.titlecase}, region: #{self.region}"
+    @slug ||= "#{self.class.name.demodulize.titlecase}, region: #{self.datacenter_name}"
   end
 
   # (see Hailstorm::Behavior::Clusterable#public_properties)
   def public_properties()
-    columns = [:region]
-    self.attributes.symbolize_keys.slice(*columns)
   end
 
   # Purges the Amazon accounts used of Hailstorm related artifacts
 
   ################## NEED TO MODIFY ACCORDING TO SCHEMA
   def self.purge()
-    self.group(:access_key, :secret_key)
-    .select("access_key, secret_key")
+    self.group(:user_name, :ssh_identity)
+    .select("user_name, ssh_identity")
     .each do |item|
-      cleaner = Hailstorm::Support::AmazonAccountCleaner.new(
-          :access_key_id => item.access_key,
-          :secret_access_key => item.secret_key
-      )
-      regions = []
-      self.where(:access_key => item.access_key, :secret_key => item.secret_key)
-      .each do |record|
-        record.update_column(:agent_ami, nil)
-        regions.push(record.region)
-      end
-      cleaner.cleanup(false, regions)
+    # Remove any JMeter log that might be present there
+
     end
   end
 
@@ -189,40 +156,112 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   private
 
   #################### WE ARE NOY USING KEY FOR NOW SO WE DON'T NEED THESE FUNCTIONS
-  # def identity_file_exists()
-  #
-  # end
-  #
-  # def identity_file_path()
-  #
-  # end
-  #
-  # def identity_file_name()
-  #
-  # end
+
+  def identity_file_exists?
+    return File.exists?(identity_file_path)
+  end
+  def identity_file_path()
+    @identity_file_path ||= File.join(Hailstorm.root, Hailstorm.db_dir, self.ssh_identity)
+  end
 
 
   def set_defaults()
     self.user_name ||= Defaults::SSH_USER
-    self.password ||= Defaults::Defaults
     self.ip_address ||= Defaults::IP_ADDRESS
     self.machine_type ||= Defaults::MACHINE_TYPE
+    self.datacenter_name ||= Defaults::DATACENTER_NAME
     self.max_threads_per_machine ||= default_max_threads_per_machine()
-
     if self.ssh_identity.nil?
       self.ssh_identity = [Defaults::SSH_IDENTITY, Hailstorm.app_name].join('_')
-      self.autogenerated_ssh_key = true
     end
-
   end
 
-  def check_machine_status
-
+  def check_machine_status()
+    #check if Hailstorm can SSH to specified machine
+    logger.info("Checking SSH connectivity status")
+    status = Hailstorm::Support::SSH.ensure_connection(self.ip_address,
+                                                               self.user_name, ssh_options)
+    self.update_column(:active, status)
+    return status
   end
 
-  def data_center
-    @data_center ||= AWS::EC2.new(aws_config)
-    .regions[self.region]
+  def provision_datacenter_agents()
+    logger.debug { "#{self.class}##{__method__}" }
+    if self.active? and self.machine_type.nil?
+
+      # check if Hailstorm can co...
+      logger.info { "Looking up if Hailstorm can connect datacenter machine through SSH..."}
+      if self.machine_type.nil?
+
+        # Check if required JMeter version is present in our bucket
+        begin
+          jmeter_s3_object.content_length() # will fail if object does not exist
+        rescue AWS::S3::Errors::NoSuchKey
+          raise(Hailstorm::JMeterVersionNotFound.new(self.project.jmeter_version,
+                                                     Defaults::BUCKET_NAME))
+        end
+        begin
+          sleep(120)
+          if Hailstorm::Support::SSH.ensure_connection(self.ip_address,
+                                                    self.user_name, ssh_options)
+
+            Hailstorm::Support::SSH.start(self.public_ip_address,
+                                          self.user_name, ssh_options) do |ssh|
+
+              # install JAVA to /opt
+              ssh.exec!("wget -q '#{java_download_url}' -O #{java_download_file()}")
+              ssh.exec!("chmod +x #{java_download_file}")
+              ssh.exec!("cd /opt && sudo #{self.user_home}/#{java_download_file}")
+              ssh.exec!("sudo ln -s /opt/#{jre_directory()} /opt/jre")
+              # modify /etc/environment
+              env_local_copy = File.join(Hailstorm.tmp_path, current_env_file_name)
+              ssh.download('/etc/environment', env_local_copy)
+              new_env_copy = File.join(Hailstorm.tmp_path, new_env_file_name)
+              File.open(env_local_copy, 'r') do |envin|
+                File.open(new_env_copy, 'w') do |envout|
+                  envin.each_line do |linein|
+                    lineout = nil
+                    linein.strip!
+                    if linein =~ /^PATH/
+                      components = /^PATH="(.+?)"/.match(linein)[1].split(':')
+                      components.unshift('/opt/jre/bin') # trying to get it in the beginning
+                      lineout = "PATH=\"#{components.join(':')}\""
+
+                    else
+                      lineout = linein
+                    end
+
+                    envout.puts(lineout) unless lineout.blank?
+                  end
+                  envout.puts "export JRE_HOME=/opt/jre"
+                  envout.puts "export CLASSPATH=/opt/jre/lib:."
+                end
+              end
+              ssh.upload(new_env_copy, "#{self.user_home}/environment")
+              File.unlink(new_env_copy)
+              File.unlink(env_local_copy)
+              ssh.exec!("sudo mv -f #{self.user_home}/environment /etc/environment")
+
+              # install JMeter to self.user_home
+              logger.info { "Installing JMeter for #{self.region} AMI..." }
+              ssh.exec!("wget -q '#{jmeter_download_url}' -O #{jmeter_download_file}")
+              ssh.exec!("tar -xzf #{jmeter_download_file}")
+              ssh.exec!("ln -s #{self.user_home}/#{jmeter_directory} #{self.user_home}/jmeter")
+
+            end # end ssh
+
+          end
+        rescue
+          logger.error("Failed to connect to specified datacenter machine...")
+          raise
+        ensure
+          # ensure to terminate running instance
+          clean_instance.terminate()
+          sleep(DOZE_TIME) until clean_instance.status.eql?(:terminated)
+        end
+
+      end
+    end
   end
 
   def java_download_url()
@@ -269,16 +308,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   end
 
   ################# NEED TO CHK AND CHANGE ACCORDINGLY
-  # The AMI ID to search for and create
-  # def ami_id
-  #   "#{Defaults::AMI_ID}-j#{self.project.jmeter_version}-#{arch()}"
-  # end
 
-  # # Base AMI to use to create Hailstorm AMI based on the region and instance_type
-  # # @return [String] Base AMI ID
-  # def base_ami()
-  #   region_base_ami_map[self.region][arch(true)]
-  # end
 
   ############################## WE DON't NEED THIS
   # def region_base_ami_map()
@@ -303,13 +333,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     }[arch(true)]
   end
 
-  def instance_type_supported()
 
-    unless InstanceTypes.valid?(self.instance_type)
-      errors.add(:instance_type,
-                 "not in supported list (#{InstanceTypes.allowed})")
-    end
-  end
 
   # @return [String] thead-safe name for the downloaded environment file
   def current_env_file_name()
@@ -359,10 +383,16 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   class Defaults
     BUCKET_NAME         = 'brickred-perftest'
     SSH_USER            = 'ubuntu'
-    SSH_PASS            = 'hailstorm'
+    SSH_IDENTITY        = 'server.pem'
     MACHINE_TYPE        = '64-bit'
     IP_ADDRESS          = '127.0.0.1'
+    DATACENTER_NAME     = 'Hailstorm'
   end
 
+  # class SSHHelper
+  #   def agent_status()
+  #
+  #   end
+  # end
 
 end
