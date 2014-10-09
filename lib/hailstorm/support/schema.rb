@@ -73,7 +73,7 @@ class Hailstorm::Support::Schema
   end
 
   def create_local_datacenters
-    ActiveRecord::Migration.create_table(:datacenters) do |t|
+    ActiveRecord::Migration.create_table(:data_centers) do |t|
       t.references  :project, :null => false
       t.string      :user_name, :null => false
       t.string      :password, :null => false
