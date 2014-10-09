@@ -13,15 +13,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   before_validation :set_defaults
 
-  validates_presence_of :access_key, :secret_key, :region
-
-  validate :identity_file_exists, :if => proc {|r| r.active?}
-
-  validate :instance_type_supported, :if => proc {|r| r.active?}
-
-  before_save :set_availability_zone, :if => proc {|r| r.active?}
-
-  before_save :create_agent_ami, :if => proc {|r| r.active? and r.agent_ami.nil?}
+  before_save :check_machine_status, :if => proc {|r| r.active? and r.agent_ami.nil?}
 
   after_destroy :cleanup
 
@@ -211,10 +203,11 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
 
   def set_defaults()
-    self.security_group = Defaults::SECURITY_GROUP if self.security_group.blank?
     self.user_name ||= Defaults::SSH_USER
-    self.instance_type ||= InstanceTypes::Hydrogen
-    self.max_threads_per_agent ||= default_max_threads_per_agent()
+    self.password ||= Defaults::Defaults
+    self.ip_address ||= Defaults::IP_ADDRESS
+    self.machine_type ||= Defaults::MACHINE_TYPE
+    self.max_threads_per_machine ||= default_max_threads_per_machine()
 
     if self.ssh_identity.nil?
       self.ssh_identity = [Defaults::SSH_IDENTITY, Hailstorm.app_name].join('_')
@@ -223,171 +216,14 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   end
 
+  def check_machine_status
 
-################################ NEED TO CHK WHAT CAN WE USE IN PLACE
-  # creates the agent ami
-  def create_agent_ami()
-
-    # logger.debug { "#{self.class}##{__method__}" }
-    # if self.active? and self.agent_ami.nil?
-    #
-    #   rexp = Regexp.compile(ami_id())
-    #   # check if this region already has the AMI...
-    #   logger.info { "Searching available AMI on #{self.region}..."}
-    #   ec2.images()
-    #   .with_owner(:self)
-    #   .inject({}) {|acc, e| e.state == :available ? acc.merge(e.name => e.id) : acc}.each_pair do |name, id|
-    #
-    #     if rexp.match(name)
-    #       self.agent_ami = id
-    #       logger.info("Using AMI #{self.agent_ami} for #{self.region}...")
-    #       break
-    #     end
-    #   end
-    #
-    #   if self.agent_ami.nil?
-    #     # AMI does not exist
-    #     logger.info("Creating agent AMI for #{self.region}...")
-    #
-    #     # Check if required JMeter version is present in our bucket
-    #     begin
-    #       jmeter_s3_object.content_length() # will fail if object does not exist
-    #     rescue AWS::S3::Errors::NoSuchKey
-    #       raise(Hailstorm::JMeterVersionNotFound.new(self.project.jmeter_version,
-    #                                                  Defaults::BUCKET_NAME))
-    #     end
-    #
-    #     # Check if the SSH security group exists, or create it
-    #     security_group = find_or_create_security_group()
-    #
-    #     # Launch base AMI
-    #     clean_instance = ec2.instances.create({
-    #                                               :image_id => base_ami(),
-    #                                               :key_name => self.ssh_identity,
-    #                                               :security_groups => [security_group.name],
-    #                                               :instance_type => self.instance_type
-    #                                           }.merge(self.zone.nil? ? {} : {:availability_zone => self.zone}))
-    #
-    #     timeout_message("#{clean_instance.id} to start") do
-    #       wait_until { clean_instance.exists? && clean_instance.status.eql?(:running) }
-    #     end
-    #
-    #     begin
-    #       logger.info { "Clean instance at #{self.region} running, ensuring SSH access..." }
-    #       sleep(120)
-    #       Hailstorm::Support::SSH.ensure_connection(clean_instance.public_ip_address,
-    #                                                 self.user_name, ssh_options)
-    #
-    #       Hailstorm::Support::SSH.start(clean_instance.public_ip_address,
-    #                                     self.user_name, ssh_options) do |ssh|
-    #
-    #         # install JAVA to /opt
-    #         logger.info { "Installing Java for #{self.region} AMI..." }
-    #         ssh.exec!("wget -q '#{java_download_url}' -O #{java_download_file()}")
-    #         ssh.exec!("chmod +x #{java_download_file}")
-    #         ssh.exec!("cd /opt && sudo #{self.user_home}/#{java_download_file}")
-    #         ssh.exec!("sudo ln -s /opt/#{jre_directory()} /opt/jre")
-    #         # modify /etc/environment
-    #         env_local_copy = File.join(Hailstorm.tmp_path, current_env_file_name)
-    #         ssh.download('/etc/environment', env_local_copy)
-    #         new_env_copy = File.join(Hailstorm.tmp_path, new_env_file_name)
-    #         File.open(env_local_copy, 'r') do |envin|
-    #           File.open(new_env_copy, 'w') do |envout|
-    #             envin.each_line do |linein|
-    #               lineout = nil
-    #               linein.strip!
-    #               if linein =~ /^PATH/
-    #                 components = /^PATH="(.+?)"/.match(linein)[1].split(':')
-    #                 components.unshift('/opt/jre/bin') # trying to get it in the beginning
-    #                 lineout = "PATH=\"#{components.join(':')}\""
-    #
-    #               else
-    #                 lineout = linein
-    #               end
-    #
-    #               envout.puts(lineout) unless lineout.blank?
-    #             end
-    #             envout.puts "export JRE_HOME=/opt/jre"
-    #             envout.puts "export CLASSPATH=/opt/jre/lib:."
-    #           end
-    #         end
-    #         ssh.upload(new_env_copy, "#{self.user_home}/environment")
-    #         File.unlink(new_env_copy)
-    #         File.unlink(env_local_copy)
-    #         ssh.exec!("sudo mv -f #{self.user_home}/environment /etc/environment")
-    #
-    #         # install JMeter to self.user_home
-    #         logger.info { "Installing JMeter for #{self.region} AMI..." }
-    #         ssh.exec!("wget -q '#{jmeter_download_url}' -O #{jmeter_download_file}")
-    #         ssh.exec!("tar -xzf #{jmeter_download_file}")
-    #         ssh.exec!("ln -s #{self.user_home}/#{jmeter_directory} #{self.user_home}/jmeter")
-    #
-    #       end # end ssh
-    #
-    #       # create the AMI
-    #       logger.info { "Finalizing changes for #{self.region} AMI..." }
-    #       new_ami = ec2.images.create(
-    #           :name => ami_id,
-    #           :instance_id => clean_instance.instance_id,
-    #           :description => "AMI for distributed performance testing with JMeter (TSG)"
-    #       )
-    #       sleep(DOZE_TIME*12) while new_ami.state == :pending
-    #
-    #       if new_ami.state == :available
-    #         self.agent_ami = new_ami.id
-    #         logger.info { "New AMI##{self.agent_ami} on #{self.region} created successfully, cleaning up..."}
-    #       else
-    #         raise(Hailstorm::AmiCreationFailure.new(self.region, new_ami.state_reason))
-    #       end
-    #
-    #     rescue
-    #       logger.error("Failed to create instance on #{self.region}, terminating temporary instance...")
-    #       raise
-    #     ensure
-    #       # ensure to terminate running instance
-    #       clean_instance.terminate()
-    #       sleep(DOZE_TIME) until clean_instance.status.eql?(:terminated)
-    #     end
-    #
-    #   end # self.agent_ami.nil?
-    # end # self.active? and self.agent_ami.nil?
   end
-
-  # def find_or_create_security_group()
-  #
-  #   logger.debug { "#{self.class}##{__method__}" }
-  #   security_group = ec2.security_groups
-  #   .filter('group-name', Defaults::SECURITY_GROUP)
-  #   .first()
-  #   if security_group.nil?
-  #     logger.info("Creating #{Defaults::SECURITY_GROUP} security group on #{self.region}...")
-  #     security_group = ec2.security_groups.create(Defaults::SECURITY_GROUP,
-  #                                                 :description => Defaults::SECURITY_GROUP_DESC)
-  #
-  #     security_group.authorize_ingress(:tcp, 22) # allow SSH from anywhere
-  #     # allow incoming TCP to any port within the group
-  #     security_group.authorize_ingress(:tcp, 0..65535, :group_id => security_group.id)
-  #     # allow incoming UDP to any port within the group
-  #     security_group.authorize_ingress(:udp, 0..65535, :group_id => security_group.id)
-  #     # allow ICMP from anywhere
-  #     security_group.allow_ping()
-  #   end
-  #
-  #   return security_group
-  # end
-
-
 
   def data_center
     @data_center ||= AWS::EC2.new(aws_config)
     .regions[self.region]
   end
-
-  ##################### NEED TO CHK
-  def s3()
-    @s3 ||= AWS::S3.new(aws_config)
-  end
-
 
   def java_download_url()
     @java_download_url ||= s3_bucket().objects[java_download_file_path()]
@@ -405,12 +241,6 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   def s3_bucket()
     @s3_bucket ||= s3.buckets[Defaults::BUCKET_NAME]
   end
-
-  ######################## WE DON'T NEED THIS WE DON'T HAVE ZONES
-  # def set_availability_zone()
-  #
-  # end
-
 
   def jmeter_download_file()
     "#{jmeter_directory}.tgz"
@@ -521,50 +351,18 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     end
   end
 
-  def default_max_threads_per_agent()
-    @default_max_threads_per_agent ||= {
-        InstanceTypes::Hydrogen => 50,
-        InstanceTypes::Calcium => 200,
-        InstanceTypes::Ebony => 800,
-        InstanceTypes::Steel => 1000
-    }
-    @default_max_threads_per_agent[self.instance_type]
+  def default_max_threads_per_machine()
+    @default_max_threads_per_machine ||= 100
   end
 
-  # EC2 default settings
+  # Data center default settings
   class Defaults
-    AMI_ID              = "brickred-hailstorm"
-    SECURITY_GROUP      = "Hailstorm"
-    SECURITY_GROUP_DESC = "Allows traffic to port 22 from anywhere and internal TCP, UDP and ICMP traffic"
     BUCKET_NAME         = 'brickred-perftest'
     SSH_USER            = 'ubuntu'
-    SSH_IDENTITY        = 'hailstorm'
+    SSH_PASS            = 'hailstorm'
+    MACHINE_TYPE        = '64-bit'
+    IP_ADDRESS          = '127.0.0.1'
   end
-
-  ######################### CHECK ONCE, NEED TO ADD SETTINGS FOR DATA CENTERS
-  class InstanceTypes
-    Hydrogen = 'm1.small'
-    Calcium  = 'm1.large'
-    Ebony    = 'm1.xlarge'
-    Steel    = 'c1.xlarge'
-    # HVM cluster compute instances are not supported due to limited availability
-    # (only on us-east-1), different operating system and creation strategy
-    # Titanium = 'cc1.4xlarge'
-    # Diamond  = 'cc2.8xlarge'
-
-    def self.valid?(instance_type)
-      self.allowed.include?(instance_type)
-    end
-
-    def self.allowed()
-      self.constants()
-      .collect {|c| eval("#{self.name}::#{c}") }
-    end
-
-  end
-
-
-
 
 
 end
