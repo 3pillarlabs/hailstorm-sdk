@@ -145,8 +145,14 @@ class Hailstorm::Support::Configuration
   # in Hailstorm::Model namespace. Select this using the :data_center clusters
   # parameter.
   class DataCenter < ClusterBase
-    # Datacenter access password
-    attr_accessor :password
+    #datacenter display identifier
+    attr_accessor :datacenter_name
+
+    # Datacenter password
+    attr_accessor :user_name
+
+    # Datacenter access ssh key file
+    attr_accessor :ssh_identity
 
     # IP Address of datacenter
     attr_accessor :ip_address
