@@ -166,6 +166,12 @@ class Hailstorm::Support::Configuration
     # If the number of threads in the JMeter thread group is higher than this
     # value, multiple machines will be spawned with equal thread distribution.
     attr_accessor :max_threads_per_machine
+
+    # Amazon EC2 access key
+    attr_accessor :aws_access_key
+
+    # Amazon EC2 secret key
+    attr_accessor :aws_secret_key
   end
 
   # Settings for one more monitors. Multiple monitors of different types can
