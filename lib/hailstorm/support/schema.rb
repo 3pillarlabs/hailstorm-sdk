@@ -81,6 +81,8 @@ class Hailstorm::Support::Schema
       t.string      :ip_address, :null => false
       t.string      :machine_type, :null => false
       t.string      :datacenter_name, :null => false, :default => 'Hailstorm'
+      t.string      :aws_access_key, :null => false
+      t.string      :aws_secret_key, :null => false
       t.boolean     :active, :null => false, :default => false
       t.integer     :max_threads_per_machine, :null => false
     end
