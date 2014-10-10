@@ -235,7 +235,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
             ssh.exec!("sudo mv -f #{self.user_home}/environment /etc/environment")
 
             # install JMeter to self.user_home
-            logger.info { "Installing JMeter for #{self.region} AMI..." }
+             #logger.info { "Installing JMeter for #{self.region} AMI..." }
             ssh.exec!("wget -q '#{jmeter_download_url}' -O #{jmeter_download_file}")
             ssh.exec!("tar -xzf #{jmeter_download_file}")
             ssh.exec!("ln -s #{self.user_home}/#{jmeter_directory} #{self.user_home}/jmeter")
