@@ -27,8 +27,15 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   # starts requisite number of instances
   def setup(force = false)
     logger.debug { "#{self.class}##{__method__}" }
-    unless self.ssh_identity.nil?
-      if identity_file_exists?
+
+    #TODO : remove this block, just for testing
+    Hailstorm::Support::SSH.start(self.ip_address,
+                                  self.user_name, ssh_options) do |ssh|
+      output = ssh.exec!("ls /home/")
+      puts output
+    end
+    if not self.ssh_identity.nil?
+      if not identity_file_exists?
         if self.active?
           self.save!()
           provision_agents()
@@ -38,13 +45,15 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
       else
         logger.warn("identity file :#{identity_file_path} not accessible")
       end
+    else
+      logger.warn("identity file nil")
     end
   end
 
   # start the agent and update agent ip_address and identifier
   def start_agent(load_agent)
     logger.debug { load_agent.attributes.inspect }
-    unless load_agent.running?
+    if not self.ip_address.nil?
       # update attributes
       load_agent.identifier = self.datacenter_name
       load_agent.public_ip_address = self.ip_address
@@ -83,7 +92,6 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   # Start load agents if not started
   # (see Hailstorm::Behavior::Clusterable#before_generate_load)
   def before_generate_load()
-
     logger.debug { "#{self.class}##{__method__}" }
     self.load_agents.where(:active => true).each do |agent|
       unless agent.running?
@@ -187,11 +195,11 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   def provision_datacenter_agents()
     logger.debug { "#{self.class}##{__method__}" }
-    if self.active? and self.machine_type.nil?
 
-      # check if Hailstorm can co...
-      logger.info { "Looking up if Hailstorm can connect datacenter machine through SSH..."}
-      if self.machine_type.nil?
+    # check if Hailstorm can connect to machine using SSH...
+    logger.info { "Looking up if Hailstorm can connect datacenter machine through SSH..."}
+    if check_machine_status == true
+      if not self.machine_type.nil?
 
         # Check if required JMeter version is present in our bucket
         begin
@@ -253,13 +261,9 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
           end
         rescue
           logger.error("Failed to connect to specified datacenter machine...")
-          raise
         ensure
-          # ensure to terminate running instance
-          clean_instance.terminate()
-          sleep(DOZE_TIME) until clean_instance.status.eql?(:terminated)
-        end
 
+        end
       end
     end
   end

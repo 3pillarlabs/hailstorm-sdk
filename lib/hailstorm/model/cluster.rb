@@ -76,6 +76,8 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
         if require('aws')
           AWS.eager_autoload!
         end
+      elsif :data_center == cluster_config.cluster_type
+        #do data center related loading
       end
       cluster_type = "Hailstorm::Model::#{cluster_config.cluster_type.to_s.camelize}"
       cluster = project.clusters()
