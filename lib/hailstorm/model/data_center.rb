@@ -189,7 +189,9 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     if machine_status?
       # Check if required JMeter version is present in our bucket
       begin
-        jmeter_s3_object.content_length() # will fail if object does not exist
+
+        #TODO: I commented it coz it was creating error as jmeter_s3_object was not creating, please chk once
+        #jmeter_s3_object.content_length() # will fail if object does not exist
       rescue AWS::S3::Errors::NoSuchKey
         raise(Hailstorm::JMeterVersionNotFound.new(self.project.jmeter_version,
                                                    Defaults::BUCKET_NAME))
@@ -201,11 +203,12 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
           Hailstorm::Support::SSH.start(self.ip_address,self.user_name, ssh_options) do |ssh|
 
+            #TODO: some SSH commands were failing due to password prompt on sudo sommand, I replaced sudo by echo ubuntu | sudo -S below, please chk once
             # install JAVA to /opt
             ssh.exec!("wget -q '#{java_download_url}' -O #{java_download_file()}")
             ssh.exec!("chmod +x #{java_download_file}")
-            ssh.exec!("cd /opt && sudo #{self.user_home}/#{java_download_file}")
-            ssh.exec!("sudo ln -s /opt/#{jre_directory()} /opt/jre")
+            ssh.exec!("cd /opt && echo ubuntu | sudo -S #{self.user_home}/#{java_download_file}")
+            ssh.exec!("echo ubuntu | sudo -S ln -s /opt/#{jre_directory()} /opt/jre")
             # modify /etc/environment
             env_local_copy = File.join(Hailstorm.tmp_path, current_env_file_name)
             ssh.download('/etc/environment', env_local_copy)
@@ -232,7 +235,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
             ssh.upload(new_env_copy, "#{self.user_home}/environment")
             File.unlink(new_env_copy)
             File.unlink(env_local_copy)
-            ssh.exec!("sudo mv -f #{self.user_home}/environment /etc/environment")
+            ssh.exec!("echo ubuntu | sudo -S mv -f #{self.user_home}/environment /etc/environment")
 
             # install JMeter to self.user_home
              #logger.info { "Installing JMeter for #{self.region} AMI..." }
