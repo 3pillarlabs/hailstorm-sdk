@@ -146,7 +146,7 @@ class Hailstorm::Support::Configuration
   # parameter.
   class DataCenter < ClusterBase
     #datacenter display identifier
-    attr_accessor :datacenter_name
+    attr_accessor :title
 
     # Datacenter password
     attr_accessor :user_name
@@ -154,24 +154,8 @@ class Hailstorm::Support::Configuration
     # Datacenter access ssh key file
     attr_accessor :ssh_identity
 
-    # IP Address of datacenter
-    attr_accessor :ip_address
-
-    # Datacenter machine type Available machine types are -
-    #   * 64-bit' (default)
-    #   * 32-bit'
-    attr_accessor :machine_type
-
-    # Set the maximum number of threads spawned by a single machine.
-    # If the number of threads in the JMeter thread group is higher than this
-    # value, multiple machines will be spawned with equal thread distribution.
-    attr_accessor :max_threads_per_machine
-
-    # Amazon EC2 access key
-    attr_accessor :aws_access_key
-
-    # Amazon EC2 secret key
-    attr_accessor :aws_secret_key
+    # Array of ip_addresses
+    attr_accessor :machines
   end
 
   # Settings for one more monitors. Multiple monitors of different types can
