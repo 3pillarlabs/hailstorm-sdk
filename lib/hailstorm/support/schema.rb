@@ -78,8 +78,8 @@ class Hailstorm::Support::Schema
       t.references  :project, :null => false
       t.string      :user_name, :null => false
       t.string      :ssh_identity, :null => false
-      t.string      :ip_address, :null => false
-      t.string      :datacenter_name, :null => false
+      t.string      :machines, :null => false
+      t.string      :title, :null => false
       t.boolean     :active, :null => false, :default => false
     end
   end

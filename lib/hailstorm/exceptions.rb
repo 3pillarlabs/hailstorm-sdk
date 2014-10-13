@@ -90,19 +90,19 @@ module Hailstorm
 
   class DataCenterAccessFailure < DiagnosticAwareException
 
-    attr_reader :ip_address, :user_name, :ssh_identity
+    attr_reader :machines, :user_name, :ssh_identity
 
     # @param [String] user_name  ssh user name
-    # @param [String] ip_address ip address
+    # @param [String] machines comma separated ip addresses of machines
     # @param [String] ssh_identity ssh ssh identity
-    def initialize(user_name, ip_address, ssh_identity)
-      @ip_address   = ip_address
+    def initialize(user_name, machines, ssh_identity)
+      @machines   = machines
       @user_name    = user_name
       @ssh_identity = ssh_identity
     end
 
     def diagnostics
-      %{HailStrom is not able to connect to : "#{ip_address}" using user name : '#{user_name}'
+      %{HailStrom is not able to connect to : "#{machines}" using user name : '#{user_name}'
       and ssh identity file '#{ssh_identity}'. System might not be running at the moment or
       user and/or ssh identity used are not allowed to connect to specified machine}
     end

@@ -13,9 +13,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   before_validation :set_defaults
 
-  validates_presence_of :user_name, :ip_address, :ssh_identity
-
-  before_save :provision_data_center_agents#, :if => proc {|r| r.ssh_identity.nil?}
+  validates_presence_of :user_name, :machines, :ssh_identity
 
   after_destroy :cleanup
 
@@ -25,25 +23,32 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   # Creates a data center load agent with all required packages pre-installed and
   # starts requisite number of instances
   def setup(force = false)
+    puts "Inside #{self.class}##{__method__}"
     logger.debug { "#{self.class}##{__method__}" }
 
-    #check machine status
+    # check machine status
     # check master slave
     # create load agents
 
-    if machine_status?
-      puts "Machine status verified"
-      if self.active?
-        puts "Machine status active"
-        self.save!()
-        provision_agents()
+    #TODO check master slave
+    self.provision_agents()
+    status = true
+    self.machines.each do |machine|
+      #check machine status
+      if machine_status?(machine)
+        status &=true
       else
-        puts "Machine status inactive"
+        status &= false
+      end
+    end
+    if status
+      if self.active?
+        self.save!()
+      else
         self.update_column(:active, false) if self.persisted?
       end
     else
-      logger.warn("Invalid ssh identity file or machine not accessible")
-      raise(Hailstorm::DataCenterAccessFailure.new(self.user_name, self.ip_address, self.ssh_identity))
+      raise(Hailstorm::DataCenterAccessFailure.new(self.user_name, self.machines, self.ssh_identity))
     end
   end
 
@@ -51,10 +56,9 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   def start_agent(load_agent)
     logger.debug { "#{self.class}##{__method__}" }
       # SSH is available a while later even though status may be running
-      logger.info { "agent##{load_agent.identifier} is running, ensuring SSH access..." }
+      logger.info { "agent##{load_agent.public_ip_address} is running, ensuring SSH access..." }
       Hailstorm::Support::SSH.ensure_connection(load_agent.public_ip_address,
                                                 self.user_name, ssh_options)
-    end
   end
 
   # stop the load agent
@@ -71,52 +75,33 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   # Start load agents if not started
   # (see Hailstorm::Behavior::Clusterable#before_generate_load)
-  # def before_generate_load()
-  #   logger.debug { "#{self.class}##{__method__}" }
-  #   self.load_agents.where(:active => true).each do |agent|
-  #     unless agent.running?
-  #       start_agent(agent)
-  #       agent.save!
-  #     end
-  #   end
-  # end
+  def before_generate_load()
+    logger.debug { "#{self.class}##{__method__}" }
+    self.load_agents.where(:active => true).each do |agent|
+      unless agent.running?
+        #start_agent(agent)
+        agent.save!
+      end
+    end
+  end
+
+  def required_load_agent_count()
+    return self.machines.count()
+  end
 
   # Terminate load agent
   # (see Hailstorm::Behavior::Clusterable#before_destroy_load_agent)
-  # def before_destroy_load_agent(load_agent)
-  #   logger.debug { "#{self.class}##{__method__}" }
-  #   agent_data_center_instance = data_center.instances[load_agent.identiiffier]
-  #   if agent_data_center_instance.exists?
-  #     logger.info("Terminating agent##{load_agent.identifier}...")
-  #     agent_data_center_instance.terminate()
-  #     timeout_message("#{agent_data_center_instance.id} to terminate") do
-  #       wait_until { agent_data_center_instance.status.eql?(:terminated) }
-  #     end
-  #   else
-  #     logger.warn("Agent ##{load_agent.identifier} does not exist on EC2")
-  #   end
-  # end
+  def before_destroy_load_agent(load_agent)
+    logger.debug { "#{self.class}##{__method__}" }
+  end
 
-
-
-  # Delete SSH key-pair and identity once all load agents have been terminated
-  # (see Hailstorm::Behavior::Clusterable#cleanup)
-
-  ### DO WE NEED THIS #############################################
-  # def cleanup()
-  # end
 
 
   # (see Hailstorm::Behavior::Clusterable#slug)
   def slug()
-    @slug ||= "#{self.class.name.demodulize.titlecase}, region: #{self.datacenter_name}"
+    @slug ||= "#{self.class.name.demodulize.titlecase}, region: #{self.title}"
   end
 
-  # (see Hailstorm::Behavior::Clusterable#public_properties)
-  # def public_properties()
-  # end
-
-  # Purges the Amazon accounts used of Hailstorm related artifacts
 
   ################## NEED TO MODIFY ACCORDING TO SCHEMA
   def self.purge()
@@ -128,11 +113,97 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     end
   end
 
+  # Launch new instances or bring down instances based on number of instances needed
+  def provision_agents()
+    puts "Inside #{self.class}##{__method__}"
+    logger.debug { "#{self.class}##{__method__}" }
+    self.project.jmeter_plans.where(:active => true).each do |jmeter_plan|
+      common_attributes = {
+          :jmeter_plan_id => jmeter_plan.id,
+          :active => true
+      }
+      required_count = required_load_agent_count()
+
+      if self.project.master_slave_mode?
+        query = self.master_agents
+        .where(:jmeter_plan_id => jmeter_plan.id)
+
+        # abort if more than 1 master agent is present
+        if query.all.count > 1
+          raise(Hailstorm::MasterSlaveSwitchOnConflict)
+        end
+
+        # one master is necessary
+        query.first_or_create!()
+        .tap {|agent| agent.update_column(:active, true)}
+
+        if required_count > 1
+          create_or_enable(common_attributes, required_count, :slave_agents)
+        end
+
+      else # not operating in master-slave mode
+        # abort if slave agents are present
+        slave_agents_count = self.slave_agents
+        .where(:jmeter_plan_id => jmeter_plan.id)
+        .all.count()
+        if slave_agents_count > 0
+          raise(Hailstorm::MasterSlaveSwitchOffConflict)
+        end
+
+        begin
+          create_or_enable(common_attributes, required_count, :master_agents)
+        rescue Exception => e
+          logger.error(e.message)
+          logger.debug { "\n".concat(e.backtrace().join("\n")) }
+          raise(Hailstorm::AgentCreationFailure)
+        end
+      end
+    end
+  end
 
   ######################### PRIVATE METHODS ####################################
   private
-
   #################### WE ARE NOY USING KEY FOR NOW SO WE DON'T NEED THESE FUNCTIONS
+
+  # Creates master/slave agents based on the relation
+  def create_or_enable(attributes, required_count, relation)
+
+    # count of active agents
+    active_count = self.send(relation).where(attributes).all().count()
+
+    activate_count = required_count - active_count
+
+    activate_count.times do # block wont execute if activate_count <= 0
+
+      # is there an inactive agent? if yes, activate it, or, create new
+      agent = self.send(relation)
+      .where(attributes.merge(:active => false))
+      .first_or_initialize(:active => true)
+      if agent.new_record?
+        if activate_count > 1
+          Hailstorm::Support::Thread.start(agent) do |agent_instance|
+            #start_agent(agent_instance)
+            agent_instance.save!
+          end
+        else
+          #start_agent(agent)
+          agent.save!
+        end
+      else
+        agent.update_column(:active, true)
+      end
+    end
+    Hailstorm::Support::Thread.join() if activate_count > 1# wait for agents to be created
+
+    if activate_count < 0
+      self.send(relation)
+      .where(attributes)
+      .limit(activate_count.abs).each do |agent|
+
+        agent.update_column(:active, false)
+      end
+    end
+  end
 
   def identity_file_exists?
     return File.exists?(identity_file_path)
@@ -144,100 +215,64 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   def set_defaults()
     self.user_name ||= Defaults::SSH_USER
-    self.ip_address ||= Defaults::IP_ADDRESS
-    self.machine_type ||= Defaults::MACHINE_TYPE
-    self.datacenter_name ||= Defaults::DATACENTER_NAME
-    self.max_threads_per_machine ||= default_max_threads_per_machine()
+    self.machines ||= Defaults::MACHINES
+    self.title ||= Defaults::TITLE
     if self.ssh_identity.nil?
       self.ssh_identity = [Defaults::SSH_IDENTITY, Hailstorm.app_name].join('_')
     end
   end
 
-  def machine_status?
+  def machine_status?(ip_address)
     #check if Hailstorm can SSH to specified machine
-    #logger.info("Checking SSH connectivity status")
-    status = Hailstorm::Support::SSH.ensure_connection(self.ip_address,
+    #logger.info("Checking SSH connectivity status #{ip_address}")
+
+    status = Hailstorm::Support::SSH.ensure_connection(ip_address,
                                                                self.user_name, ssh_options)
-    #starself.update_column(:active, status)
     return status
   end
 
-  # def provision_data_center_agents()
-  #   logger.debug { "#{self.class}##{__method__}" }
-  #   # check if Hailstorm can connect to machine using SSH...
-  #   logger.info { "Looking up if Hailstorm can connect datacenter machine through SSH..."}
-  #   if machine_status?
-  #     # Check if required JMeter version is present in our bucket
-  #     begin
-  #
-  #       #TODO: I commented it coz it was creating error as jmeter_s3_object was not creating, please chk once
-  #       #jmeter_s3_object.content_length() # will fail if object does not exist
-  #     rescue AWS::S3::Errors::NoSuchKey
-  #       raise(Hailstorm::JMeterVersionNotFound.new(self.project.jmeter_version,
-  #                                                  Defaults::BUCKET_NAME))
-  #     end
-  #     begin
-  #       sleep(120)
-  #       puts "Installing required software on target machine"
-  #       #if Hailstorm::Support::SSH.ensure_connection(self.ip_address,self.user_name, ssh_options)
-  #
-  #         Hailstorm::Support::SSH.start(self.ip_address,self.user_name, ssh_options) do |ssh|
-  #
-  #           #TODO: some SSH commands were failing due to password prompt on sudo sommand, I replaced sudo by echo ubuntu | sudo -S below, please chk once
-  #           # install JAVA to /opt
-  #           ssh.exec!("wget -q '#{java_download_url}' -O #{java_download_file()}")
-  #           ssh.exec!("chmod +x #{java_download_file}")
-  #           ssh.exec!("cd /opt && echo ubuntu | sudo -S #{self.user_home}/#{java_download_file}")
-  #           ssh.exec!("echo ubuntu | sudo -S ln -s /opt/#{jre_directory()} /opt/jre")
-  #           # modify /etc/environment
-  #           env_local_copy = File.join(Hailstorm.tmp_path, current_env_file_name)
-  #           ssh.download('/etc/environment', env_local_copy)
-  #           new_env_copy = File.join(Hailstorm.tmp_path, new_env_file_name)
-  #           File.open(env_local_copy, 'r') do |envin|
-  #             File.open(new_env_copy, 'w') do |envout|
-  #               envin.each_line do |linein|
-  #                 lineout = nil
-  #                 linein.strip!
-  #                 if linein =~ /^PATH/
-  #                   components = /^PATH="(.+?)"/.match(linein)[1].split(':')
-  #                   components.unshift('/opt/jre/bin') # trying to get it in the beginning
-  #                   lineout = "PATH=\"#{components.join(':')}\""
-  #
-  #                 else
-  #                   lineout = linein
-  #                 end
-  #                 envout.puts(lineout) unless lineout.blank?
-  #               end
-  #               envout.puts "export JRE_HOME=/opt/jre"
-  #               envout.puts "export CLASSPATH=/opt/jre/lib:."
-  #             end
-  #           end
-  #           ssh.upload(new_env_copy, "#{self.user_home}/environment")
-  #           File.unlink(new_env_copy)
-  #           File.unlink(env_local_copy)
-  #           ssh.exec!("echo ubuntu | sudo -S mv -f #{self.user_home}/environment /etc/environment")
-  #
-  #           # install JMeter to self.user_home
-  #            #logger.info { "Installing JMeter for #{self.region} AMI..." }
-  #           ssh.exec!("wget -q '#{jmeter_download_url}' -O #{jmeter_download_file}")
-  #           ssh.exec!("tar -xzf #{jmeter_download_file}")
-  #           ssh.exec!("ln -s #{self.user_home}/#{jmeter_directory} #{self.user_home}/jmeter")
-  #
-  #         end # end ssh
-  #       #end
-  #     rescue  Exception => e
-  #       puts e.message
-  #       logger.error("Failed to connect to specified datacenter machine...")
-  #       raise(Hailstorm::DataCenterAccessFailure.new(self.user_name, self.ip_address, self.ssh_identity))
-  #     ensure
-  #       #Ensure cleanup
-  #   end
-  #   else
-  #     raise(Hailstorm::DataCenterAccessFailure.new(self.user_name, self.ip_address, self.ssh_identity))
-  #   end
-  # end
+  def machines_status?
+    status = true
+    self.machines.each do |machine|
+      status &=machine_status?(machine)
+    end
+    return status
+  end
 
+  # check if
+  # @return
+  def java_installed?(load_agent)
+    logger.debug { "#{self.class}##{__method__}" }
+    java_available = false
+    Hailstorm::Support::SSH.start(load_agent.private_ip_address,self.user_name, ssh_options) do |ssh|
+      output = ssh.exec!("command -pv java")
+      logger.debugger ("output of java check #{output}")
+      if not output.nil? and output.include? "java"
+        java_available = true
+      end
+    end
+    return java_available
+  end
 
+  def jmeter_installed?(load_agent)
+    jmeter_available = false
+    Hailstorm::Support::SSH.start(load_agent.private_ip_address,self.user_name, ssh_options) do |ssh|
+      output = ssh.exec!("command -pv jmeter")
+      logger.debugger ("output of java check #{output}")
+      if not output.nil? and output.include? "jmeter"
+        jmeter_available = true
+      end
+    end
+    return jmeter_available
+  end
+
+  def java_version()
+
+  end
+
+  def jmeter_version()
+
+  end
 
 
   # @return [String] thead-safe name for the downloaded environment file
@@ -279,18 +314,11 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
       raise(Hailstorm::Exception, "Timeout while waiting for #{message} on #{self.region}.")
     end
   end
-
-  def default_max_threads_per_machine()
-    @default_max_threads_per_machine ||= 100
-  end
-
   # Data center default settings
   class Defaults
-    BUCKET_NAME         = 'brickred-perftest'
     SSH_USER            = 'ubuntu'
     SSH_IDENTITY        = 'server.pem'
-    MACHINE_TYPE        = '64-bit'
-    IP_ADDRESS          = '127.0.0.1'
-    DATACENTER_NAME     = 'Hailstorm'
+    MACHINES            = ['127.0.0.1', '127.0.0.1']
+    TITLE               = 'Hailstorm'
   end
 end
