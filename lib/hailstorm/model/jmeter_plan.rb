@@ -117,7 +117,8 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     if clusterable.respond_to?(:max_threads_per_agent) and num_threads() > clusterable.max_threads_per_agent
       (num_threads.to_f / clusterable.max_threads_per_agent).ceil()
     else
-      1      
+      #TODO Move data_center
+      2
     end 
   end
   

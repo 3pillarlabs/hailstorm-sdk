@@ -108,5 +108,28 @@ module Hailstorm
     end
   end
 
+  class DataCenterJavaFailure < DiagnosticAwareException
+    attr_reader :java_version
+    # @param [String] java_version
+    def initialize(java_version)
+      @java_version = java_version
+    end
+
+    def diagnostics
+      %{Either Java is not installed or required version #{java_version} is not available on one of the machines specified}
+    end
+  end
+
+  class DataCenterJMeterFailure < DiagnosticAwareException
+    attr_reader :jmeter_version
+    # @param [String] jmeter_version
+    def initialize(jmeter_version)
+      @jmeter_version = jmeter_version
+    end
+
+    def diagnostics
+      %{Either JMeter is not installed or required version #{jmeter_version} is not available on one of one of the machines specified }
+    end
+  end
 
 end

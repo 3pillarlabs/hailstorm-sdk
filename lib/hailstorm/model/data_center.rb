@@ -12,6 +12,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   include Hailstorm::Behavior::Clusterable
 
   before_validation :set_defaults
+  serialize :machines
 
   validates_presence_of :user_name, :machines, :ssh_identity
 
@@ -23,26 +24,14 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   # Creates a data center load agent with all required packages pre-installed and
   # starts requisite number of instances
   def setup(force = false)
-    puts "Inside #{self.class}##{__method__}"
     logger.debug { "#{self.class}##{__method__}" }
 
-    # check machine status
-    # check master slave
-    # create load agents
-
-    #TODO check master slave
-    status = true
-    self.machines.each do |machine|
-      #check machine status
-      if machine_status?(machine)
-        status &=true
-      else
-        status &= false
-      end
-    end
-    if status
+    # check machines are connectable
+    if machines_connectable?
       if self.active?
         self.save!()
+        # check master slave
+        # create load agents
         provision_agents()
       else
         self.update_column(:active, false) if self.persisted?
@@ -55,7 +44,8 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   # start the agent and update agent ip_address and identifier
   def start_agent(load_agent)
     logger.debug { "#{self.class}##{__method__}" }
-    logger.debug { load_agent.attributes.inspect }
+    #verify everything is ok with machines
+    verify_machines_status()
     if load_agent.private_ip_address.nil?
       ip = self.machines.shift()
       # update attributes
@@ -64,8 +54,8 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
       load_agent.private_ip_address = ip
 
       # SSH is available a while later even though status may be running
-      puts "agent##{load_agent.private_ip_address} is running, ensuring SSH access with #{self.user_name}..."
-      sleep(30)
+      puts "Ensuring SSH access to agent##{load_agent.private_ip_address} with user name #{self.user_name}..."
+      sleep(10)
       logger.debug { "sleep over..."}
       Hailstorm::Support::SSH.ensure_connection(load_agent.private_ip_address,
                                                 self.user_name, ssh_options)
@@ -101,7 +91,6 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   # @param [Hash] options
   # (see Hailstorm::Behavior::Clusterable#after_stop_load_generation)
   def after_stop_load_generation(options = nil)
-
     logger.debug { "#{self.class}##{__method__}" }
     suspend = (options.nil? ? false : options[:suspend])
     if suspend
@@ -115,7 +104,6 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     end
   end
 
-
   def required_load_agent_count()
     return self.machines.count()
   end
@@ -124,6 +112,16 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   # (see Hailstorm::Behavior::Clusterable#before_destroy_load_agent)
   def before_destroy_load_agent(load_agent)
     logger.debug { "#{self.class}##{__method__}" }
+  end
+
+  def cleanup()
+    logger.debug { "#{self.class}##{__method__}" }
+      if self.load_agents(true).empty?
+        #connect to each machine and remove the test folder
+        self.machines.each do |machine|
+          puts machine
+        end
+      end
   end
 
   # (see Hailstorm::Behavior::Clusterable#slug)
@@ -166,26 +164,56 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   def machine_status?(ip_address)
     #TODO check if Hailstorm can SSH to specified machine, check Java and jMeter
 
-    status = true
-    return status
+    return Hailstorm::Support::SSH.ensure_connection(ip_address,
+                                                       self.user_name, ssh_options)
   end
 
-  def machines_status?
+  def machines_connectable?
     status = true
     self.machines.each do |machine|
-      status &=machine_status?(machine)
+      status &= machine_status?(machine)
     end
     return status
   end
 
-  # check if
+  def verify_machines_status()
+    logger.debug { "#{self.class}##{__method__}" }
+    logger.debug { "Verifying all machines are connectable" }
+    raise(Hailstorm::DataCenterAccessFailure.new(
+              self.user_name, self.machines, self.ssh_identity)
+    ) if not machines_connectable?
+
+    logger.debug { "Verifying if all machines have required Java Version" }
+    raise(Hailstorm::DataCenterJavaFailure.new("1.6")) if not java_available?
+
+    logger.debug { "Verifying if all machines have required JMeter Version" }
+    #raise(Hailstorm::DataCenterJMeterFailure.new("2.7")) if not jmeter_available?
+  end
+
+  def java_available?
+    status = true
+    self.machines.each do |machine|
+      status &= java_installed?(machine)
+    end
+    return status
+  end
+
+  def jmeter_available?
+    status = true
+    self.machines.each do |machine|
+      status &= jmeter_installed?(machine)
+    end
+    return status
+  end
+
+  # check if java is installed on target machine
   # @return
-  def java_installed?(load_agent)
+  def java_installed?(ip_address)
     logger.debug { "#{self.class}##{__method__}" }
     java_available = false
-    Hailstorm::Support::SSH.start(load_agent.private_ip_address,self.user_name, ssh_options) do |ssh|
-      output = ssh.exec!("command -pv java")
-      logger.debugger ("output of java check #{output}")
+    Hailstorm::Support::SSH.start(ip_address,self.user_name, ssh_options) do |ssh|
+      output = ssh.exec!("command -v java")
+      logger.debug ("output of java check #{output}")
       if not output.nil? and output.include? "java"
         java_available = true
       end
@@ -193,11 +221,11 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     return java_available
   end
 
-  def jmeter_installed?(load_agent)
+  def jmeter_installed?(ip_address)
     jmeter_available = false
-    Hailstorm::Support::SSH.start(load_agent.private_ip_address,self.user_name, ssh_options) do |ssh|
-      output = ssh.exec!("command -pv jmeter")
-      logger.debugger ("output of java check #{output}")
+    Hailstorm::Support::SSH.start(ip_address,self.user_name, ssh_options) do |ssh|
+      output = ssh.exec!("command -v jmeter")
+      logger.debug ("output of java check #{output}")
       if not output.nil? and output.include? "jmeter"
         jmeter_available = true
       end
@@ -205,8 +233,18 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     return jmeter_available
   end
 
-  def java_version_ok?
-
+  def java_version_ok?(ip_address)
+    logger.debug { "#{self.class}##{__method__}" }
+    java_available = false
+    Hailstorm::Support::SSH.start(ip_address,self.user_name, ssh_options) do |ssh|
+      output = ssh.exec!("java -version")
+      logger.debug ("output of java version check #{output}")
+      #/java\sversion\s\"[1]\.[6-7]{1}\.[0-9].*\"/g
+      if not output.nil? and output.include? "java"
+        java_available = true
+      end
+    end
+    return java_available
   end
 
   def jmeter_version_ok?
