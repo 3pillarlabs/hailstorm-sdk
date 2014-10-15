@@ -414,7 +414,7 @@ Continue using old version?
   # Starts the load generation and monitoring on targets
   def start(*args)
 
-    logger.info("Starting load generation and monitoring on targets... 111")
+    logger.info("Starting load generation and monitoring on targets...")
     redeploy = (args.empty? ? false : true)
     puts "Project #{current_project.inspect}"
     current_project.start(redeploy)

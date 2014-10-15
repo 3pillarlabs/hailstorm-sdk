@@ -147,7 +147,6 @@ module Hailstorm::Behavior::Clusterable
     
     logger.debug { "#{self.class}##{__method__}" }
     visit_collection(self.slave_agents.where(:active => true)) do |agent|
-      puts "Inside #{self.class}##{__method__} ## #{agent.inspect}"
       agent.upload_scripts(redeploy)
       agent.start_jmeter()
     end
@@ -158,7 +157,6 @@ module Hailstorm::Behavior::Clusterable
     
     logger.debug { "#{self.class}##{__method__}" }
     visit_collection(self.master_agents.where(:active => true)) do |agent|
-      puts "Inside #{self.class}##{__method__} ## #{agent.inspect}"
       agent.upload_scripts(redeploy)
       agent.start_jmeter()
     end
