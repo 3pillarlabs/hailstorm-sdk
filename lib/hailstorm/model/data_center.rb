@@ -295,7 +295,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   class Defaults
     SSH_USER            = 'ubuntu'
     SSH_IDENTITY        = 'server.pem'
-    MACHINES            = ['127.0.0.1', '127.0.0.1']
+    MACHINES            = ['172.20.2.17', '172.20.2.18'] #Default machines for development
     TITLE               = 'Hailstorm'
   end
 end
