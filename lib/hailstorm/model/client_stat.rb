@@ -36,6 +36,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   def self.create_client_stats(execution_cycle, jmeter_plan_id,
                                   clusterable, stat_file_paths)
 
+    puts "Inside #{self.class}.#{__method__}  #{YAML::dump(execution_cycle)} using  #{YAML::dump(jmeter_plan_id)} and #{YAML::dump(clusterable)} / #{YAML::dump(stat_file_paths)} "
     # Collate statistics file if needed
     stat_file_path = nil
     if stat_file_paths.size == 1
@@ -44,7 +45,6 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
       stat_file_path = combine_stats(stat_file_paths, execution_cycle.id,
                                      jmeter_plan_id, clusterable.id)
     end
-
     # create 1 record for client_stats if it does not exist yet
     jmeter_plan = Hailstorm::Model::JmeterPlan.find(jmeter_plan_id)
     client_stat = execution_cycle.client_stats()
@@ -65,7 +65,6 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     jtl_document.page_stats_map.values.each do |page_stat|
       page_stat.save!
     end
-
     # update aggregates
     aggregate_samples_count = client_stat.page_stats()
                                          .sum(:samples_count)

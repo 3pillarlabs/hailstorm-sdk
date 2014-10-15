@@ -140,9 +140,10 @@ Type help to get started...
           logger.error {"Unknown command: #{command_line}"}
         end
 
-      rescue Hailstorm::ThreadJoinException
+      rescue Hailstorm::ThreadJoinException =>e
         logger.error "'#{command_line}' command failed."
-
+        puts e.backtrace
+        puts e.inspect
       rescue Hailstorm::Exception => hailstorm_exception
         logger.error hailstorm_exception.message()
 
@@ -413,8 +414,9 @@ Continue using old version?
   # Starts the load generation and monitoring on targets
   def start(*args)
 
-    logger.info("Starting load generation and monitoring on targets...")
+    logger.info("Starting load generation and monitoring on targets... 111")
     redeploy = (args.empty? ? false : true)
+    puts "Project #{current_project.inspect}"
     current_project.start(redeploy)
 
     show_load_agents()

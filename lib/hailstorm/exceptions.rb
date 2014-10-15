@@ -102,7 +102,7 @@ module Hailstorm
     end
 
     def diagnostics
-      %{HailStrom is not able to connect to : "#{machines}" using user name : '#{user_name}'
+      %{HailStrom is not able to connect to : "#{machines.inspect}" using user name : '#{user_name}'
       and ssh identity file '#{ssh_identity}'. System might not be running at the moment or
       user and/or ssh identity used are not allowed to connect to specified machine}
     end

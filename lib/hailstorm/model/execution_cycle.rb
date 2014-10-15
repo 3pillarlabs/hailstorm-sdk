@@ -28,12 +28,14 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   def collect_client_stats(cluster_instance)
     
     logger.debug { "#{self.class}.#{__method__}" }
+    puts "Inside #{self.class}.#{__method__} #{YAML::dump(cluster_instance)}"
 
     jmeter_plan_results_map = {}
     result_mutex = Mutex.new()
     llp = local_log_path()
 
     visit_collection(cluster_instance.master_agents.where(:active => true)) do |master|
+      puts "Fetching Result from #{YAML::dump(master)} using  #{YAML::dump(self)} and #{YAML::dump(llp)}  "
       result_file_name = master.result_for(self, llp)
       result_file_path = File.join(llp, result_file_name)
       result_mutex.synchronize do
