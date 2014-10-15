@@ -55,7 +55,6 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   # start the agent and update agent ip_address and identifier
   def start_agent(load_agent)
     logger.debug { "#{self.class}##{__method__}" }
-    # SSH is available a while later even though status may be running
     logger.debug { load_agent.attributes.inspect }
     if load_agent.private_ip_address.nil?
       ip = self.machines.shift()
@@ -98,6 +97,25 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     end
   end
 
+  # Process the suspend option. Must be specified as {:suspend => true}
+  # @param [Hash] options
+  # (see Hailstorm::Behavior::Clusterable#after_stop_load_generation)
+  def after_stop_load_generation(options = nil)
+
+    logger.debug { "#{self.class}##{__method__}" }
+    suspend = (options.nil? ? false : options[:suspend])
+    if suspend
+      self.load_agents.where(:active => true).each do |agent|
+        if agent.running?
+          stop_agent(agent)
+          agent.public_ip_address = nil
+          agent.save!
+        end
+      end
+    end
+  end
+
+
   def required_load_agent_count()
     return self.machines.count()
   end
@@ -110,7 +128,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   # (see Hailstorm::Behavior::Clusterable#slug)
   def slug()
-    @slug ||= "#{self.class.name.demodulize.titlecase}, region: #{self.title}"
+    @slug ||= "#{self.class.name.demodulize.titlecase}, data center: #{self.title}"
   end
 
 
