@@ -6,6 +6,7 @@ require 'hailstorm/model'
 require 'hailstorm/behavior/clusterable'
 require 'hailstorm/support/ssh'
 
+
 class Hailstorm::Model::DataCenter < ActiveRecord::Base
   include Hailstorm::Behavior::Clusterable
 
@@ -46,7 +47,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
       ip = self.machines.shift()
       # update attributes
       load_agent.identifier = ip
-      load_agent.public_ip_address = nil
+      load_agent.public_ip_address = ip
       load_agent.private_ip_address = ip
 
       puts "\t\tData-center agent##{load_agent.private_ip_address} checking SSH connection..."
@@ -102,7 +103,8 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
       self.load_agents.where(:active => true).each do |agent|
         if agent.running?
           stop_agent(agent)
-          agent.private_ip_address = nil
+          agent.public_ip_address = nil
+		  agent.private_ip_address = nil
           agent.save!
         end
       end
@@ -168,12 +170,12 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   # check if java is installed on agent or not
   # @return
-  def java_installed?(load_agent)
+  def java_installed?(ip_address)
     logger.debug { "#{self.class}##{__method__}" }
     java_available = false
-    Hailstorm::Support::SSH.start(load_agent.private_ip_address,self.user_name, ssh_options) do |ssh|
-      output = ssh.exec!("command -pv java")
-      logger.debugger ("output of java check #{output}")
+    Hailstorm::Support::SSH.start(ip_address,self.user_name, ssh_options) do |ssh|
+      output = ssh.exec!("command -v java")
+      logger.debug ("output of java check #{output}")
       if not output.nil? and output.include? "java"
         java_available = true
       end
@@ -181,11 +183,11 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     return java_available
   end
 
-  def jmeter_installed?(load_agent)
+  def jmeter_installed?(ip_address)
     jmeter_available = false
-    Hailstorm::Support::SSH.start(load_agent.private_ip_address,self.user_name, ssh_options) do |ssh|
-      output = ssh.exec!("command -pv jmeter")
-      logger.debugger ("output of java check #{output}")
+    Hailstorm::Support::SSH.start(ip_address,self.user_name, ssh_options) do |ssh|
+      output = ssh.exec!("command -v jmeter")
+      logger.debug ("output of java check #{output}")
       if not output.nil? and output.include? "jmeter"
         jmeter_available = true
       end
@@ -193,14 +195,64 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     return jmeter_available
   end
 
-  def java_version_ok?
-
+  def java_version_ok?(ip_address)
+    logger.debug { "#{self.class}##{__method__}" }
+    java_available = false
+    Hailstorm::Support::SSH.start(ip_address,self.user_name, ssh_options) do |ssh|
+      output = ssh.exec!("java -version")
+      logger.debug ("output of java version check #{output}")
+      #/java\sversion\s\"[1]\.[6-7]{1}\.[0-9].*\"/g
+      if not output.nil? and output.include? "java"
+        java_available = true
+      end
+    end
+    return java_available
   end
 
   def jmeter_version_ok?
 
   end
 
+
+  # @return [String] thead-safe name for the downloaded environment file
+  def current_env_file_name()
+    "environment-#{self.id}~"
+  end
+
+  # @return [String] thread-safe name for environment file to be written locally
+  # for upload to agent.
+  def new_env_file_name()
+    "environment-#{self.id}"
+  end
+
+  # Waits for <tt>timeout_sec</tt> seconds for condition in <tt>block</tt>
+  # to return true, else throws a Timeout::Error
+  # @param [Integer] timeout_sec
+  # @param [Proc] block
+  # @raise [Timeout::Error] if block does not return true within timeout_sec
+  def wait_until(timeout_sec = 300, &block)
+    # make the timeout configurable by an environment variable
+    timeout_sec = ENV['HAILSTORM_EC2_TIMEOUT'] || timeout_sec
+    total_elapsed = 0
+    while total_elapsed <= (timeout_sec * 1000)
+      before_yield_time = Time.now.to_i
+      result = yield
+      if result
+        break
+      else
+        sleep(DOZE_TIME)
+        total_elapsed += (Time.now.to_i - before_yield_time)
+      end
+    end
+  end
+
+  def timeout_message(message, &block)
+    begin
+      yield
+    rescue Timeout::Error
+      raise(Hailstorm::Exception, "Timeout while waiting for #{message} on #{self.region}.")
+    end
+  end
   # Data center default settings
   class Defaults
     SSH_USER            = 'ubuntu'
