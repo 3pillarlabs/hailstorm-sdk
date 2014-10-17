@@ -6,7 +6,6 @@ require 'hailstorm/model'
 require 'hailstorm/behavior/clusterable'
 require 'hailstorm/support/ssh'
 
-
 class Hailstorm::Model::DataCenter < ActiveRecord::Base
   include Hailstorm::Behavior::Clusterable
 
@@ -56,13 +55,13 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
       end
 
       # puts "\t\tData-center agent##{load_agent.private_ip_address} checking jmeter install..."
-      # if !jmeter_installed?(load_agent)
-      #   raise(new Exception('Error:JMeter is not installed'))
+      # if !jmeter_installed?(load_agent.private_ip_address)
+      #   raise(Hailstorm::DataCenterJavaFailure('Error:JMeter is not installed'))
       # end
       #
       # puts "\t\tData-center agent##{load_agent.private_ip_address} checking java install..."
-      # if !java_installed?(load_agent)
-      #   raise(new Exception('Error:Java is not installed'))
+      # if !java_installed?(load_agent.private_ip_address)
+      #   raise(Hailstorm::DataCenterJavaFailure('Error:Java is not installed'))
       # end
 
       #TODO: Check JMeter and Java version
@@ -213,46 +212,6 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   end
 
-
-  # @return [String] thead-safe name for the downloaded environment file
-  def current_env_file_name()
-    "environment-#{self.id}~"
-  end
-
-  # @return [String] thread-safe name for environment file to be written locally
-  # for upload to agent.
-  def new_env_file_name()
-    "environment-#{self.id}"
-  end
-
-  # Waits for <tt>timeout_sec</tt> seconds for condition in <tt>block</tt>
-  # to return true, else throws a Timeout::Error
-  # @param [Integer] timeout_sec
-  # @param [Proc] block
-  # @raise [Timeout::Error] if block does not return true within timeout_sec
-  def wait_until(timeout_sec = 300, &block)
-    # make the timeout configurable by an environment variable
-    timeout_sec = ENV['HAILSTORM_EC2_TIMEOUT'] || timeout_sec
-    total_elapsed = 0
-    while total_elapsed <= (timeout_sec * 1000)
-      before_yield_time = Time.now.to_i
-      result = yield
-      if result
-        break
-      else
-        sleep(DOZE_TIME)
-        total_elapsed += (Time.now.to_i - before_yield_time)
-      end
-    end
-  end
-
-  def timeout_message(message, &block)
-    begin
-      yield
-    rescue Timeout::Error
-      raise(Hailstorm::Exception, "Timeout while waiting for #{message} on #{self.region}.")
-    end
-  end
   # Data center default settings
   class Defaults
     SSH_USER            = 'ubuntu'
