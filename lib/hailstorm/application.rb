@@ -416,7 +416,6 @@ Continue using old version?
 
     logger.info("Starting load generation and monitoring on targets...")
     redeploy = (args.empty? ? false : true)
-    puts "Project #{current_project.inspect}"
     current_project.start(redeploy)
 
     show_load_agents()
