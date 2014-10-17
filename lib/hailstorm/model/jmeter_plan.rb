@@ -114,11 +114,13 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   # @param [Hailstorm::Behavior::Clusterable]
   # @return [Fixnum]
   def required_load_agent_count(clusterable)
-    if clusterable.respond_to?(:max_threads_per_agent) and num_threads() > clusterable.max_threads_per_agent
+
+    if clusterable.class == Hailstorm::Model::DataCenter
+      clusterable.machines.count()
+    elsif clusterable.respond_to?(:max_threads_per_agent) and num_threads() > clusterable.max_threads_per_agent
       (num_threads.to_f / clusterable.max_threads_per_agent).ceil()
     else
-      #TODO Move data_center
-      2
+      1
     end 
   end
   
@@ -469,22 +471,22 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
       return @jmeter_document
     end
   end
-  
+
   # Thread count in the JMeter thread group - if multiple thread groups are
   # present, the maximum is returned if serialize_threadgroups? is true, else
-  # sum is taken. 
+  # sum is taken.
   def num_threads()
-    
+
     logger.debug { "#{self.class}##{__method__}" }
     if @num_threads.nil?
       @num_threads = 0
-      
+
       threadgroups_threads_count_properties.each do |property_name|
         value = properties_map[property_name]
         logger.debug("#{property_name} -> #{value}")
-        
+
         if serialize_threadgroups?
-          @num_threads = value if value > @num_threads  
+          @num_threads = value if value > @num_threads
         else
           @num_threads += value
         end
