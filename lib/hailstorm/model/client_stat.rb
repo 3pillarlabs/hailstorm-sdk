@@ -36,7 +36,6 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   def self.create_client_stats(execution_cycle, jmeter_plan_id,
       clusterable, stat_file_paths)
 
-    puts "Inside #{self.class}.#{__method__} / creating stats . 1"
     # Collate statistics file if needed
     stat_file_path = nil
     if stat_file_paths.size == 1
@@ -46,7 +45,6 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
                                      jmeter_plan_id, clusterable.id)
     end
 
-    puts "Inside #{self.class}.#{__method__} / creating stats . 2 "
     # create 1 record for client_stats if it does not exist yet
     jmeter_plan = Hailstorm::Model::JmeterPlan.find(jmeter_plan_id)
     client_stat = execution_cycle.client_stats()
@@ -56,7 +54,6 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
                                     :threads_count => jmeter_plan.latest_threads_count)
                                  .first_or_create!()
 
-    puts "Inside #{self.class}.#{__method__} / creating stats . 3"
     # SAX parsing
     jtl_document = JtlDocument.new(Hailstorm::Model::PageStat, client_stat)
     jtl_parser = Nokogiri::XML::SAX::Parser.new(jtl_document)
@@ -65,41 +62,33 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     end
 
     # save in db
-    puts "Inside #{self.class}.#{__method__} / creating stats . 4"
     jtl_document.page_stats_map.values.each do |page_stat|
       page_stat.save!
     end
 
-    puts "Inside #{self.class}.#{__method__} / creating stats . 5"
     # update aggregates
     aggregate_samples_count = client_stat.page_stats()
                                          .sum(:samples_count)
     test_duration = (client_stat.end_sample['ts'].to_f +
         client_stat.end_sample['t'].to_f - client_stat.start_timestamp) / 1000.to_f
 
-    puts "Inside #{self.class}.#{__method__} / creating stats . 5.2"
     client_stat.aggregate_response_throughput = (aggregate_samples_count.to_f / test_duration)
 
-    puts "Inside #{self.class}.#{__method__} / creating stats . 5.3"
     logger.debug { "Calculating aggregate_ninety_percentile..." }
     client_stat.aggregate_ninety_percentile = client_stat.sample_response_times.quantile(90)
     logger.debug { "... finished calculating aggregate_ninety_percentile" }
 
-    puts "Inside #{self.class}.#{__method__} / creating stats . 5.4"
     # this is the duration of the last sample sent, it is in milliseconds, so
     # we divide it by 1000
     client_stat.last_sample_at = Time.at((client_stat.end_sample['ts'].to_i +
         client_stat.end_sample['t'].to_i) / 1000)
 
-    puts "Inside #{self.class}.#{__method__} / creating stats . 5.5"
     client_stat.save!
-    puts "Inside #{self.class}.#{__method__} / creating stats . 6"
 
     # persist file to DB and remove file from FS
     logger.info { "Persisting #{stat_file_path} to DB..." }
     Hailstorm::Model::JtlFile.persist_file(client_stat, stat_file_path)
     File.unlink(stat_file_path)
-    puts "Inside #{self.class}.#{__method__} / creating stats . 7"
   end
 
   # Combines two or more JTL files to create new JTL file with combined stats.
