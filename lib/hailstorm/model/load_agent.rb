@@ -103,7 +103,7 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
     logger.debug { "#{self.class}##{__method__}" }
     Hailstorm::Support::SSH.start(self.public_ip_address, self.clusterable.user_name,
       self.clusterable.ssh_options) do |ssh|
-      
+
       logger.debug { command }
       ssh.exec!(command)
       remote_pid = ssh.find_process_id(self.jmeter_plan

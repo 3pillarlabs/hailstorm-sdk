@@ -27,12 +27,12 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   def setup(force = false)
     logger.debug { "#{self.class}##{__method__}" }
 
-    puts "\tTotal machines available for this cluster : #{self.machines.count()}"
+    logger.info("Total machines available for this cluster : #{self.machines.count()}")
 
     # create load agents
     if self.active?
       self.save!()
-      puts "\tProvisioning data-center agents"
+      logger.info( "Provisioning #{self.class} agents")
       provision_agents()
     else
       self.update_column(:active, false) if self.persisted?
@@ -49,22 +49,21 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
       load_agent.public_ip_address = ip
       load_agent.private_ip_address = ip
 
-      puts "\t\tData-center agent##{load_agent.private_ip_address} checking SSH connection..."
+      logger.info( "#{self.class} agent##{load_agent.private_ip_address} checking SSH connection...")
       if !check_connection?(load_agent.private_ip_address)
         raise(Hailstorm::DataCenterAccessFailure.new(self.user_name, self.machines, self.ssh_identity))
       end
 
-      # puts "\t\tData-center agent##{load_agent.private_ip_address} checking jmeter install..."
-      # if !jmeter_installed?(load_agent.private_ip_address)
-      #   raise(Hailstorm::DataCenterJavaFailure('Error:JMeter is not installed'))
-      # end
-      #
-      # puts "\t\tData-center agent##{load_agent.private_ip_address} checking java install..."
-      # if !java_installed?(load_agent.private_ip_address)
-      #   raise(Hailstorm::DataCenterJavaFailure('Error:Java is not installed'))
-      # end
+      logger.info("#{self.class} agent##{load_agent.private_ip_address} checking java install...")
+      if !java_installed?(load_agent.private_ip_address) or !java_version_ok?(load_agent.private_ip_address)
+        raise(Hailstorm::DataCenterJavaFailure.new(Defaults::JAVA_VERSION))
+      end
 
-      #TODO: Check JMeter and Java version
+      logger.info("#{self.class} agent##{load_agent.private_ip_address} checking jmeter install...")
+      if !jmeter_installed?(load_agent.private_ip_address) or !jmeter_version_ok?(load_agent.private_ip_address)
+        raise(Hailstorm::DataCenterJMeterFailure.new(self.project.jmeter_version))
+      end
+
     end
   end
 
@@ -183,11 +182,12 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   end
 
   def jmeter_installed?(ip_address)
+    logger.debug { "#{self.class}##{__method__}" }
     jmeter_available = false
     Hailstorm::Support::SSH.start(ip_address,self.user_name, ssh_options) do |ssh|
-      output = ssh.exec!("command -v jmeter")
-      logger.debug ("output of java check #{output}")
-      if not output.nil? and output.include? "jmeter"
+      output = ssh.exec!("#{jmeter_home}/bin/jmeter -n -v")
+      logger.info ("output of jmeter check #{output}")
+      if not output.nil? and output.include? "Apache Software Foundation"
         jmeter_available = true
       end
     end
@@ -196,20 +196,26 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   def java_version_ok?(ip_address)
     logger.debug { "#{self.class}##{__method__}" }
-    java_available = false
+    java_version_ok = false
     Hailstorm::Support::SSH.start(ip_address,self.user_name, ssh_options) do |ssh|
-      output = ssh.exec!("java -version")
-      logger.debug ("output of java version check #{output}")
-      #/java\sversion\s\"[1]\.[6-7]{1}\.[0-9].*\"/g
-      if not output.nil? and output.include? "java"
-        java_available = true
+      if /java\sversion\s\"#{Defaults::JAVA_VERSION}\.[0-9].*\"/ =~ ssh.exec!("java -version")
+        java_version_ok = true
       end
     end
-    return java_available
+    return java_version_ok
   end
 
-  def jmeter_version_ok?
-
+  def jmeter_version_ok?(ip_address)
+    logger.debug { "#{self.class}##{__method__}" }
+    jmeter_version_ok = false
+    Hailstorm::Support::SSH.start(ip_address,self.user_name, ssh_options) do |ssh|
+      output = ssh.exec!("#{jmeter_home}/bin/jmeter -n -v")
+      logger.info ("output of JMETER version check #{output}")
+      if /Version\s#{self.project.jmeter_version}.*/ =~ output
+        jmeter_version_ok = true
+      end
+    end
+    return jmeter_version_ok
   end
 
   # Data center default settings
@@ -217,5 +223,6 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     SSH_USER            = 'ubuntu'
     SSH_IDENTITY        = 'server.pem'
     TITLE               = 'Hailstorm'
+    JAVA_VERSION        = '1.6'
   end
 end

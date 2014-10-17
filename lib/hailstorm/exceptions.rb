@@ -116,7 +116,8 @@ module Hailstorm
     end
 
     def diagnostics
-      %{Either Java is not installed or required version #{java_version} is not available on one of the machines specified}
+      %{Either Java is not installed or required version #{java_version} is not available on one of the machines specified.
+      Please make sure:  1) Required Java/JRE version is installed 2) JAVA_HOME/JRE_HOME and required path variable are set and accessible}
     end
   end
 
@@ -128,7 +129,8 @@ module Hailstorm
     end
 
     def diagnostics
-      %{Either JMeter is not installed or required version #{jmeter_version} is not available on one of one of the machines specified }
+      %{Either JMeter is not installed or required version #{jmeter_version} is not available on one of one of the machines specified
+      Please make sure:  1) Required JMeter version is installed 2) JMETER_HOME and required path variable are set and accessible}
     end
   end
 
