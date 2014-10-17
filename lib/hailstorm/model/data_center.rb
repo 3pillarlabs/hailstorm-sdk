@@ -119,6 +119,14 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     logger.debug { "#{self.class}##{__method__}" }
   end
 
+  def after_destroy_load_agent(load_agent)
+    logger.info("cleaning up agent##{load_agent.identifier}")
+    Hailstorm::Support::SSH.start(load_agent.private_ip_address,self.user_name, ssh_options) do |ssh|
+      logger.debug ("Removing projects test script directory #{Hailstorm.app_name} from remote machine= ")
+      ssh.exec!("rm -r -v -f #{user_home}/#{Hailstorm.app_name}")
+    end
+  end
+
   # (see Hailstorm::Behavior::Clusterable#slug)
   def slug()
     @slug ||= "#{self.class.name.demodulize.titlecase}, data center: #{self.title}"
