@@ -62,7 +62,7 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
       Hailstorm::Support::SSH.start(self.public_ip_address,
         self.clusterable.user_name, self.clusterable.ssh_options) do |ssh|
         unless directory_hierarchy.nil?
-          logger.info{"Creating directory structure...#{directory_hierarchy.inspect}"}
+          logger.debug{"Creating directory structure...#{directory_hierarchy.inspect}"}
           create_directory_hierarchy(ssh, self.clusterable.user_home, directory_hierarchy)
         end
         upload_files(ssh, test_artifacts)

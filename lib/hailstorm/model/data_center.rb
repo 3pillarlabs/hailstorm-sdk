@@ -194,7 +194,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     jmeter_available = false
     Hailstorm::Support::SSH.start(ip_address,self.user_name, ssh_options) do |ssh|
       output = ssh.exec!("#{jmeter_home}/bin/jmeter -n -v")
-      logger.info ("output of jmeter check #{output}")
+      logger.debug ("output of jmeter check #{output}")
       if not output.nil? and output.include? "Apache Software Foundation"
         jmeter_available = true
       end
@@ -218,7 +218,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     jmeter_version_ok = false
     Hailstorm::Support::SSH.start(ip_address,self.user_name, ssh_options) do |ssh|
       output = ssh.exec!("#{jmeter_home}/bin/jmeter -n -v")
-      logger.info ("output of JMETER version check #{output}")
+      logger.debug ("Output of JMETER version check #{output}")
       if /Version\s#{self.project.jmeter_version}.*/ =~ output
         jmeter_version_ok = true
       end
