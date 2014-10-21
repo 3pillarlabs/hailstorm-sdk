@@ -35,11 +35,10 @@ Hailstorm works in an offline mode by default, which means you can exit the appl
   gem.add_dependency(%q<jruby-openssl>, '= 0.7.4')
   gem.add_dependency(%q<net-ssh>, '= 2.6.6')
   gem.add_dependency(%q<net-sftp>, '= 2.1.1')
-  gem.add_dependency(%q<nokogiri>, '= 1.5.5')
+  gem.add_dependency(%q<nokogiri>, '~> 1.6.1')
   gem.add_dependency(%q<aws-sdk>, '= 1.6.4')
   gem.add_dependency(%q<rubyzip>, '= 0.9.9')
   gem.add_dependency(%q<terminal-table>, '= 1.4.5')
-  gem.add_dependency(%q<bundler>, '= 1.1.5')
   gem.add_dependency(%q<bouncy-castle-java>, '= 1.5.0146.1')
   gem.add_dependency(%q<httparty>, '= 0.10.2')
 

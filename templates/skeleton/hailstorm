@@ -3,6 +3,24 @@
 # Hailstorm executable
 # @author Sayantam Dey
 
+
+#Start the progress bar while required gems and files are loaded
+$started = false
+def progress_bar()
+  while $started == false
+    ["|", "/", "-", "\\"].each{|v| STDOUT.write "\r#{v}"; sleep 0.3}
+  end
+  STDOUT.write "\r";
+end
+
+t1=Thread.new{progress_bar()}
+
+#Start loading the gems and required files.
 require File.expand_path('../../config/boot', __FILE__)
 
+#Instruct progress bar to disappear
+$started = true
+t1.join()
+
+#Start the shell to listen to commands
 Hailstorm.application.process_commands()
