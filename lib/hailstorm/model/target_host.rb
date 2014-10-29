@@ -44,20 +44,20 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
   # @param [Hailstorm::Model::Project] project current project instance
   # @param [Hailstorm::Support::Configuration] config the configuration instance
   def self.configure_all(project, config)
-    
+
     logger.debug { "#{self}.#{__method__}" }
     # disable all hosts and delegate to monitor#setup to enable specific hosts 
     moniterables(project, false).each {|t| t.update_column(:active, false)}
 
     config.target_hosts.each do |host_def|
       next if host_def[:active] == false
-      
+
       # update type nmemonic to real type
       host_def[:type] = "Hailstorm::Model::#{host_def[:type].to_s.camelize}"
       target_host = project.target_hosts()
                            .where(host_def.slice(:host_name, :type))
-                           .first_or_initialize(host_def.except(:type))      
-      
+                           .first_or_initialize(host_def.except(:type))
+
       unless target_host.persisted? # not persisted class -> TargetHost
         monitor = target_host.becomes(moniterable_klass(host_def[:type]))
       else
@@ -68,7 +68,7 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
       else
         monitor.update_attributes!(host_def) unless monitor.new_record?
       end
-      
+
       # invoke configure in new thread
       Hailstorm::Support::Thread.start(monitor) {|t| t.call_setup()}
     end

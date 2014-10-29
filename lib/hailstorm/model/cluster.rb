@@ -64,7 +64,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     # disable all clusters and then create/update as per configuration
     project.clusters.each do |cluster|
       cluster.cluster_klass()
-             .update_all({:active => false}, {:project_id => project.id})
+             .where({:project_id => project.id}).update_all({:active => false})
     end
 
     cluster_line_items = []

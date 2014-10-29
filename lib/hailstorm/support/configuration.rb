@@ -272,7 +272,7 @@ class Hailstorm::Support::Configuration
         end
       end
     end
-    
+
     return host_defs
   end
   
