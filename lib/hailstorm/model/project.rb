@@ -18,8 +18,8 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   
   has_many :execution_cycles, :dependent => :destroy
   
-  has_one  :current_execution_cycle, :class_name => 'Hailstorm::Model::ExecutionCycle',
-           :conditions => {:status => 'started'}, :order => "started_at DESC"
+  has_one  :current_execution_cycle, -> { where(status: "started") },
+           :class_name => 'Hailstorm::Model::ExecutionCycle', :order => "started_at DESC"
 
   before_save :set_defaults
 

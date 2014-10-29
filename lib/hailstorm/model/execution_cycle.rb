@@ -3,7 +3,7 @@
 # @author Sayantam Dey
 
 require 'erubis/engine/eruby'
-require 'zip/zipfilesystem'
+require 'zip/filesystem'
 
 require 'hailstorm/model'
 require 'hailstorm/model/project'
