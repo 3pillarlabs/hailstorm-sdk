@@ -20,7 +20,7 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
   
   after_commit :upload_scripts, :if => proc {|r| r.active? && !r.public_ip_address.nil?}, :on => :create
 
-  scope :active, where(:active => true)
+  scope :active, -> {where(:active => true)}
 
   def first_use?
     @first_use

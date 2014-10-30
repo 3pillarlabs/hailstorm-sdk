@@ -15,9 +15,9 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
 
   validates :host_name, :role_name, :presence => true, :if => proc {|r| r.active? }
 
-  scope :active, where(:active => true)
+  scope :active, -> {where(:active => true)}
 
-  scope :natural_order, order('role_name')
+  scope :natural_order, -> {order('role_name')}
 
   # require & create the class
   # @param [String] monitor_type fully qualified type of monitor

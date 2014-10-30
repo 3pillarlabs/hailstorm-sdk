@@ -28,7 +28,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   
   after_update :disable_load_agents, :unless => proc {|r| r.active?}
 
-  scope :active, where(:active => true)
+  scope :active, ->{where(:active => true)}
 
   # Regular expression to match property names, always only matching the name
   # Examples of matches:
