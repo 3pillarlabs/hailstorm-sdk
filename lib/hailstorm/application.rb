@@ -16,8 +16,11 @@ require 'hailstorm/model/project'
 
 require 'hailstorm/model/nmon'
 
+require "hailstorm/behavior/loggable"
+
 class Hailstorm::Application
-  
+
+  include Hailstorm::Behavior::Loggable
 
   # Initialize the application and connects to the database
   # @param [String] app_name the application name

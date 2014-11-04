@@ -7,7 +7,6 @@ require 'action_dispatch/http/mime_type'
 require 'action_view'
 
 require "hailstorm/version"
-require "hailstorm/behavior/loggable"
 
 # Defines the namespace and module static accessors.
 # @author Sayantam Dey
@@ -83,10 +82,3 @@ module Hailstorm
   end
 
 end
-
-# inject a logger method to Kernel so it's available everywhere
-# TODO: Developer doc
-class Object
-  include Hailstorm::Behavior::Loggable
-end
-
