@@ -81,4 +81,8 @@ module Hailstorm
     'http://labs.3pillarglobal.com:8808'
   end
 
+  def self.log4j_dir
+    File.join(self.config_dir, 'log4j')
+  end
+
 end

@@ -31,12 +31,14 @@ class Hailstorm::Application
     Hailstorm.app_name = app_name
     Hailstorm.root = File.expand_path("../..", boot_file_path)
     # set JAVA classpath
+
     # Add config/log4j.xml if it exists
-    custom_log4j = File.join(Hailstorm.root, Hailstorm.config_dir, 'log4j.xml')
+    custom_log4j = File.join(Hailstorm.root, Hailstorm.config_dir, 'log4j', 'log4j.xml')
     if File.exists?(custom_log4j)
-      $CLASSPATH << custom_log4j
+      $CLASSPATH << File.dirname(custom_log4j)
     end
-    # Add all Java Jars to classpath
+
+    # Add all Java Jars and log4j.xml (will not be added if already added in above case) to classpath
     java_lib = File.expand_path('../java/lib', __FILE__)
     $CLASSPATH << java_lib
     Dir[File.join(java_lib, '*.jar')].each do |jar|
@@ -356,7 +358,8 @@ Continue using old version?
       Hailstorm.reports_dir,
       Hailstorm.config_dir,
       Hailstorm.vendor_dir,
-      Hailstorm.script_dir
+      Hailstorm.script_dir,
+      Hailstorm.log4j_dir,
     ]
 
     dirs.each do |dir|
