@@ -4,8 +4,11 @@
 require 'net/ssh'
 require 'net/sftp'
 require 'hailstorm/support'
+require "hailstorm/behavior/loggable"
 
 class Hailstorm::Support::SSH
+
+  include Hailstorm::Behavior::Loggable
   
   # Starts a new SSH connection. When a block is provided, the connection
   # is closed when the block terminates, otherwise the connection will be

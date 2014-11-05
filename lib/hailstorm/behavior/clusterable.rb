@@ -14,9 +14,11 @@ require 'hailstorm/behavior'
 require 'hailstorm/model/jmeter_plan'
 require 'hailstorm/model/slave_agent'
 require 'hailstorm/model/master_agent'
+require "hailstorm/behavior/loggable"
 
 module Hailstorm::Behavior::Clusterable
-  
+
+  include Hailstorm::Behavior::Loggable
  
   # Implement this method to start the agent and update load_agent
   # attributes for persistence.

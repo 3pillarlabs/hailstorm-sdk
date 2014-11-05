@@ -2,8 +2,11 @@
 # @author Sayantam Dey
 
 require 'hailstorm/support'
+require "hailstorm/behavior/loggable"
 
 class Hailstorm::Support::Schema
+
+  include Hailstorm::Behavior::Loggable
   
   # List of tables in schema  
   SchemaTables = [

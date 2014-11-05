@@ -2,8 +2,11 @@
 # @author Sayantam Dey
 
 require 'hailstorm/support'
+require "hailstorm/behavior/loggable"
 
 class Hailstorm::Support::Thread
+
+  include Hailstorm::Behavior::Loggable
   
   # Start a new Ruby thread. The thread is push to Hailstorm.application.threads
   # so they can be joined on later. *args are passed as thread local variables
