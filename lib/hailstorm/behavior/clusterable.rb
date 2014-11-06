@@ -250,7 +250,7 @@ module Hailstorm::Behavior::Clusterable
         begin
           create_or_enable(common_attributes, required_count, :master_agents)
         rescue Exception => e
-          logger.error(e.message)
+          logger.debug(e.message)
           logger.debug { "\n".concat(e.backtrace().join("\n")) }
           raise(Hailstorm::AgentCreationFailure)
         end

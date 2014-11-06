@@ -44,8 +44,8 @@ module Hailstorm
   class AgentCreationFailure < DiagnosticAwareException
     def diagnostics
       %{One or more agents could not be prepared for load generation.
-        This can happen due to issues in your cluster such as Amazon or
-        your data-center or a misconfiguration. Try 'setup force'.}
+        This can happen due to issues in your cluster(Amazon or data-center)
+        or a misconfiguration. Try 'setup force'.}
     end
   end
 
@@ -90,19 +90,19 @@ module Hailstorm
 
   class DataCenterAccessFailure < DiagnosticAwareException
 
-    attr_reader :machines, :user_name, :ssh_identity
+    attr_reader :agent_machine, :user_name, :ssh_identity
 
     # @param [String] user_name  ssh user name
     # @param [String] machines comma separated ip addresses of machines
     # @param [String] ssh_identity ssh ssh identity
-    def initialize(user_name, machines, ssh_identity)
-      @machines   = machines
+    def initialize(user_name, agent_machine, ssh_identity)
+      @agent_machine   = agent_machine
       @user_name    = user_name
       @ssh_identity = ssh_identity
     end
 
     def diagnostics
-      %{HailStrom is not able to connect to : "#{machines.inspect}" using user name : '#{user_name}'
+      %{HailStrom is not able to connect to agent##{agent_machine} using user name '#{user_name}'
       and ssh identity file '#{ssh_identity}'. System might not be running at the moment or
       user and/or ssh identity used are not allowed to connect to specified machine}
     end
@@ -116,8 +116,10 @@ module Hailstorm
     end
 
     def diagnostics
-      %{Either Java is not installed or required version #{java_version} is not available on one of the machines specified.
-      Please make sure:  1) Required Java/JRE version is installed 2) JAVA_HOME/JRE_HOME and required path variable are set and accessible}
+      %{Either Java is not installed or required version '#{java_version}' is not available
+      on one of the machines specified. Please make sure:
+      1) Required Java/JRE version is installed
+      2) JAVA_HOME/JRE_HOME and required path variable are set and accessible}
     end
   end
 
@@ -129,9 +131,10 @@ module Hailstorm
     end
 
     def diagnostics
-      %{Either JMeter is not installed or required version #{jmeter_version} is not available on one of one of the machines specified
-      Please make sure:  1) Required JMeter version is installed 2) JMETER_HOME and required path variable are set and accessible}
+      %{Either JMeter is not installed or required version '#{jmeter_version}' is not available
+      on one of one of the machines specified. Please make sure:
+      1) Required JMeter version is installed
+      2) JMETER_HOME and required path variable are set and accessible}
     end
   end
-
 end

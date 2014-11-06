@@ -51,15 +51,15 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
       logger.info( "#{self.class} agent##{load_agent.private_ip_address} checking SSH connection...")
       if !check_connection?(load_agent.private_ip_address)
-        raise(Hailstorm::DataCenterAccessFailure.new(self.user_name, self.machines, self.ssh_identity))
+        raise(Hailstorm::DataCenterAccessFailure.new(self.user_name, load_agent.private_ip_address, self.ssh_identity))
       end
 
-      logger.info("#{self.class} agent##{load_agent.private_ip_address} checking java install...")
+      logger.info("#{self.class} agent##{load_agent.private_ip_address} validating java installation...")
       if !java_installed?(load_agent.private_ip_address) or !java_version_ok?(load_agent.private_ip_address)
         raise(Hailstorm::DataCenterJavaFailure.new(Defaults::JAVA_VERSION))
       end
 
-      logger.info("#{self.class} agent##{load_agent.private_ip_address} checking jmeter install...")
+      logger.info("#{self.class} agent##{load_agent.private_ip_address} validating jmeter installation...")
       if !jmeter_installed?(load_agent.private_ip_address) or !jmeter_version_ok?(load_agent.private_ip_address)
         raise(Hailstorm::DataCenterJMeterFailure.new(self.project.jmeter_version))
       end

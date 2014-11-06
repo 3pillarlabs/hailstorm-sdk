@@ -8,9 +8,13 @@ require 'action_view'
 
 require "hailstorm/version"
 
+require "hailstorm/behavior/loggable"
+
 # Defines the namespace and module static accessors.
 # @author Sayantam Dey
 module Hailstorm
+
+  include Hailstorm::Behavior::Loggable
 
   # The application root path. Access this by calling <tt>Hailstorm.root</tt>
   @@root = nil
