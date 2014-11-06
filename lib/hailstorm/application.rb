@@ -203,7 +203,7 @@ Type help to get started...
         raise
       end
     ensure
-      ActiveRecord::Base.clear_all_connections!
+      ActiveRecord::Base.clear_active_connections!
     end
   end
 
