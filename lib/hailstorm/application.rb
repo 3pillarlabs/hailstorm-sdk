@@ -22,6 +22,10 @@ class Hailstorm::Application
 
   include Hailstorm::Behavior::Loggable
 
+  # in included gem version of i18n this value is set to null by default
+  # this will switch to default locale if in case of invalid locale
+  I18n.config.enforce_available_locales = true
+
   # Initialize the application and connects to the database
   # @param [String] app_name the application name
   # @param [String] boot_file_path full path to application config/boot.rb
