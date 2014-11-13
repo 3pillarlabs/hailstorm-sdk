@@ -9,8 +9,9 @@ require 'hailstorm/model/jmeter_plan'
 require 'hailstorm/model/page_stat'
 require 'hailstorm/model/jtl_file'
 require 'hailstorm/support/quantile'
+require 'hailstorm/model/hailstorm_base'
 
-class Hailstorm::Model::ClientStat < ActiveRecord::Base
+class Hailstorm::Model::ClientStat < Hailstorm::Model::HailstormBase
 
   belongs_to :execution_cycle
 

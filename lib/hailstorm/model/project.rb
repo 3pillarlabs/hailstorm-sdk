@@ -3,12 +3,14 @@
 
 require 'hailstorm'
 require 'hailstorm/model'
+require 'hailstorm/model/hailstorm_base'
 require 'hailstorm/model/jmeter_plan'
 require 'hailstorm/model/cluster'
 require 'hailstorm/model/target_host'
 require 'hailstorm/model/execution_cycle'
+require 'hailstorm/model/hailstorm_base'
 
-class Hailstorm::Model::Project < ActiveRecord::Base
+class Hailstorm::Model::Project < Hailstorm::Model::HailstormBase
 
   has_many :clusters, :dependent => :destroy
   
@@ -166,6 +168,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       logger.info("Creating report for stopped tests...")
       report_path = Hailstorm::Model::ExecutionCycle.create_report(self, cycle_ids)
       logger.info { "Report generated to: #{report_path}" }
+      return report_path
     end
   end
 
