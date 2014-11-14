@@ -50,7 +50,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
       load_agent.private_ip_address = ip
 
       logger.info( "#{self.class} agent##{load_agent.private_ip_address} checking SSH connection...")
-      if !check_connection?(load_agent)
+      if !identity_file_exists or !check_connection?(load_agent)
         raise(Hailstorm::DataCenterAccessFailure.new(self.user_name, load_agent.private_ip_address, self.ssh_identity))
       end
 
@@ -150,12 +150,8 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   end
 
   def identity_file_path()
-
-    if @identity_file_path.nil? and require('pathname')
       path = Pathname.new(self.ssh_identity)
-      @identity_file_path = path.absolute?() ? self.ssh_identity : File.join(Hailstorm.root, Hailstorm.config_dir, self.ssh_identity)
-    end
-    @identity_file_path
+      path.absolute?() ? self.ssh_identity : File.join(Hailstorm.root, Hailstorm.config_dir, self.ssh_identity)
   end
 
   def set_defaults()
