@@ -107,24 +107,8 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
 
     return instances
   end
-  
-  # Looks up the number of threads configured in the backing test plan
-  # and returns the number of load agents needed.
-  #
-  # @param [Hailstorm::Behavior::Clusterable]
-  # @return [Fixnum]
-  def required_load_agent_count(clusterable)
 
-    if clusterable.class == Hailstorm::Model::DataCenter
-      clusterable.machines.count()
-    elsif clusterable.respond_to?(:max_threads_per_agent) and num_threads() > clusterable.max_threads_per_agent
-      (num_threads.to_f / clusterable.max_threads_per_agent).ceil()
-    else
-      1
-    end 
-  end
-  
-  # Compares the calculated hash for source on disk and the 
+  # Compares the calculated hash for source on disk and the
   # recorded hash of contents in the database. 
   # @return [Boolean] true if hash matches, false otherwise
   def content_modified?
@@ -423,6 +407,29 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     @properties_map ||= JSON.parse(self.properties)
   end
 
+  # Thread count in the JMeter thread group - if multiple thread groups are
+  # present, the maximum is returned if serialize_threadgroups? is true, else
+  # sum is taken.
+  def num_threads()
+
+    logger.debug { "#{self.class}##{__method__}" }
+    if @num_threads.nil?
+      @num_threads = 0
+
+      threadgroups_threads_count_properties.each do |property_name|
+        value = properties_map[property_name]
+        logger.debug("#{property_name} -> #{value}")
+
+        if serialize_threadgroups?
+          @num_threads = value if value > @num_threads
+        else
+          @num_threads += value
+        end
+      end
+    end
+    @num_threads
+  end
+
 ########################## PRIVATE METHODS ##################################
   private
   
@@ -472,29 +479,6 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     end
   end
 
-  # Thread count in the JMeter thread group - if multiple thread groups are
-  # present, the maximum is returned if serialize_threadgroups? is true, else
-  # sum is taken.
-  def num_threads()
-
-    logger.debug { "#{self.class}##{__method__}" }
-    if @num_threads.nil?
-      @num_threads = 0
-
-      threadgroups_threads_count_properties.each do |property_name|
-        value = properties_map[property_name]
-        logger.debug("#{property_name} -> #{value}")
-
-        if serialize_threadgroups?
-          @num_threads = value if value > @num_threads
-        else
-          @num_threads += value
-        end
-      end
-    end
-    @num_threads
-  end
-  
   # Recursively picks directories within app
   # Example:
   #  {
@@ -562,7 +546,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
       
       properties_map.each_pair do |name, value|
         if threadgroups_threads_count_properties.include?(name)
-          value = value.to_f / required_load_agent_count(clusterable)
+          value = value.to_f / clusterable.required_load_agent_count(self)
           if value < 1
             value = 1
           else
@@ -629,6 +613,5 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
 
     return @extracted_property_names
   end
-
 
 end

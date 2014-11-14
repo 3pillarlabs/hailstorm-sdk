@@ -208,6 +208,15 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     end
   end
 
+  def required_load_agent_count(jmeter_plan)
+
+    if self.respond_to?(:max_threads_per_agent) and jmeter_plan.num_threads() > self.max_threads_per_agent
+    (jmeter_plan.num_threads().to_f / self.max_threads_per_agent).ceil()
+    else
+      1
+    end
+  end
+
 ######################### PRIVATE METHODS ####################################
   private
 
@@ -234,7 +243,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   end
 
   def identity_file_path()
-    @identity_file_path ||= File.join(Hailstorm.root, Hailstorm.db_dir,
+    @identity_file_path ||= File.join(Hailstorm.root, Hailstorm.config_dir,
                                       identity_file_name())
   end
 

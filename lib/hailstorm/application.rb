@@ -22,22 +22,22 @@ class Hailstorm::Application
 
   include Hailstorm::Behavior::Loggable
 
-  # in included gem version of i18n this value is set to null by default
-  # this will switch to default locale if in case of invalid locale
-  I18n.config.enforce_available_locales = true
-
   # Initialize the application and connects to the database
   # @param [String] app_name the application name
   # @param [String] boot_file_path full path to application config/boot.rb
   # @return nil
   def self.initialize!(app_name, boot_file_path)
-    
+
+    # in included gem version of i18n this value is set to null by default
+    # this will switch to default locale if in case of invalid locale
+    I18n.config.enforce_available_locales = true
+
     Hailstorm.app_name = app_name
     Hailstorm.root = File.expand_path("../..", boot_file_path)
     # set JAVA classpath
 
     # Add config/log4j.xml if it exists
-    custom_log4j = File.join(Hailstorm.root, Hailstorm.config_dir, 'log4j', 'log4j.xml')
+    custom_log4j = File.join(Hailstorm.root, Hailstorm.config_dir, 'log4j.xml')
     if File.exists?(custom_log4j)
       $CLASSPATH << File.dirname(custom_log4j)
     end
@@ -362,8 +362,7 @@ Continue using old version?
       Hailstorm.reports_dir,
       Hailstorm.config_dir,
       Hailstorm.vendor_dir,
-      Hailstorm.script_dir,
-      Hailstorm.log4j_dir,
+      Hailstorm.script_dir
     ]
 
     dirs.each do |dir|

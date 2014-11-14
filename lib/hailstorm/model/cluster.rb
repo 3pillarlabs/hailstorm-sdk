@@ -70,12 +70,10 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     cluster_line_items = []
     config.clusters.each do |cluster_config|
       cluster_config.active = true if cluster_config.active.nil?
-      if :amazon_cloud == cluster_config.cluster_type
-        # eager-load 'AWS', since some parts of it are auto-loaded. autoloading
-        # is apparently not thread safe.
-        if require('aws')
-          AWS.eager_autoload!
-        end
+      # eager-load 'AWS', since some parts of it are auto-loaded. autoloading
+      # is apparently not thread safe.
+      if cluster_config.aws_required? and require('aws')
+        AWS.eager_autoload!
       end
       cluster_type = "Hailstorm::Model::#{cluster_config.cluster_type.to_s.camelize}"
       cluster = project.clusters()
@@ -240,7 +238,6 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   end
 
   def purge()
-    # TODO: Developer documentation
     if cluster_klass.respond_to?(:purge)
       cluster_klass.purge()
     end

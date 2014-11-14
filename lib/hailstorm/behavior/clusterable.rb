@@ -59,6 +59,14 @@ module Hailstorm::Behavior::Clusterable
   def setup(force = false)
     raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
+
+  # Implement to get load agent count for each cluster type
+  # @param [Hailstorm::Model::JmeterPlan] jmeter_plan
+  # @return [Int] count of required load agents to run the test
+  # @abstract
+  def required_load_agent_count(jmeter_plan)
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
+  end
   
   # Implement this method to perform additional tasks before starting load generation,
   # default method is empty.
@@ -219,7 +227,7 @@ module Hailstorm::Behavior::Clusterable
           :active => true
       }
 
-      required_count = jmeter_plan.required_load_agent_count(self)
+      required_count = required_load_agent_count(jmeter_plan)
 
       if self.project.master_slave_mode?
         query = self.master_agents

@@ -332,7 +332,7 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
   end
 
   def identity_file_path()
-    File.join(Hailstorm.root, Hailstorm.db_dir,
+    File.join(Hailstorm.root, Hailstorm.config_dir,
       self.ssh_identity.gsub(/\.pem$/, '').concat('.pem'))
   end
 

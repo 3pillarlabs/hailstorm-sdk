@@ -50,17 +50,17 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
       load_agent.private_ip_address = ip
 
       logger.info( "#{self.class} agent##{load_agent.private_ip_address} checking SSH connection...")
-      if !check_connection?(load_agent.private_ip_address)
+      if !check_connection?(load_agent)
         raise(Hailstorm::DataCenterAccessFailure.new(self.user_name, load_agent.private_ip_address, self.ssh_identity))
       end
 
       logger.info("#{self.class} agent##{load_agent.private_ip_address} validating java installation...")
-      if !java_installed?(load_agent.private_ip_address) or !java_version_ok?(load_agent.private_ip_address)
+      if !java_installed?(load_agent) or !java_version_ok?(load_agent)
         raise(Hailstorm::DataCenterJavaFailure.new(Defaults::JAVA_VERSION))
       end
 
       logger.info("#{self.class} agent##{load_agent.private_ip_address} validating jmeter installation...")
-      if !jmeter_installed?(load_agent.private_ip_address) or !jmeter_version_ok?(load_agent.private_ip_address)
+      if !jmeter_installed?(load_agent) or !jmeter_version_ok?(load_agent)
         raise(Hailstorm::DataCenterJMeterFailure.new(self.project.jmeter_version))
       end
 
@@ -109,8 +109,13 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     end
   end
 
-  def required_load_agent_count()
-    return self.machines.count()
+  def required_load_agent_count(jmeter_plan)
+
+    if jmeter_plan.num_threads() > 1
+      self.machines.count()
+    else
+      1
+    end
   end
 
   # Terminate load agent
@@ -145,7 +150,12 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   end
 
   def identity_file_path()
-    @identity_file_path ||= File.join(Hailstorm.root, Hailstorm.db_dir, self.ssh_identity)
+
+    if @identity_file_path.nil? and require('pathname')
+      path = Pathname.new(self.ssh_identity)
+      @identity_file_path = path.absolute?() ? self.ssh_identity : File.join(Hailstorm.root, Hailstorm.config_dir, self.ssh_identity)
+    end
+    @identity_file_path
   end
 
   def set_defaults()
@@ -159,16 +169,16 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     end
   end
 
-  def check_connection?(ip_address)
+  def check_connection?(load_agent)
 
     connection_obtained = false
     begin
-      Hailstorm::Support::SSH.start(ip_address, self.user_name, ssh_options()) do |ssh|
+      Hailstorm::Support::SSH.start(load_agent.private_ip_address, self.user_name, ssh_options()) do |ssh|
         ssh.exec!("ls")
         connection_obtained = true
       end
     rescue Errno::ECONNREFUSED, Net::SSH::ConnectionTimeout
-      logger.debug { "Failed to ssh to machine : #{ip_address}" }
+      logger.debug { "Failed to ssh to machine : #{load_agent.private_ip_address}" }
     end
 
     return connection_obtained
@@ -176,10 +186,10 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   # check if java is installed on agent or not
   # @return
-  def java_installed?(ip_address)
+  def java_installed?(load_agent)
     logger.debug { "#{self.class}##{__method__}" }
     java_available = false
-    Hailstorm::Support::SSH.start(ip_address,self.user_name, ssh_options) do |ssh|
+    Hailstorm::Support::SSH.start(load_agent.private_ip_address,self.user_name, ssh_options) do |ssh|
       output = ssh.exec!("command -v java")
       logger.debug ("output of java check #{output}")
       if not output.nil? and output.include? "java"
@@ -189,10 +199,10 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     return java_available
   end
 
-  def jmeter_installed?(ip_address)
+  def jmeter_installed?(load_agent)
     logger.debug { "#{self.class}##{__method__}" }
     jmeter_available = false
-    Hailstorm::Support::SSH.start(ip_address,self.user_name, ssh_options) do |ssh|
+    Hailstorm::Support::SSH.start(load_agent.private_ip_address,self.user_name, ssh_options) do |ssh|
       output = ssh.exec!("#{jmeter_home}/bin/jmeter -n -v")
       logger.debug ("output of jmeter check #{output}")
       if not output.nil? and output.include? "Apache Software Foundation"
@@ -202,10 +212,10 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     return jmeter_available
   end
 
-  def java_version_ok?(ip_address)
+  def java_version_ok?(load_agent)
     logger.debug { "#{self.class}##{__method__}" }
     java_version_ok = false
-    Hailstorm::Support::SSH.start(ip_address,self.user_name, ssh_options) do |ssh|
+    Hailstorm::Support::SSH.start(load_agent.private_ip_address,self.user_name, ssh_options) do |ssh|
       if /java\sversion\s\"#{Defaults::JAVA_VERSION}\.[0-9].*\"/ =~ ssh.exec!("java -version")
         java_version_ok = true
       end
@@ -213,10 +223,10 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     return java_version_ok
   end
 
-  def jmeter_version_ok?(ip_address)
+  def jmeter_version_ok?(load_agent)
     logger.debug { "#{self.class}##{__method__}" }
     jmeter_version_ok = false
-    Hailstorm::Support::SSH.start(ip_address,self.user_name, ssh_options) do |ssh|
+    Hailstorm::Support::SSH.start(load_agent.private_ip_address,self.user_name, ssh_options) do |ssh|
       output = ssh.exec!("#{jmeter_home}/bin/jmeter -n -v")
       logger.debug ("Output of JMETER version check #{output}")
       if /Version\s#{self.project.jmeter_version}.*/ =~ output
