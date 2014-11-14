@@ -8,9 +8,8 @@ require 'hailstorm/model'
 require 'hailstorm/behavior/clusterable'
 require 'hailstorm/support/ssh'
 require 'hailstorm/support/amazon_account_cleaner'
-require 'hailstorm/model/hailstorm_base'
 
-class Hailstorm::Model::AmazonCloud < Hailstorm::Model::HailstormBase
+class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   
   include Hailstorm::Behavior::Clusterable
 

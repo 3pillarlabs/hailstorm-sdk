@@ -5,9 +5,8 @@
 require 'hailstorm/model'
 require 'hailstorm/support/ssh'
 require 'erubis/tiny'
-require 'hailstorm/model/hailstorm_base'
 
-class Hailstorm::Model::LoadAgent < Hailstorm::Model::HailstormBase
+class Hailstorm::Model::LoadAgent < ActiveRecord::Base
   
   belongs_to :clusterable, :polymorphic => true
   

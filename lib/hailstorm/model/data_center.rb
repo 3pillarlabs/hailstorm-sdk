@@ -5,9 +5,8 @@ require 'hailstorm'
 require 'hailstorm/model'
 require 'hailstorm/behavior/clusterable'
 require 'hailstorm/support/ssh'
-require 'hailstorm/model/hailstorm_base'
 
-class Hailstorm::Model::DataCenter < Hailstorm::Model::HailstormBase
+class Hailstorm::Model::DataCenter < ActiveRecord::Base
   include Hailstorm::Behavior::Clusterable
 
   serialize :machines

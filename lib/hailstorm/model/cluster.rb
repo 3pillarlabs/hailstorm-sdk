@@ -4,9 +4,8 @@
 require 'hailstorm/model'
 require 'hailstorm/model/load_agent'
 require 'hailstorm/support/thread'
-require 'hailstorm/model/hailstorm_base'
 
-class Hailstorm::Model::Cluster < Hailstorm::Model::HailstormBase
+class Hailstorm::Model::Cluster < ActiveRecord::Base
 
   belongs_to :project
 

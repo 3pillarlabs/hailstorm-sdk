@@ -11,11 +11,8 @@ require 'hailstorm/model/load_agent'
 require 'hailstorm/model/slave_agent'
 require 'hailstorm/model/master_agent'
 require 'nokogiri'
-require 'hailstorm/model/hailstorm_base'
 
-require 'hailstorm/model/data_center'
-
-class Hailstorm::Model::JmeterPlan < Hailstorm::Model::HailstormBase
+class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   
   belongs_to :project
   

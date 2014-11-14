@@ -18,8 +18,6 @@ require 'hailstorm/model/nmon'
 
 require "hailstorm/behavior/loggable"
 
-require 'hailstorm/model/hailstorm_base'
-
 class Hailstorm::Application
 
   include Hailstorm::Behavior::Loggable
@@ -57,38 +55,6 @@ class Hailstorm::Application
     Hailstorm.application = self.new
     Hailstorm.application.clear_tmp_dir()
     Hailstorm.application.check_for_updates()
-    Hailstorm.application.load_config(true)
-    Hailstorm.application.check_database()
-  end
-
-  # Initialize the application and connects to the database
-  # @param [String] app_name the application name
-  # @param [String] boot_file_path full path to application config/boot.rb
-  # @return nil
-  def self.initialize_web!(app_name, hailstorm_app_root)
-
-    Hailstorm.app_name = app_name
-    Hailstorm.root = hailstorm_app_root
-    # set JAVA classpath
-
-    # Add config/log4j.xml if it exists
-    custom_log4j = File.join(Hailstorm.root, Hailstorm.config_dir, 'log4j', 'log4j.xml')
-    if File.exists?(custom_log4j)
-      $CLASSPATH << File.dirname(custom_log4j)
-    end
-
-    # Add all Java Jars and log4j.xml (will not be added if already added in above case) to classpath
-    java_lib = File.expand_path('../java/lib', __FILE__)
-    $CLASSPATH << java_lib
-    Dir[File.join(java_lib, '*.jar')].each do |jar|
-      require(jar)
-    end
-    java.lang.System.setProperty("hailstorm.log.dir",
-                                 File.join(Hailstorm.root, Hailstorm.log_dir))
-
-    ActiveRecord::Base.logger = logger
-    Hailstorm.application = self.new
-    Hailstorm.application.clear_tmp_dir()
     Hailstorm.application.load_config(true)
     Hailstorm.application.check_database()
   end
@@ -194,7 +160,7 @@ Type help to get started...
         logger.error uncaught.message
         logger.debug { "\n".concat(uncaught.backtrace.join("\n")) }
       ensure
-        Hailstorm::Model::HailstormBase.clear_all_connections!
+        ActiveRecord::Base.clear_all_connections!
       end
 
       save_history(command_line)
@@ -221,9 +187,9 @@ Type help to get started...
 
     fail_once = false
     begin
-      Hailstorm::Model::HailstormBase.establish_connection(connection_spec) # this is lazy, does not fail!
+      ActiveRecord::Base.establish_connection(connection_spec) # this is lazy, does not fail!
       # create/update the schema
-      Hailstorm::Support::Schema.create_schema
+      Hailstorm::Support::Schema.create_schema()
 
     rescue ActiveRecord::ActiveRecordError => e
       unless fail_once
@@ -237,7 +203,7 @@ Type help to get started...
         raise
       end
     ensure
-      Hailstorm::Model::HailstormBase.clear_all_connections!
+      ActiveRecord::Base.clear_all_connections!
     end
   end
 
@@ -327,39 +293,22 @@ Continue using old version?
     end
   end
 
-  def results_for_web(*args)
-    operation = (args.first || 'show').to_sym
-    sequences = args[1]
-    unless sequences.nil?
-      if sequences.match(/^(\d+)\-(\d+)$/)
-        sequences = ($1..$2).to_a.collect(&:to_i)
-      else
-        sequences = sequences.split(/\s*,\s*/).collect(&:to_i)
-      end
-    end
-    rval = current_project.results(operation, sequences)
-    if :show == operation
-      return rval
-    end
-  end
-
+  private
 
   def current_project
     Hailstorm::Model::Project.where(:project_code => Hailstorm.app_name)
-    .first_or_create!()
+                             .first_or_create!()
   end
-
-
-  private
 
   def database_name()
     Hailstorm.app_name
   end
 
   def create_database()
-    Hailstorm::Model::HailstormBase.establish_connection(connection_spec.merge(:database => nil))
-    Hailstorm::Model::HailstormBase.connection.create_database(connection_spec[:database])
-    Hailstorm::Model::HailstormBase.establish_connection(connection_spec)
+
+    ActiveRecord::Base.establish_connection(connection_spec.merge(:database => nil))
+    ActiveRecord::Base.connection.create_database(connection_spec[:database])
+    ActiveRecord::Base.establish_connection(connection_spec)
   end
 
   def connection_spec

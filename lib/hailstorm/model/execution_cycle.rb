@@ -12,9 +12,8 @@ require 'hailstorm/model/client_stat'
 require 'hailstorm/model/target_stat'
 require 'hailstorm/model/jmeter_plan'
 require 'hailstorm/support/report_builder'
-require 'hailstorm/model/hailstorm_base'
 
-class Hailstorm::Model::ExecutionCycle < Hailstorm::Model::HailstormBase
+class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   
   belongs_to :project
 

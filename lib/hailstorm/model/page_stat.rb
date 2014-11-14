@@ -2,9 +2,8 @@
 require "hailstorm/model"
 require "hailstorm/model/client_stat"
 require 'hailstorm/support/quantile'
-require 'hailstorm/model/hailstorm_base'
 
-class Hailstorm::Model::PageStat < Hailstorm::Model::HailstormBase
+class Hailstorm::Model::PageStat < ActiveRecord::Base
 
   belongs_to :client_stat
 

@@ -4,9 +4,8 @@
 require 'zlib'
 require 'hailstorm/model/execution_cycle'
 require 'hailstorm/model/target_host'
-require 'hailstorm/model/hailstorm_base'
 
-class Hailstorm::Model::TargetStat < Hailstorm::Model::HailstormBase
+class Hailstorm::Model::TargetStat < ActiveRecord::Base
 
   DefaultSelectColumns = [:id, :execution_cycle_id, :target_host_id,
       :average_cpu_usage, :average_memory_usage, :average_swap_usage]

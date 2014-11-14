@@ -4,9 +4,8 @@
 require 'zlib'
 
 require 'hailstorm/model'
-require 'hailstorm/model/hailstorm_base'
 
-class Hailstorm::Model::JtlFile  < Hailstorm::Model::HailstormBase
+class Hailstorm::Model::JtlFile  < ActiveRecord::Base
 
   READ_BUFFER_SIZE = 4 * 1024 * 1024 # 4MB
   DATA_CHUNK_SIZE = 63 * 1024 # 63KB

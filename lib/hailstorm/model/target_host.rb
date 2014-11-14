@@ -4,9 +4,8 @@
 require 'hailstorm/model'
 require 'hailstorm/behavior/moniterable'
 require 'hailstorm/support/thread'
-require 'hailstorm/model/hailstorm_base'
 
-class Hailstorm::Model::TargetHost < Hailstorm::Model::HailstormBase
+class Hailstorm::Model::TargetHost < ActiveRecord::Base
   
   include Hailstorm::Behavior::Moniterable
   

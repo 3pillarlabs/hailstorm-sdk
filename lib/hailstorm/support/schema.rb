@@ -3,7 +3,6 @@
 
 require 'hailstorm/support'
 require "hailstorm/behavior/loggable"
-require 'hailstorm/model/hailstorm_base'
 
 class Hailstorm::Support::Schema
 
@@ -30,7 +29,7 @@ class Hailstorm::Support::Schema
     schema = self.new
     schema.create()
   end
-
+  
   # Creates the application schema in the application db directory.
   # A sqlite3 database is created. The database name is <tt>#{Hailstorm.app_name}.sqlite3</tt>.
   # If the tables already exist, nothing is changed.
@@ -42,8 +41,8 @@ class Hailstorm::Support::Schema
   end
   
   def create_table(table_name)
-
-    unless Hailstorm::Model::HailstormBase.connection.table_exists?(table_name)
+      
+    unless ActiveRecord::Base.connection.table_exists?(table_name)
       logger.debug("Creating #{table_name} table...")
       self.send("create_#{table_name}")
     end

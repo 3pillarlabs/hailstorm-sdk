@@ -3,7 +3,6 @@
 
 require 'hailstorm/support'
 require "hailstorm/behavior/loggable"
-require 'hailstorm/model/hailstorm_base'
 
 class Hailstorm::Support::Thread
 
@@ -26,7 +25,7 @@ class Hailstorm::Support::Thread
           logger.debug { "\n".concat(e.backtrace().join("\n")) }
           raise()
         ensure
-          Hailstorm::Model::HailstormBase.connection.close()
+          ActiveRecord::Base.connection.close()
         end
       end
       Thread.current[:spawned] ||= []
@@ -45,7 +44,7 @@ class Hailstorm::Support::Thread
     Hailstorm.logger.debug { "#{self}.#{__method__}" }
     # Give up the current threads connection, so that a child thread waiting
     # on it will get the connection
-    Hailstorm::Model::HailstormBase.connection_pool.release_connection()
+    ActiveRecord::Base.connection_pool.release_connection()
     thread_exceptions = []
     spawned = Thread.current[:spawned]
     until spawned.blank?
