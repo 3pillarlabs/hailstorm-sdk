@@ -1,0 +1,19 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <strong>Project:</strong>
+  <%= @test_plan.project_id %>
+</p>
+
+<p>
+  <strong>Status:</strong>
+  <%= @test_plan.status %>
+</p>
+
+<p>
+  <strong>Default:</strong>
+  <%= @test_plan.default %>
+</p>
+
+<%= link_to 'Edit', edit_test_plan_path(@test_plan) %> |
+<%= link_to 'Back', test_plans_path %>

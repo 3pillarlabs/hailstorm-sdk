@@ -31,3 +31,5 @@ gem 'sdoc', '~> 0.4.0',                            group: :doc
 gem 'autoprefixer-rails'
 
 gem 'sass-rails', '~> 4.0.3'
+
+gem "paperclip", "~> 4.2"
