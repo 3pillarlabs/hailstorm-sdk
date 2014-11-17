@@ -35,7 +35,7 @@
           <td><%= project.created_at.strftime('%F') %></td>
           <td><%= project.updated_at.strftime('%F') %></td>
           <td>
-            <%= link_to 'Show', project, class:"btn btn-info" %>
+            <%= link_to 'Configuration', project, class:"btn btn-info" %>
             <%= link_to 'Edit', edit_project_path(project), class:"btn btn-warning" %>
             <%= link_to 'Destroy', project, method: :delete, data: { confirm: 'Are you sure?' }, class:"btn btn-danger" %>
           </td>
