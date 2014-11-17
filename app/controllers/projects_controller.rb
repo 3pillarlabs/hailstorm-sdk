@@ -4,7 +4,9 @@ class ProjectsController < ApplicationController
   # GET /projects
   # GET /projects.json
   def index
-    @projects = Project.all
+    @items_per_page = Rails.configuration.items_per_page
+    @current_page = params[:page].blank? ? 1 : params[:page]
+    @projects = Project.all.paginate(page: @current_page, per_page: @items_per_page)
   end
 
   # GET /projects/1
@@ -28,7 +30,8 @@ class ProjectsController < ApplicationController
 
     respond_to do |format|
       if @project.save
-        format.html { redirect_to @project, notice: 'Project was successfully created.' }
+        #format.html { redirect_to @project, notice: 'Project was successfully created.' }
+        format.html { redirect_to({:action => :index}, {notice: 'Project was successfully created.'}) }
         format.json { render :show, status: :created, location: @project }
       else
         format.html { render :new }
@@ -42,7 +45,8 @@ class ProjectsController < ApplicationController
   def update
     respond_to do |format|
       if @project.update(project_params)
-        format.html { redirect_to @project, notice: 'Project was successfully updated.' }
+        #format.html { redirect_to @project, notice: 'Project was successfully updated.' }
+        format.html { redirect_to({:action => :index}, {notice: 'Project was successfully updated.'}) }
         format.json { render :show, status: :ok, location: @project }
       else
         format.html { render :edit }

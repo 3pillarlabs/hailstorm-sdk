@@ -33,7 +33,7 @@ GEM
       thread_safe (~> 0.1)
       tzinfo (~> 1.1)
     arel (5.0.1.20140414130214)
-    autoprefixer-rails (4.0.0)
+    autoprefixer-rails (4.0.0.1)
       execjs
     builder (3.2.2)
     coffee-rails (4.1.0)
@@ -47,7 +47,7 @@ GEM
     execjs (2.2.2)
     hike (1.2.3)
     i18n (0.6.11)
-    jbuilder (2.2.4)
+    jbuilder (2.2.5)
       activesupport (>= 3.0.0, < 5)
       multi_json (~> 1.2)
     jdbc-mysql (5.1.33)
@@ -109,6 +109,7 @@ GEM
       coffee-rails
     tzinfo (1.2.2)
       thread_safe (~> 0.1)
+    will_paginate (3.0.7)
 
 PLATFORMS
   java
@@ -123,3 +124,4 @@ DEPENDENCIES
   sdoc (~> 0.4.0)
   therubyrhino
   turbolinks
+  will_paginate (~> 3.0.5)

@@ -18,6 +18,7 @@
   <table class="table table-hover table-bordered">
     <thead>
     <tr>
+      <th>S.No.</th>
       <th>Name</th>
       <th>Status</th>
       <th>Created</th>
@@ -26,23 +27,26 @@
     </tr>
     </thead>
     <tbody>
-    <% @projects.each do |project| %>
+    <% @projects.each.with_index(1) do |project, index| %>
         <tr>
+          <td><%= ((@current_page.to_i-1)*@items_per_page.to_i)+index %></td>
           <td><%= project.title %></td>
-          <td><%= project.status %></td>
-          <td><%= project.created_at %></td>
-          <td><%= project.updated_at %></td>
+          <td><%= project.status ? "Configured" : "Empty" %></td>
+          <td><%= project.created_at.strftime('%F') %></td>
+          <td><%= project.updated_at.strftime('%F') %></td>
           <td>
-            <%= link_to 'Show', project %>
-            <%= link_to 'Edit', edit_project_path(project) %>
-            <%= link_to 'Destroy', project, method: :delete, data: { confirm: 'Are you sure?' } %>
+            <%= link_to 'Show', project, class:"btn btn-info" %>
+            <%= link_to 'Edit', edit_project_path(project), class:"btn btn-warning" %>
+            <%= link_to 'Destroy', project, method: :delete, data: { confirm: 'Are you sure?' }, class:"btn btn-danger" %>
           </td>
         </tr>
     <% end %>
     </tbody>
   </table>
 
-
+  <div class="text-center">
+    <%= will_paginate @projects %>
+  </div>
 </div>
 </p>
 

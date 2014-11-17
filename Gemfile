@@ -31,3 +31,5 @@ gem 'sdoc', '~> 0.4.0',                            group: :doc
 gem 'autoprefixer-rails'
 
 gem 'sass-rails', '~> 4.0.3'
+
+gem 'will_paginate', '~> 3.0.5'

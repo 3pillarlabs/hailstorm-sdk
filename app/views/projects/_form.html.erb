@@ -1,3 +1,4 @@
+<p>
 <%= form_for(@project) do |f| %>
   <% if @project.errors.any? %>
     <div id="error_explanation">
@@ -11,15 +12,10 @@
     </div>
   <% end %>
 
-  <div class="field">
-    <%= f.label :title %><br>
-    <%= f.text_field :title %>
+  <div class="form-group">
+    <%= f.label :title, "Project title : " %>
+    <%= f.text_field :title,class:"form-control",placeholder:"Enter title" %>
   </div>
-  <div class="field">
-    <%= f.label :status %><br>
-    <%= f.check_box :status %>
-  </div>
-  <div class="actions">
-    <%= f.submit %>
-  </div>
+    <%= f.submit nil,{class:"btn btn-default"} %>
 <% end %>
+</p>

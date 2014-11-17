@@ -1,5 +1,3 @@
-<p id="notice"><%= notice %></p>
-
 <p>
   <strong>Title:</strong>
   <%= @project.title %>
@@ -7,8 +5,13 @@
 
 <p>
   <strong>Status:</strong>
-  <%= @project.status %>
+  <%= @project.status ? "Configured" : "Empty" %>
 </p>
 
-<%= link_to 'Edit', edit_project_path(@project) %> |
-<%= link_to 'Back', projects_path %>
+<%#= link_to 'Edit', edit_project_path(@project) %>
+<%#= link_to 'Back', projects_path %>
+<p>
+    <%= link_to "Testplans", "javascript:void(0);" , class:"btn btn-success" %>
+    <%= link_to "Clusters", "javascript:void(0);" , class:"btn btn-success" %>
+    <%= link_to "Load Agents", "javascript:void(0);" , class:"btn btn-success" %>
+</p>
