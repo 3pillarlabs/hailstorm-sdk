@@ -28,3 +28,6 @@ gem 'sdoc', '~> 0.4.0',                            group: :doc
 # gem 'capistrano-rails', group: :development
 
 
+gem 'autoprefixer-rails'
+
+gem 'sass-rails', '~> 4.0.3'

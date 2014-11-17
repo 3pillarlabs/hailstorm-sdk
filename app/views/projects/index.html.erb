@@ -1,0 +1,48 @@
+<div class="row-fluid">
+  <div class="page-header">
+    <div class="container">
+      <div class="col-md-10">
+        <h1>Projects List</h1>
+      </div>
+      <div class="col-md-2" align="right">
+        <%= link_to 'New Project', new_project_path, class:"btn btn-default" %>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<p class="lead">
+<div class="table-responsive">
+  <table class="table table-hover table-bordered">
+    <thead>
+    <tr>
+      <th>Name</th>
+      <th>Status</th>
+      <th>Created</th>
+      <th>Last updated</th>
+      <th>Action</th>
+    </tr>
+    </thead>
+    <tbody>
+    <% @projects.each do |project| %>
+        <tr>
+          <td><%= project.title %></td>
+          <td><%= project.status %></td>
+          <td><%= project.created_at %></td>
+          <td><%= project.updated_at %></td>
+          <td>
+            <%= link_to 'Show', project %>
+            <%= link_to 'Edit', edit_project_path(project) %>
+            <%= link_to 'Destroy', project, method: :delete, data: { confirm: 'Are you sure?' } %>
+          </td>
+        </tr>
+    <% end %>
+    </tbody>
+  </table>
+
+
+</div>
+</p>
+

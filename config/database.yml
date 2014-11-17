@@ -12,7 +12,7 @@
 default: &default
   adapter: mysql
   username: root
-  password:
+  password: sa
   host: localhost
 
 development:
