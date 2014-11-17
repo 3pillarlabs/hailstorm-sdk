@@ -1,17 +1,25 @@
-<p>
-  <strong>Title:</strong>
-  <%= @project.title %>
-</p>
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title"><%= @project.title %></h3>
+  </div>
+  <div class="panel-body">
+    <p>
+      <strong>Title:</strong>
+      <%= @project.title %>
+    </p>
 
-<p>
-  <strong>Status:</strong>
-  <%= @project.status ? "Configured" : "Empty" %>
-</p>
+    <p>
+      <strong>Status:</strong>
+      <%= @project.status ? "Configured" : "Empty" %>
+    </p>
 
 <%#= link_to 'Edit', edit_project_path(@project) %>
 <%#= link_to 'Back', projects_path %>
-<p>
-    <%= link_to "Testplans", "javascript:void(0);" , class:"btn btn-success" %>
-    <%= link_to "Clusters", "javascript:void(0);" , class:"btn btn-success" %>
-    <%= link_to "Load Agents", "javascript:void(0);" , class:"btn btn-success" %>
-</p>
+    <p>
+      <%= link_to "Testplans", "javascript:void(0);" , class:"btn btn-info" %>
+      <%= link_to "Clusters", "javascript:void(0);" , class:"btn btn-info" %>
+      <%= link_to "Load Agents", "javascript:void(0);" , class:"btn btn-info" %>
+      <%= link_to "Cancel", projects_path, :class => "btn btn-default" %>
+    </p>
+  </div>
+</div>

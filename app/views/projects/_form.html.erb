@@ -16,6 +16,7 @@
     <%= f.label :title, "Project title : " %>
     <%= f.text_field :title,class:"form-control",placeholder:"Enter title" %>
   </div>
-    <%= f.submit nil,{class:"btn btn-default"} %>
+    <%= f.submit "Save",{class:"btn btn-primary"} %>
+    <%= link_to "Cancel", projects_path, :class => "btn btn-default" %>
 <% end %>
 </p>

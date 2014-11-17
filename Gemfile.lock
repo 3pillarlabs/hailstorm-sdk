@@ -110,6 +110,8 @@ GEM
     tzinfo (1.2.2)
       thread_safe (~> 0.1)
     will_paginate (3.0.7)
+    will_paginate-bootstrap (1.0.1)
+      will_paginate (>= 3.0.3)
 
 PLATFORMS
   java
@@ -125,3 +127,4 @@ DEPENDENCIES
   therubyrhino
   turbolinks
   will_paginate (~> 3.0.5)
+  will_paginate-bootstrap (~> 1.0.1)

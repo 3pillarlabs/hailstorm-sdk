@@ -18,12 +18,13 @@
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="/">Hailstorm Web</a>
+      <%= link_to "Hailstorm Web", root_path, :class => "navbar-brand" %>
     </div>
     <div class="collapse navbar-collapse">
       <ul class="nav navbar-nav">
-        <li class="active"><a href="/">Project List</a></li>
-
+        <li class="active">
+        <%= link_to "Project List", projects_path %>
+        </li>
       </ul>
 
     </div><!--/.nav-collapse -->
