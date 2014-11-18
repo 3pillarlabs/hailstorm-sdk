@@ -1,8 +1,7 @@
-<div class="panel panel-default">
-  <div class="panel-heading">
-    <h3 class="panel-title"><%= @project.title %></h3>
-  </div>
-  <div class="panel-body">
+<%#= link_to 'Edit', edit_project_path(@project) %>
+<%#= link_to 'Back', projects_path %>
+<div class="row">
+  <div class="col-md-5">
     <p>
       <strong>Title:</strong>
       <%= @project.title %>
@@ -12,14 +11,22 @@
       <strong>Status:</strong>
       <%= @project.status ? "Configured" : "Empty" %>
     </p>
-
-<%#= link_to 'Edit', edit_project_path(@project) %>
-<%#= link_to 'Back', projects_path %>
-    <p>
-      <%= link_to "Testplans", "javascript:void(0);" , class:"btn btn-info" %>
-      <%= link_to "Clusters", "javascript:void(0);" , class:"btn btn-info" %>
-      <%= link_to "Load Agents", "javascript:void(0);" , class:"btn btn-info" %>
-      <%= link_to "Cancel", projects_path, :class => "btn btn-default" %>
-    </p>
   </div>
+  <div class="col-md-7">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title">Configuration</h3>
+      </div>
+      <div class="panel-body">
+        <p>
+          <%= link_to "Testplans", "javascript:void(0);" %><br/>
+          <%= link_to "Clusters", "javascript:void(0);" %><br/>
+          <%= link_to "Target Hosts", "javascript:void(0);" %><br/>
+        </p>
+      </div>
+    </div>
+
+
+  </div>
+  <p><%= link_to "Back to Projects", projects_path %></p>
 </div>

@@ -2,10 +2,10 @@
   <div class="page-header">
     <div class="container">
       <div class="col-md-10">
-        <h1>Projects List</h1>
+        <h1>Projects</h1>
       </div>
       <div class="col-md-2" align="right">
-        <%= link_to 'New Project', new_project_path, class:"btn btn-default" %>
+        <%= link_to 'New Project', new_project_path, class:"btn btn-info" %>
       </div>
     </div>
   </div>
@@ -35,9 +35,9 @@
           <td><%= project.created_at.strftime('%F') %></td>
           <td><%= project.updated_at.strftime('%F') %></td>
           <td>
-            <%= link_to 'Configuration', project, class:"btn btn-info" %>
-            <%= link_to 'Edit', edit_project_path(project), class:"btn btn-warning" %>
-            <%= link_to 'Destroy', project, method: :delete, data: { confirm: 'Are you sure?' }, class:"btn btn-danger" %>
+            <%= link_to 'Open', project %>
+            <%#= link_to 'Edit', edit_project_path(project), class:"btn btn-warning" %>
+            <%#= link_to 'Destroy', project, method: :delete, data: { confirm: 'Are you sure?' }, class:"btn btn-danger" %>
           </td>
         </tr>
     <% end %>

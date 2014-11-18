@@ -18,7 +18,7 @@ pre {
   font-size: 11px;
 }
 
-a {
+/*a {
   color: #000;
   &:visited {
     color: #000;
@@ -34,15 +34,15 @@ div {
     margin-bottom: 10px;
   }
 }
-
+*/
 #notice {
   color: green;
 }
 
 .field_with_errors {
-  padding: 2px;
+  /*padding: 2px;
   background-color: red;
-  /*display: table;*/
+  display: table;*/
 }
 
 #error_explanation {
