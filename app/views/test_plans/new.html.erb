@@ -1,5 +1,19 @@
-<h1>New test_plan</h1>
 
-<%= render 'form' %>
-
-<%= link_to 'Back', test_plans_path %>
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title text-right"><%= @project_name.title %></h3>
+  </div>
+  <div class="panel-body">
+    <%= form_for @test_plan, :html => {:multipart => true}, url: {action: "create"} do |f| %>
+        <p>
+          <%= f.hidden_field :project_id,  :value => params['id']  %>
+          <%= f.label :jmx, "Jmeter File" %>
+          <%= f.file_field :jmx %>
+        </p>
+        <p>
+          <%= f.submit "Save", :class => "btn btn-primary" %>
+          <%= link_to "Cancel", { action: "index" }, :class => "btn btn-default" %>
+        </p>
+    <% end %>
+  </div>
+</div>
