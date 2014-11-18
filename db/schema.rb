@@ -20,18 +20,14 @@ ActiveRecord::Schema.define(version: 20141117081900) do
     t.datetime "updated_at"
   end
 
-  add_index "projects", ["title"], name: "index_projects_on_title", unique: true, using: :btree
+  add_index "projects", ["title"], name: "index_projects_on_title", using: :btree
 
   create_table "test_plans", force: true do |t|
     t.integer  "project_id"
-    t.boolean  "status",           default: false, null: false
-    t.string   "default"
+    t.boolean  "status",     default: false, null: false
+    t.text     "properties"
     t.datetime "created_at"
     t.datetime "updated_at"
-    t.string   "jmx_file_name"
-    t.string   "jmx_content_type"
-    t.integer  "jmx_file_size"
-    t.datetime "jmx_updated_at"
   end
 
 end

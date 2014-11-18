@@ -5,7 +5,11 @@ class TestPlansController < ApplicationController
   # GET /test_plans
   # GET /test_plans.json
   def index
-    @test_plans = TestPlan.all
+    @test_plan = TestPlan.new
+    @items_per_page = Rails.configuration.items_per_page
+    @current_page = params[:page].blank? ? 1 : params[:page]
+    @test_plans = @test_plan.getProjectTestPlans(params[:project_id]).pagination(@current_page, @items_per_page)
+    @project = Project.find(params[:project_id])
   end
 
   # GET /test_plans/1
@@ -16,7 +20,7 @@ class TestPlansController < ApplicationController
   # GET /test_plans/new
   def new
     @test_plan = TestPlan.new
-    @project_name = Project.find(params[:project_id])
+    @project = Project.find(params[:project_id])
   end
 
   # GET /test_plans/1/edit
@@ -28,10 +32,11 @@ class TestPlansController < ApplicationController
   def create
     @test_plan = TestPlan.new(test_plan_params)
     @test_plan.project_id = params[:project_id]
+    @project_name = Project.find(params[:project_id])
 
     respond_to do |format|
       if @test_plan.save
-        format.html { redirect_to @test_plan, notice: 'Test plan was successfully created.' }
+        format.html { redirect_to :test_plan, notice: 'Test plan was successfully created.' }
         format.json { render :show, status: :created, location: @test_plan }
       else
         format.html { render :new }
@@ -54,14 +59,11 @@ class TestPlansController < ApplicationController
     end
   end
 
-  # DELETE /test_plans/1
-  # DELETE /test_plans/1.json
-  def destroy
-    @test_plan.destroy
-    respond_to do |format|
-      format.html { redirect_to test_plans_url, notice: 'Test plan was successfully destroyed.' }
-      format.json { head :no_content }
-    end
+  def downloadJmx
+    project = Project.find(params[:project_id])
+    project_attachment = ProjectAttachment.find(params[:id])
+    project_attachment.title = project.title
+    send_file project_attachment.attachment.path, :type => "application/xml", :disposition => 'attachment'
   end
 
   private
@@ -72,7 +74,7 @@ class TestPlansController < ApplicationController
 
     # Never trust parameters from the scary internet, only allow the white list through.
     def test_plan_params
-      params.require(:test_plan).permit(:project_id, :status, :jmx)
+      params.require(:test_plan).permit(:project_id, :status, :jmx, :properties)
     end
 
     def check_for_cancel
