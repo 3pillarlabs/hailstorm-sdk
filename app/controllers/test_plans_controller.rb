@@ -1,6 +1,6 @@
 class TestPlansController < ApplicationController
-  before_action :set_test_plan, only: [:show, :edit, :update, :destroy]
-  before_filter :check_for_cancel, :only => [:create, :update, :new]
+  before_action :set_test_plan, only: [:show, :edit, :update]
+  before_filter :set_project, :only => [:index, :create, :update, :new, :edit]
 
   # GET /test_plans
   # GET /test_plans.json
@@ -9,7 +9,6 @@ class TestPlansController < ApplicationController
     @items_per_page = Rails.configuration.items_per_page
     @current_page = params[:page].blank? ? 1 : params[:page]
     @test_plans = @test_plan.getProjectTestPlans(params[:project_id]).pagination(@current_page, @items_per_page)
-    @project = Project.find(params[:project_id])
   end
 
   # GET /test_plans/1
@@ -20,11 +19,13 @@ class TestPlansController < ApplicationController
   # GET /test_plans/new
   def new
     @test_plan = TestPlan.new
-    @project = Project.find(params[:project_id])
   end
 
   # GET /test_plans/1/edit
   def edit
+    test_plan = TestPlan.new
+    @test_plan_properties = test_plan.getTestPlanProperties(params[:id])
+    #:todo remove edit from set_test_plan
   end
 
   # POST /test_plans
@@ -32,11 +33,10 @@ class TestPlansController < ApplicationController
   def create
     @test_plan = TestPlan.new(test_plan_params)
     @test_plan.project_id = params[:project_id]
-    @project_name = Project.find(params[:project_id])
 
     respond_to do |format|
       if @test_plan.save
-        format.html { redirect_to :test_plan, notice: 'Test plan was successfully created.' }
+        format.html { redirect_to :project_test_plans, notice: 'Test plan was successfully created.' }
         format.json { render :show, status: :created, location: @test_plan }
       else
         format.html { render :new }
@@ -48,9 +48,19 @@ class TestPlansController < ApplicationController
   # PATCH/PUT /test_plans/1
   # PATCH/PUT /test_plans/1.json
   def update
+    properties_array = Array.new
+    property_names = params[:test_plan]['property_name']
+    property_values = params[:test_plan]['property_value']
+
+    count =0
+    while property_names[count] != nil and property_values[count] != nil
+      properties_array[count] = {"name" => property_names[count], "value" => property_values[count]}
+      count += 1
+    end
+
     respond_to do |format|
-      if @test_plan.update(test_plan_params)
-        format.html { redirect_to @test_plan, notice: 'Test plan was successfully updated.' }
+      if @test_plan.update(:properties => properties_array.to_json)
+        format.html { redirect_to :project_test_plans, notice: 'Test plan was successfully updated.' }
         format.json { render :show, status: :ok, location: @test_plan }
       else
         format.html { render :edit }
@@ -74,12 +84,12 @@ class TestPlansController < ApplicationController
 
     # Never trust parameters from the scary internet, only allow the white list through.
     def test_plan_params
-      params.require(:test_plan).permit(:project_id, :status, :jmx, :properties)
+      params.require(:test_plan).permit(:project_id, :status, :jmx, :properties, :property_name, :property_value)
     end
 
-    def check_for_cancel
-      if params[:commit] == "Cancel"
-        redirect_to my_page_path
+    def set_project
+      if(params.has_key?(:project_id))
+        @project = Project.find(params[:project_id])
       end
     end
 end

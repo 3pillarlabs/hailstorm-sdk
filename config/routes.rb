@@ -1,15 +1,15 @@
 Rails.application.routes.draw do
 
   root "projects#index"
-  resources :projects
+  # resources :projects
 
-  get '/projects/:project_id/test_plans' => 'test_plans#index', :as=> :test_plan
+  # get '/projects/:project_id/test_plans' => 'test_plans#index', :as=> :test_plan
 
   resources :projects do
     resources :test_plans
   end
 
-  resources :test_plans
+  # resources :test_plans
 
   # The priority is based upon order of creation: first created -> highest priority.
   # See how all your routes lay out with "rake routes".
