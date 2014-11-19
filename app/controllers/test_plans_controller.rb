@@ -23,8 +23,13 @@ class TestPlansController < ApplicationController
 
   # GET /test_plans/1/edit
   def edit
+    @test_plan_properties = Array.new
     test_plan = TestPlan.new
-    @test_plan_properties = test_plan.getTestPlanProperties(params[:id])
+    test_plan_properties_json = test_plan.getTestPlanProperties(params[:id])
+    if(!test_plan_properties_json.nil?)
+      @test_plan_properties = JSON.parse(test_plan_properties_json)
+    end
+
     #:todo remove edit from set_test_plan
   end
 
@@ -70,10 +75,8 @@ class TestPlansController < ApplicationController
   end
 
   def downloadJmx
-    project = Project.find(params[:project_id])
-    project_attachment = ProjectAttachment.find(params[:id])
-    project_attachment.title = project.title
-    send_file project_attachment.attachment.path, :type => "application/xml", :disposition => 'attachment'
+    test_plan = TestPlan.find(params[:id])
+    send_file test_plan.jmx.path, :type => "application/xml", :disposition => 'attachment'
   end
 
   private

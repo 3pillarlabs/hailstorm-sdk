@@ -20,11 +20,7 @@ class TestPlan < ActiveRecord::Base
 
   def getTestPlanProperties(testPlanId)
     testPlanPropertiesJSON = []
-    testPlanProperties = TestPlan.where(id: testPlanId).select("properties").take
-    if(!testPlanProperties.properties.nil?)
-      testPlanPropertiesJSON = JSON.parse(testPlanProperties.properties)
-    end
-    return testPlanPropertiesJSON
+    testPlan = TestPlan.where(id: testPlanId).select("properties").take
+    return testPlan.properties
   end
-
 end

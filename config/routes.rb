@@ -3,6 +3,8 @@ Rails.application.routes.draw do
   root "projects#index"
   # resources :projects
 
+  get 'test_plans/downloadJmx/:id' => 'test_plans#downloadJmx', as: :download_jmx
+
   # get '/projects/:project_id/test_plans' => 'test_plans#index', :as=> :test_plan
 
   resources :projects do
