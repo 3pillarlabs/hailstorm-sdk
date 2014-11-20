@@ -1,5 +1,5 @@
 class TestPlansController < ApplicationController
-  before_action :set_test_plan, only: [:show, :edit, :update]
+  before_action :set_test_plan, only: [:show, :edit, :update, :downloadJmx]
   before_filter :set_project, :only => [:index, :create, :update, :new, :edit]
 
   # GET /test_plans
@@ -77,8 +77,7 @@ class TestPlansController < ApplicationController
   end
 
   def downloadJmx
-    test_plan = TestPlan.find(params[:id])
-    send_file test_plan.jmx.path, :type => "application/xml", :disposition => 'attachment'
+    send_file @test_plan.jmx.path, :type => "application/xml", :disposition => 'attachment'
   end
 
   private
