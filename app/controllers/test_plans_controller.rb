@@ -57,10 +57,12 @@ class TestPlansController < ApplicationController
     property_names = params[:test_plan]['property_name']
     property_values = params[:test_plan]['property_value']
 
-    count =0
-    while property_names[count] != nil and property_values[count] != nil
-      properties_array[count] = {"name" => property_names[count], "value" => property_values[count]}
-      count += 1
+    count = 0
+    property_names.each_with_index.each do |name, index|
+      if(!name.strip.empty? and !property_values[index].strip.empty?)
+        properties_array[count] = {"name" => name.strip, "value" => property_values[index].strip}
+        count += 1
+      end
     end
 
     respond_to do |format|

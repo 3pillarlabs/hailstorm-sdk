@@ -1,4 +1,5 @@
-jQuery( document ).ready(function() {
+function add_property_fields()
+{
     var propertiesHTML = '<tr>'+
         '<td>'+
         '<input type="text" name="test_plan[property_name][]">'+
@@ -7,7 +8,5 @@ jQuery( document ).ready(function() {
         '<input type="text" name="test_plan[property_value][]">'+
         '</td>'+
         '</tr>';
-    jQuery("#add_test_plan").click(function(){
-        jQuery("#test_plan_properties_body").append(propertiesHTML);
-    });
-});
+    jQuery("#test_plan_properties_body").append(propertiesHTML);
+}
