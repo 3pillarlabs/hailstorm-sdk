@@ -25,7 +25,7 @@
       <% @test_plans.each do |test_plan| %>
           <tr>
             <td><%= test_plan.project_id %></td>
-            <td><%= link_to test_plan.jmx_file_name, action: "downloadJmx", id: test_plan.id %></td>
+            <td><%= link_to test_plan.jmx_file_name, download_jmx_path(test_plan) %></td>
             <td><%= link_to 'Set Properties', edit_project_test_plan_path(test_plan.project_id, test_plan), class: "btn btn-warning" %></td>
           </tr>
       <% end %>
