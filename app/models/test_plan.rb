@@ -9,7 +9,7 @@ class TestPlan < ActiveRecord::Base
   attr_accessor :property_name, :property_value
 
   def getProjectTestPlans(projectId)
-    test_plans = TestPlan.joins(:project).where(:project_id => projectId)
+    test_plans = TestPlan.where(:project_id => projectId)
     # test_plans = TestPlan.joins('RIGHT OUTER JOIN projects ON test_plans.project_id = projects.id').where('projects.id' => projectId).select("projects.title, test_plans.*")
     return test_plans
   end
