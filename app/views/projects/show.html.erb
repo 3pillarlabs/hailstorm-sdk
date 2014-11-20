@@ -19,8 +19,8 @@
       </div>
       <div class="panel-body">
         <p>
-          <%= link_to "Testplans", "javascript:void(0);" %><br/>
-          <%= link_to "Clusters", "javascript:void(0);" %><br/>
+          <%= link_to "Test Plans", "javascript:void(0);" %><br/>
+          <%= link_to "Clusters", project_clusters_path(@project) %><br/>
           <%= link_to "Target Hosts", "javascript:void(0);" %><br/>
         </p>
       </div>
@@ -28,5 +28,5 @@
 
 
   </div>
-  <p><%= link_to "Back to Projects", projects_path %></p>
+  <p><%= link_to "Back to Projects", params[:page].blank? ? projects_path():projects_path(:page=>params[:page]) %></p>
 </div>

@@ -1,0 +1,34 @@
+<h3>Cluster configuration</h3>
+<p>
+  <strong>Name:</strong>
+  <%= @cluster.name %>
+</p>
+
+<p>
+  <strong>Access key:</strong>
+  <%= @cluster.access_key %>
+</p>
+
+<p>
+  <strong>Secret key:</strong>
+  <%= @cluster.secret_key %>
+</p>
+
+<p>
+  <strong>Ssh identity:</strong>
+  <%= @cluster.ssh_identity %>
+</p>
+
+<p>
+  <strong>Region:</strong>
+  <%= @cluster.region %>
+</p>
+
+<p>
+  <strong>Instance type:</strong>
+  <%= @cluster.instance_type %>
+</p>
+<p>
+    <%= link_to 'Edit', params[:page].blank? ? edit_project_cluster_path(@project,@cluster):edit_project_cluster_path(@project,@cluster,:page=>params[:page]) %> |
+    <%= link_to 'Back', params[:page].blank? ? project_clusters_path : project_clusters_path(:page=>params[:page]) %>
+</p>

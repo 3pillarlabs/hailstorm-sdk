@@ -1,7 +1,7 @@
 <p>
 <%= form_for(@project) do |f| %>
   <div class="form-group">
-    <%= f.label :title, "Project title : " %>
+    <%= f.label :title, "Title : " %>
     <%= f.text_field :title,class:"form-control",placeholder:"Enter title" %>
   </div>
   <% if @project.errors.any? %>

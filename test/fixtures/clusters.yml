@@ -1,0 +1,19 @@
+# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  project_id: 
+  name: MyString
+  access_key: MyString
+  secret_key: MyString
+  ssh_identity: MyString
+  region: MyString
+  instance_type: MyString
+
+two:
+  project_id: 
+  name: MyString
+  access_key: MyString
+  secret_key: MyString
+  ssh_identity: MyString
+  region: MyString
+  instance_type: MyString

@@ -1,4 +1,6 @@
 class Project < ActiveRecord::Base
+  has_many :cluster, dependent: :destroy
+
   validates :title, presence: true
   validates :title, uniqueness: true
 
