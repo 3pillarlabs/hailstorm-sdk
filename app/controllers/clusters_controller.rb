@@ -1,5 +1,5 @@
 class ClustersController < ApplicationController
-  before_action :set_cluster, only: [:show, :edit, :update, :destroy]
+  before_action :set_cluster, only: [:show, :edit, :update, :destroy, :downloadSSHIdentity]
   before_filter :set_project, :only => [:index, :show, :create, :update, :new, :edit, :destroy]
 
   # GET /clusters
@@ -68,8 +68,7 @@ class ClustersController < ApplicationController
   end
 
   def downloadSSHIdentity
-    test_plan = Cluster.find(params[:id])
-    send_file test_plan.ssh_identity.path, :type => "application/x-x509-ca-cert", :disposition => 'attachment'
+    send_file @cluster.ssh_identity.path, :type => "application/x-x509-ca-cert", :disposition => 'attachment'
   end
 
   private
