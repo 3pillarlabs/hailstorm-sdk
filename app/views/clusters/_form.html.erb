@@ -1,4 +1,5 @@
 <p>
+  <%#= debug @cluster %>
 <%= form_for([@project,@cluster],multipart: true) do |f| %>
   <% if @cluster.errors[:project].present? or @cluster.errors[:name].present? %>
     <div class="alert alert-danger" role="alert">
@@ -32,7 +33,11 @@
     <% end %>
   <div class="form-group">
     <%= f.label :ssh_identity %><br>
+    <% if @cluster.ssh_identity_file_name.blank? %>
     <%= f.file_field :ssh_identity %>
+    <% else %>
+    <%= @cluster.ssh_identity_file_name%>
+    <% end %>
   </div>
   <div class="form-group">
     <%= f.label :region %><br>

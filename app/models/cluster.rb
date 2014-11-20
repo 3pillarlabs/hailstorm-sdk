@@ -2,6 +2,10 @@ class Cluster < ActiveRecord::Base
   belongs_to :project
 
   validates :project, :name, :access_key, :secret_key, :region, :instance_type, presence: true
+  has_attached_file :ssh_identity,
+                    :path => ":rails_root/public/ssh_identity_Files/:project_id/:basename.:extension",
+                    :url => "/ssh_identity_Files/:project_id/:basename.:extension"
+  validates_attachment_file_name :ssh_identity, :matches => [/pem\Z/]
   validate :check_form_for_spoofed_data
 
   AMAZON_CLUSTER_REGIONS = {"us-east-1"=>"us-east-1","us-west-1"=>"us-west-1","us-west-2"=>"us-west-2","eu-west-1"=>"eu-west-1","ap-northeast-1"=>"ap-northeast-1","ap-southeast-1"=>"ap-southeast-1","sa-east-1"=>"sa-east-1"}

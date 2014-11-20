@@ -2,9 +2,7 @@ Rails.application.routes.draw do
 
   root 'projects#index'
 
-  # resources :projects
-
-  # resources :clusters
+  get 'clusters/downloadSSHIdentity/:id' => 'clusters#downloadSSHIdentity', as: :download_ssh_identity
 
   resources :projects do
     resources :clusters

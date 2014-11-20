@@ -7,7 +7,7 @@ class ClustersController < ApplicationController
   def index
     @items_per_page = Rails.configuration.items_per_page
     @current_page = params[:page].blank? ? 1 : params[:page]
-    @clusters = Cluster.all.pagination(@current_page, @items_per_page)
+    @clusters = Cluster.where(:project_id=>params[:project_id]).pagination(@current_page, @items_per_page)
   end
 
   # GET /clusters/1
@@ -65,6 +65,11 @@ class ClustersController < ApplicationController
       format.html { redirect_to project_clusters_path(@project), notice: 'Cluster was successfully destroyed.' }
       format.json { head :no_content }
     end
+  end
+
+  def downloadSSHIdentity
+    test_plan = Cluster.find(params[:id])
+    send_file test_plan.ssh_identity.path, :type => "application/x-x509-ca-cert", :disposition => 'attachment'
   end
 
   private

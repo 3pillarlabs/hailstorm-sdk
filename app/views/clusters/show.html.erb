@@ -16,7 +16,7 @@
 
 <p>
   <strong>Ssh identity:</strong>
-  <%= @cluster.ssh_identity %>
+  <%= @cluster.ssh_identity_file_name.blank? ? "" : link_to(@cluster.ssh_identity_file_name, download_ssh_identity_path(@cluster)) %>
 </p>
 
 <p>
