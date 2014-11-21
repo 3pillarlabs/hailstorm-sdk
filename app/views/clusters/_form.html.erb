@@ -1,5 +1,5 @@
 <p>
-  <%#= debug @cluster %>
+  <%#= debug @cluster.errors %>
 <%= form_for([@project,@cluster],multipart: true) do |f| %>
   <% if @cluster.errors[:project].present? or @cluster.errors[:name].present? %>
     <div class="alert alert-danger" role="alert">
@@ -61,7 +61,6 @@
           <%= @cluster.errors.full_message(:instance_type, @cluster.errors[:instance_type].first) %>
         </div>
     <% end %>
-    <%= f.hidden_field :project_id, :value => @project.id %>
     <%= f.hidden_field :name %>
     <%= f.submit "Save",{class:"btn btn-primary"} %>
     <%= link_to "Cancel", params[:page].blank? ? project_clusters_path : project_clusters_path(:page=>params[:page]), :class => "btn btn-default" %>

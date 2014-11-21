@@ -11,47 +11,55 @@
   </div>
 </div>
 
-<%#= debug @clusters %>
-<p class="lead">
-<div class="table-responsive">
-  <table class="table table-hover table-bordered">
-    <thead>
-    <tr>
-      <th>S.No.</th>
-      <th>Name</th>
-      <th>Access key</th>
-      <th>Secret key</th>
-      <th>SSH identity</th>
-      <th>Region</th>
-      <th>Instance type</th>
-      <th>Actions</th>
-    </tr>
-    </thead>
-    <tbody>
-
-    <% @clusters.each.with_index(1) do |cluster, index| %>
+<% if @clusters.blank? %>
+    <div role="alert" class="alert alert-warning">
+      <span aria-hidden="true" class="glyphicon glyphicon-warning-sign"></span>
+      No cluster added yet for this project.
+    </div>
+<% else %>
+    <p class="lead">
+    <div class="table-responsive">
+      <table class="table table-hover table-bordered">
+        <thead>
         <tr>
-          <td><%= ((@current_page.to_i-1)*@items_per_page.to_i)+index %></td>
-          <td><%= cluster.name %></td>
-          <td><%= cluster.access_key %></td>
-          <td><%= cluster.secret_key %></td>
-          <td><%= cluster.ssh_identity_file_name.blank? ? "" : link_to(cluster.ssh_identity_file_name, download_ssh_identity_path(cluster)) %></td>
-          <td><%= cluster.region %></td>
-          <td><%= cluster.instance_type %></td>
-          <td>
-            <%= link_to 'Show', params[:page].blank? ? project_cluster_path(@project,cluster):project_cluster_path(@project,cluster,:page=>params[:page]) %><br/>
-            <%= link_to 'Edit', params[:page].blank? ? edit_project_cluster_path(@project,cluster):edit_project_cluster_path(@project,cluster,:page=>params[:page]) %>
-            <%#= link_to 'Destroy', project_cluster_path(@project,cluster), method: :delete, data: { confirm: 'Are you sure?' } %>
-          </td>
+          <th>S.No.</th>
+          <th>Name</th>
+          <th>Access key</th>
+          <th>Secret key</th>
+          <th>SSH identity</th>
+          <th>Region</th>
+          <th>Instance type</th>
+          <th>Actions</th>
         </tr>
-    <% end %>
-    </tbody>
-  </table>
+        </thead>
+        <tbody>
 
-  <div class="text-center">
-    <%= will_paginate @clusters, renderer: BootstrapPagination::Rails %>
-  </div>
+        <% @clusters.each.with_index(1) do |cluster, index| %>
+            <tr>
+              <td><%= ((@current_page.to_i-1)*@items_per_page.to_i)+index %></td>
+              <td><%= cluster.name %></td>
+              <td><%= cluster.access_key %></td>
+              <td><%= cluster.secret_key %></td>
+              <td><%= cluster.ssh_identity_file_name.blank? ? "" : link_to(cluster.ssh_identity_file_name, project_cluster_path(@project,cluster, format: :pem)) %></td>
+              <td><%= cluster.region %></td>
+              <td><%= cluster.instance_type %></td>
+              <td>
+                <%= link_to 'Show', params[:page].blank? ? project_cluster_path(@project,cluster):project_cluster_path(@project,cluster,:page=>params[:page]) %><br/>
+                <%= link_to 'Edit', params[:page].blank? ? edit_project_cluster_path(@project,cluster):edit_project_cluster_path(@project,cluster,:page=>params[:page]) %>
+                <%#= link_to 'Destroy', project_cluster_path(@project,cluster), method: :delete, data: { confirm: 'Are you sure?' } %>
+              </td>
+            </tr>
+        <% end %>
+        </tbody>
+      </table>
 
-</div>
-</p>
+      <div class="text-center">
+        <%= will_paginate @clusters, renderer: BootstrapPagination::Rails %>
+      </div>
+
+    </div>
+    </p>
+<% end %>
+
+
 <p><%= link_to "Back to Project", project_path(@project) %></p>

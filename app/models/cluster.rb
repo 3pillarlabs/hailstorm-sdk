@@ -1,9 +1,9 @@
 class Cluster < ActiveRecord::Base
   belongs_to :project
 
-  validates :project, :name, :access_key, :secret_key, :region, :instance_type, presence: true
+  validates :name, :access_key, :secret_key, :region, :instance_type, presence: true
   has_attached_file :ssh_identity,
-                    :path => ":rails_root/public/ssh_identity_Files/:project_id/:basename.:extension",
+                    :path => Rails.configuration.uploads_path+"/ssh_identity_Files/:project_id/:basename.:extension",
                     :url => "/ssh_identity_Files/:project_id/:basename.:extension"
   validates_attachment_file_name :ssh_identity, :matches => [/pem\Z/]
   validate :check_form_for_spoofed_data

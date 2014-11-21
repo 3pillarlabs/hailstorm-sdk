@@ -1,6 +1,7 @@
 class ClustersController < ApplicationController
-  before_action :set_cluster, only: [:show, :edit, :update, :destroy, :downloadSSHIdentity]
-  before_filter :set_project, :only => [:index, :show, :create, :update, :new, :edit, :destroy]
+  before_action :set_cluster, :except => [:index, :new, :create]
+  before_filter :set_project
+  before_action :set_project_id, only: [:create, :update]
 
   # GET /clusters
   # GET /clusters.json
@@ -13,6 +14,9 @@ class ClustersController < ApplicationController
   # GET /clusters/1
   # GET /clusters/1.json
   def show
+    if params[:format] == "pem"
+      send_file @cluster.ssh_identity.path, :type => "application/x-x509-ca-cert", :disposition => 'attachment'
+    end
   end
 
   # GET /clusters/new
@@ -67,24 +71,18 @@ class ClustersController < ApplicationController
     end
   end
 
-  def downloadSSHIdentity
-    send_file @cluster.ssh_identity.path, :type => "application/x-x509-ca-cert", :disposition => 'attachment'
-  end
-
   private
     # Use callbacks to share common setup or constraints between actions.
     def set_cluster
       @cluster = Cluster.find(params[:id])
     end
 
-    # Never trust parameters from the scary internet, only allow the white list through.
-    def cluster_params
-      params.require(:cluster).permit(:project_id, :name, :access_key, :secret_key, :ssh_identity, :region, :instance_type)
+    def set_project_id
+      params[:cluster][:project_id] = params[:project_id]
     end
 
-    def set_project
-      if(params.has_key?(:project_id))
-        @project = Project.find(params[:project_id])
-      end
+    # Never trust parameters from the scary internet, only allow the white list through.
+    def cluster_params
+      params.require(:cluster).permit(:project_id,:name, :access_key, :secret_key, :ssh_identity, :region, :instance_type)
     end
 end

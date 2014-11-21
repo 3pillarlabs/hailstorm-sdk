@@ -11,42 +11,47 @@
   </div>
 </div>
 
-
-
-<p class="lead">
-<div class="table-responsive">
-  <table class="table table-hover table-bordered">
-    <thead>
-    <tr>
-      <th>S.No.</th>
-      <th>Name</th>
-      <th>Status</th>
-      <th>Created</th>
-      <th>Last updated</th>
-      <th>Action</th>
-    </tr>
-    </thead>
-    <tbody>
-    <% @projects.each.with_index(1) do |project, index| %>
+<% if @projects.blank? %>
+    <div role="alert" class="alert alert-warning">
+      <span aria-hidden="true" class="glyphicon glyphicon-warning-sign"></span>
+      No project added yet.
+    </div>
+<% else %>
+    <p class="lead">
+    <div class="table-responsive">
+      <table class="table table-hover table-bordered">
+        <thead>
         <tr>
-          <td><%= ((@current_page.to_i-1)*@items_per_page.to_i)+index %></td>
-          <td><%= project.title %></td>
-          <td><%= project.status ? "Configured" : "Empty" %></td>
-          <td><%= project.created_at.strftime('%F') %></td>
-          <td><%= project.updated_at.strftime('%F') %></td>
-          <td>
-            <%= link_to 'Open', params[:page].blank? ? project_path(project):project_path(project,:page=>params[:page]) %>
-            <%#= link_to 'Edit', edit_project_path(project), class:"btn btn-warning" %>
-            <%#= link_to 'Destroy', project, method: :delete, data: { confirm: 'Are you sure?' }, class:"btn btn-danger" %>
-          </td>
+          <th>S.No.</th>
+          <th>Name</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Last updated</th>
+          <th>Action</th>
         </tr>
-    <% end %>
-    </tbody>
-  </table>
+        </thead>
+        <tbody>
+        <% @projects.each.with_index(1) do |project, index| %>
+            <tr>
+              <td><%= ((@current_page.to_i-1)*@items_per_page.to_i)+index %></td>
+              <td><%= project.title %></td>
+              <td><%= project.status ? "Configured" : "Empty" %></td>
+              <td><%= project.created_at.strftime('%F') %></td>
+              <td><%= project.updated_at.strftime('%F') %></td>
+              <td>
+                <%= link_to 'Open', params[:page].blank? ? project_path(project):project_path(project,:page=>params[:page]) %>
+                <%#= link_to 'Edit', edit_project_path(project), class:"btn btn-warning" %>
+                <%#= link_to 'Destroy', project, method: :delete, data: { confirm: 'Are you sure?' }, class:"btn btn-danger" %>
+              </td>
+            </tr>
+        <% end %>
+        </tbody>
+      </table>
 
-  <div class="text-center">
-    <%= will_paginate @projects, renderer: BootstrapPagination::Rails %>
-  </div>
-</div>
-</p>
+      <div class="text-center">
+        <%= will_paginate @projects, renderer: BootstrapPagination::Rails %>
+      </div>
+    </div>
+    </p>
+<% end %>
 
