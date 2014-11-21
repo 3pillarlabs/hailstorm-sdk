@@ -11,6 +11,7 @@
  * file per style scope.
  *
  *= require bootstrap.min
+ *= require bootstrap-theme.min
  *= require_tree .
  *= require_self
  */

@@ -1,25 +1,20 @@
+<p>
 <%= form_for(@project) do |f| %>
+  <div class="form-group">
+    <%= f.label :title, "Title : " %>
+    <%= f.text_field :title,class:"form-control",placeholder:"Enter title" %>
+  </div>
   <% if @project.errors.any? %>
-    <div id="error_explanation">
-      <h2><%= pluralize(@project.errors.count, "error") %> prohibited this project from being saved:</h2>
-
-      <ul>
+    <div class="alert alert-danger" role="alert">
       <% @project.errors.full_messages.each do |message| %>
-        <li><%= message %></li>
+          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+          <span class="sr-only">Error:</span>
+          <%= message %>
       <% end %>
-      </ul>
     </div>
   <% end %>
 
-  <div class="field">
-    <%= f.label :title %><br>
-    <%= f.text_field :title %>
-  </div>
-  <div class="field">
-    <%= f.label :status %><br>
-    <%= f.check_box :status %>
-  </div>
-  <div class="actions">
-    <%= f.submit %>
-  </div>
+    <%= f.submit "Save",{class:"btn btn-primary"} %>
+    <%= link_to "Cancel", projects_path, :class => "btn btn-default" %>
 <% end %>
+</p>

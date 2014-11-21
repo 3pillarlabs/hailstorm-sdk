@@ -4,7 +4,9 @@ class ProjectsController < ApplicationController
   # GET /projects
   # GET /projects.json
   def index
-    @projects = Project.all
+    @items_per_page = Rails.configuration.items_per_page
+    @current_page = params[:page].blank? ? 1 : params[:page]
+    @projects = Project.all.pagination(@current_page, @items_per_page)
   end
 
   # GET /projects/1

@@ -5,7 +5,9 @@ class ApplicationController < ActionController::Base
 
   private
 
+  # Use callbacks to share common setup or constraints between actions for project.
   def set_project
     @project = Project.find(params.has_key?(:project_id) ? params[:project_id] : params[:id])
   end
+
 end
