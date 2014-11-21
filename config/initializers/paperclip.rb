@@ -1,5 +1,6 @@
 Paperclip.options[:content_type_mappings] = {
-    :pem => "text/plain"
+    :pem => "text/plain",
+    :jmx => 'application/xml'
 }
 
 
