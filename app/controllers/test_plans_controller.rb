@@ -1,6 +1,7 @@
 class TestPlansController < ApplicationController
-  before_action :set_test_plan, only: [:show, :edit, :update, :downloadJmx]
-  before_filter :set_project, :only => [:index, :create, :update, :new, :edit]
+  before_action :set_test_plan, :except => [:index, :new, :create]
+  before_filter :set_project, :except => [:show]
+  before_action :set_project_id, only: [:create, :update]
 
   # GET /test_plans
   # GET /test_plans.json
@@ -14,6 +15,9 @@ class TestPlansController < ApplicationController
   # GET /test_plans/1
   # GET /test_plans/1.json
   def show
+    if params[:format] == "xml"
+      send_file @test_plan.jmx.path, :type => "application/xml", :disposition => 'attachment'
+    end
   end
 
   # GET /test_plans/new
@@ -91,9 +95,7 @@ class TestPlansController < ApplicationController
       params.require(:test_plan).permit(:project_id, :status, :jmx, :properties, :property_name, :property_value)
     end
 
-    def set_project
-      if(params.has_key?(:project_id))
-        @project = Project.find(params[:project_id])
-      end
+    def set_project_id
+      params[:test_plan][:project_id] = params[:project_id]
     end
 end

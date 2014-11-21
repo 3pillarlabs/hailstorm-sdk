@@ -9,7 +9,6 @@
 </div>
 <%= form_for ([@project,@test_plan]), :html => {:multipart => true} do |f| %>
     <p>
-      <%= f.hidden_field :project_id,  :value => @project.id  %>
       <%= f.label :jmx, "Jmeter File" %>
       <%= f.file_field :jmx %>
     </p>

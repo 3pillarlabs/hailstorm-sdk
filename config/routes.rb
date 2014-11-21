@@ -1,7 +1,5 @@
 Rails.application.routes.draw do
 
-  get 'test_plans/downloadJmx/:id' => 'test_plans#downloadJmx', as: :download_jmx
-
   resources :projects do
     resources :test_plans
   end

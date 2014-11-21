@@ -12,30 +12,39 @@
     </div>
 </div>
 
-<div class="table-responsive">
-    <table class="table table-hover table-bordered">
-      <thead>
-          <tr>
-            <th>Project</th>
-            <th>JMX File Name</th>
-            <th>Action</th>
-          </tr>
-      </thead>
+<% if @test_plans.blank? %>
 
-      <tbody>
-      <% @test_plans.each do |test_plan| %>
-          <tr>
-            <td><%= test_plan.project_id %></td>
-            <td><%= link_to test_plan.jmx_file_name, download_jmx_path(test_plan) %></td>
-            <td><%= link_to 'Set Properties', edit_project_test_plan_path(test_plan.project_id, test_plan), class: "btn btn-warning" %></td>
-          </tr>
-      <% end %>
-      </tbody>
-    </table>
-    <div class="text-center">
-      <%= will_paginate @test_plans, renderer: BootstrapPagination::Rails %>
+    <div role="alert" class="alert alert-warning">
+      <span aria-hidden="true" class="glyphicon glyphicon-warning-sign"></span>
+      No test plans added yet for this project.
     </div>
-</div>
+
+<% else %>
+    <div class="table-responsive">
+        <table class="table table-hover table-bordered">
+          <thead>
+              <tr>
+                <th>Project</th>
+                <th>JMX File Name</th>
+                <th>Action</th>
+              </tr>
+          </thead>
+
+          <tbody>
+          <% @test_plans.each do |test_plan| %>
+              <tr>
+                <td><%= test_plan.project_id %></td>
+                <td><%= link_to test_plan.jmx_file_name, project_test_plan_path(test_plan.project_id, test_plan, format: :xml) %></td>
+                <td><%= link_to 'Set Properties', edit_project_test_plan_path(test_plan.project_id, test_plan), class: "btn btn-warning" %></td>
+              </tr>
+          <% end %>
+          </tbody>
+        </table>
+        <div class="text-center">
+          <%= will_paginate @test_plans, renderer: BootstrapPagination::Rails %>
+        </div>
+    </div>
+<% end %>
 
 <td><%= link_to "Back to project", project_path(@project) %></td>
 
