@@ -78,7 +78,7 @@ class ClustersController < ApplicationController
     end
 
     def set_project_id
-      params[:cluster][:project_id] = params[:project_id]
+      params[:cluster][:project_id] = @project.id
     end
 
     # Never trust parameters from the scary internet, only allow the white list through.
