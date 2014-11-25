@@ -26,6 +26,9 @@ class ClustersController < ApplicationController
 
   # GET /clusters/1/edit
   def edit
+    if ! @cluster.machines.blank?
+      @cluster.machines = JSON.parse(@cluster.machines)
+    end
   end
 
   # POST /clusters
@@ -83,6 +86,11 @@ class ClustersController < ApplicationController
 
     # Never trust parameters from the scary internet, only allow the white list through.
     def cluster_params
-      params.require(:cluster).permit(:project_id,:name, :access_key, :secret_key, :ssh_identity, :region, :instance_type)
+      if(params[:cluster][:name] == "amazon_cloud")
+        params.require(:cluster).permit(:project_id, :name, :access_key, :secret_key, :ssh_identity, :region, :instance_type)
+      elsif(params[:cluster][:name] == "data_center")
+        params[:cluster][:machines] = params[:cluster][:machines].reject{ |e| e.empty? }.to_json
+        params.require(:cluster).permit(:project_id, :name, :user_name, :machines, :ssh_identity)
+      end
     end
 end

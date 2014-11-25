@@ -11,38 +11,44 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20141120091905) do
+ActiveRecord::Schema.define(version: 20141124130111) do
 
   create_table "clusters", force: true do |t|
     t.integer  "project_id",                                         null: false
     t.string   "name",                      default: "amazon_cloud", null: false
-    t.string   "access_key",                                         null: false
-    t.string   "secret_key",                                         null: false
-    t.string   "region",                                             null: false
-    t.string   "instance_type",                                      null: false
+    t.string   "access_key"
+    t.string   "secret_key"
+    t.string   "region"
+    t.string   "instance_type"
     t.datetime "created_at"
     t.datetime "updated_at"
     t.string   "ssh_identity_file_name"
     t.string   "ssh_identity_content_type"
     t.integer  "ssh_identity_file_size"
     t.datetime "ssh_identity_updated_at"
+    t.string   "user_name"
+    t.text     "machines"
   end
 
   add_index "clusters", ["project_id"], name: "index_clusters_on_project_id", using: :btree
-
-	create_table "test_plans", force: true do |t|
-    t.integer  "project_id"
-    t.boolean  "status",     default: false, null: false
-    t.text     "properties"
-    t.datetime "created_at"
-    t.datetime "updated_at"
-  end
 
   create_table "projects", force: true do |t|
     t.string   "title",                      null: false
     t.boolean  "status",     default: false, null: false
     t.datetime "created_at"
     t.datetime "updated_at"
+  end
+
+  create_table "test_plans", force: true do |t|
+    t.integer  "project_id"
+    t.boolean  "status",           default: false, null: false
+    t.text     "properties"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.string   "jmx_file_name"
+    t.string   "jmx_content_type"
+    t.integer  "jmx_file_size"
+    t.datetime "jmx_updated_at"
   end
 
 end

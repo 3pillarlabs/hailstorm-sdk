@@ -1,4 +1,5 @@
 <p>
+
   <%#= debug @cluster.errors %>
 <%= form_for([@project,@cluster],multipart: true) do |f| %>
   <% if @cluster.errors[:project].present? or @cluster.errors[:name].present? %>
@@ -9,59 +10,121 @@
     </div>
   <% end %>
 
-  <div class="form-group">
-    <%= f.label :access_key %><br>
-    <%= f.text_field :access_key,class:"form-control",placeholder:"Enter access key" %>
-  </div>
-    <% if @cluster.errors[:access_key].present? %>
-        <div class="alert alert-danger" role="alert">
-              <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-              <span class="sr-only">Error:</span>
-              <%= @cluster.errors.full_message(:access_key, @cluster.errors[:access_key].first) %>
+
+
+    <div class="form-group">
+      <div><%= f.label :name, "Cluster Type" %></div>
+      <div>
+        <% if params['action'] == "new" %>
+            <%= f.label "name_amazon_cloud", "Amazon" %>
+            <%= f.radio_button(:name, "amazon_cloud", :onclick => "changeClusterType('amazon_cloud');", :checked => "checked") %>
+            <%= f.label "name_data_center", "Data Center" %>
+            <%= f.radio_button(:name, "data_center", :onclick => "changeClusterType('data_center');") %>
+        <% else %>
+            <%= @cluster.name %>
+            <%= f.hidden_field :name %>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <div><%= f.label :ssh_identity %></div>
+      <div>
+        <% if @cluster.ssh_identity_file_name.blank? %>
+            <%= f.file_field :ssh_identity %>
+        <% else %>
+            <%= @cluster.ssh_identity_file_name%>
+        <% end %>
+      </div>
+    </div>
+
+    <div id="amazon-form" <% if @cluster.name == "data_center" %> class="collapse"  <% end %> >
+      <div class="form-group">
+        <div><%= f.label :access_key %></div>
+        <div><%= f.text_field :access_key,class:"form-control",placeholder:"Enter access key" %></div>
+      </div>
+      <% if @cluster.errors[:access_key].present? %>
+          <div class="alert alert-danger" role="alert">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Error:</span>
+            <%= @cluster.errors.full_message(:access_key, @cluster.errors[:access_key].first) %>
+          </div>
+      <% end %>
+      <div class="form-group">
+        <div><%= f.label :secret_key %></div>
+        <div><%= f.text_field :secret_key,class:"form-control",placeholder:"Enter secret key" %></div>
+      </div>
+      <% if @cluster.errors[:secret_key].present? %>
+          <div class="alert alert-danger" role="alert">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Error:</span>
+            <%= @cluster.errors.full_message(:secret_key, @cluster.errors[:secret_key].first) %>
+          </div>
+      <% end %>
+      <div class="form-group">
+        <div><%= f.label :region %></div>
+        <div><%= f.select :region, options_for_select(Cluster::AMAZON_CLUSTER_REGIONS.sort,@cluster.region.blank? ? "us-east-1" : @cluster.region),{},{ :class => "form-control" } %></div>
+      </div>
+      <% if @cluster.errors[:region].present? %>
+          <div class="alert alert-danger" role="alert">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Error:</span>
+            <%= @cluster.errors.full_message(:region, @cluster.errors[:region].first) %>
+          </div>
+      <% end %>
+      <div class="form-group">
+        <div><%= f.label :instance_type %></div>
+        <div><%= f.select :instance_type, options_for_select(Cluster::AMAZON_INSTANCE_TYPES.sort,@cluster.instance_type.blank? ? "m1.small" : @cluster.instance_type),{},{ :class => "form-control" } %></div>
+      </div>
+      <% if @cluster.errors[:instance_type].present? %>
+          <div class="alert alert-danger" role="alert">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Error:</span>
+            <%= @cluster.errors.full_message(:instance_type, @cluster.errors[:instance_type].first) %>
+          </div>
+      <% end %>
+    </div>
+
+    <div id="datacenter-form"  <% if @cluster.name == "amazon_cloud" or @cluster.name.blank? %> class="collapse"  <% end %>>
+      <div class="form-group">
+        <div><%= f.label :user_name %></div>
+        <div><%= f.text_field :user_name,class:"form-control",placeholder:"Enter user name of machine" %></div>
+      </div>
+      <% if @cluster.errors[:user_name].present? %>
+          <div class="alert alert-danger" role="alert">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Error:</span>
+            <%= @cluster.errors.full_message(:user_name, @cluster.errors[:user_name].first) %>
+          </div>
+      <% end %>
+
+      <div class="form-group">
+        <div><%= f.label :machines %></div>
+        <div class="row">
+            <div class="col-xs-11" id="cluster_machines" align="left">
+
+                <% if @cluster.machines.blank? %>
+                  <div class="panel"><input type="text" name="cluster[machines][]" class = "form-control" placeholder="Enter IP address of machine"></div>
+                <% else %>
+                    <% @cluster.machines.each do |machine| %>
+                      <div class="panel"><input type="text" name="cluster[machines][]" class = "form-control" placeholder="Enter IP address of machine" value="<%= machine %>"></div>
+                    <% end %>
+                <% end %>
+            </div>
+            <div class="col-xs-1" align="left">
+              <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add'.html_safe, "javascript:void(0);", :class => "btn btn-info", :onclick => "add_machines_fields();" %>
+            </div>
         </div>
-    <% end %>
-  <div class="form-group">
-    <%= f.label :secret_key %><br>
-    <%= f.text_field :secret_key,class:"form-control",placeholder:"Enter secret key" %>
-  </div>
-    <% if @cluster.errors[:secret_key].present? %>
-        <div class="alert alert-danger" role="alert">
-          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-          <span class="sr-only">Error:</span>
-          <%= @cluster.errors.full_message(:secret_key, @cluster.errors[:secret_key].first) %>
-        </div>
-    <% end %>
-  <div class="form-group">
-    <%= f.label :ssh_identity %><br>
-    <% if @cluster.ssh_identity_file_name.blank? %>
-    <%= f.file_field :ssh_identity %>
-    <% else %>
-    <%= @cluster.ssh_identity_file_name%>
-    <% end %>
-  </div>
-  <div class="form-group">
-    <%= f.label :region %><br>
-    <%= f.select :region, options_for_select(Cluster::AMAZON_CLUSTER_REGIONS.sort,@cluster.region.blank? ? "us-east-1" : @cluster.region),{},{ :class => "form-control" } %>
-  </div>
-    <% if @cluster.errors[:region].present? %>
-        <div class="alert alert-danger" role="alert">
-          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-          <span class="sr-only">Error:</span>
-          <%= @cluster.errors.full_message(:region, @cluster.errors[:region].first) %>
-        </div>
-    <% end %>
-  <div class="form-group">
-    <%= f.label :instance_type %><br>
-    <%= f.select :instance_type, options_for_select(Cluster::AMAZON_INSTANCE_TYPES.sort,@cluster.instance_type.blank? ? "m1.small" : @cluster.instance_type),{},{ :class => "form-control" } %>
-  </div>
-    <% if @cluster.errors[:instance_type].present? %>
-        <div class="alert alert-danger" role="alert">
-          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-          <span class="sr-only">Error:</span>
-          <%= @cluster.errors.full_message(:instance_type, @cluster.errors[:instance_type].first) %>
-        </div>
-    <% end %>
-    <%= f.hidden_field :name %>
+      </div>
+      <% if @cluster.errors[:machines].present? %>
+          <div class="alert alert-danger" role="alert">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Error:</span>
+            <%= @cluster.errors.full_message(:machines, @cluster.errors[:machines].first) %>
+          </div>
+      <% end %>
+    </div>
+
     <%= f.submit "Save",{class:"btn btn-primary"} %>
     <%= link_to "Cancel", params[:page].blank? ? project_clusters_path : project_clusters_path(:page=>params[:page]), :class => "btn btn-default" %>
 <% end %>
