@@ -19,16 +19,28 @@
 <% else %>
     <p class="lead">
     <div class="table-responsive">
+      <ul class="nav nav-tabs">
+        <li <% if params[:type].blank? or params[:type] == "amazon_cloud" %> class="active" <% end %>>
+          <%= link_to 'Amazon cloud', {:type => "amazon_cloud"} %>
+        </li>
+        <li <% if params[:type] == "data_center" %> class="active" <% end %>>
+          <%= link_to 'Data center', {:type => "data_center"} %>
+        </li>
+      </ul>
       <table class="table table-hover table-bordered">
         <thead>
         <tr>
           <th>S.No.</th>
-          <th>Name</th>
-          <th>Access key</th>
-          <th>Secret key</th>
           <th>SSH identity</th>
-          <th>Region</th>
-          <th>Instance type</th>
+          <% if params[:type].blank? or params[:type] == "amazon_cloud" %>
+              <th>Access key</th>
+              <th>Secret key</th>
+              <th>Region</th>
+              <th>Instance type</th>
+          <% elsif params[:type] == "data_center" %>
+              <th>User name</th>
+              <th>Machines</th>
+          <% end %>
           <th>Actions</th>
         </tr>
         </thead>
@@ -37,16 +49,24 @@
         <% @clusters.each.with_index(1) do |cluster, index| %>
             <tr>
               <td><%= ((@current_page.to_i-1)*@items_per_page.to_i)+index %></td>
-              <td><%= cluster.name %></td>
-              <td><%= cluster.access_key %></td>
-              <td><%= cluster.secret_key %></td>
               <td><%= cluster.ssh_identity_file_name.blank? ? "" : link_to(cluster.ssh_identity_file_name, project_cluster_path(@project,cluster, format: :pem)) %></td>
-              <td><%= cluster.region %></td>
-              <td><%= cluster.instance_type %></td>
+              <% if params[:type].blank? or params[:type] == "amazon_cloud" %>
+                  <td><%= cluster.access_key %></td>
+                  <td><%= cluster.secret_key %></td>
+                  <td><%= cluster.region %></td>
+                  <td><%= cluster.instance_type %></td>
+              <% else %>
+                  <td><%= cluster.user_name %></td>
+                  <%
+                     if !cluster.machines.blank?
+                        machines = JSON.parse(cluster.machines)
+                     end
+                  %>
+                  <td><% if(machines.kind_of?(Array))  %> <%= machines.join(", ") %> <% end %></td>
+              <% end %>
               <td>
                 <%= link_to 'Show', params[:page].blank? ? project_cluster_path(@project,cluster):project_cluster_path(@project,cluster,:page=>params[:page]) %><br/>
                 <%= link_to 'Edit', params[:page].blank? ? edit_project_cluster_path(@project,cluster):edit_project_cluster_path(@project,cluster,:page=>params[:page]) %>
-                <%#= link_to 'Destroy', project_cluster_path(@project,cluster), method: :delete, data: { confirm: 'Are you sure?' } %>
               </td>
             </tr>
         <% end %>

@@ -8,7 +8,10 @@ class ClustersController < ApplicationController
   def index
     @items_per_page = Rails.configuration.items_per_page
     @current_page = params[:page].blank? ? 1 : params[:page]
-    @clusters = Cluster.where(:project_id=>params[:project_id]).pagination(@current_page, @items_per_page)
+    # @clusters = Cluster.where(:project_id=>params[:project_id]).pagination(@current_page, @items_per_page)
+    cluster_obj = Cluster.new
+    cluster_type = params[:type].blank? ? "amazon_cloud" : params[:type]
+    @clusters = cluster_obj.getClustersOfType(cluster_type, params[:project_id]).pagination(@current_page, @items_per_page)
   end
 
   # GET /clusters/1

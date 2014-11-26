@@ -50,4 +50,9 @@ class Cluster < ActiveRecord::Base
     self.paginate(page: current_page, per_page: items_per_page).order("updated_at DESC")
   end
 
+  def getClustersOfType(type, project_id)
+    clusters = Cluster.where(:project_id=>project_id, :name => type)
+    return clusters
+  end
+
 end
