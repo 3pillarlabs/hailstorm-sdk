@@ -2,6 +2,7 @@ class ClustersController < ApplicationController
   before_action :set_cluster, :except => [:index, :new, :create]
   before_filter :set_project
   before_action :set_project_id, only: [:create, :update]
+  before_action :convert_machines_json_to_array, :only => [:edit]
 
   # GET /clusters
   # GET /clusters.json
@@ -29,9 +30,6 @@ class ClustersController < ApplicationController
 
   # GET /clusters/1/edit
   def edit
-    if ! @cluster.machines.blank?
-      @cluster.machines = JSON.parse(@cluster.machines)
-    end
   end
 
   # POST /clusters
@@ -45,6 +43,7 @@ class ClustersController < ApplicationController
         format.html { redirect_to project_clusters_path(@project), notice: 'Cluster was successfully created.' }
         format.json { render :show, status: :created, location: @cluster }
       else
+        convert_machines_json_to_array
         format.html { render :new }
         format.json { render json: @cluster.errors, status: :unprocessable_entity }
       end
@@ -56,10 +55,10 @@ class ClustersController < ApplicationController
   def update
     respond_to do |format|
       if @cluster.update(cluster_params)
-        #format.html { redirect_to @cluster, notice: 'Cluster was successfully updated.' }
         format.html { redirect_to project_clusters_path(@project), notice: 'Cluster was successfully updated.' }
         format.json { render :show, status: :ok, location: @cluster }
       else
+        convert_machines_json_to_array
         format.html { render :edit }
         format.json { render json: @cluster.errors, status: :unprocessable_entity }
       end
@@ -92,8 +91,14 @@ class ClustersController < ApplicationController
       if(params[:cluster][:name] == "amazon_cloud")
         params.require(:cluster).permit(:project_id, :name, :access_key, :secret_key, :ssh_identity, :region, :instance_type)
       elsif(params[:cluster][:name] == "data_center")
-        params[:cluster][:machines] = params[:cluster][:machines].reject{ |e| e.empty? }.to_json
+        params[:cluster][:machines] = params[:cluster][:machines].reject{ |e| e.blank? }.to_json
         params.require(:cluster).permit(:project_id, :name, :user_name, :machines, :ssh_identity)
+      end
+    end
+
+    def convert_machines_json_to_array
+      if ! @cluster.machines.blank?
+        @cluster.machines = JSON.parse(@cluster.machines)
       end
     end
 end

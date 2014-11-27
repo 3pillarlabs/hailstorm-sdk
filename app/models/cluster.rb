@@ -14,24 +14,22 @@ class Cluster < ActiveRecord::Base
   def check_form_for_spoofed_and_mandatory_data
     if name.present? and !(name == "amazon_cloud" or name == "data_center")
       errors.add(:name, "can't change cluster name")
-    end
-
-    if name == "amazon_cloud"
+    elsif name == "amazon_cloud"
 
       if !access_key.present?
-        errors.add("Please provide an access key")
+        errors.add(:access_key, " can't be blank")
       end
 
       if !secret_key.present?
-        errors.add("Please provide a secret key must")
+        errors.add(:secret_key, " can't be blank")
       end
 
       if !region.present?
-        errors.add("Please provide region.")
+        errors.add(:region, " can't be blank")
       end
 
       if !instance_type.present?
-        errors.add("Please provide instance type")
+        errors.add(:instance_type, " can't be blank")
       end
 
       if !AMAZON_CLUSTER_REGIONS.has_value?(region)
@@ -41,7 +39,14 @@ class Cluster < ActiveRecord::Base
       if !AMAZON_INSTANCE_TYPES.has_value?(instance_type)
         errors.add(:instance_type, "must be from the list")
       end
+    elsif name == "data_center"
+      if !user_name.present?
+        errors.add(:user_name, " can't be blank")
+      end
 
+      if !machines.present? or machines == "[]"
+        errors.add(:machines, " can't be blank")
+      end
     end
 
   end
