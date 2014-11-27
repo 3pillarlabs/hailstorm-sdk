@@ -1,7 +1,13 @@
 <h3>Cluster configuration</h3>
 <p>
-  <strong>Name:</strong>
+  <strong>Type:</strong>
   <%= @cluster.name %>
+</p>
+
+<% if @cluster.name == "amazon_cloud" %>
+<p>
+  <strong>Ssh identity:</strong>
+  <%= @cluster.ssh_identity_file_name.blank? ? "" : link_to(@cluster.ssh_identity_file_name, project_cluster_path(@project,@cluster, format: :pem)) %>
 </p>
 
 <p>
@@ -15,11 +21,6 @@
 </p>
 
 <p>
-  <strong>Ssh identity:</strong>
-  <%= @cluster.ssh_identity_file_name.blank? ? "" : link_to(@cluster.ssh_identity_file_name, project_cluster_path(@project,@cluster, format: :pem)) %>
-</p>
-
-<p>
   <strong>Region:</strong>
   <%= @cluster.region %>
 </p>
@@ -28,6 +29,24 @@
   <strong>Instance type:</strong>
   <%= @cluster.instance_type %>
 </p>
+<% elsif  @cluster.name == "data_center" %>
+
+    <p>
+      <strong>User name:</strong>
+      <%= @cluster.user_name %>
+    </p>
+
+    <p>
+      <strong>Machines:</strong>
+      <%
+         if !@cluster.machines.blank?
+           machines = JSON.parse(@cluster.machines)
+         end
+      %>
+    <% if(machines.kind_of?(Array))  %> <%= machines.join(", ") %> <% end %>
+    </p>
+
+<% end %>
 <p>
     <%= link_to 'Edit', params[:page].blank? ? edit_project_cluster_path(@project,@cluster):edit_project_cluster_path(@project,@cluster,:page=>params[:page]) %> |
     <%= link_to 'Back', params[:page].blank? ? project_clusters_path : project_clusters_path(:page=>params[:page]) %>
