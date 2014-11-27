@@ -12,9 +12,17 @@
 </div>
 
 <% if @clusters.blank? %>
+    <ul class="nav nav-tabs">
+      <li <% if params[:type].blank? or params[:type] == "amazon_cloud" %> class="active" <% end %>>
+        <%= link_to 'Amazon cloud', {:type => "amazon_cloud"} %>
+      </li>
+      <li <% if params[:type] == "data_center" %> class="active" <% end %>>
+        <%= link_to 'Data center', {:type => "data_center"} %>
+      </li>
+    </ul>
     <div role="alert" class="alert alert-warning">
       <span aria-hidden="true" class="glyphicon glyphicon-warning-sign"></span>
-      No cluster added yet for this project.
+      No cluster<% if params[:type] == "amazon_cloud" %> of type 'Amazon cloud'<% elsif params[:type] == "data_center" %> of type 'Data center'<% end %> added yet for this project.
     </div>
 <% else %>
     <p class="lead">
