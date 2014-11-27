@@ -40,7 +40,7 @@ class ClustersController < ApplicationController
     respond_to do |format|
       if @cluster.save
         #format.html { redirect_to @cluster, notice: 'Cluster was successfully created.' }
-        format.html { redirect_to project_clusters_path(@project), notice: 'Cluster was successfully created.' }
+        format.html { redirect_to project_clusters_path(@project,:type => @cluster.name), notice: 'Cluster was successfully created.' }
         format.json { render :show, status: :created, location: @cluster }
       else
         convert_machines_json_to_array
@@ -55,7 +55,7 @@ class ClustersController < ApplicationController
   def update
     respond_to do |format|
       if @cluster.update(cluster_params)
-        format.html { redirect_to project_clusters_path(@project), notice: 'Cluster was successfully updated.' }
+        format.html { redirect_to project_clusters_path(@project,:type => @cluster.name), notice: 'Cluster was successfully updated.' }
         format.json { render :show, status: :ok, location: @cluster }
       else
         convert_machines_json_to_array
