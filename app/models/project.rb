@@ -1,6 +1,7 @@
 class Project < ActiveRecord::Base
-  has_many :cluster, dependent: :destroy
+  has_many :clusters, dependent: :destroy
   has_many :test_plans, dependent: :destroy
+  delegate :data_centers, :amazon_clouds, to: :clusters
 
   validates :title, presence: true
   validates :title, uniqueness: true

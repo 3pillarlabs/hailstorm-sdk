@@ -2,7 +2,7 @@
 
   <%#= debug @cluster.errors %>
 <%= form_for([@project,@cluster],multipart: true) do |f| %>
-  <% if @cluster.errors[:project].present? or @cluster.errors[:name].present? %>
+  <% if @cluster.errors[:project].present? or @cluster.errors[:type].present? %>
     <div class="alert alert-danger" role="alert">
       <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
       <span class="sr-only">Error:</span>
@@ -13,16 +13,16 @@
 
 
     <div class="form-group">
-      <div><%= f.label :name, "Cluster Type" %></div>
+      <div><%= f.label :type, "Cluster Type" %></div>
       <div>
         <% if params['action'] == "new" %>
             <%= f.label "name_amazon_cloud", "Amazon" %>
-            <%= f.radio_button(:name, "amazon_cloud", :onclick => "changeClusterType('amazon_cloud');", :checked => "checked") %>
+            <%= f.radio_button(:type, "AmazonCloud", :onclick => "changeClusterType('amazon_cloud');", :checked => "checked") %>
             <%= f.label "name_data_center", "Data Center" %>
-            <%= f.radio_button(:name, "data_center", :onclick => "changeClusterType('data_center');") %>
+            <%= f.radio_button(:type, "DataCenter", :onclick => "changeClusterType('data_center');") %>
         <% else %>
-            <%= @cluster.name %>
-            <%= f.hidden_field :name %>
+            <%= @cluster.type %>
+            <%= f.hidden_field :type %>
         <% end %>
       </div>
     </div>
@@ -38,7 +38,7 @@
       </div>
     </div>
 
-    <div id="amazon-form" <% if @cluster.name == "data_center" %> class="collapse"  <% end %> >
+    <div id="amazon-form" <% if @cluster.type == "DataCenter" %> class="collapse"  <% end %> >
       <div class="form-group">
         <div><%= f.label :access_key %></div>
         <div><%= f.text_field :access_key,class:"form-control",placeholder:"Enter access key" %></div>
@@ -85,7 +85,7 @@
       <% end %>
     </div>
 
-    <div id="datacenter-form"  <% if @cluster.name == "amazon_cloud" or @cluster.name.blank? %> class="collapse"  <% end %>>
+    <div id="datacenter-form"  <% if @cluster.type == "AmazonCloud" or @cluster.type.blank? %> class="collapse"  <% end %>>
       <div class="form-group">
         <div><%= f.label :user_name %></div>
         <div><%= f.text_field :user_name,class:"form-control",placeholder:"Enter user name of machine" %></div>

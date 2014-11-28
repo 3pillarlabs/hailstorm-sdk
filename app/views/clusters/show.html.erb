@@ -1,10 +1,10 @@
 <h3>Cluster configuration</h3>
 <p>
   <strong>Type:</strong>
-  <%= @cluster.name %>
+  <%= @cluster.type %>
 </p>
 
-<% if @cluster.name == "amazon_cloud" %>
+<% if @cluster.type == "AmazonCloud" %>
 <p>
   <strong>Ssh identity:</strong>
   <%= @cluster.ssh_identity_file_name.blank? ? "" : link_to(@cluster.ssh_identity_file_name, project_cluster_path(@project,@cluster, format: :pem)) %>
@@ -29,7 +29,7 @@
   <strong>Instance type:</strong>
   <%= @cluster.instance_type %>
 </p>
-<% elsif  @cluster.name == "data_center" %>
+<% elsif  @cluster.type == "DataCenter" %>
 
     <p>
       <strong>User name:</strong>
