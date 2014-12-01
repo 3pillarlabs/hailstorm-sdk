@@ -40,12 +40,12 @@
         <tr>
           <th>S.No.</th>
           <th>SSH identity</th>
-          <% if params[:type].blank? or params[:type] == "amazon_cloud" %>
+          <% if params[:type].blank? or params[:type] == "AmazonCloud" %>
               <th>Access key</th>
               <th>Secret key</th>
               <th>Region</th>
               <th>Instance type</th>
-          <% elsif params[:type] == "data_center" %>
+          <% elsif params[:type] == "DataCenter" %>
               <th>User name</th>
               <th>Machines</th>
           <% end %>
@@ -58,7 +58,7 @@
             <tr>
               <td><%= ((@current_page.to_i-1)*@items_per_page.to_i)+index %></td>
               <td><%= cluster.ssh_identity_file_name.blank? ? "" : link_to(cluster.ssh_identity_file_name, project_cluster_path(@project,cluster, format: :pem)) %></td>
-              <% if params[:type].blank? or params[:type] == "amazon_cloud" %>
+              <% if params[:type].blank? or params[:type] == "AmazonCloud" %>
                   <td><%= cluster.access_key %></td>
                   <td><%= cluster.secret_key %></td>
                   <td><%= cluster.region %></td>
@@ -73,8 +73,13 @@
                   <td><% if(machines.kind_of?(Array))  %> <%= machines.join(", ") %> <% end %></td>
               <% end %>
               <td>
-                <%= link_to 'Show', params[:page].blank? ? project_cluster_path(@project,cluster):project_cluster_path(@project,cluster,:page=>params[:page]) %><br/>
-                <%= link_to 'Edit', params[:page].blank? ? edit_project_cluster_path(@project,cluster):edit_project_cluster_path(@project,cluster,:page=>params[:page]) %>
+                <% if(cluster.type == "AmazonCloud") %>
+                    <%= link_to 'Show', params[:page].blank? ? project_amazon_cloud_path(@project,cluster):project_amazon_cloud_path(@project,cluster,:page=>params[:page]) %><br/>
+                    <%= link_to 'Edit', params[:page].blank? ? edit_project_amazon_cloud_path(@project,cluster):edit_project_amazon_cloud_path(@project,cluster,:page=>params[:page]) %>
+                <% elsif(cluster.type == "DataCenter") %>
+                    <%= link_to 'Show', params[:page].blank? ? project_data_center_path(@project,cluster):project_data_center_path(@project,cluster,:page=>params[:page]) %><br/>
+                    <%= link_to 'Edit', params[:page].blank? ? edit_project_data_center_path(@project,cluster):edit_project_data_center_path(@project,cluster,:page=>params[:page]) %>
+                <% end %>
               </td>
             </tr>
         <% end %>

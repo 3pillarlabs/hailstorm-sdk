@@ -10,7 +10,14 @@
     </div>
   <% end %>
 
-
+    <%
+       cluster_type = 'cluster'
+       Cluster.types.each do |cluster_type_name|
+         if(params[:type] == cluster_type_name.to_s)
+           cluster_type = cluster_type_name.underscore.to_s
+         end
+       end
+    %>
 
     <div class="form-group">
       <div><%= f.label :type, "Cluster Type" %></div>
@@ -104,15 +111,15 @@
             <div class="col-xs-11" id="cluster_machines" align="left">
 
                 <% if @cluster.machines.blank? %>
-                  <div class="panel"><input type="text" name="cluster[machines][]" class = "form-control" placeholder="Enter IP address of machine"></div>
+                  <div class="panel"><input type="text" name="<%= cluster_type %>[machines][]" class = "form-control" placeholder="Enter IP address of machine"></div>
                 <% else %>
                     <% @cluster.machines.each do |machine| %>
-                      <div class="panel"><input type="text" name="cluster[machines][]" class = "form-control" placeholder="Enter IP address of machine" value="<%= machine %>"></div>
+                      <div class="panel"><input type="text" name="<%= cluster_type %>[machines][]" class = "form-control" placeholder="Enter IP address of machine" value="<%= machine %>"></div>
                     <% end %>
                 <% end %>
             </div>
             <div class="col-xs-1" align="left">
-              <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add'.html_safe, "javascript:void(0);", :class => "btn btn-info", :onclick => "add_machines_fields();" %>
+              <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add'.html_safe, "javascript:void(0);", :class => "btn btn-info", :onclick => "add_machines_fields('"+cluster_type+"');" %>
             </div>
         </div>
       </div>
