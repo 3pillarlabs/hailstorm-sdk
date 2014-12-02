@@ -4,7 +4,8 @@ Rails.application.routes.draw do
 
   resources :projects do
     resources :clusters
-	resources :test_plans
+	  resources :test_plans
+    resources :target_hosts, :except => [:edit,:update]
   end
 
   # The priority is based upon order of creation: first created -> highest priority.

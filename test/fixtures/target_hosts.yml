@@ -1,0 +1,21 @@
+# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  project_id: 
+  host_name: MyString
+  type: 
+  role_name: MyString
+  executable_path: MyString
+  executable_pid: 1
+  user_name: MyString
+  sampling_interval: 1
+
+two:
+  project_id: 
+  host_name: MyString
+  type: 
+  role_name: MyString
+  executable_path: MyString
+  executable_pid: 1
+  user_name: MyString
+  sampling_interval: 1

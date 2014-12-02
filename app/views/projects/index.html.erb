@@ -35,7 +35,7 @@
             <tr>
               <td><%= ((@current_page.to_i-1)*@items_per_page.to_i)+index %></td>
               <td><%= project.title %></td>
-              <td><%= project.status ? "Configured" : "Empty" %></td>
+              <td><%= project_status(project.status) %></td>
               <td><%= project.created_at.strftime('%F') %></td>
               <td><%= project.updated_at.strftime('%F') %></td>
               <td>

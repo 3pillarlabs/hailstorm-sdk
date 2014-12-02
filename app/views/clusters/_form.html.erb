@@ -1,5 +1,4 @@
-<p>
-  <%#= debug @cluster.errors %>
+<%#= debug @cluster.errors %>
 <%= form_for([@project,@cluster],multipart: true) do |f| %>
   <% if @cluster.errors[:project].present? or @cluster.errors[:name].present? %>
     <div class="alert alert-danger" role="alert">
@@ -10,8 +9,8 @@
   <% end %>
 
   <div class="form-group">
-    <%= f.label :access_key %><br>
-    <%= f.text_field :access_key,class:"form-control",placeholder:"Enter access key" %>
+    <div><%= f.label :access_key %></div>
+    <div><%= f.text_field :access_key,class:"form-control",placeholder:"Enter access key" %></div>
   </div>
     <% if @cluster.errors[:access_key].present? %>
         <div class="alert alert-danger" role="alert">
@@ -21,8 +20,8 @@
         </div>
     <% end %>
   <div class="form-group">
-    <%= f.label :secret_key %><br>
-    <%= f.text_field :secret_key,class:"form-control",placeholder:"Enter secret key" %>
+    <div><%= f.label :secret_key %></div>
+    <div><%= f.text_field :secret_key,class:"form-control",placeholder:"Enter secret key" %></div>
   </div>
     <% if @cluster.errors[:secret_key].present? %>
         <div class="alert alert-danger" role="alert">
@@ -32,16 +31,18 @@
         </div>
     <% end %>
   <div class="form-group">
-    <%= f.label :ssh_identity %><br>
-    <% if @cluster.ssh_identity_file_name.blank? %>
-    <%= f.file_field :ssh_identity %>
-    <% else %>
-    <%= @cluster.ssh_identity_file_name%>
-    <% end %>
+    <div><%= f.label :ssh_identity %></div>
+    <div>
+        <% if @cluster.ssh_identity_file_name.blank? %>
+        <%= f.file_field :ssh_identity %>
+        <% else %>
+        <%= @cluster.ssh_identity_file_name%>
+        <% end %>
+    </div>
   </div>
   <div class="form-group">
-    <%= f.label :region %><br>
-    <%= f.select :region, options_for_select(Cluster::AMAZON_CLUSTER_REGIONS.sort,@cluster.region.blank? ? "us-east-1" : @cluster.region),{},{ :class => "form-control" } %>
+    <div><%= f.label :region %></div>
+    <div><%= f.select :region, options_for_select(Cluster::AMAZON_CLUSTER_REGIONS.sort,@cluster.region.blank? ? "us-east-1" : @cluster.region),{},{ :class => "form-control" } %></div>
   </div>
     <% if @cluster.errors[:region].present? %>
         <div class="alert alert-danger" role="alert">
@@ -51,8 +52,8 @@
         </div>
     <% end %>
   <div class="form-group">
-    <%= f.label :instance_type %><br>
-    <%= f.select :instance_type, options_for_select(Cluster::AMAZON_INSTANCE_TYPES.sort,@cluster.instance_type.blank? ? "m1.small" : @cluster.instance_type),{},{ :class => "form-control" } %>
+    <div><%= f.label :instance_type %></div>
+    <div><%= f.select :instance_type, options_for_select(Cluster::AMAZON_INSTANCE_TYPES.sort,@cluster.instance_type.blank? ? "m1.small" : @cluster.instance_type),{},{ :class => "form-control" } %></div>
   </div>
     <% if @cluster.errors[:instance_type].present? %>
         <div class="alert alert-danger" role="alert">
@@ -65,4 +66,3 @@
     <%= f.submit "Save",{class:"btn btn-primary"} %>
     <%= link_to "Cancel", params[:page].blank? ? project_clusters_path : project_clusters_path(:page=>params[:page]), :class => "btn btn-default" %>
 <% end %>
-</p>
