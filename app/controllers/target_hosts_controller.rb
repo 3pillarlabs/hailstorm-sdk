@@ -60,6 +60,7 @@ class TargetHostsController < ApplicationController
 
               @target_host = TargetHost.new(target_host_parameter)
               if !@target_host.save
+                formatted_target_host_data
                 format.html { render :new }
               else
                 process_status = 1
@@ -71,6 +72,7 @@ class TargetHostsController < ApplicationController
           #check if host empty then save data with role only
           if target_host_parameter[:host_name].blank?
             @target_host = TargetHost.new(target_host_parameter)
+            formatted_target_host_data
             if !@target_host.save
               format.html { render :new }
             else
@@ -89,6 +91,7 @@ class TargetHostsController < ApplicationController
           delete_target_hosts(old_ts)
           format.html { redirect_to project_target_hosts_path(@project), notice: 'Target host was successfully created.' }
         else
+          formatted_target_host_data
           format.html { render :new }
         end
       elsif process_status==1
@@ -107,6 +110,13 @@ class TargetHostsController < ApplicationController
       #puts target_hosts.inspect
       target_hosts_k.each do |host|
         host.destroy
+      end
+    end
+
+    def formatted_target_host_data
+      @target_host_data = TargetHost.where(:project_id=>params[:project_id]).group_by(&:role_name)
+      if !@target_host_data.blank?
+        @target_host_data = format_target_host(@target_host_data)
       end
     end
 

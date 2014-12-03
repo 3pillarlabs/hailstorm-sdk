@@ -1,6 +1,7 @@
 class Project < ActiveRecord::Base
   has_many :clusters, dependent: :destroy
   has_many :test_plans, dependent: :destroy
+  has_many :target_hosts
 
   validates :title, presence: true
   validates :title, uniqueness: true
