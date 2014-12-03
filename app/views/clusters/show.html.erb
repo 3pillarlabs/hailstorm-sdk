@@ -48,6 +48,12 @@
 
 <% end %>
 <p>
-    <%= link_to 'Edit', params[:page].blank? ? edit_project_cluster_path(@project,@cluster):edit_project_cluster_path(@project,@cluster,:page=>params[:page]) %> |
-    <%= link_to 'Back', params[:page].blank? ? project_clusters_path : project_clusters_path(:page=>params[:page]) %>
+  <% if(@cluster.type == "AmazonCloud") %>
+      <%= link_to 'Edit', edit_project_amazon_cloud_path(@project,@cluster) %> |
+      <%= link_to 'Back', project_amazon_clouds_path %>
+  <% elsif(@cluster.type == "DataCenter") %>
+      <%= link_to 'Edit', edit_project_data_center_path(@project,@cluster) %> |
+      <%= link_to 'Back', project_data_centers_path %>
+  <% end %>
+
 </p>

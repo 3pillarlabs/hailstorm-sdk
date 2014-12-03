@@ -23,10 +23,10 @@
       <div><%= f.label :type, "Cluster Type" %></div>
       <div>
         <% if params['action'] == "new" %>
-            <%= f.label "name_amazon_cloud", "Amazon" %>
-            <%= f.radio_button(:type, "AmazonCloud", :onclick => "changeClusterType('amazon_cloud');", :checked => "checked") %>
-            <%= f.label "name_data_center", "Data Center" %>
-            <%= f.radio_button(:type, "DataCenter", :onclick => "changeClusterType('data_center');") %>
+            <% Cluster.types.each do |cluster_type_name| %>
+                <%= f.label "name_"+cluster_type_name.underscore, cluster_type_name.underscore.humanize %>
+                <%= f.radio_button(:type, cluster_type_name, :onclick => "changeClusterType('"+cluster_type_name.underscore+"');", :checked => cluster_type_name == "DataCenter") %>
+            <% end %>
         <% else %>
             <%= @cluster.type %>
             <%= f.hidden_field :type %>
@@ -45,7 +45,7 @@
       </div>
     </div>
 
-    <div id="amazon-form" <% if @cluster.type == "DataCenter" %> class="collapse"  <% end %> >
+    <div id="amazon-form" <% if @cluster.type == "DataCenter" or @cluster.type.blank? %> class="collapse"  <% end %> >
       <div class="form-group">
         <div><%= f.label :access_key %></div>
         <div><%= f.text_field :access_key,class:"form-control",placeholder:"Enter access key" %></div>
@@ -92,7 +92,7 @@
       <% end %>
     </div>
 
-    <div id="datacenter-form"  <% if @cluster.type == "AmazonCloud" or @cluster.type.blank? %> class="collapse"  <% end %>>
+    <div id="datacenter-form"  <% if @cluster.type == "AmazonCloud" %> class="collapse"  <% end %>>
       <div class="form-group">
         <div><%= f.label :user_name %></div>
         <div><%= f.text_field :user_name,class:"form-control",placeholder:"Enter user name of machine" %></div>

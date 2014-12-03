@@ -11,7 +11,7 @@ class ClustersController < ApplicationController
     @current_page = params[:page].blank? ? 1 : params[:page]
     # @clusters = Cluster.where(:project_id=>params[:project_id]).pagination(@current_page, @items_per_page)
     # cluster_obj = Cluster.new
-    cluster_type = params[:type].blank? ? "AmazonCloud" : params[:type]
+    cluster_type = params[:type].blank? ? "DataCenter" : params[:type]
     # @clusters = cluster_obj.getClustersOfType(cluster_type, params[:project_id]).pagination(@current_page, @items_per_page)
     if(cluster_type == "AmazonCloud")
       @clusters = @project.amazon_clouds.pagination(@current_page, @items_per_page)
