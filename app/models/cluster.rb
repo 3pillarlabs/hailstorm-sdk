@@ -11,6 +11,8 @@ class Cluster < ActiveRecord::Base
   AMAZON_CLUSTER_REGIONS = {"us-east-1"=>"us-east-1","us-west-1"=>"us-west-1","us-west-2"=>"us-west-2","eu-west-1"=>"eu-west-1","ap-northeast-1"=>"ap-northeast-1","ap-southeast-1"=>"ap-southeast-1","sa-east-1"=>"sa-east-1"}
   AMAZON_INSTANCE_TYPES = {"m1.small"=>"m1.small","m1.large"=>"m1.large","m1.xlarge"=>"m1.xlarge","c1.xlarge"=>"c1.xlarge"}
 
+  after_create :check_project_clusters
+
   def check_form_for_spoofed_and_mandatory_data
     if name.present? and !(name == "amazon_cloud" or name == "data_center")
       errors.add(:name, "can't change cluster name")
@@ -58,6 +60,10 @@ class Cluster < ActiveRecord::Base
   def getClustersOfType(type, project_id)
     clusters = Cluster.where(:project_id=>project_id, :name => type)
     return clusters
+  end
+
+  def check_project_clusters
+    project.transition_state if project.clusters.count==1
   end
 
 end

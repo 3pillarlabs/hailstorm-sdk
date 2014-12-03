@@ -9,7 +9,7 @@
 
     <p>
       <strong>Status:</strong>
-      <%= @project.status ? "Configured" : "Empty" %>
+      <%= project_status(@project.status) %>
     </p>
   </div>
   <div class="col-md-7">
@@ -21,7 +21,7 @@
         <p>
           <%= link_to "Test Plans", project_test_plans_path(@project) %><br/>
           <%= link_to "Clusters", project_clusters_path(@project) %><br/>
-          <%= link_to "Target Hosts", "javascript:void(0);" %><br/>
+          <%= link_to "Target Hosts", project_target_hosts_path(@project) %><br/>
         </p>
       </div>
     </div>

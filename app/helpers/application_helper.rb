@@ -23,4 +23,16 @@ module ApplicationHelper
     end
     nil
   end
+
+  def project_status(status)
+    case status
+      when 1
+        "Partial Configured"
+      when 2
+        "Configured"
+      else
+        "Empty"
+    end
+  end
+
 end

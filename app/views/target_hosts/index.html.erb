@@ -1,0 +1,67 @@
+<div class="row-fluid">
+  <div class="page-header">
+    <div class="container">
+      <div class="col-md-10">
+        <h1>Target Hosts</h1>
+      </div>
+      <div class="col-md-2" align="right">
+        <%= link_to 'Configure'.html_safe, new_project_target_host_path, class: 'btn btn-info' %>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<%#= debug @target_hosts %>
+<% if @target_hosts.blank? %>
+    <div role="alert" class="alert alert-warning">
+      <span aria-hidden="true" class="glyphicon glyphicon-warning-sign"></span>
+      Target host not configured.
+    </div>
+<% else %>
+    <p>
+      <strong>Type:</strong>
+      <%= @target_hosts[:target_host_type] %>
+    </p>
+
+    <p>
+      <strong>Executable path:</strong>
+      <%= @target_hosts[:executable_path] %>
+    </p>
+
+
+    <p>
+      <strong>User name:</strong>
+      <%= @target_hosts[:user_name] %>
+    </p>
+
+    <p>
+      <strong>Sampling interval:</strong>
+      <%= @target_hosts[:sampling_interval] %>
+    </p>
+
+    <p>
+      <strong>Sampling interval:</strong>
+      <%= @target_hosts[:sampling_interval] %>
+    </p>
+
+    <p>
+      <strong>SSH identity:</strong>
+      <%= @target_hosts[:ssh_identity_file_name].blank? ? "" : link_to(@target_hosts[:ssh_identity_file_name], project_target_host_path(@project,:id=>@target_hosts[:id], format: :pem)) %>
+    </p>
+
+
+    <% @target_hosts[:roles].each do |roles| %>
+        <p>
+          <strong>Role Name:</strong>
+          <%= roles[:name] %>
+        </p>
+        <% roles[:hosts].each do |host| %>
+            <p>
+              <strong>Host Name:</strong>
+              <%= host[:host_name] %>
+            </p>
+        <% end %>
+    <% end %>
+<% end %>
+<p><%= link_to "Back to Project", project_path(@project) %></p>

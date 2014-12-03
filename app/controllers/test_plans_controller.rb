@@ -41,7 +41,6 @@ class TestPlansController < ApplicationController
   # POST /test_plans.json
   def create
     @test_plan = TestPlan.new(test_plan_params)
-    @test_plan.project_id = params[:project_id]
 
     respond_to do |format|
       if @test_plan.save
@@ -96,6 +95,11 @@ class TestPlansController < ApplicationController
     end
 
     def set_project_id
-      params[:test_plan][:project_id] = params[:project_id]
+      if params[:test_plan].present?
+        params[:test_plan][:project_id] = @project.id
+      else
+        params[:test_plan] = Hash.new
+        params[:test_plan][:project_id] = @project.id
+      end
     end
 end

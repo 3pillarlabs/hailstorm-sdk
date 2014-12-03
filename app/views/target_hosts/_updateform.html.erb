@@ -1,0 +1,148 @@
+<%= form_for([@project,@target_host],multipart: true) do |f| %>
+
+    <div class="form-group">
+      <div><%= f.label :executable_path %></div>
+      <div><%= f.text_field :executable_path,class:"form-control",placeholder:"Enter executable path",:value=>@target_host_data[:executable_path] %></div>
+    </div>
+    <% if @target_host.errors[:executable_path].present? %>
+        <div class="alert alert-danger" role="alert">
+          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+          <span class="sr-only">Error:</span>
+          <%= @target_host.errors.full_message(:executable_path, @target_host.errors[:executable_path].first) %>
+        </div>
+    <% end %>
+
+    <div class="form-group">
+      <div><%= f.label :ssh_identity %></div>
+      <div>
+        <%= f.file_field :ssh_identity %>
+        <%#= @target_host_data[:ssh_identity_file_name] %>
+      </div>
+    </div>
+    <% if @target_host.errors[:ssh_identity_file_name].present? %>
+        <div class="alert alert-danger" role="alert">
+          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+          <span class="sr-only">Error:</span>
+          <%= @target_host.errors.full_message(:ssh_identity_file_name, @target_host.errors[:ssh_identity_file_name].first) %>
+        </div>
+    <% end %>
+
+    <div class="form-group">
+      <div><%= f.label :user_name %></div>
+      <div><%= f.text_field :user_name,class:"form-control",placeholder:"Enter user name",:value=>@target_host_data[:user_name] %></div>
+    </div>
+    <% if @target_host.errors[:user_name].present? %>
+        <div class="alert alert-danger" role="alert">
+          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+          <span class="sr-only">Error:</span>
+          <%= @target_host.errors.full_message(:user_name, @target_host.errors[:user_name].first) %>
+        </div>
+    <% end %>
+
+    <div class="form-group">
+      <div><%= f.label :sampling_interval %></div>
+      <div><%= f.text_field :sampling_interval,class:"form-control",placeholder:"Enter sampling interval",:value=>@target_host_data[:sampling_interval] %></div>
+    </div>
+    <% if @target_host.errors[:sampling_interval].present? %>
+        <div class="alert alert-danger" role="alert">
+          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+          <span class="sr-only">Error:</span>
+          <%= @target_host.errors.full_message(:sampling_interval, @target_host.errors[:sampling_interval].first) %>
+        </div>
+    <% end %>
+
+    <div class="form-group-sm page-header">
+      <label for="target_host_roles">Roles</label>
+      <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>'.html_safe, "javascript:void(0);", :class => "btn btn-info btn-xs", :onclick => "add_role_host_fields();" %>
+    </div>
+
+    <div class="form-group" id="role_host_group_placeholder">
+      <% if @target_host_data[:roles].blank? %>
+          <div class="row">
+            <div class="col-md-12">
+              <div class="col-md-11"><%= f.label :role_name %></div>
+              <div class="col-md-1">&nbsp;</div>
+            </div>
+            <div class="col-md-12">
+              <div class="col-md-11">
+                <input type="text" name="target_host[role_name][1]" class="form-control" placeholder="Enter role name">
+              </div>
+              <div class="col-md-1">&nbsp;</div>
+            </div>
+          </div>
+
+          <div class="row" id="host_name_placeholder1">
+            <div class="col-md-12">
+              <div class="col-md-11"><%= f.label :host_name %></div>
+              <div class="col-md-1">&nbsp;</div>
+            </div>
+            <div class="col-md-12">
+              <div class="col-md-11">
+                <input type="text" name="target_host[host_name][1][]" class="form-control" placeholder="Enter host name">
+              </div>
+              <div class="col-md-1">
+                <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>'.html_safe, "javascript:void(0);", :class => "btn btn-info btn-xs", :onclick => "add_host_fields(1);" %>
+              </div>
+            </div>
+          </div>
+      <% else %>
+      <% @target_host_data[:roles].each.with_index(1) do |roles,role_index| %>
+      <div class="row">
+        <div class="col-md-12">
+          <div class="col-md-11"><%= f.label :role_name %></div>
+          <div class="col-md-1">&nbsp;</div>
+        </div>
+        <div class="col-md-12">
+          <div class="col-md-11">
+            <input type="text" name="target_host[role_name][<%= role_index %>]" class="form-control" placeholder="Enter role name" value="<%= roles[:name] %>">
+          </div>
+          <div class="col-md-1">&nbsp;</div>
+        </div>
+      </div>
+
+      <div class="row" id="host_name_placeholder<%= role_index %>">
+        <% if roles[:hosts].blank? %>
+            <div class="col-md-12">
+              <div class="col-md-11"><%= f.label :host_name %></div>
+              <div class="col-md-1">&nbsp;</div>
+            </div>
+            <div class="col-md-12">
+              <div class="col-md-11">
+                <input type="text" name="target_host[host_name][<%= role_index %>][]" class="form-control" placeholder="Enter host name" value="">
+              </div>
+              <div class="col-md-1">
+                <a onclick="add_host_fields(<%= role_index %>);" href="javascript:void(0);" class="btn btn-info btn-xs">
+                  <span aria-hidden="true" class="glyphicon glyphicon-plus"></span>
+                </a>
+              </div>
+            </div>
+        <% else %>
+            <% roles[:hosts].each.with_index(1) do |host,host_index| %>
+                <div class="col-md-12">
+                  <div class="col-md-11"><%= f.label :host_name %></div>
+                  <div class="col-md-1">&nbsp;</div>
+                </div>
+                <div class="col-md-12">
+                  <div class="col-md-11">
+                    <input type="text" name="target_host[host_name][<%= role_index %>][]" class="form-control" placeholder="Enter host name" value="<%= host[:host_name] %>">
+                  </div>
+                  <div class="col-md-1">
+                    <% if host_index==1 %>
+                        <a onclick="add_host_fields(<%= role_index %>);" href="javascript:void(0);" class="btn btn-info btn-xs">
+                          <span aria-hidden="true" class="glyphicon glyphicon-plus"></span>
+                        </a>
+                    <% end %>
+                  </div>
+                </div>
+            <% end %>
+        <% end %>
+      </div>
+      <% end %>
+      <% end %>
+    </div>
+
+
+    <input type="hidden" id="role_count" value="<%= @target_host_data[:roles].blank? ? 1 : @target_host_data[:roles].count %>" />
+    <%= f.submit "Save",{class:"btn btn-primary"} %>
+    <%= link_to "Cancel", params[:page].blank? ? project_target_hosts_path : project_target_hosts_path(:page=>params[:page]), :class => "btn btn-default" %>
+<% end %>

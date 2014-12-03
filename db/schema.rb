@@ -33,11 +33,29 @@ ActiveRecord::Schema.define(version: 20141124130111) do
   add_index "clusters", ["project_id"], name: "index_clusters_on_project_id", using: :btree
 
   create_table "projects", force: true do |t|
-    t.string   "title",                      null: false
-    t.boolean  "status",     default: false, null: false
+    t.string   "title",                  null: false
+    t.integer  "status",     default: 0, null: false
     t.datetime "created_at"
     t.datetime "updated_at"
   end
+
+  create_table "target_hosts", force: true do |t|
+    t.integer  "project_id",                                 null: false
+    t.string   "host_name"
+    t.string   "target_host_type",          default: "nmon", null: false
+    t.string   "role_name"
+    t.string   "executable_path"
+    t.string   "user_name"
+    t.integer  "sampling_interval",         default: 10,     null: false
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.string   "ssh_identity_file_name"
+    t.string   "ssh_identity_content_type"
+    t.integer  "ssh_identity_file_size"
+    t.datetime "ssh_identity_updated_at"
+  end
+
+  add_index "target_hosts", ["project_id"], name: "index_target_hosts_on_project_id", using: :btree
 
   create_table "test_plans", force: true do |t|
     t.integer  "project_id"

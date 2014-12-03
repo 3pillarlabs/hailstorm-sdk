@@ -7,6 +7,8 @@ class TestPlan < ActiveRecord::Base
   validates :jmx_file_name, :presence => { :message => " is empty, please upload a valid JMX file" }
   attr_accessor :property_name, :property_value
 
+  after_create :check_project_testplans
+
   def getProjectTestPlans(projectId)
     test_plans = TestPlan.where(:project_id => projectId)
     # test_plans = TestPlan.joins('RIGHT OUTER JOIN projects ON test_plans.project_id = projects.id').where('projects.id' => projectId).select("projects.title, test_plans.*")
@@ -22,4 +24,9 @@ class TestPlan < ActiveRecord::Base
     testPlan = TestPlan.where(id: testPlanId).select("properties").take
     return testPlan.properties
   end
+
+  def check_project_testplans
+    project.transition_state if project.test_plans.count==1
+  end
+
 end
