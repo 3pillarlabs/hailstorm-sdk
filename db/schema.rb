@@ -16,16 +16,18 @@ ActiveRecord::Schema.define(version: 20141202114046) do
   create_table "clusters", force: true do |t|
     t.integer  "project_id",                                         null: false
     t.string   "name",                      default: "amazon_cloud", null: false
-    t.string   "access_key",                                         null: false
-    t.string   "secret_key",                                         null: false
-    t.string   "region",                                             null: false
-    t.string   "instance_type",                                      null: false
+    t.string   "access_key"
+    t.string   "secret_key"
+    t.string   "region"
+    t.string   "instance_type"
     t.datetime "created_at"
     t.datetime "updated_at"
     t.string   "ssh_identity_file_name"
     t.string   "ssh_identity_content_type"
     t.integer  "ssh_identity_file_size"
     t.datetime "ssh_identity_updated_at"
+    t.string   "user_name"
+    t.text     "machines"
   end
 
   add_index "clusters", ["project_id"], name: "index_clusters_on_project_id", using: :btree

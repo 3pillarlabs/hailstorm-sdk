@@ -89,14 +89,14 @@ class TargetHostsController < ApplicationController
         @target_host = TargetHost.new(target_host_parameter)
         if @target_host.save
           delete_target_hosts(old_ts)
-          format.html { redirect_to project_target_hosts_path(@project), notice: 'Target host was successfully created.' }
+          format.html { redirect_to project_target_hosts_path(@project), notice: 'Target host successfully configured.' }
         else
           formatted_target_host_data
           format.html { render :new }
         end
       elsif process_status==1
         delete_target_hosts(old_ts)
-        format.html { redirect_to project_target_hosts_path(@project), notice: 'Target host was successfully created.' }
+        format.html { redirect_to project_target_hosts_path(@project), notice: 'Target host successfully configured.' }
       end
 
 
