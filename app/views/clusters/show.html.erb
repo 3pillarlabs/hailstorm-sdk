@@ -9,10 +9,10 @@
 </div>
 <p>
   <strong>Type:</strong>
-  <%= @cluster.name %>
+  <%= @cluster.type %>
 </p>
 
-<% if @cluster.name == "amazon_cloud" %>
+<% if @cluster.type == "AmazonCloud" %>
 <p>
   <strong>Ssh identity:</strong>
   <%= @cluster.ssh_identity_file_name.blank? ? "" : link_to(@cluster.ssh_identity_file_name, project_cluster_path(@project,@cluster, format: :pem)) %>
@@ -37,7 +37,7 @@
   <strong>Instance type:</strong>
   <%= @cluster.instance_type %>
 </p>
-<% elsif  @cluster.name == "data_center" %>
+<% elsif  @cluster.type == "DataCenter" %>
 
     <p>
       <strong>User name:</strong>
@@ -56,6 +56,12 @@
 
 <% end %>
 <p>
-    <%= link_to 'Edit', params[:page].blank? ? edit_project_cluster_path(@project,@cluster):edit_project_cluster_path(@project,@cluster,:page=>params[:page]) %> |
-    <%= link_to 'Back', params[:page].blank? ? project_clusters_path : project_clusters_path(:page=>params[:page]) %>
+  <% if(@cluster.type == "AmazonCloud") %>
+      <%= link_to 'Edit', edit_project_amazon_cloud_path(@project,@cluster) %> |
+      <%= link_to 'Back', project_amazon_clouds_path %>
+  <% elsif(@cluster.type == "DataCenter") %>
+      <%= link_to 'Edit', edit_project_data_center_path(@project,@cluster) %> |
+      <%= link_to 'Back', project_data_centers_path %>
+  <% end %>
+
 </p>
