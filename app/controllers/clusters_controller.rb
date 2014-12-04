@@ -9,10 +9,7 @@ class ClustersController < ApplicationController
   def index
     @items_per_page = Rails.configuration.items_per_page
     @current_page = params[:page].blank? ? 1 : params[:page]
-    # @clusters = Cluster.where(:project_id=>params[:project_id]).pagination(@current_page, @items_per_page)
-    # cluster_obj = Cluster.new
     cluster_type = params[:type].blank? ? "DataCenter" : params[:type]
-    # @clusters = cluster_obj.getClustersOfType(cluster_type, params[:project_id]).pagination(@current_page, @items_per_page)
     if(cluster_type == "AmazonCloud")
       @clusters = @project.amazon_clouds.pagination(@current_page, @items_per_page)
     elsif(cluster_type == "DataCenter")
@@ -41,18 +38,29 @@ class ClustersController < ApplicationController
   # POST /clusters
   # POST /clusters.json
   def create
-    if(params[:cluster][:type] == "AmazonCloud")
+    cluster_type = nil
+    if(!params[:data_center].blank?)
+      cluster_type = params[:data_center][:type]
+    elsif(!params[:amazon_cloud].blank?)
+      cluster_type = params[:amazon_cloud][:type]
+    elsif(!params[:cluster].blank?)
+      cluster_type = params[:cluster][:type]
+    end
+
+    if(cluster_type == "AmazonCloud")
       @cluster = AmazonCloud.new(cluster_params)
-    elsif(params[:cluster][:type] == "DataCenter")
+    elsif(cluster_type == "DataCenter")
       @cluster = DataCenter.new(cluster_params)
     end
+
+
 
     respond_to do |format|
       if @cluster.save
         #format.html { redirect_to @cluster, notice: 'Cluster was successfully created.' }
-        if(params[:cluster][:type] == "AmazonCloud")
+        if(cluster_type == "AmazonCloud")
           format.html { redirect_to project_amazon_clouds_path(@project), notice: 'Amazon cloud cluster was successfully created.' }
-        elsif(params[:cluster][:type] == "DataCenter")
+        elsif(cluster_type == "DataCenter")
           format.html { redirect_to project_data_centers_path(@project), notice: 'Data center cluster was successfully created.' }
         end
 
@@ -84,17 +92,6 @@ class ClustersController < ApplicationController
     end
   end
 
-  # DELETE /clusters/1
-  # DELETE /clusters/1.json
-  def destroy
-    @cluster.destroy
-    respond_to do |format|
-      #format.html { redirect_to clusters_url, notice: 'Cluster was successfully destroyed.' }
-      format.html { redirect_to project_clusters_path(@project), notice: 'Cluster was successfully destroyed.' }
-      format.json { head :no_content }
-    end
-  end
-
   private
     # Use callbacks to share common setup or constraints between actions.
     def set_cluster
@@ -120,7 +117,10 @@ class ClustersController < ApplicationController
       elsif(params[:cluster][:type] == "AmazonCloud")
         params.require(:cluster).permit(:project_id, :type, :access_key, :secret_key, :ssh_identity, :region, :instance_type)
       elsif(params[:cluster][:type] == "DataCenter")
-        params[:cluster][:machines] = params[:cluster][:machines].reject{ |e| e.blank? }.to_json
+        params[:cluster][:machines] = params[:cluster][:machines].reject{ |e| e.blank? }
+        if(! params[:cluster][:machines].blank?)
+          params[:cluster][:machines] = params[:cluster][:machines].to_json
+        end
         params.require(:cluster).permit(:project_id, :type, :user_name, :machines, :ssh_identity)
       end
     end
@@ -136,7 +136,10 @@ class ClustersController < ApplicationController
   end
 
   def data_center_params
-    params[:data_center][:machines] = params[:data_center][:machines].reject{ |e| e.blank? }.to_json
+    params[:data_center][:machines] = params[:data_center][:machines].reject{ |e| e.blank? }
+    if(! params[:data_center][:machines].blank?)
+      params[:data_center][:machines] = params[:data_center][:machines].to_json
+    end
     params.require(:data_center).permit(:project_id, :type, :user_name, :machines, :ssh_identity)
   end
 end
