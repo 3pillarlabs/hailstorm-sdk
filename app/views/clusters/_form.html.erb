@@ -1,6 +1,6 @@
 <%#= debug @cluster.errors %>
 <%= form_for([@project,@cluster],multipart: true) do |f| %>
-  <% if @cluster.errors[:project].present? or @cluster.errors[:name].present? %>
+  <% if @cluster.errors[:project].present? or @cluster.errors[:type].present? %>
     <div class="alert alert-danger" role="alert">
       <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
       <span class="sr-only">Error:</span>
@@ -8,19 +8,26 @@
     </div>
   <% end %>
 
-
+    <%
+       cluster_type = 'cluster'
+       Cluster.types.each do |cluster_type_name|
+         if(params[:type] == cluster_type_name.to_s)
+           cluster_type = cluster_type_name.underscore.to_s
+         end
+       end
+    %>
 
     <div class="form-group">
-      <div><%= f.label :name, "Cluster Type" %></div>
+      <div><%= f.label :type, "Cluster Type" %></div>
       <div>
         <% if params['action'] == "new" %>
-            <%= f.label "name_amazon_cloud", "Amazon" %>
-            <%= f.radio_button(:name, "amazon_cloud", :onclick => "changeClusterType('amazon_cloud');", :checked => "checked") %>
-            <%= f.label "name_data_center", "Data Center" %>
-            <%= f.radio_button(:name, "data_center", :onclick => "changeClusterType('data_center');") %>
+            <% Cluster.types.each do |cluster_type_name| %>
+                <%= f.label "name_"+cluster_type_name.underscore, cluster_type_name.underscore.humanize %>
+                <%= f.radio_button(:type, cluster_type_name, :onclick => "changeClusterType('"+cluster_type_name.underscore+"');", :checked => cluster_type_name == "DataCenter") %>
+            <% end %>
         <% else %>
-            <%= @cluster.name %>
-            <%= f.hidden_field :name %>
+            <%= @cluster.type %>
+            <%= f.hidden_field :type %>
         <% end %>
       </div>
     </div>
@@ -36,7 +43,7 @@
       </div>
     </div>
 
-    <div id="amazon-form" <% if @cluster.name == "data_center" %> class="collapse"  <% end %> >
+    <div id="amazon-form" <% if @cluster.type == "DataCenter" or @cluster.type.blank? %> class="collapse"  <% end %> >
       <div class="form-group">
         <div><%= f.label :access_key %></div>
         <div><%= f.text_field :access_key,class:"form-control",placeholder:"Enter access key" %></div>
@@ -83,7 +90,7 @@
       <% end %>
     </div>
 
-    <div id="datacenter-form"  <% if @cluster.name == "amazon_cloud" or @cluster.name.blank? %> class="collapse"  <% end %>>
+    <div id="datacenter-form"  <% if @cluster.type == "AmazonCloud" %> class="collapse"  <% end %>>
       <div class="form-group">
         <div><%= f.label :user_name %></div>
         <div><%= f.text_field :user_name,class:"form-control",placeholder:"Enter user name of machine" %></div>
@@ -102,15 +109,15 @@
             <div class="col-xs-11" id="cluster_machines" align="left">
 
                 <% if @cluster.machines.blank? %>
-                  <div class="panel"><input type="text" name="cluster[machines][]" class = "form-control" placeholder="Enter IP address of machine"></div>
+                  <div class="panel"><input type="text" name="<%= cluster_type %>[machines][]" class = "form-control" placeholder="Enter IP address of machine"></div>
                 <% else %>
                     <% @cluster.machines.each do |machine| %>
-                      <div class="panel"><input type="text" name="cluster[machines][]" class = "form-control" placeholder="Enter IP address of machine" value="<%= machine %>"></div>
+                      <div class="panel"><input type="text" name="<%= cluster_type %>[machines][]" class = "form-control" placeholder="Enter IP address of machine" value="<%= machine %>"></div>
                     <% end %>
                 <% end %>
             </div>
             <div class="col-xs-1" align="left">
-              <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add'.html_safe, "javascript:void(0);", :class => "btn btn-info", :onclick => "add_machines_fields();" %>
+              <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add'.html_safe, "javascript:void(0);", :class => "btn btn-info", :onclick => "add_machines_fields('"+cluster_type+"');" %>
             </div>
         </div>
       </div>

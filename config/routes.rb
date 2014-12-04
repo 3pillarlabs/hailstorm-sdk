@@ -4,7 +4,9 @@ Rails.application.routes.draw do
 
   resources :projects do
     resources :clusters
-	  resources :test_plans
+    resources :data_centers, :controller => "clusters", :type => "DataCenter"
+    resources :amazon_clouds, :controller => "clusters", :type => "AmazonCloud"
+	resources :test_plans
     resources :target_hosts, :except => [:edit,:update]
   end
 

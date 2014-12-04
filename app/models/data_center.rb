@@ -1,0 +1,3 @@
+class DataCenter < Cluster
+
+end
