@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20141202114046) do
+ActiveRecord::Schema.define(version: 20141204121226) do
 
   create_table "clusters", force: true do |t|
     t.integer  "project_id",                null: false
@@ -28,6 +28,7 @@ ActiveRecord::Schema.define(version: 20141202114046) do
     t.string   "user_name"
     t.text     "machines"
     t.string   "type"
+    t.string   "title"
   end
 
   add_index "clusters", ["project_id"], name: "index_clusters_on_project_id", using: :btree

@@ -98,8 +98,23 @@
 
     <div id="datacenter-form"  <% if @cluster.type == "AmazonCloud" %> class="collapse"  <% end %>>
       <div class="form-group">
+        <div><%= f.label :title %></div>
+        <div><%= f.text_field :title,class:"form-control",placeholder:"Enter name of data center" %></div>
+      </div>
+      <% if @cluster.errors[:title].present? %>
+          <div class="alert alert-danger" role="alert">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Error:</span>
+            <%= @cluster.errors.full_message(:title, @cluster.errors[:title].first) %>
+          </div>
+      <% end %>
+
+      <div class="form-group">
         <div><%= f.label :user_name %></div>
-        <div><%= f.text_field :user_name,class:"form-control",placeholder:"Enter user name of machine" %></div>
+        <%
+           machine_user_name = ''
+        %>
+        <div><%= f.text_field :user_name,class:"form-control",placeholder:"Enter user name of machine", value: @cluster.user_name.nil? ? Rails.configuration.data_center_default_user_name : @cluster.user_name %></div>
       </div>
       <% if @cluster.errors[:user_name].present? %>
           <div class="alert alert-danger" role="alert">

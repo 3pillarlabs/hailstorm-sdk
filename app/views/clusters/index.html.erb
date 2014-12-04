@@ -48,7 +48,6 @@
       <table class="table table-hover table-bordered">
         <thead>
         <tr>
-          <th>S.No.</th>
           <th>SSH identity</th>
           <% if navType == "AmazonCloud" %>
               <th>Access key</th>
@@ -56,6 +55,7 @@
               <th>Region</th>
               <th>Instance type</th>
           <% elsif navType == "DataCenter" %>
+              <th>Title</th>
               <th>User name</th>
               <th>Machines</th>
           <% end %>
@@ -66,7 +66,6 @@
 
         <% @clusters.each.with_index(1) do |cluster, index| %>
             <tr>
-              <td><%= ((@current_page.to_i-1)*@items_per_page.to_i)+index %></td>
               <td><%= cluster.ssh_identity_file_name.blank? ? "" : link_to(cluster.ssh_identity_file_name, project_cluster_path(@project,cluster, format: :pem)) %></td>
               <% if navType == "AmazonCloud" %>
                   <td><%= cluster.access_key %></td>
@@ -74,6 +73,7 @@
                   <td><%= cluster.region %></td>
                   <td><%= cluster.instance_type %></td>
               <% else %>
+                  <td><%= cluster.title %></td>
                   <td><%= cluster.user_name %></td>
                   <%
                      if !cluster.machines.blank?
@@ -84,10 +84,8 @@
               <% end %>
               <td>
                 <% if(cluster.type == "AmazonCloud") %>
-                    <%= link_to 'Show', params[:page].blank? ? project_amazon_cloud_path(@project,cluster):project_amazon_cloud_path(@project,cluster,:page=>params[:page]) %><br/>
                     <%= link_to 'Edit', params[:page].blank? ? edit_project_amazon_cloud_path(@project,cluster):edit_project_amazon_cloud_path(@project,cluster,:page=>params[:page]) %>
                 <% elsif(cluster.type == "DataCenter") %>
-                    <%= link_to 'Show', params[:page].blank? ? project_data_center_path(@project,cluster):project_data_center_path(@project,cluster,:page=>params[:page]) %><br/>
                     <%= link_to 'Edit', params[:page].blank? ? edit_project_data_center_path(@project,cluster):edit_project_data_center_path(@project,cluster,:page=>params[:page]) %>
                 <% end %>
               </td>

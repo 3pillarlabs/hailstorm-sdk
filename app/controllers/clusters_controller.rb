@@ -117,11 +117,11 @@ class ClustersController < ApplicationController
       elsif(params[:cluster][:type] == "AmazonCloud")
         params.require(:cluster).permit(:project_id, :type, :access_key, :secret_key, :ssh_identity, :region, :instance_type)
       elsif(params[:cluster][:type] == "DataCenter")
-        params[:cluster][:machines] = params[:cluster][:machines].reject{ |e| e.blank? }
+        params[:cluster][:machines] = params[:cluster][:machines].uniq.reject{ |e| e.blank? }
         if(! params[:cluster][:machines].blank?)
           params[:cluster][:machines] = params[:cluster][:machines].to_json
         end
-        params.require(:cluster).permit(:project_id, :type, :user_name, :machines, :ssh_identity)
+        params.require(:cluster).permit(:project_id, :type, :user_name, :machines, :ssh_identity, :title)
       end
     end
 
@@ -136,10 +136,10 @@ class ClustersController < ApplicationController
   end
 
   def data_center_params
-    params[:data_center][:machines] = params[:data_center][:machines].reject{ |e| e.blank? }
+    params[:data_center][:machines] = params[:data_center][:machines].uniq.reject{ |e| e.blank? }
     if(! params[:data_center][:machines].blank?)
       params[:data_center][:machines] = params[:data_center][:machines].to_json
     end
-    params.require(:data_center).permit(:project_id, :type, :user_name, :machines, :ssh_identity)
+    params.require(:data_center).permit(:project_id, :type, :user_name, :machines, :ssh_identity, :title)
   end
 end

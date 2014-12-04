@@ -24,7 +24,6 @@
         <table class="table table-hover table-bordered">
           <thead>
               <tr>
-                <th>Project</th>
                 <th>JMX File Name</th>
                 <th>Action</th>
               </tr>
@@ -33,7 +32,6 @@
           <tbody>
           <% @test_plans.each do |test_plan| %>
               <tr>
-                <td><%= test_plan.project_id %></td>
                 <td><%= link_to test_plan.jmx_file_name, project_test_plan_path(test_plan.project_id, test_plan, format: :xml) %></td>
                 <td><%= link_to 'Set Properties', params[:page].blank? ? edit_project_test_plan_path(test_plan.project_id, test_plan):edit_project_test_plan_path(test_plan.project_id, test_plan,:page=>params[:page]), class: "btn btn-warning" %></td>
               </tr>

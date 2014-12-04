@@ -28,5 +28,6 @@ module HailstormWeb
     # config.i18n.default_locale = :de
     config.items_per_page = 3
     config.uploads_path = ":rails_root/uploads"
+    config.data_center_default_user_name = "ubuntu"
   end
 end

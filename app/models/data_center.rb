@@ -1,3 +1,3 @@
 class DataCenter < Cluster
-  validates :user_name, :machines, presence: true
+  validates :user_name, :machines, :title, presence: true
 end
