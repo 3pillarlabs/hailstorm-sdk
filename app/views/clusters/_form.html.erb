@@ -12,11 +12,17 @@
 
     <%
        cluster_type = 'cluster'
-       Cluster.types.each do |cluster_type_name|
-         if(params[:type] == cluster_type_name.to_s)
-           cluster_type = cluster_type_name.underscore.to_s
-         end
+       if(!params[:data_center].blank?)
+         cluster_type = params[:data_center][:type]
+       elsif(!params[:amazon_cloud].blank?)
+         cluster_type = params[:amazon_cloud][:type]
+       elsif(!params[:cluster].blank?)
+         cluster_type = params[:cluster][:type]
+       elsif(!params[:type].blank?)
+         cluster_type = params[:type]
        end
+
+       cluster_type = cluster_type.underscore
     %>
 
     <div class="form-group">
