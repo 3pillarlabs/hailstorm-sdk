@@ -1,13 +1,14 @@
+<p>
 <%#= link_to 'Edit', edit_project_path(@project) %>
 <%#= link_to 'Back', projects_path %>
 <div class="row">
   <div class="col-md-5">
-    <p>
+    <p class="h3">
       <strong>Title:</strong>
       <%= @project.title %>
     </p>
 
-    <p>
+    <p class="h3">
       <strong>Status:</strong>
       <%= project_status(@project.status) %>
     </p>
@@ -19,9 +20,9 @@
       </div>
       <div class="panel-body">
         <p>
-          <%= link_to "Test Plans", project_test_plans_path(@project) %><br/>
-          <%= link_to "Clusters", project_clusters_path(@project) %><br/>
-          <%= link_to "Target Hosts", project_target_hosts_path(@project) %><br/>
+          <%= link_to "Test Plans", project_test_plans_path(@project) %> (<%= @project.test_plans.count %>)<br/>
+          <%= link_to "Clusters", project_clusters_path(@project) %> (<%= @project.clusters.count %>)<br/>
+          <%= link_to "Target Hosts", project_target_hosts_path(@project) %> (<%= @project.target_hosts.count %>)<br/>
         </p>
       </div>
     </div>
@@ -30,3 +31,4 @@
   </div>
   <p><%= link_to "Back to Projects", params[:page].blank? ? projects_path():projects_path(:page=>params[:page]) %></p>
 </div>
+</p>

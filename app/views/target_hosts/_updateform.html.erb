@@ -55,37 +55,21 @@
       <label for="target_host_roles">Roles</label>
       <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>'.html_safe, "javascript:void(0);", :class => "btn btn-info btn-xs", :onclick => "add_role_host_fields();" %>
     </div>
+    <% if @target_host.errors[:role_name].present? %>
+        <div class="alert alert-danger" role="alert">
+          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+          <span class="sr-only">Error:</span>
+          <%= @target_host.errors[:role_name].first %>
+        </div>
+    <% elsif @target_host.errors[:host_name].present? %>
+        <div class="alert alert-danger" role="alert">
+          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+          <span class="sr-only">Error:</span>
+          <%= @target_host.errors[:host_name].first %>
+        </div>
+    <% end %>
 
     <div class="form-group" id="role_host_group_placeholder">
-      <% if @target_host_data[:roles].blank? %>
-          <div class="row">
-            <div class="col-md-12">
-              <div class="col-md-11"><%= f.label :role_name %></div>
-              <div class="col-md-1">&nbsp;</div>
-            </div>
-            <div class="col-md-12">
-              <div class="col-md-11">
-                <input type="text" name="target_host[role_name][1]" class="form-control" placeholder="Enter role name">
-              </div>
-              <div class="col-md-1">&nbsp;</div>
-            </div>
-          </div>
-
-          <div class="row" id="host_name_placeholder1">
-            <div class="col-md-12">
-              <div class="col-md-11"><%= f.label :host_name %></div>
-              <div class="col-md-1">&nbsp;</div>
-            </div>
-            <div class="col-md-12">
-              <div class="col-md-11">
-                <input type="text" name="target_host[host_name][1][]" class="form-control" placeholder="Enter host name">
-              </div>
-              <div class="col-md-1">
-                <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>'.html_safe, "javascript:void(0);", :class => "btn btn-info btn-xs", :onclick => "add_host_fields(1);" %>
-              </div>
-            </div>
-          </div>
-      <% else %>
       <% @target_host_data[:roles].each.with_index(1) do |roles,role_index| %>
       <div class="row">
         <div class="col-md-12">
@@ -101,43 +85,22 @@
       </div>
 
       <div class="row" id="host_name_placeholder<%= role_index %>">
-        <% if roles[:hosts].blank? %>
-            <div class="col-md-12">
-              <div class="col-md-11"><%= f.label :host_name %></div>
-              <div class="col-md-1">&nbsp;</div>
+        <% roles[:hosts].each.with_index(1) do |host,host_index| %>
+            <div class="col-md-offset-1 col-md-12">
+              <%= f.label :host_name %>
             </div>
-            <div class="col-md-12">
-              <div class="col-md-11">
-                <input type="text" name="target_host[host_name][<%= role_index %>][]" class="form-control" placeholder="Enter host name" value="">
-              </div>
-              <div class="col-md-1">
+            <div class="col-md-offset-1 col-md-9">
+              <input type="text" name="target_host[host_name][<%= role_index %>][]" class="form-control" placeholder="Enter host name" value="<%= host[:host_name] %>">
+            </div>
+            <% if host_index==1 %>
+              <div class="col-md-2">
                 <a onclick="add_host_fields(<%= role_index %>);" href="javascript:void(0);" class="btn btn-info btn-xs">
                   <span aria-hidden="true" class="glyphicon glyphicon-plus"></span>
                 </a>
               </div>
-            </div>
-        <% else %>
-            <% roles[:hosts].each.with_index(1) do |host,host_index| %>
-                <div class="col-md-12">
-                  <div class="col-md-11"><%= f.label :host_name %></div>
-                  <div class="col-md-1">&nbsp;</div>
-                </div>
-                <div class="col-md-12">
-                  <div class="col-md-11">
-                    <input type="text" name="target_host[host_name][<%= role_index %>][]" class="form-control" placeholder="Enter host name" value="<%= host[:host_name] %>">
-                  </div>
-                  <div class="col-md-1">
-                    <% if host_index==1 %>
-                        <a onclick="add_host_fields(<%= role_index %>);" href="javascript:void(0);" class="btn btn-info btn-xs">
-                          <span aria-hidden="true" class="glyphicon glyphicon-plus"></span>
-                        </a>
-                    <% end %>
-                  </div>
-                </div>
             <% end %>
         <% end %>
       </div>
-      <% end %>
       <% end %>
     </div>
 

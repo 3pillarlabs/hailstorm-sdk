@@ -34,6 +34,7 @@ class TargetHostsController < ApplicationController
   # POST /target_hosts
   # POST /target_hosts.json
   def create
+    #@target_host = TargetHost.new(target_host_params)
     #delete all records related to project
     old_ts = TargetHost.where(:project_id => @project.id)
     puts old_ts.inspect
@@ -47,7 +48,6 @@ class TargetHostsController < ApplicationController
 
     respond_to do |format|
       params[:target_host][:host_name].each do |key,value|
-
         #if role not empty then
         if !params[:target_host][:role_name][key].blank?
           target_host_parameter[:role_name] = params[:target_host][:role_name][key]
@@ -66,41 +66,24 @@ class TargetHostsController < ApplicationController
                 process_status = 1
               end
             end
-
-          end
-
-          #check if host empty then save data with role only
-          if target_host_parameter[:host_name].blank?
-            @target_host = TargetHost.new(target_host_parameter)
-            formatted_target_host_data
-            if !@target_host.save
-              format.html { render :new }
-            else
-              process_status = 1
-            end
           end
 
         end
-
       end
 
-      # if both role and host both are empty then
-      if target_host_parameter[:role_name].blank? and target_host_parameter[:host_name].blank?
+      if process_status==1
+        delete_target_hosts(old_ts)
+        format.html { redirect_to project_target_hosts_path(@project), notice: 'Target host successfully configured.' }
+      else
         @target_host = TargetHost.new(target_host_parameter)
-        if @target_host.save
-          delete_target_hosts(old_ts)
-          format.html { redirect_to project_target_hosts_path(@project), notice: 'Target host successfully configured.' }
-        else
+        if !@target_host.valid?
           formatted_target_host_data
           format.html { render :new }
         end
-      elsif process_status==1
-        delete_target_hosts(old_ts)
-        format.html { redirect_to project_target_hosts_path(@project), notice: 'Target host successfully configured.' }
       end
 
-
     end
+
   end
 
 
