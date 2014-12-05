@@ -1,15 +1,12 @@
 <div class="row-fluid">
-    <div class="page-header">
-      <div class="container">
-        <div class="col-md-10">
-          <h3>Test plans</h3>
-        </div>
-        <div align="right" class="col-md-2">
-          <!--<%= link_to 'New Test plan', new_project_test_plan_path, class: "btn btn-info" %>-->
-          <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add'.html_safe, new_project_test_plan_path, :class => "btn btn-info" %>
-        </div>
+  <div class="page-header">
+    <div class="btn-toolbar pull-right">
+      <div class="btn-group">
+        <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add'.html_safe, new_project_test_plan_path, :class => "btn btn-info" %>
       </div>
     </div>
+    <h2>Test plans</h2>
+  </div>
 </div>
 
 <% if @test_plans.blank? %>
