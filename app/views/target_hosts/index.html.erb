@@ -38,11 +38,6 @@
     </p>
 
     <p>
-      <strong>Sampling interval:</strong>
-      <%= @target_hosts[:sampling_interval] %>
-    </p>
-
-    <p>
       <strong>SSH identity:</strong>
       <%= @target_hosts[:ssh_identity_file_name].blank? ? "" : link_to(@target_hosts[:ssh_identity_file_name], project_target_host_path(@project,:id=>@target_hosts[:id], format: :pem)) %>
     </p>
