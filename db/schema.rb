@@ -11,11 +11,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20141202114046) do
+ActiveRecord::Schema.define(version: 20141205075908) do
 
   create_table "clusters", force: true do |t|
-    t.integer  "project_id",                                         null: false
-    t.string   "name",                      default: "amazon_cloud", null: false
+    t.integer  "project_id",                null: false
     t.string   "access_key"
     t.string   "secret_key"
     t.string   "region"
@@ -28,6 +27,7 @@ ActiveRecord::Schema.define(version: 20141202114046) do
     t.datetime "ssh_identity_updated_at"
     t.string   "user_name"
     t.text     "machines"
+    t.string   "type"
   end
 
   add_index "clusters", ["project_id"], name: "index_clusters_on_project_id", using: :btree
@@ -40,13 +40,13 @@ ActiveRecord::Schema.define(version: 20141202114046) do
   end
 
   create_table "target_hosts", force: true do |t|
-    t.integer  "project_id",                                 null: false
+    t.integer  "project_id",                                   null: false
     t.string   "host_name"
-    t.string   "target_host_type",          default: "nmon", null: false
+    t.string   "target_host_type",          default: "nmon",   null: false
     t.string   "role_name"
     t.string   "executable_path"
-    t.string   "user_name"
-    t.integer  "sampling_interval",         default: 10,     null: false
+    t.string   "user_name",                 default: "ubuntu"
+    t.integer  "sampling_interval",         default: 10,       null: false
     t.datetime "created_at"
     t.datetime "updated_at"
     t.string   "ssh_identity_file_name"

@@ -1,13 +1,11 @@
 <div class="row-fluid">
   <div class="page-header">
-    <div class="container">
-      <div class="col-md-10">
-        <h1>Projects</h1>
-      </div>
-      <div class="col-md-2" align="right">
-        <%= link_to 'New Project', new_project_path, class:"btn btn-info" %>
+    <div class="btn-toolbar pull-right">
+      <div class="btn-group">
+        <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add'.html_safe, new_project_path, class: 'btn btn-info' %>
       </div>
     </div>
+    <h2>Projects</h2>
   </div>
 </div>
 
@@ -22,7 +20,6 @@
       <table class="table table-hover table-bordered">
         <thead>
         <tr>
-          <th>S.No.</th>
           <th>Name</th>
           <th>Status</th>
           <th>Created</th>
@@ -33,7 +30,6 @@
         <tbody>
         <% @projects.each.with_index(1) do |project, index| %>
             <tr>
-              <td><%= ((@current_page.to_i-1)*@items_per_page.to_i)+index %></td>
               <td><%= project.title %></td>
               <td><%= project_status(project.status) %></td>
               <td><%= project.created_at.strftime('%F') %></td>
