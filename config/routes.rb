@@ -6,6 +6,7 @@ Rails.application.routes.draw do
     resources :clusters
     resources :data_centers, :controller => "clusters", :type => "DataCenter"
     resources :amazon_clouds, :controller => "clusters", :type => "AmazonCloud"
+    get "setup_project"
 	resources :test_plans
     resources :target_hosts, :except => [:edit,:update]
   end

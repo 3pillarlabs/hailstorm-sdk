@@ -10,6 +10,11 @@
     <p>
       <strong>Status:</strong>
       <%= project_status(@project.status) %>
+      <% if(project_status(@project.status) == "Configured" ) %>
+          <div>
+            <%= link_to "setup", project_setup_project_path(@project), class: "btn btn-primary" %><br/>
+          </div>
+      <% end %>
     </p>
   </div>
   <div class="col-md-7">

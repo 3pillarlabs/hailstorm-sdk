@@ -35,3 +35,7 @@ gem 'sass-rails', '~> 4.0.3'
 gem 'will_paginate-bootstrap', '~> 1.0.1'
 
 gem "paperclip", "~> 4.2"
+
+gem 'sidekiq'
+
+gem "hailstorm", :path => "/home/ravish/Projects/demosidekiq/hailstorm-gem/"

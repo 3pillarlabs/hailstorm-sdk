@@ -1,5 +1,6 @@
+require 'hailstorm_setup'
 class ProjectsController < ApplicationController
-  before_action :set_project, only: [:show, :edit, :update, :destroy]
+  before_action :set_project, only: [:show, :edit, :update, :destroy, :setup_project]
 
   # GET /projects
   # GET /projects.json
@@ -61,6 +62,21 @@ class ProjectsController < ApplicationController
       format.html { redirect_to projects_url, notice: 'Project was successfully destroyed.' }
       format.json { head :no_content }
     end
+  end
+
+  def setup_project
+    #Get test plan data for the project
+    @test_plans_data = @project.test_plans
+
+    #Get amazon cloud data for the project
+    @amazon_clouds_data = @project.amazon_clouds
+
+    #Get data center data for the project
+    @data_centers_data = @project.data_centers
+
+    #Create environment config file
+    #Submit job for project setup
+    # HailstormSetup.perform_async(@project.title,"/home/ravish/hailstorm_projects")
   end
 
   private
