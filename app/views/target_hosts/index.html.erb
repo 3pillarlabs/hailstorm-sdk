@@ -1,16 +1,13 @@
 <div class="row-fluid">
   <div class="page-header">
-    <div class="container">
-      <div class="col-md-10">
-        <h1>Target Hosts</h1>
-      </div>
-      <div class="col-md-2" align="right">
-        <%= link_to 'Configure'.html_safe, new_project_target_host_path, class: 'btn btn-info' %>
+    <div class="btn-toolbar pull-right">
+      <div class="btn-group">
+        <%= link_to 'Configure', new_project_target_host_path, class: 'btn btn-info' %>
       </div>
     </div>
+    <h2>Target Hosts</h2>
   </div>
 </div>
-
 
 <%#= debug @target_hosts %>
 <% if @target_hosts.blank? %>
@@ -41,11 +38,6 @@
     </p>
 
     <p>
-      <strong>Sampling interval:</strong>
-      <%= @target_hosts[:sampling_interval] %>
-    </p>
-
-    <p>
       <strong>SSH identity:</strong>
       <%= @target_hosts[:ssh_identity_file_name].blank? ? "" : link_to(@target_hosts[:ssh_identity_file_name], project_target_host_path(@project,:id=>@target_hosts[:id], format: :pem)) %>
     </p>
@@ -57,7 +49,7 @@
           <%= roles[:name] %>
         </p>
         <% roles[:hosts].each do |host| %>
-            <p>
+            <p class="col-md-offset-1">
               <strong>Host Name:</strong>
               <%= host[:host_name] %>
             </p>

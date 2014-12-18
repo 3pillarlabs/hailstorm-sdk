@@ -54,6 +54,20 @@
       <label for="target_host_roles">Roles</label>
       <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>'.html_safe, "javascript:void(0);", :class => "btn btn-info btn-xs", :onclick => "add_role_host_fields();" %>
     </div>
+    <% if @target_host.errors[:role_name].present? %>
+        <div class="alert alert-danger" role="alert">
+          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+          <span class="sr-only">Error:</span>
+          <%= @target_host.errors[:role_name].first %>
+        </div>
+    <% elsif @target_host.errors[:host_name].present? %>
+        <div class="alert alert-danger" role="alert">
+          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+          <span class="sr-only">Error:</span>
+          <%= @target_host.errors[:host_name].first %>
+        </div>
+    <% end %>
+
 
     <div class="form-group" id="role_host_group_placeholder">
       <div class="row">
@@ -70,17 +84,14 @@
       </div>
 
       <div class="row" id="host_name_placeholder1">
-        <div class="col-md-12">
-          <div class="col-md-11"><%= f.label :host_name %></div>
-          <div class="col-md-1">&nbsp;</div>
+        <div class="col-md-offset-1 col-md-12">
+          <%= f.label :host_name %>
         </div>
-        <div class="col-md-12">
-          <div class="col-md-11">
-            <input type="text" name="target_host[host_name][1][]" class="form-control" placeholder="Enter host name">
-          </div>
-          <div class="col-md-1">
-            <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>'.html_safe, "javascript:void(0);", :class => "btn btn-info btn-xs", :onclick => "add_host_fields(1);" %>
-          </div>
+        <div class="col-md-offset-1 col-md-9">
+          <input type="text" name="target_host[host_name][1][]" class="form-control" placeholder="Enter host name">
+        </div>
+        <div class="col-md-2">
+          <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>'.html_safe, "javascript:void(0);", :class => "btn btn-info btn-xs", :onclick => "add_host_fields(1);" %>
         </div>
       </div>
     </div>

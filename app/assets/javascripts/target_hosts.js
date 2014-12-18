@@ -4,17 +4,11 @@
 function add_host_fields(role_key)
 {
     //alert("host  "+role_key);
-    var propertiesHTML = '<div class="col-md-12">'+
-        '<div class="col-md-11">'+
+    var propertiesHTML = '<div class="col-md-offset-1 col-md-12">'+
         '<label for="target_host_host_name">Host name</label>'+
         '</div>'+
-        '<div class="col-md-1">&nbsp;</div>'+
-        '</div>'+
-        '<div class="col-md-12">'+
-        '<div class="col-md-11">'+
+        '<div class="col-md-offset-1 col-md-9">'+
         '<input type="text" placeholder="Enter host name" class="form-control" name="target_host[host_name]['+role_key+'][]">'+
-        '</div>'+
-        '<div class="col-md-1">&nbsp;</div>'
         '</div>';
     jQuery("#host_name_placeholder"+role_key).append(propertiesHTML);
 }
@@ -39,19 +33,14 @@ function add_role_host_fields()
         '</div>'+
         '</div>'+
         '<div class="row" id="host_name_placeholder'+roles_count+'">'+
-        '<div class="col-md-12">'+
-        '<div class="col-md-11">'+
+        '<div class="col-md-offset-1 col-md-12">'+
         '<label for="target_host_host_name">Host name</label>'+
         '</div>'+
-        '<div class="col-md-1">&nbsp;</div>'+
-        '</div>'+
-        '<div class="col-md-12">'+
-        '<div class="col-md-11">'+
+        '<div class="col-md-offset-1 col-md-9">'+
         '<input type="text" placeholder="Enter host name" class="form-control" name="target_host[host_name]['+roles_count+'][]">'+
         '</div>'+
-        '<div class="col-md-1">'+
+        '<div class="col-md-2">'+
         '<a onclick="add_host_fields('+roles_count+');" href="javascript:void(0);" class="btn btn-info btn-xs"><span aria-hidden="true" class="glyphicon glyphicon-plus"></span></a>'+
-        '</div>'+
         '</div>'+
         '</div>';
 
