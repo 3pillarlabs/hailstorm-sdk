@@ -1,4 +1,6 @@
 require 'hailstorm_setup'
+require 'fileutils'
+
 class ProjectsController < ApplicationController
   before_action :set_project, only: [:show, :edit, :update, :destroy, :setup_project]
 
@@ -66,17 +68,76 @@ class ProjectsController < ApplicationController
 
   def setup_project
     #Get test plan data for the project
-    @test_plans_data = @project.test_plans
+    test_plans_data = @project.test_plans
 
     #Get amazon cloud data for the project
-    @amazon_clouds_data = @project.amazon_clouds
+    amazon_clouds_data = @project.amazon_clouds
 
     #Get data center data for the project
-    @data_centers_data = @project.data_centers
+    data_centers_data = @project.data_centers
 
     #Create environment config file
+
+    #create enviroment file for app
+    env_file_dir_path = Rails.root.join(Rails.configuration.uploads_directory, 'configs', @project.id.to_s)
+    # puts "path: "+env_file_dir_path.to_s
+    FileUtils::mkdir_p env_file_dir_path
+    env_file_path = File.join(env_file_dir_path, 'environment.rb')
+
+    envstr = "# Hailstorm configuration \n"
+    envstr += "Hailstorm.application.config do |config|\n"
+
+    #JMeter configuration
+    envstr += "\n\n\t# This is the JMeter configuration\n"
+    envstr += "\tconfig.jmeter do |jmeter|\n"
+    envstr += "\t\tjmeter.properties do |map|\n"
+    envstr += "\t\t\tmap['ThreadGroup.loops_count'] = 1\n"
+    envstr += "\t\t\tmap['ThreadGroup.num_threads'] = 10\n"
+    envstr += "\t\t\tmap['ThreadGroup.ramp_time'] = 1\n"
+    envstr += "\t\tend\n"
+
+    # test_plans_data.each do |test_plan|
+    #   envstr += "\t\tjmeter.properties do |map|\n"
+    #   envstr += "\t\t\tmap['ThreadGroup.loops_count'] = 1\n"
+    #   envstr += "\t\t\tmap['ThreadGroup.num_threads'] = 10\n"
+    #   envstr += "\t\t\tmap['ThreadGroup.ramp_time'] = 1\n"
+    #   envstr += "\t\tend\n"
+    #
+    # end
+
+    envstr += "\tend\n"
+
+
+    #cluster configuration
+    envstr += "\n\n\t# EC2 configuration\n"
+    amazon_clouds_data.each do |amazon_cloud|
+      envstr += "\tconfig.clusters(:amazon_cloud) do |cluster|\n"
+      envstr += "\t\tcluster.access_key = '"+amazon_cloud.access_key+"'\n"
+      envstr += "\t\tcluster.secret_key = '"+amazon_cloud.secret_key+"'\n"
+      envstr += "\t\tcluster.region = '"+amazon_cloud.region+"'\n"
+      envstr += "\t\tcluster.instance_type = '"+amazon_cloud.instance_type+"'\n"
+      envstr += "\tend\n"
+    end
+
+    #Data Center Configuration
+    envstr += "\n\n\t# Data Center Configuration\n"
+    data_centers_data.each do |data_center|
+      envstr += "\tconfig.clusters(:data_center) do |cluster|\n"
+      machines = data_center.machines.gsub! "\"", "'"
+      envstr += "\t\tcluster.machines = "+machines+"\n"
+      envstr += "\t\tcluster.user_name = '"+data_center.user_name+"'\n"
+      envstr += "\t\tcluster.ssh_identity = '"+data_center.ssh_identity_file_name.to_s+"'\n"
+      envstr += "\t\tcluster.title = '"+data_center.title+"'\n"
+      envstr += "\tend\n"
+    end
+
+    envstr += "end"
+    #puts envstr
+
+    File.open(env_file_path, 'w') { |file| file.write(envstr) }
+
     #Submit job for project setup
-    # HailstormSetup.perform_async(@project.title,"/home/ravish/hailstorm_projects")
+    # HailstormSetup.perform_async(@project.title, Rails.configuration.project_setup_path)
   end
 
   private
