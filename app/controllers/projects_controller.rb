@@ -69,16 +69,18 @@ class ProjectsController < ApplicationController
     environment_data = Hash.new
 
     #Get test plan data for the project
-    environment_data['test_plans_data'] = @project.test_plans
+    environment_data['test_plans_data'] = @project.test_plans.as_json
 
     #Get amazon cloud data for the project
-    environment_data['amazon_clouds_data'] = @project.amazon_clouds
+    environment_data['amazon_clouds_data'] = @project.amazon_clouds.as_json
 
     #Get data center data for the project
-    environment_data['data_centers_data'] = @project.data_centers
+    environment_data['data_centers_data'] = @project.data_centers.as_json
+
+    upload_directory_path = Rails.root.join(Rails.configuration.uploads_directory)
 
     #Submit job for project setup
-    HailstormSetup.perform_async(@project.title, Rails.configuration.project_setup_path, @project.id, environment_data)
+    HailstormSetup.perform_async(@project.title, Rails.configuration.project_setup_path, upload_directory_path, @project.id, environment_data)
   end
 
   private
