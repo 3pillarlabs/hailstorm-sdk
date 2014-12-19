@@ -1,0 +1,10 @@
+    # EC2 configuration
+    <% amazon_clouds_data.each do |amazon_cloud| %>
+    config.clusters(:amazon_cloud) do |cluster|
+        cluster.access_key = '<%= amazon_cloud['access_key'] %>'
+        cluster.secret_key = '<%= amazon_cloud['secret_key'] %>'
+        cluster.region = '<%= amazon_cloud['region'] %>'
+        cluster.instance_type = '<%= amazon_cloud['instance_type'] %>'
+    end
+
+    <% end %>

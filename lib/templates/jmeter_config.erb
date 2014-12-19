@@ -1,0 +1,8 @@
+    # This is the JMeter configuration
+    config.jmeter do |jmeter|
+        jmeter.properties do |map|
+            map['ThreadGroup.loops_count'] = 1
+            map['ThreadGroup.num_threads'] = 10
+            map['ThreadGroup.ramp_time'] = 1
+        end
+    end
