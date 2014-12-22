@@ -22,8 +22,8 @@ class HailstormSetup
     data_center_template = Erubis::Eruby.new(File.read(template_directory+"/data_center.erb"))
 
     jmeter_config_str = jmeter_template.result()
-    ec2_config_str = ec2_config_template.result(:amazon_clouds_data => environment_data['amazon_clouds_data'])
-    data_center_config_str = data_center_template.result(:data_centers_data => environment_data['data_centers_data'])
+    ec2_config_str = environment_data['amazon_clouds_data'].blank? ? "" : ec2_config_template.result(:amazon_clouds_data => environment_data['amazon_clouds_data'])
+    data_center_config_str = environment_data['data_centers_data'].blank? ? "" : data_center_template.result(:data_centers_data => environment_data['data_centers_data'])
 
     hailstormObj = Hailstorm::Application.new
     app_directory = File.join(app_root_path, app_name)
