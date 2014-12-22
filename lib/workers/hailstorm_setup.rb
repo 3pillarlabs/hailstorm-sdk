@@ -43,6 +43,13 @@ class HailstormSetup
 
     end
 
+    #copy jmx file to app jmeter directory
+    sourcejmx_file_path = File.join(upload_directory_path, 'Jmx_Files', project_id.to_s, "/.")
+    destjmx_file_path = File.join(app_directory, 'jmeter/')
+
+    puts "**** copying JMX files from source: "+sourcejmx_file_path+" to destination: "+destjmx_file_path
+    FileUtils.cp_r sourcejmx_file_path, destjmx_file_path
+
     #create enviroment file for app
     env_file_path = File.join(app_directory, 'config/environment.rb')
     envstr = environment_template.result(:jmeter_config => jmeter_config_str, :ec2_config => ec2_config_str, :data_center_config => data_center_config_str)
@@ -52,14 +59,6 @@ class HailstormSetup
     app_boot_file_path = File.join(app_directory, 'config/boot.rb')
     #puts "app boot file path : "+app_boot_file_path
     Hailstorm::Application.initialize!(app_name,app_boot_file_path)
-
-    #copy jmx file to app jmeter directory
-    sourcejmx_file_path = File.join(upload_directory_path, 'Jmx_Files', project_id.to_s, "/.")
-    destjmx_file_path = File.join(app_directory, 'jmeter/')
-
-    puts "**** copying JMX files from source: "+sourcejmx_file_path+" to destination: "+destjmx_file_path
-    FileUtils.cp_r sourcejmx_file_path, destjmx_file_path
-
 
     #now setup app configuration
     #Hailstorm.application.interpret_command("setup")
