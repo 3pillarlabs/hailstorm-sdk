@@ -1,7 +1,7 @@
 require 'hailstorm_setup'
 
 class ProjectsController < ApplicationController
-  before_action :set_project, only: [:show, :edit, :update, :destroy, :setup_project]
+  before_action :set_project, only: [:show, :edit, :update, :destroy, :interpret_task]
 
   # GET /projects
   # GET /projects.json
@@ -65,27 +65,41 @@ class ProjectsController < ApplicationController
     end
   end
 
-  def setup_project
-    environment_data = Hash.new
+  #interprete gem tasks and call appropriate method
+  def interpret_task
+    respond_to do |format|
+      case params[:process]
+        when "setup"
+          setup_project
+          format.html { render :setup_project }
+        else
+          format.html { redirect_to @project, notice: 'Unidentified process command.' }
+      end
 
-    #Get test plan data for the project
-    environment_data['test_plans_data'] = @project.test_plans.as_json
-
-    #Get amazon cloud data for the project
-    environment_data['amazon_clouds_data'] = @project.amazon_clouds.as_json
-
-    #Get data center data for the project
-    environment_data['data_centers_data'] = @project.data_centers.as_json
-
-    upload_directory_path = Rails.root.join(Rails.configuration.uploads_directory)
-
-    #Submit job for project setup
-    HailstormSetup.perform_async(@project.title, Rails.configuration.project_setup_path, upload_directory_path, @project.id, environment_data)
+    end
   end
 
   private
     # Never trust parameters from the scary internet, only allow the white list through.
     def project_params
       params.require(:project).permit(:title, :status)
+    end
+
+    def setup_project
+      environment_data = Hash.new
+
+      #Get test plan data for the project
+      environment_data['test_plans_data'] = @project.test_plans.as_json
+
+      #Get amazon cloud data for the project
+      environment_data['amazon_clouds_data'] = @project.amazon_clouds.as_json
+
+      #Get data center data for the project
+      environment_data['data_centers_data'] = @project.data_centers.as_json
+
+      upload_directory_path = Rails.root.join(Rails.configuration.uploads_directory)
+
+      #Submit job for project setup
+      HailstormSetup.perform_async(@project.title, Rails.configuration.project_setup_path, upload_directory_path, @project.id, environment_data)
     end
 end
