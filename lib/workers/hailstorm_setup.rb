@@ -54,10 +54,11 @@ class HailstormSetup
     Hailstorm::Application.initialize!(app_name,app_boot_file_path)
 
     #copy jmx file to app jmeter directory
-    sourcejmx_file_path = File.join(upload_directory_path, 'Jmx_Files', project_id.to_s)
-    puts "**** jmx file path: "+sourcejmx_file_path
+    sourcejmx_file_path = File.join(upload_directory_path, 'Jmx_Files', project_id.to_s, "/.")
     destjmx_file_path = File.join(app_directory, 'jmeter/')
-    FileUtils.cp(sourcejmx_file_path,destjmx_file_path)
+
+    puts "**** copying JMX files from source: "+sourcejmx_file_path+" to destination: "+destjmx_file_path
+    FileUtils.cp_r sourcejmx_file_path, destjmx_file_path
 
 
     #now setup app configuration
