@@ -30,6 +30,14 @@ module ApplicationHelper
         "Partial Configured"
       when 2
         "Configured"
+      when 3
+        "Tests Set-up"
+      when 4
+        "Tests Started"
+      when 5
+        "Tests Stopped"
+      when 6
+        "Tests Aborted"
       else
         "Empty"
     end
