@@ -6,11 +6,12 @@ require 'erubis'
 class HailstormSetup
   include Sidekiq::Worker
 
-  def perform(app_name, app_root_path, upload_directory_path, project_id, environment_data)
+  def perform(app_name, app_root_path, upload_directory_path, project_id, environment_data, callback)
     puts "configure application"
     puts "app name : "+app_name
     puts "app root path : "+app_root_path
     puts "project id : "+project_id.to_s
+    puts "callback url: "+callback
 
     template_directory = File.join(Dir.pwd, 'lib', 'templates')
 
@@ -62,6 +63,14 @@ class HailstormSetup
     #now setup app configuration
     #Hailstorm.application.interpret_command("setup")
 
+    puts "callback to: "+callback
+    # uri = URI(callback)
+    # request = Net::HTTP::Get.new(uri.path)
+    # response = Net::HTTP.new(uri.host,uri.port) do |http|
+    #   http.request(request)
+    # end
+
+    system ("curl #{callback}")
     puts "application configuration ended"
   end
 
