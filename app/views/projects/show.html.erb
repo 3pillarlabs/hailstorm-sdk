@@ -1,6 +1,7 @@
 <p>
 <%#= link_to 'Edit', edit_project_path(@project) %>
 <%#= link_to 'Back', projects_path %>
+<%#= debug params %>
 <div class="row">
   <div class="col-md-5">
     <p class="h3">
@@ -28,17 +29,17 @@
 
           <div class="col-md-6">
             <div>
-              <%= link_to "setup", project_interpret_task_path(@project,:process => "setup"), class: ["btn","btn-primary", ("disabled" if(project_status(@project.status) != 'Configured'))] %><br/>
+              <%= link_to "setup", project_interpret_task_path(@project,:process => "setup"), class: ["btn","btn-primary", ("disabled" if(project_status(@project.status) != 'Configured' || params[:submit_action] == 'setup'))] %><br/>
             </div>
             <hr>
             <div>
-              <%= link_to "Start", project_interpret_task_path(@project,:process => "setup"), class: ["btn", "btn-success", ("disabled" if(project_status(@project.status) != 'Tests Set-up'))] %>&nbsp;
-              <%= link_to "Stop", project_interpret_task_path(@project,:process => "setup"), class: ["btn", "btn-warning", ("disabled" if(project_status(@project.status) != 'Tests Started'))] %>&nbsp;
-              <%= link_to "Abort", project_interpret_task_path(@project,:process => "setup"), class: ["btn", "btn-warning", ("disabled" if(project_status(@project.status) != 'Tests Started'))] %>&nbsp;
+              <%= link_to "Start", project_interpret_task_path(@project,:process => "started"), class: ["btn", "btn-success", ("disabled" if(project_status(@project.status) != 'Tests Set-up'))] %>&nbsp;
+              <%= link_to "Stop", project_interpret_task_path(@project,:process => "stopped"), class: ["btn", "btn-warning", ("disabled" if(project_status(@project.status) != 'Tests Started'))] %>&nbsp;
+              <%= link_to "Abort", project_interpret_task_path(@project,:process => "aborted"), class: ["btn", "btn-warning", ("disabled" if(project_status(@project.status) != 'Tests Started'))] %>&nbsp;
             </div>
             <hr>
             <div>
-              <%= link_to "Terminate", project_interpret_task_path(@project,:process => "setup"), class: ["btn", "btn-danger", ("disabled" if(@project.status < 3 ))] %><br/>
+              <%= link_to "Terminate", project_interpret_task_path(@project,:process => "terminated"), class: ["btn", "btn-danger", ("disabled" if(@project.status < 3 ))] %><br/>
             </div>
           </div>
         </div>

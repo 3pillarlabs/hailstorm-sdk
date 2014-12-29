@@ -1,7 +1,7 @@
 require 'hailstorm_setup'
 
 class ProjectsController < ApplicationController
-  before_action :set_project, only: [:show, :edit, :update, :destroy, :interpret_task]
+  before_action :set_project, only: [:show, :edit, :update, :destroy, :interpret_task, :update_status]
 
   # GET /projects
   # GET /projects.json
@@ -55,6 +55,34 @@ class ProjectsController < ApplicationController
     end
   end
 
+  def update_status
+    status = 0
+    case params[:status]
+      when "terminated"
+        status = 2
+      when 'setup'
+        status = 3
+      when 'started'
+        status = 4
+      when 'stopped'
+        status = 5
+      when 'aborted'
+        status = 6
+    end
+
+    if status> 0 then
+      params[:project] = Hash[:status => status]
+      if @project.update(project_params)
+        puts "status updated successfully"
+      else
+        raise "Some error occur, please try again."
+      end
+    else
+      raise "Invalid value for status!"
+    end
+    render nothing: true
+  end
+
   # DELETE /projects/1
   # DELETE /projects/1.json
   def destroy
@@ -71,9 +99,11 @@ class ProjectsController < ApplicationController
       case params[:process]
         when "setup"
           setup_project
-          format.html { render :setup_project }
+          format.html { redirect_to project_path(@project, :submit_action => "setup"), notice: 'Request for project set-up has been submitted, please check again for updated status.' }
+          format.json { render :show, status: :ok, location: @project }
         else
-          format.html { redirect_to @project, notice: 'Unidentified process command.' }
+          format.html { redirect_to project_path(@project), notice: 'Unidentified process command.' }
+          format.json { render :show, status: :ok, location: @project }
       end
 
     end
@@ -99,7 +129,9 @@ class ProjectsController < ApplicationController
 
       upload_directory_path = Rails.root.join(Rails.configuration.uploads_directory)
 
+      callback = url_for(:action => 'update_status', :status => "setup")
+
       #Submit job for project setup
-      HailstormSetup.perform_async(@project.title, Rails.configuration.project_setup_path, upload_directory_path, @project.id, environment_data)
+      HailstormSetup.perform_async(@project.title, Rails.configuration.project_setup_path, upload_directory_path, @project.id, environment_data, callback)
     end
 end
