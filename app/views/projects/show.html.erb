@@ -2,6 +2,7 @@
 <%#= link_to 'Edit', edit_project_path(@project) %>
 <%#= link_to 'Back', projects_path %>
 <%#= debug params %>
+
 <div class="row">
   <div class="col-md-5">
     <p class="h3">
@@ -53,29 +54,8 @@
 
       <div class="panel-body logs-console">
         <div class="row">
-          <div class="col-md-12">
-              <ul>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-                <li>Sample log 1 - this is a sample log</li>
-              </ul>
+          <div class="col-md-12" id="logsResults">
+            <%= @logs %>
           </div>
 
         </div>
@@ -88,3 +68,6 @@
   <p><%= link_to "Back to Projects", params[:page].blank? ? projects_path():projects_path(:page=>params[:page]) %></p>
 </div>
 </p>
+<script language="JavaScript">
+    refreshLogs('<%= project_read_logs_path(@project) %>');
+</script>

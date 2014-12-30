@@ -8,6 +8,7 @@ Rails.application.routes.draw do
     resources :amazon_clouds, :controller => "clusters", :type => "AmazonCloud"
     get "interpret_task"
     get "update_status"
+    get "read_logs"
 	resources :test_plans
     resources :target_hosts, :except => [:edit,:update]
   end

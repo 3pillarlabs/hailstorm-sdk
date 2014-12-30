@@ -14,6 +14,12 @@ class ProjectsController < ApplicationController
   # GET /projects/1
   # GET /projects/1.json
   def show
+    file_name = "/home/ravish/log.txt"
+    # file_name = Rails.root.join("log/development.log")
+    # puts "*********"+Rails.root.join("log/development.log").to_s
+    @logs = File.read(file_name)
+    # @logs = system "tail -f "+Rails.root.join("log/development.log").to_s
+    # @logs = system("tail -f "+file_name.to_s)
   end
 
   # GET /projects/new
@@ -107,6 +113,14 @@ class ProjectsController < ApplicationController
       end
 
     end
+  end
+
+  def read_logs
+    file_name = "/home/ravish/log.txt"
+    # puts File.read(file_name)
+    # file_name = Rails.root.join("log/development.log")
+    render :text => File.read(file_name)
+    # render :text => system("tail -f "+file_name.to_s)
   end
 
   private
