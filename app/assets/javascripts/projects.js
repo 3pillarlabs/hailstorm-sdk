@@ -6,10 +6,9 @@
     {
         setInterval(function(){
             jQuery.ajax({url:logsUri,success:function(result){
-//                alert(result)
                 jQuery("#logsResults").html(result);
             }});
-        }, 3000);
+        }, 5000);
     }
 
 
