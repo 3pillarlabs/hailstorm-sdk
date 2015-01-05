@@ -68,6 +68,6 @@
   <p><%= link_to "Back to Projects", params[:page].blank? ? projects_path():projects_path(:page=>params[:page]) %></p>
 </div>
 </p>
-<script language="JavaScript">
+<script type="text/javascript">
     refreshLogs('<%= project_read_logs_path(@project) %>');
 </script>
