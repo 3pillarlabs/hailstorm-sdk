@@ -118,7 +118,7 @@ class ProjectsController < ApplicationController
   def read_logs
     file_name = File.join(Rails.configuration.project_setup_path, @project.title, "log", Rails.configuration.project_logs_file)
     if(File.exist? (file_name))
-      render :text => File.read(file_name)
+      render :text => File.read(file_name).gsub!(/\n/, '<br />')
     else
       render :nothing => true
     end
