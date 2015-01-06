@@ -1,7 +1,7 @@
 require 'hailstorm_setup'
 
 class ProjectsController < ApplicationController
-  before_action :set_project, only: [:show, :edit, :update, :destroy, :interpret_task, :update_status]
+  before_action :set_project, only: [:show, :edit, :update, :destroy, :interpret_task, :update_status, :read_logs]
 
   # GET /projects
   # GET /projects.json
@@ -14,8 +14,12 @@ class ProjectsController < ApplicationController
   # GET /projects/1
   # GET /projects/1.json
   def show
-    file_name = "/home/ravish/log.txt"
-    @logs = File.read(file_name)
+    file_name = File.join(Rails.configuration.project_setup_path, @project.title, "log", Rails.configuration.project_logs_file)
+    if(File.exist? (file_name))
+      @logs = File.read(file_name)
+    else
+      @logs = ""
+    end
   end
 
   # GET /projects/new
@@ -112,8 +116,12 @@ class ProjectsController < ApplicationController
   end
 
   def read_logs
-    file_name = "/home/ravish/log.txt"
-    render :text => File.read(file_name)
+    file_name = File.join(Rails.configuration.project_setup_path, @project.title, "log", Rails.configuration.project_logs_file)
+    if(File.exist? (file_name))
+      render :text => File.read(file_name)
+    else
+      render :nothing => true
+    end
   end
 
   private
