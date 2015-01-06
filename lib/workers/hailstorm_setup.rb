@@ -31,6 +31,11 @@ class HailstormSetup
       #create app directory structure
       hailstormObj.create_project(app_root_path,app_name)
 
+      #place log4j file in config directory of project
+      log_source_file_path = File.join(Dir.pwd, 'lib', 'templates/log4j.xml')
+      log_dest_file_path = File.join(app_directory, 'config/')
+      FileUtils.cp log_source_file_path, log_dest_file_path
+
       #change database.properties file and add password to it
       app_database_file_path = File.join(app_directory, 'config/database.properties')
       dbtext = File.read(app_database_file_path)
@@ -39,7 +44,7 @@ class HailstormSetup
       #change GEM hailstorm path
       app_gem_file_path = File.join(app_directory, 'Gemfile')
       gemtext = File.read(app_gem_file_path)
-      File.write(app_gem_file_path, gemtext.gsub(/"hailstorm"/, '"hailstorm", :path=> "/home/ravish/Projects/demosidekiq/hailstorm-gem/"'))
+      File.write(app_gem_file_path, gemtext.gsub(/"hailstorm"/, '"hailstorm", :path=> "/home/ravish/Projects/hail-web/hailstorm-gem/"'))
 
     end
 
@@ -61,14 +66,9 @@ class HailstormSetup
     Hailstorm::Application.initialize!(app_name,app_boot_file_path)
 
     #now setup app configuration
-    #Hailstorm.application.interpret_command("setup")
+    # Hailstorm.application.interpret_command("setup")
 
     puts "callback to: "+callback
-    # uri = URI(callback)
-    # request = Net::HTTP::Get.new(uri.path)
-    # response = Net::HTTP.new(uri.host,uri.port) do |http|
-    #   http.request(request)
-    # end
 
     system ("curl #{callback}")
     puts "application configuration ended"
