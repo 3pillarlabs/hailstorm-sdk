@@ -1,2 +1,2 @@
-#($LOAD_PATH << '.' << 'lib' << 'lib/workers').uniq!
-  require 'workers/hailstorm_setup'
+#Dir["lib/workers/*.rb"].each {|file| require file }
+require 'workers/hailstorm_process'
