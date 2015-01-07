@@ -1,5 +1,5 @@
 PATH
-  remote: /home/ravish/Projects/demosidekiq/hailstorm-gem
+  remote: /home/ravish/hailstorm_projects/hailstorm-gem
   specs:
     hailstorm (4.0.0-java)
       actionpack (= 4.1.6)
@@ -51,7 +51,7 @@ GEM
       thread_safe (~> 0.1)
       tzinfo (~> 1.1)
     arel (5.0.1.20140414130214)
-    autoprefixer-rails (4.0.2.1)
+    autoprefixer-rails (4.0.2.2)
       execjs
     aws-sdk (1.57.0)
       aws-sdk-v1 (= 1.57.0)
@@ -82,7 +82,7 @@ GEM
       json (~> 1.8)
       multi_xml (>= 0.5.2)
     i18n (0.6.11)
-    jbuilder (2.2.5)
+    jbuilder (2.2.6)
       activesupport (>= 3.0.0, < 5)
       multi_json (~> 1.2)
     jdbc-mysql (5.1.33)

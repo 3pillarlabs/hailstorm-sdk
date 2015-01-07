@@ -34,13 +34,14 @@
             </div>
             <hr>
             <div>
-              <%= link_to "Start", project_interpret_task_path(@project,:process => "started"), class: ["btn", "btn-success", ("disabled" if(project_status(@project.status) != 'Tests Set-up'))] %>&nbsp;
-              <%= link_to "Stop", project_interpret_task_path(@project,:process => "stopped"), class: ["btn", "btn-warning", ("disabled" if(project_status(@project.status) != 'Tests Started'))] %>&nbsp;
-              <%= link_to "Abort", project_interpret_task_path(@project,:process => "aborted"), class: ["btn", "btn-warning", ("disabled" if(project_status(@project.status) != 'Tests Started'))] %>&nbsp;
+              <%= link_to "Start", project_interpret_task_path(@project,:process => "start"), class: ["btn", "btn-success", ("disabled" if(project_status(@project.status) != 'Tests Set-up'))] %>&nbsp;
+              <%= link_to "Stop", project_interpret_task_path(@project,:process => "stop"), class: ["btn", "btn-warning", ("disabled" if(project_status(@project.status) != 'Tests Started'))] %>&nbsp;
+              <%= link_to "Abort", project_interpret_task_path(@project,:process => "abort"), class: ["btn", "btn-warning", ("disabled" if(project_status(@project.status) != 'Tests Started'))] %>&nbsp;
+              <%= link_to "Results", project_interpret_task_path(@project,:process => "results"), class: ["btn", "btn-success", ("disabled" if(project_status(@project.status) != 'Tests Stopped'))] %>&nbsp;
             </div>
             <hr>
             <div>
-              <%= link_to "Terminate", project_interpret_task_path(@project,:process => "terminated"), class: ["btn", "btn-danger", ("disabled" if(@project.status < 3 ))] %><br/>
+              <%= link_to "Terminate", project_interpret_task_path(@project,:process => "terminate"), class: ["btn", "btn-danger", ("disabled" if(@project.status < 3 ))] %><br/>
             </div>
           </div>
         </div>
@@ -69,5 +70,5 @@
 </div>
 </p>
 <script language="JavaScript">
-    refreshLogs('<%= project_read_logs_path(@project) %>');
+    //refreshLogs('<%#= project_read_logs_path(@project) %>');
 </script>
