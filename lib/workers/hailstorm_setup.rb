@@ -6,11 +6,13 @@ require 'erubis'
 class HailstormSetup
   include Sidekiq::Worker
 
+  @@hailstorm_pool = {}
   def perform(app_name, app_root_path, upload_directory_path, project_id, environment_data, callback)
+    project_id_str = project_id.to_s
     puts "configure application"
     puts "app name : "+app_name
     puts "app root path : "+app_root_path
-    puts "project id : "+project_id.to_s
+    puts "project id : "+project_id_str
     puts "callback url: "+callback
 
     template_directory = File.join(Dir.pwd, 'lib', 'templates')
@@ -63,16 +65,26 @@ class HailstormSetup
     #setup database by initializing application
     app_boot_file_path = File.join(app_directory, 'config/boot.rb')
     #puts "app boot file path : "+app_boot_file_path
-    Hailstorm::Application.initialize!(app_name,app_boot_file_path)
+    puts "project ids having objects in pool: "+@@hailstorm_pool.keys.inspect
+    if @@hailstorm_pool[project_id_str] == nil
+      puts "*** hailstorm object does not exists in pool for project id :"+project_id_str
+      Hailstorm::Application.initialize!(app_name,app_boot_file_path)
+      @@hailstorm_pool[project_id_str] = Hailstorm.application
+    else
+      puts "*** hailstorm object already exists in pool for project id :"+project_id_str
+    end
+
+    puts "2: project ids having objects in pool: "+@@hailstorm_pool.keys.inspect
+
+
 
     #now setup app configuration
-    # Hailstorm.application.interpret_command("setup")
+    @@hailstorm_pool[project_id_str].interpret_command("setup")
 
     puts "callback to: "+callback
 
-    system ("curl #{callback}")
+    # system ("curl #{callback}")
     puts "application configuration ended"
   end
-
 
 end
