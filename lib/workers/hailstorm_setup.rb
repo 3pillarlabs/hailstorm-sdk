@@ -7,7 +7,7 @@ class HailstormSetup
   include Sidekiq::Worker
 
   @@hailstorm_pool = {}
-  def perform(app_name, app_root_path, upload_directory_path, project_id, environment_data, callback)
+  def perform(app_name, app_root_path, upload_directory_path, project_id, environment_data, callback, command)
     project_id_str = project_id.to_s
     puts "configure application"
     puts "app name : "+app_name

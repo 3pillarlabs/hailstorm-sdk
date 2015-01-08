@@ -4,7 +4,7 @@ PATH
     hailstorm-redis (0.0.1)
 
 PATH
-  remote: /home/ravish/hailstorm_projects/hailstorm-gem
+  remote: /home/ravish/Projects/hail-web/hailstorm-gem
   specs:
     hailstorm (4.0.0-java)
       actionpack (= 4.1.6)
