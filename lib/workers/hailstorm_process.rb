@@ -2,6 +2,7 @@ require 'sidekiq'
 require 'hailstorm/application'
 require 'fileutils'
 require 'erubis'
+require 'logger/custom_logger'
 
 class HailstormProcess
   include Sidekiq::Worker
@@ -27,7 +28,7 @@ class HailstormProcess
   end
 
   def set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
-    app_boot_file_path = File.join(app_root_path, app_name, 'config/boot.rb')
+
     if @@hailstorm_pool[project_id_str] == nil
       puts "*** hailstorm object does not exists in pool for project id :"+project_id_str
 
@@ -38,7 +39,8 @@ class HailstormProcess
       custom_logger = CustomLogger.new(logfile)  #constant accessible anywhere
       custom_logger_config = { :level => Logger::INFO }
       custom_logger.level = custom_logger_config[:level] #change log level
-	  
+
+      app_boot_file_path = File.join(app_root_path, app_name, 'config/boot.rb')
       Hailstorm::Application.initialize!(app_name,app_boot_file_path,custom_logger)
       @@hailstorm_pool[project_id_str] = Hailstorm.application
     else
@@ -46,9 +48,6 @@ class HailstormProcess
     end
 
     puts "2: project ids having objects in pool: "+@@hailstorm_pool.keys.inspect
-
-    puts "****current project: "
-    puts @@hailstorm_pool[project_id_str].current_project.inspect
   end
 
 
@@ -94,7 +93,6 @@ class HailstormProcess
     File.open(env_file_path, 'w') { |file| file.write(envstr) }
 
     #setup database by initializing application
-    # app_boot_file_path = File.join(app_directory, 'config/boot.rb')
     set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
 
     #now setup app configuration
@@ -108,12 +106,10 @@ class HailstormProcess
   def process_request(app_name, app_root_path, project_id, command, callback)
     project_id_str = project_id.to_s
     puts "in "+command+" project worker of "+app_name
-    app_boot_file_path = File.join(app_root_path, app_name, 'config/boot.rb')
-    #Hailstorm::Application.initialize!(app_name,app_boot_file_path)
 
     set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
 
-    #now setup app configuration
+    #now process request command
     @@hailstorm_pool[project_id_str].interpret_command(command)
 
     puts "callback to: "+callback
@@ -125,10 +121,10 @@ class HailstormProcess
   def project_results(app_name, app_root_path, project_id)
     project_id_str = project_id.to_s
     puts "in project results worker of "+app_name
-    app_boot_file_path = File.join(app_root_path, app_name, 'config/boot.rb')
-    #Hailstorm::Application.initialize!(app_name,app_boot_file_path)
 
-    #now setup app configuration
+    set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
+
+    #now process request for results
     @@hailstorm_pool[project_id_str].interpret_command("results report")
 
     puts "application result process ended"
