@@ -164,7 +164,7 @@ class ProjectsController < ApplicationController
 
     def project_results
       puts "in project results"
-      HailstormProcess.perform_async(@project.title, Rails.configuration.project_setup_path, 'results')
+      HailstormProcess.perform_async(@project.title, Rails.configuration.project_setup_path, 'results', @project.id)
     end
 
 end

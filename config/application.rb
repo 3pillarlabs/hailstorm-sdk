@@ -30,7 +30,7 @@ module HailstormWeb
     config.uploads_directory = 'uploads'
     config.uploads_path = ":rails_root/"+config.uploads_directory
     config.data_center_default_user_name = "ubuntu"
-    config.project_setup_path = "/home/ravish/hailstorm_projects"
+    config.project_setup_path = "/home/ravish/hailstorm_projects/hailstorm_projects"
     config.project_logs_file = "hailstorm_status.log"
   end
 end
