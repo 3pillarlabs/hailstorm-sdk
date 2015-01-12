@@ -31,6 +31,8 @@ module Hailstorm
 
   mattr_accessor :application
 
+  mattr_accessor :custom_logger
+
   # Directory name used to store database and other files.
   def self.db_dir
     "db"

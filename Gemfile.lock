@@ -70,7 +70,7 @@ GEM
     jdbc-mysql (5.1.33)
     jruby-openssl (0.9.5-java)
     json (1.8.1-java)
-    minitest (5.4.3)
+    minitest (5.5.0)
     multi_json (1.10.1)
     multi_xml (0.5.5)
     net-sftp (2.1.2)

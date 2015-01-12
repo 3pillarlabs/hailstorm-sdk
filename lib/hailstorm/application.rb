@@ -26,7 +26,7 @@ class Hailstorm::Application
   # @param [String] app_name the application name
   # @param [String] boot_file_path full path to application config/boot.rb
   # @return nil
-  def self.initialize!(app_name, boot_file_path)
+  def self.initialize!(app_name, boot_file_path, custom_logger=nil)
 
     # in included gem version of i18n this value is set to null by default
     # this will switch to default locale if in case of invalid locale
@@ -51,7 +51,14 @@ class Hailstorm::Application
     java.lang.System.setProperty("hailstorm.log.dir",
                                  File.join(Hailstorm.root, Hailstorm.log_dir))
 
-    ActiveRecord::Base.logger = logger
+    if(custom_logger)
+      Hailstorm.custom_logger = custom_logger
+      ActiveRecord::Base.logger = custom_logger
+    else
+      ActiveRecord::Base.logger = logger
+    end
+
+    #ActiveRecord::Base.logger = logger
     Hailstorm.application = self.new
     Hailstorm.application.clear_tmp_dir()
     Hailstorm.application.check_for_updates()
