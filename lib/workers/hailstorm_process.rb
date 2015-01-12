@@ -34,8 +34,6 @@ class HailstormProcess
       @@hailstorm_pool[project_id_str] = Hailstorm.application
     else
       puts "*** hailstorm object already exists in pool for project id :"+project_id_str
-      Hailstorm::Application.initialize!(app_name,app_boot_file_path)
-      @@hailstorm_pool[project_id_str] = Hailstorm.application
     end
 
     puts "2: project ids having objects in pool: "+@@hailstorm_pool.keys.inspect
