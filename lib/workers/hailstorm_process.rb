@@ -30,7 +30,16 @@ class HailstormProcess
     app_boot_file_path = File.join(app_root_path, app_name, 'config/boot.rb')
     if @@hailstorm_pool[project_id_str] == nil
       puts "*** hailstorm object does not exists in pool for project id :"+project_id_str
-      Hailstorm::Application.initialize!(app_name,app_boot_file_path)
+
+      #create custom_logger instance
+      log_file_path = File.join(app_root_path, app_name, 'log/hailstorm_status.log')
+      logfile = File.open(log_file_path, File::WRONLY | File::APPEND | File::CREAT)
+      logfile.sync = true  #automatically flushes data to file
+      custom_logger = CustomLogger.new(logfile)  #constant accessible anywhere
+      custom_logger_config = { :level => Logger::INFO }
+      custom_logger.level = custom_logger_config[:level] #change log level
+	  
+      Hailstorm::Application.initialize!(app_name,app_boot_file_path,custom_logger)
       @@hailstorm_pool[project_id_str] = Hailstorm.application
     else
       puts "*** hailstorm object already exists in pool for project id :"+project_id_str
@@ -50,11 +59,6 @@ class HailstormProcess
     if !File.directory?(app_directory)
       #create app directory structure
       hailstormObj.create_project(app_root_path,app_name)
-
-      #place log4j file in config directory of project
-      log_source_file_path = File.join(Dir.pwd, 'lib', 'templates/log4j.xml')
-      log_dest_file_path = File.join(app_directory, 'config/')
-      FileUtils.cp log_source_file_path, log_dest_file_path
 
       #change database.properties file and add password to it
       app_database_file_path = File.join(app_directory, 'config/database.properties')
@@ -125,7 +129,7 @@ class HailstormProcess
     #Hailstorm::Application.initialize!(app_name,app_boot_file_path)
 
     #now setup app configuration
-    Hailstorm.application.interpret_command("results report")
+    @@hailstorm_pool[project_id_str].interpret_command("results report")
 
     puts "application result process ended"
   end
