@@ -2,6 +2,7 @@ require 'sidekiq'
 require 'hailstorm/application'
 require 'fileutils'
 require 'erubis'
+require 'logger/custom_logger'
 
 class HailstormProcess
   include Sidekiq::Worker
@@ -40,11 +41,6 @@ class HailstormProcess
       #create app directory structure
       hailstormObj.create_project(app_root_path,app_name)
 
-      #place log4j file in config directory of project
-      log_source_file_path = File.join(Dir.pwd, 'lib', 'templates/log4j.xml')
-      log_dest_file_path = File.join(app_directory, 'config/')
-      FileUtils.cp log_source_file_path, log_dest_file_path
-
       #change database.properties file and add password to it
       app_database_file_path = File.join(app_directory, 'config/database.properties')
       dbtext = File.read(app_database_file_path)
@@ -78,9 +74,17 @@ class HailstormProcess
     envstr = environment_template.result(:jmeter_config => jmeter_config_str, :ec2_config => ec2_config_str, :data_center_config => data_center_config_str)
     File.open(env_file_path, 'w') { |file| file.write(envstr) }
 
+    #create custom_logger instance
+    log_file_path = File.join(app_directory, 'log/hailstorm_status.log')
+    logfile = File.open(log_file_path, File::WRONLY | File::APPEND | File::CREAT)
+    logfile.sync = true  #automatically flushes data to file
+    custom_logger = CustomLogger.new(logfile)  #constant accessible anywhere
+    custom_logger_config = { :level => Logger::INFO }
+    custom_logger.level = custom_logger_config[:level] #change log level
+
     #setup database by initializing application
     app_boot_file_path = File.join(app_directory, 'config/boot.rb')
-    Hailstorm::Application.initialize!(app_name,app_boot_file_path)
+    Hailstorm::Application.initialize!(app_name,app_boot_file_path,custom_logger)
 
     #now setup app configuration
     Hailstorm.application.interpret_command("setup")
