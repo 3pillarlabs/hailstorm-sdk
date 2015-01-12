@@ -62,15 +62,15 @@ class ProjectsController < ApplicationController
   def update_status
     status = 0
     case params[:status]
-      when "terminated"
+      when "terminate"
         status = 2
       when 'setup'
         status = 3
-      when 'started'
+      when 'start'
         status = 4
-      when 'stopped'
+      when 'stop'
         status = 5
-      when 'aborted'
+      when 'abort'
         status = 6
     end
 
@@ -105,25 +105,13 @@ class ProjectsController < ApplicationController
           setup_project
           format.html { redirect_to project_path(@project, :submit_action => "setup"), notice: 'Request for project set-up has been submitted, please check again for updated status.' }
           format.json { render :show, status: :ok, location: @project }
-        when "start"
-          start_project
-          format.html { redirect_to project_path(@project, :submit_action => "start"), notice: 'Request for project start has been submitted, please check again for updated status.' }
-          format.json { render :show, status: :ok, location: @project }
-        when "stop"
-          stop_project
-          format.html { redirect_to project_path(@project, :submit_action => "stop"), notice: 'Request for project stop has been submitted, please check again for updated status.' }
-          format.json { render :show, status: :ok, location: @project }
-        when "abort"
-          abort_project
-          format.html { redirect_to project_path(@project, :submit_action => "abort"), notice: 'Request for project abort has been submitted, please check again for updated status.' }
+        when "start", "stop", "abort", "terminate"
+          submit_process(params[:process])
+          format.html { redirect_to project_path(@project, :submit_action => params[:process]), notice: 'Request for project '+params[:process]+' has been submitted, please check again for updated status.' }
           format.json { render :show, status: :ok, location: @project }
         when "results"
           project_results
           format.html { redirect_to project_path(@project, :submit_action => "results"), notice: 'Request for project results has been submitted, please check again for updated status.' }
-          format.json { render :show, status: :ok, location: @project }
-        when "terminate"
-          terminate_project
-          format.html { redirect_to project_path(@project, :submit_action => "terminate"), notice: 'Request for project terminate has been submitted, please check again for updated status.' }
           format.json { render :show, status: :ok, location: @project }
         else
           format.html { redirect_to project_path(@project), notice: 'Unidentified process command.' }
@@ -165,36 +153,18 @@ class ProjectsController < ApplicationController
       callback = url_for(:action => 'update_status', :status => "setup")
 
       #Submit job for project setup
-      HailstormProcess.perform_async(@project.title, Rails.configuration.project_setup_path, 'setup', callback, upload_directory_path, @project.id, environment_data)
+      HailstormProcess.perform_async(@project.title, Rails.configuration.project_setup_path, 'setup', @project.id, callback, upload_directory_path, environment_data)
     end
 
-    def start_project
-      puts "in start project"
-      callback = url_for(:action => 'update_status', :status => "started")
-      HailstormProcess.perform_async(@project.title, Rails.configuration.project_setup_path, 'start', callback)
-    end
-
-    def stop_project
-      puts "in stop project"
-      callback = url_for(:action => 'update_status', :status => "stopped")
-      HailstormProcess.perform_async(@project.title, Rails.configuration.project_setup_path, 'stop', callback)
-    end
-
-    def abort_project
-      puts "in abort project"
-      callback = url_for(:action => 'update_status', :status => "aborted")
-      HailstormProcess.perform_async(@project.title, Rails.configuration.project_setup_path, 'abort', callback)
+    def submit_process(process)
+      puts "in "+process+" project"
+      callback = url_for(:action => 'update_status', :status => process)
+      HailstormProcess.perform_async(@project.title, Rails.configuration.project_setup_path, process, @project.id, callback)
     end
 
     def project_results
       puts "in project results"
       HailstormProcess.perform_async(@project.title, Rails.configuration.project_setup_path, 'results')
-    end
-
-    def terminate_project
-      puts "in terminate project"
-      callback = url_for(:action => 'update_status', :status => "terminated")
-      HailstormProcess.perform_async(@project.title, Rails.configuration.project_setup_path, 'terminate', callback)
     end
 
 end
