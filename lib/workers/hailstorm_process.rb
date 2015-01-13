@@ -2,6 +2,7 @@ require 'sidekiq'
 require 'hailstorm/application'
 require 'fileutils'
 require 'erubis'
+require 'logger/custom_logger'
 
 class HailstormProcess
   include Sidekiq::Worker
@@ -28,27 +29,28 @@ class HailstormProcess
 
   def set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
     app_boot_file_path = File.join(app_root_path, app_name, 'config/boot.rb')
+
+    #create custom_logger instance
+    log_file_path = File.join(app_root_path, app_name, 'log/hailstorm_status.log')
+    logfile = File.open(log_file_path, File::WRONLY | File::APPEND | File::CREAT)
+    logfile.sync = true  #automatically flushes data to file
+    custom_logger = CustomLogger.new(logfile)  #constant accessible anywhere
+    custom_logger_config = { :level => Logger::INFO }
+    custom_logger.level = custom_logger_config[:level] #change log level
+
     if @@hailstorm_pool[project_id_str] == nil
       puts "*** hailstorm object does not exists in pool for project id :"+project_id_str
-
-      #create custom_logger instance
-      log_file_path = File.join(app_root_path, app_name, 'log/hailstorm_status.log')
-      logfile = File.open(log_file_path, File::WRONLY | File::APPEND | File::CREAT)
-      logfile.sync = true  #automatically flushes data to file
-      custom_logger = CustomLogger.new(logfile)  #constant accessible anywhere
-      custom_logger_config = { :level => Logger::INFO }
-      custom_logger.level = custom_logger_config[:level] #change log level
-	  
       Hailstorm::Application.initialize!(app_name,app_boot_file_path,custom_logger)
       @@hailstorm_pool[project_id_str] = Hailstorm.application
     else
       puts "*** hailstorm object already exists in pool for project id :"+project_id_str
+      @@hailstorm_pool[project_id_str].set_hailstorm_configuration(app_name,app_boot_file_path,custom_logger)
     end
 
     puts "2: project ids having objects in pool: "+@@hailstorm_pool.keys.inspect
 
-    puts "****current project: "
-    puts @@hailstorm_pool[project_id_str].current_project.inspect
+    # puts "****current project: "
+    # puts @@hailstorm_pool[project_id_str].current_project.inspect
   end
 
 
