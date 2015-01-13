@@ -66,6 +66,27 @@ class Hailstorm::Application
     Hailstorm.application.check_database()
   end
 
+
+  def set_hailstorm_configuration(app_name, boot_file_path, custom_logger=nil)
+
+    Hailstorm.app_name = app_name
+    Hailstorm.root = File.expand_path("../..", boot_file_path)
+
+    java.lang.System.setProperty("hailstorm.log.dir",
+                                 File.join(Hailstorm.root, Hailstorm.log_dir))
+
+    if(custom_logger)
+      Hailstorm.custom_logger = custom_logger
+      ActiveRecord::Base.logger = custom_logger
+    else
+      ActiveRecord::Base.logger = logger
+    end
+
+    #ActiveRecord::Base.logger = logger
+    load_config(true)
+    check_database()
+  end
+
   # Constructor
   def initialize
     @multi_threaded = true
@@ -418,6 +439,7 @@ Continue using old version?
   # Pushes the monitoring artifacts to targets.
   def setup(*args)
 
+    puts "****** ARGS:::::: "+args.inspect
     force = (args.empty? ? false : true)
     current_project.setup(force)
 
@@ -432,6 +454,7 @@ Continue using old version?
 
     logger.info("Starting load generation and monitoring on targets...")
     redeploy = (args.empty? ? false : true)
+    puts "****** ARGS:::::: "+args.inspect+" redeploy:: "+redeploy.to_s
     current_project.start(redeploy)
 
     show_load_agents()
