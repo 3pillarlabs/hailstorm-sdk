@@ -110,12 +110,10 @@ class HailstormProcess
   def process_request(app_name, app_root_path, project_id, command, callback)
     project_id_str = project_id.to_s
     puts "in "+command+" project worker of "+app_name
-    app_boot_file_path = File.join(app_root_path, app_name, 'config/boot.rb')
-    #Hailstorm::Application.initialize!(app_name,app_boot_file_path)
 
     set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
 
-    #now setup app configuration
+    #now process request command
     @@hailstorm_pool[project_id_str].interpret_command(command)
 
     puts "callback to: "+callback
@@ -127,10 +125,10 @@ class HailstormProcess
   def project_results(app_name, app_root_path, project_id)
     project_id_str = project_id.to_s
     puts "in project results worker of "+app_name
-    app_boot_file_path = File.join(app_root_path, app_name, 'config/boot.rb')
-    #Hailstorm::Application.initialize!(app_name,app_boot_file_path)
 
-    #now setup app configuration
+    set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
+
+    #now process request for results
     @@hailstorm_pool[project_id_str].interpret_command("results report")
 
     puts "application result process ended"

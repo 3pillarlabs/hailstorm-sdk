@@ -38,14 +38,14 @@
     <orderEntry type="library" scope="PROVIDED" name="httparty (v0.13.1, RVM: jruby-1.7.16) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="i18n (v0.6.11, RVM: jruby-1.7.16) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="jdbc-mysql (v5.1.33, RVM: jruby-1.7.16) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="json (v1.8.1, RVM: jruby-1.7.16) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="minitest (v5.5.0, RVM: jruby-1.7.16) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="json (v1.8.2, RVM: jruby-1.7.16) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="minitest (v5.5.1, RVM: jruby-1.7.16) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="multi_xml (v0.5.5, RVM: jruby-1.7.16) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="net-sftp (v2.1.2, RVM: jruby-1.7.16) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="net-ssh (v2.9.1, RVM: jruby-1.7.16) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="nokogiri (v1.6.3.1, RVM: jruby-1.7.16) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="rack (v1.5.2, RVM: jruby-1.7.16) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="rack-test (v0.6.2, RVM: jruby-1.7.16) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="rack-test (v0.6.3, RVM: jruby-1.7.16) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="rake (v10.4.2, RVM: jruby-1.7.16) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="redis (v3.2.0, RVM: jruby-1.7.16) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="redis-namespace (v1.5.1, RVM: jruby-1.7.16) [gem]" level="application" />
