@@ -16,8 +16,9 @@ function clrInterval()
         }
     }
 }
-$(document).ready(clrInterval)
-$(document).on('page:load', clrInterval)
+
+jQuery(document).ready(clrInterval)
+jQuery(document).on('page:load', clrInterval)
 
 function refreshLogs(logsUri)
 {
@@ -32,6 +33,15 @@ function refreshLogs(logsUri)
         }});
     }, 5000);
 }
+
+jQuery(document).ready(function(){
+    jQuery("#checkUncheckAll").click(function(){
+        jQuery('.testsCheck').prop('checked', jQuery('#checkUncheckAll').is(":checked"));
+    });
+});
+
+
+
 
 
 
