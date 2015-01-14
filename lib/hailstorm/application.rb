@@ -51,15 +51,10 @@ class Hailstorm::Application
     java.lang.System.setProperty("hailstorm.log.dir",
                                  File.join(Hailstorm.root, Hailstorm.log_dir))
 
-    if(custom_logger)
-      Hailstorm.custom_logger = custom_logger
-      ActiveRecord::Base.logger = custom_logger
-    else
-      ActiveRecord::Base.logger = logger
-    end
-
-    #ActiveRecord::Base.logger = logger
     Hailstorm.application = self.new
+    Hailstorm.application.logger  = custom_logger
+    ActiveRecord::Base.logger = logger
+
     Hailstorm.application.clear_tmp_dir()
     Hailstorm.application.check_for_updates()
     Hailstorm.application.load_config(true)
@@ -67,7 +62,7 @@ class Hailstorm::Application
   end
 
 
-  def set_hailstorm_configuration(app_name, boot_file_path, custom_logger=nil)
+  def set_hailstorm_configuration(app_name, boot_file_path, custom_logger)
 
     Hailstorm.app_name = app_name
     Hailstorm.root = File.expand_path("../..", boot_file_path)
@@ -75,14 +70,8 @@ class Hailstorm::Application
     java.lang.System.setProperty("hailstorm.log.dir",
                                  File.join(Hailstorm.root, Hailstorm.log_dir))
 
-    if(custom_logger)
-      Hailstorm.custom_logger = custom_logger
-      ActiveRecord::Base.logger = custom_logger
-    else
-      ActiveRecord::Base.logger = logger
-    end
-
-    #ActiveRecord::Base.logger = logger
+    self.logger = custom_logger
+    ActiveRecord::Base.logger = logger
     load_config(true)
     check_database()
   end
@@ -319,6 +308,10 @@ Continue using old version?
     Dir["#{Hailstorm.tmp_path}/*"].each do |e|
       File.directory?(e) ? FileUtils.rmtree(e) : File.unlink(e)
     end
+  end
+
+  def logger=(new_logger)
+    @logger = new_logger
   end
 
   private
