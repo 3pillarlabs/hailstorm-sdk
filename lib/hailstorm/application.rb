@@ -61,9 +61,22 @@ class Hailstorm::Application
     Hailstorm.application.check_database()
   end
 
+  def stop_test_and_get_execution_cycle_data()
+    execution_cycle = current_project.current_execution_cycle
+    stop()
+    execution_cycle_data = [
+        execution_cycle.id,
+        execution_cycle.project_id,
+        execution_cycle.total_threads_count,
+        execution_cycle.avg_90_percentile.to_s,
+        execution_cycle.avg_tps.round(2).to_s,
+        execution_cycle.started_at,
+        execution_cycle.stopped_at
+    ]
+    return execution_cycle_data
+  end
 
   def set_hailstorm_configuration(app_name, boot_file_path, custom_logger)
-
     Hailstorm.app_name = app_name
     Hailstorm.root = File.expand_path("../..", boot_file_path)
 
@@ -432,7 +445,6 @@ Continue using old version?
   # Pushes the monitoring artifacts to targets.
   def setup(*args)
 
-    puts "****** ARGS:::::: "+args.inspect
     force = (args.empty? ? false : true)
     current_project.setup(force)
 
@@ -444,10 +456,8 @@ Continue using old version?
 
   # Starts the load generation and monitoring on targets
   def start(*args)
-
     logger.info("Starting load generation and monitoring on targets...")
     redeploy = (args.empty? ? false : true)
-    puts "****** ARGS:::::: "+args.inspect+" redeploy:: "+redeploy.to_s
     current_project.start(redeploy)
 
     show_load_agents()
