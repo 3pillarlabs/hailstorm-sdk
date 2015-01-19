@@ -18,7 +18,9 @@ class HailstormProcess
     case app_process
       when 'setup'
         project_setup(app_name, app_root_path, callback, upload_directory_path, project_id, environment_data)
-      when 'start', 'stop', 'abort', 'terminate'
+      when 'stop'
+        project_stop(app_name, app_root_path, project_id, callback)
+      when 'start', 'abort', 'terminate'
         process_request(app_name, app_root_path, project_id, app_process, callback)
       when 'results'
         project_results(app_name, app_root_path, project_id)
@@ -33,18 +35,18 @@ class HailstormProcess
     #create custom_logger instance
     log_file_path = File.join(app_root_path, app_name, 'log/hailstorm_status.log')
     logfile = File.open(log_file_path, File::WRONLY | File::APPEND | File::CREAT)
-    logfile.sync = true  #automatically flushes data to file
-    custom_logger = CustomLogger.new(logfile)  #constant accessible anywhere
-    custom_logger_config = { :level => Logger::INFO }
+    logfile.sync = true #automatically flushes data to file
+    custom_logger = CustomLogger.new(logfile) #constant accessible anywhere
+    custom_logger_config = {:level => Logger::INFO}
     custom_logger.level = custom_logger_config[:level] #change log level
 
     if @@hailstorm_pool[project_id_str] == nil
       puts "*** hailstorm object does not exists in pool for project id :"+project_id_str
-      Hailstorm::Application.initialize!(app_name,app_boot_file_path,custom_logger)
+      Hailstorm::Application.initialize!(app_name, app_boot_file_path, custom_logger)
       @@hailstorm_pool[project_id_str] = Hailstorm.application
     else
       puts "*** hailstorm object already exists in pool for project id :"+project_id_str
-      @@hailstorm_pool[project_id_str].set_hailstorm_configuration(app_name,app_boot_file_path,custom_logger)
+      @@hailstorm_pool[project_id_str].set_hailstorm_configuration(app_name, app_boot_file_path, custom_logger)
     end
 
     puts "2: project ids having objects in pool: "+@@hailstorm_pool.keys.inspect
@@ -60,7 +62,7 @@ class HailstormProcess
     app_directory = File.join(app_root_path, app_name)
     if !File.directory?(app_directory)
       #create app directory structure
-      hailstormObj.create_project(app_root_path,app_name)
+      hailstormObj.create_project(app_root_path, app_name)
 
       #change database.properties file and add password to it
       app_database_file_path = File.join(app_directory, 'config/database.properties')
@@ -120,6 +122,23 @@ class HailstormProcess
     system ("curl #{callback}")
 
     puts "application "+command+" process ended"
+  end
+
+  def project_stop(app_name, app_root_path, project_id, callback)
+    project_id_str = project_id.to_s
+    puts "in stop project worker of "+app_name
+
+    set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
+
+    #now process request command
+    execution_cycle = @@hailstorm_pool[project_id_str].stop_test_and_get_execution_cycle_data()
+
+    puts "execution cycle: "+execution_cycle.inspect
+
+    puts "callback to: "+callback
+    system ("curl #{callback}")
+
+    puts "application stop process ended"
   end
 
   def project_results(app_name, app_root_path, project_id)
