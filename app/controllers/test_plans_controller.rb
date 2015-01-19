@@ -44,7 +44,7 @@ class TestPlansController < ApplicationController
 
     respond_to do |format|
       if @test_plan.save
-        format.html { redirect_to :project_test_plans, notice: 'Test plan was successfully created.' }
+        format.html { redirect_to :project_test_plans, notice: 'LoadTest plan was successfully created.' }
         format.json { render :show, status: :created, location: @test_plan }
       else
         format.html { render :new }
@@ -70,7 +70,7 @@ class TestPlansController < ApplicationController
 
     respond_to do |format|
       if @test_plan.update(:properties => properties_array.to_json)
-        format.html { redirect_to :project_test_plans, notice: 'Test plan was successfully updated.' }
+        format.html { redirect_to :project_test_plans, notice: 'LoadTest plan was successfully updated.' }
         format.json { render :show, status: :ok, location: @test_plan }
       else
         format.html { render :edit }

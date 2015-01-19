@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20141205075908) do
+ActiveRecord::Schema.define(version: 20150115113745) do
 
   create_table "clusters", force: true do |t|
     t.integer  "project_id",                null: false
@@ -32,6 +32,16 @@ ActiveRecord::Schema.define(version: 20141205075908) do
   end
 
   add_index "clusters", ["project_id"], name: "index_clusters_on_project_id", using: :btree
+
+  create_table "load_tests", force: true do |t|
+    t.integer  "execution_cycle_id"
+    t.integer  "project_id"
+    t.integer  "total_threads_count"
+    t.float    "avg_90_percentile"
+    t.float    "avg_tps"
+    t.datetime "started_at"
+    t.datetime "stopped_at"
+  end
 
   create_table "projects", force: true do |t|
     t.string   "title",                  null: false

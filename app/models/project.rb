@@ -1,6 +1,7 @@
 class Project < ActiveRecord::Base
   has_many :clusters, dependent: :destroy
   has_many :test_plans, dependent: :destroy
+  has_many :load_tests, dependent: :destroy
   has_many :target_hosts
   delegate :data_centers, :amazon_clouds, to: :clusters
 
