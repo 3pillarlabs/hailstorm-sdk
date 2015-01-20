@@ -76,6 +76,11 @@ class Hailstorm::Application
     return execution_cycle_data
   end
 
+  def check_if_all_tests_stopped
+    running_agents = current_project.check_status()
+    return running_agents.empty? ? true : false
+  end
+
   def set_hailstorm_configuration(app_name, boot_file_path, custom_logger)
     Hailstorm.app_name = app_name
     Hailstorm.root = File.expand_path("../..", boot_file_path)
