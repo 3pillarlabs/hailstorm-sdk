@@ -165,10 +165,12 @@ class HailstormProcess
 
     set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
 
-    if(@@hailstorm_pool[project_id_str].check_if_all_tests_stopped)
+    tests_status = @@hailstorm_pool[project_id_str].get_tests_status
+
+    if(tests_status == 'stopped')
       puts "all tests stopped now submitting job for stop"
       HailstormProcess.perform_async(app_name, app_root_path, 'stop', project_id, callback, nil, nil)
-    else
+    elsif(tests_status == 'running')
       sleep(10)
       puts "tests still running submitting job for status"
       HailstormProcess.perform_async(app_name, app_root_path, 'status', project_id, callback, nil, nil)
