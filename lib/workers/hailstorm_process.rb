@@ -22,6 +22,8 @@ class HailstormProcess
         project_stop(app_name, app_root_path, project_id, callback)
       when 'start', 'abort', 'terminate'
         process_request(app_name, app_root_path, project_id, app_process, callback)
+      when 'status'
+        project_status(app_name, app_root_path, project_id, callback)
       when 'results'
         project_results(app_name, app_root_path, project_id)
     end
@@ -118,6 +120,10 @@ class HailstormProcess
     #now process request command
     @@hailstorm_pool[project_id_str].interpret_command(command)
 
+    if(command == "start")
+      HailstormProcess.perform_async(app_name, app_root_path, 'status', project_id, callback, nil, nil)
+    end
+
     puts "callback to: "+callback
     system ("curl #{callback}")
 
@@ -151,6 +157,24 @@ class HailstormProcess
     @@hailstorm_pool[project_id_str].interpret_command("results report")
 
     puts "application result process ended"
+  end
+
+  def project_status(app_name, app_root_path, project_id, callback)
+    project_id_str = project_id.to_s
+    puts "in project status worker of "+app_name
+
+    set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
+
+    if(@@hailstorm_pool[project_id_str].check_if_all_tests_stopped)
+      puts "all tests stopped now submitting job for stop"
+      HailstormProcess.perform_async(app_name, app_root_path, 'stop', project_id, callback, nil, nil)
+    else
+      sleep(10)
+      puts "tests still running submitting job for status"
+      HailstormProcess.perform_async(app_name, app_root_path, 'status', project_id, callback, nil, nil)
+    end
+
+    puts "application status process ended"
   end
 
 end
