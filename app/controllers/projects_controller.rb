@@ -1,6 +1,6 @@
 class ProjectsController < ApplicationController
   before_action :set_project, only: [:show, :edit, :update, :destroy, :interpret_task, :update_status, :read_logs]
-  protect_from_forgery :except => [:tukka]
+
   # GET /projects
   # GET /projects.json
   def index
@@ -18,11 +18,6 @@ class ProjectsController < ApplicationController
     else
       @logs = ""
     end
-  end
-
-  def tukka
-     
-    render :text => "************this is tukka"+params.inspect
   end
 
   # GET /projects/new
