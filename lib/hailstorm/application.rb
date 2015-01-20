@@ -76,9 +76,15 @@ class Hailstorm::Application
     return execution_cycle_data
   end
 
-  def check_if_all_tests_stopped
-    running_agents = current_project.check_status()
-    return running_agents.empty? ? true : false
+  def get_tests_status
+    tests_status = nil
+    if(current_project.current_execution_cycle.nil?)
+      tests_status = 'empty'
+    else
+      running_agents = current_project.check_status()
+      tests_status = running_agents.empty? ? 'stopped' : 'running'
+    end
+    return tests_status
   end
 
   def set_hailstorm_configuration(app_name, boot_file_path, custom_logger)
