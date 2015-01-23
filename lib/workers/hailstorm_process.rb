@@ -3,6 +3,8 @@ require 'hailstorm/application'
 require 'fileutils'
 require 'erubis'
 require 'logger/custom_logger'
+require 'uri'
+require 'net/http'
 
 class HailstormProcess
   include Sidekiq::Worker
@@ -83,6 +85,11 @@ class HailstormProcess
     destjmx_file_path = File.join(app_directory, 'jmeter/')
     FileUtils.cp_r sourcejmx_file_path, destjmx_file_path
 
+    #copy ssh identity file to config
+    source_sshidentity_filepath = File.join(upload_directory_path, 'ssh_identity_Files', project_id_str, "/.")
+    dest_sshidentity_filepath = File.join(app_directory, 'config/')
+    FileUtils.cp_r source_sshidentity_filepath, dest_sshidentity_filepath
+
     #create enviroment file for app
     template_directory = File.join(Dir.pwd, 'lib', 'templates')
 
@@ -139,10 +146,15 @@ class HailstormProcess
     #now process request command
     execution_cycle = @@hailstorm_pool[project_id_str].stop_test_and_get_execution_cycle_data()
 
-    puts "execution cycle: "+execution_cycle.inspect
+    #puts "execution cycle: "+execution_cycle.inspect
 
-    puts "callback to: "+callback
-    system ("curl #{callback}")
+    callback_stop = callback+"&"+execution_cycle.to_query
+    url = URI.parse(callback_stop)
+    req = Net::HTTP::Get.new(url.to_s)
+    res = Net::HTTP.start(url.host, url.port) {|http|
+      http.request(req)
+    }
+    #puts res.body
 
     puts "application stop process ended"
   end
@@ -167,8 +179,9 @@ class HailstormProcess
 
     tests_status = @@hailstorm_pool[project_id_str].get_tests_status
 
-    if(tests_status == 'stopped')
+    if(tests_status == 'completed')
       puts "all tests stopped now submitting job for stop"
+      callback.gsub!('start', 'stop')
       HailstormProcess.perform_async(app_name, app_root_path, 'stop', project_id, callback, nil, nil)
     elsif(tests_status == 'running')
       sleep(10)
