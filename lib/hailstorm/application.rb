@@ -63,16 +63,18 @@ class Hailstorm::Application
 
   def stop_test_and_get_execution_cycle_data()
     execution_cycle = current_project.current_execution_cycle
+
     stop()
-    execution_cycle_data = [
-        execution_cycle.id,
-        execution_cycle.project_id,
-        execution_cycle.total_threads_count,
-        execution_cycle.avg_90_percentile.to_s,
-        execution_cycle.avg_tps.round(2).to_s,
-        execution_cycle.started_at,
-        execution_cycle.stopped_at
-    ]
+
+    execution_cycle_data = Hash.new
+    execution_cycle_data[:execution_cycle_id] = execution_cycle.id
+    execution_cycle_data[:project_id] = execution_cycle.project_id
+    execution_cycle_data[:total_threads_count] = execution_cycle.total_threads_count
+    execution_cycle_data[:avg_90_percentile] = execution_cycle.avg_90_percentile.to_s
+    execution_cycle_data[:avg_tps] = execution_cycle.avg_tps.round(2).to_s
+    execution_cycle_data[:started_at] = execution_cycle.started_at
+    execution_cycle_data[:stopped_at] = Time.now.utc
+
     return execution_cycle_data
   end
 
@@ -82,7 +84,7 @@ class Hailstorm::Application
       tests_status = 'empty'
     else
       running_agents = current_project.check_status()
-      tests_status = running_agents.empty? ? 'stopped' : 'running'
+      tests_status = running_agents.empty? ? 'completed' : 'running'
     end
     return tests_status
   end
