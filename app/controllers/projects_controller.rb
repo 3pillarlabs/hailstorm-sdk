@@ -1,5 +1,9 @@
+require 'rubygems'
+require 'zip'
+require "open-uri"
+
 class ProjectsController < ApplicationController
-  before_action :set_project, only: [:show, :edit, :update, :destroy, :interpret_task, :update_status, :read_logs]
+  before_action :set_project, only: [:show, :edit, :update, :destroy, :interpret_task, :update_status, :read_logs, :check_project_status, :export_initiate, :project_loadtest_results]
 
   # GET /projects
   # GET /projects.json
@@ -18,6 +22,12 @@ class ProjectsController < ApplicationController
     else
       @logs = ""
     end
+
+    #get load_test data
+    @load_tests = LoadTest.where(:project_id=>@project.id)
+
+    puts @load_tests.inspect
+
   end
 
   # GET /projects/new
@@ -60,6 +70,7 @@ class ProjectsController < ApplicationController
   end
 
   def update_status
+    puts params.inspect
     status = 0
     case params[:status]
       when "terminate"
@@ -70,6 +81,18 @@ class ProjectsController < ApplicationController
         status = 4
       when 'stop'
         status = 5
+
+        #save return result data
+        load_test_data = Hash.new
+        load_test_data[:execution_cycle_id] = params[:execution_cycle_id]
+        load_test_data[:project_id] = params[:project_id]
+        load_test_data[:total_threads_count] = params[:total_threads_count]
+        load_test_data[:avg_90_percentile] = params[:avg_90_percentile]
+        load_test_data[:avg_tps] = params[:avg_tps]
+        load_test_data[:started_at] = params[:started_at]
+        load_test_data[:stopped_at] = params[:stopped_at]
+        load_test = LoadTest.new(load_test_data)
+        load_test.save
       when 'abort'
         status = 6
     end
@@ -103,19 +126,19 @@ class ProjectsController < ApplicationController
       case params[:process]
         when "setup"
           setup_project
-          format.html { redirect_to project_path(@project, :submit_action => "setup"), notice: 'Request for project set-up has been submitted, please check again for updated status.' }
-          format.json { render :show, status: :ok, location: @project }
+          format.html { redirect_to project_path(@project, :submit_action => "setup"), notice: 'Request for project set-up has been submitted.' }
+          format.json {render :json => {"data" => 'Request for project set-up has been submitted.'}}
         when "start", "stop", "abort", "terminate"
           submit_process(params[:process])
-          format.html { redirect_to project_path(@project, :submit_action => params[:process]), notice: 'Request for project '+params[:process]+' has been submitted, please check again for updated status.' }
-          format.json { render :show, status: :ok, location: @project }
+          format.html { redirect_to project_path(@project, :submit_action => params[:process]), notice: 'Request for project '+params[:process]+' has been submitted.' }
+          format.json {render :json => {"data" => 'Request for project '+params[:process]+' has been submitted.'}}
         when "results"
           project_results
-          format.html { redirect_to project_path(@project, :submit_action => "results"), notice: 'Request for project results has been submitted, please check again for updated status.' }
-          format.json { render :show, status: :ok, location: @project }
+          format.html { redirect_to project_path(@project, :submit_action => "results"), notice: 'Request for project results has been submitted.' }
+          format.json {render :json => {"data" => 'Request for project results has been submitted.'}}
         else
           format.html { redirect_to project_path(@project), notice: 'Unidentified process command.' }
-          format.json { render :show, status: :ok, location: @project }
+          format.json {render :json => {"data" => 'Unidentified process command.'}}
       end
 
     end
@@ -128,6 +151,44 @@ class ProjectsController < ApplicationController
     else
       render :nothing => true
     end
+  end
+
+  def check_project_status
+    render :text => @project.status
+  end
+
+  def project_loadtest_results
+    render :text => "sandeep"
+  end
+
+  def export_initiate
+    download_report_path = File.join(Rails.configuration.project_setup_path, @project.title, "reports")
+    download_report_folders = {}
+    report_folder1 = File.join(download_report_path,"SEQUENCE-1")
+    report_folder2 = File.join(download_report_path,"SEQUENCE-3")
+
+    download_report_folders['folder1'] = report_folder1
+    download_report_folders['folder2'] = report_folder2
+
+    t = Tempfile.new("my-temp-filename-#{Time.now}")
+    Zip::OutputStream.open(t.path) do |z|
+      download_report_folders.each do |key,val|
+        Dir.glob(val+"/*").each do |item|
+          title = File.basename(item,".jtl")
+          title = title+key+".jtl"
+          z.put_next_entry("exportreports/#{title}")
+          url1 = item
+          url1_data = open(url1)
+          z.print IO.read(url1_data)
+        end
+      end
+    end
+
+    send_file t.path, :type => 'application/zip',
+              :disposition => 'attachment',
+              :filename => "exportreports.zip"
+
+    t.close
   end
 
   private

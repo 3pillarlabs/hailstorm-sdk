@@ -9,6 +9,9 @@ Rails.application.routes.draw do
     get "interpret_task"
     get "update_status"
     get "read_logs"
+    get "check_project_status"
+    get "export_initiate"
+    get "project_loadtest_results"
 	resources :test_plans
     resources :target_hosts, :except => [:edit,:update]
   end

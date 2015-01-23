@@ -8,7 +8,7 @@
 
     <p class="h3">
       <strong>Status:</strong>
-      <%= project_status(@project.status) %>
+      <span id="project_status"><%= project_status(@project.status) %></span>
     </p>
   </div>
 
@@ -16,8 +16,9 @@
     <div class="panel panel-default">
       <div class="panel-heading clearfix">
         <h3 class="panel-title pull-left">Tests Results</h3>
-        <div class="btn-group pull-right">
-          <a href="#" class="btn btn-primary btn-sm">Export Selected</a>
+        <div class="pull-right">
+          <%= link_to "Download Results", project_export_initiate_path(@project,:process => "download"), class: "btn btn-primary btn-sm" %>
+          <%= link_to "Export Results", project_export_initiate_path(@project,:process => "export"), class: "btn btn-primary btn-sm" %>
         </div>
       </div>
 
@@ -27,7 +28,6 @@
         <thead>
         <tr>
           <th><input type="checkbox" id="checkUncheckAll"></th>
-          <th>Test</th>
           <th>Threads</th>
           <th>90 %tile</th>
           <th>TPS</th>
@@ -36,33 +36,23 @@
         </tr>
         </thead>
         <tbody>
-        <tr>
-          <td><input type="checkbox" class="testsCheck"></td>
-          <td>Table cell</td>
-          <td>Table cell</td>
-          <td>Table cell</td>
-          <td>Table cell</td>
-          <td>Table cell</td>
-          <td>Table cell</td>
-        </tr>
-        <tr>
-          <td><input type="checkbox" class="testsCheck"></td>
-          <td>Table cell</td>
-          <td>Table cell</td>
-          <td>Table cell</td>
-          <td>Table cell</td>
-          <td>Table cell</td>
-          <td>Table cell</td>
-        </tr>
-        <tr>
-          <td><input type="checkbox" class="testsCheck"></td>
-          <td>Table cell</td>
-          <td>Table cell</td>
-          <td>Table cell</td>
-          <td>Table cell</td>
-          <td>Table cell</td>
-          <td>Table cell</td>
-        </tr>
+        <% if @load_tests.blank? %>
+            <tr>
+              <td colspan="7" class="text-center">No results available.</td>
+            </tr>
+        <% else %>
+            <% @load_tests.each.with_index(1) do |load_test, index| %>
+                <tr>
+                  <td><input type="checkbox" class="testsCheck" name="load_test[]" value="<%= load_test.execution_cycle_id %>"></td>
+                  <td><%= load_test.total_threads_count %></td>
+                  <td><%= load_test.avg_90_percentile %></td>
+                  <td><%= load_test.avg_tps %></td>
+                  <td><%= load_test.started_at %></td>
+                  <td><%= load_test.stopped_at %></td>
+                </tr>
+            <% end %>
+
+        <% end %>
         </tbody>
       </table>
         </div>
@@ -73,7 +63,7 @@
 
 <div class="row">
 
-  <div class="col-md-6">
+  <div class="col-md-5">
     <div class="panel panel-default">
       <div class="panel-heading">
         <h3 class="panel-title">Configuration</h3>
@@ -81,24 +71,23 @@
       <div class="panel-body">
         <div class="row">
           <div class="col-md-6">
-            <%= link_to "LoadTest Plans", project_test_plans_path(@project) %> (<%= @project.test_plans.count %>)<br/>
+            <%= link_to "Test Plans", project_test_plans_path(@project) %> (<%= @project.test_plans.count %>)<br/>
             <%= link_to "Clusters", project_clusters_path(@project) %> (<%= @project.clusters.count %>)<br/>
             <%= link_to "Target Hosts", project_target_hosts_path(@project) %> (<%= @project.target_hosts.count %>)<br/>
           </div>
 
           <div class="col-md-6">
             <div>
-              <%= link_to "setup", project_interpret_task_path(@project,:process => "setup"), class: ["btn","btn-primary", ("disabled" if(project_status(@project.status) != 'Configured' || params[:submit_action]))] %><br/>
+              <%= link_to "setup", project_interpret_task_path(@project,:process => "setup"), id: "project_setup", class: ["btn","btn-primary", "worker_task", ("disabled" if(project_status(@project.status) != 'Configured'))] %><br/>
             </div>
             <hr>
             <div>
-              <%= link_to "Start ", project_interpret_task_path(@project,:process => "start"), class: ["btn", "btn-success", ("disabled" if(project_status(@project.status) == 'Tests Started' || @project.status < 3  || params[:submit_action]))] %>&nbsp;
-              <%= link_to "Abort", project_interpret_task_path(@project,:process => "abort"), class: ["btn", "btn-warning", ("disabled" if(project_status(@project.status) != 'Tests Started' || params[:submit_action]))] %>&nbsp;
-              <%= link_to "Results", project_interpret_task_path(@project,:process => "results"), class: ["btn", "btn-success", ("disabled" if(project_status(@project.status) != 'Tests Stopped'))] %>&nbsp;
+              <%= link_to "Start ", project_interpret_task_path(@project,:process => "start"), id: "project_start", class: ["btn", "btn-success", "worker_task", ("disabled" if(!(project_status(@project.status) == 'ready to start' || project_status(@project.status) == 'Stopped' || project_status(@project.status) == 'Aborted')))] %>&nbsp;
+              <%= link_to "Abort", project_interpret_task_path(@project,:process => "abort"), id: "project_abort", class: ["btn", "btn-warning", "worker_task", ("disabled" if(project_status(@project.status) != 'Started'))] %>&nbsp;
             </div>
             <hr>
             <div>
-              <%= link_to "Terminate", project_interpret_task_path(@project,:process => "terminate"), class: ["btn", "btn-danger", ("disabled" if(@project.status < 3  || params[:submit_action]))] %><br/>
+              <%= link_to "Terminate", project_interpret_task_path(@project,:process => "terminate"), id: "project_terminate", class: ["btn", "btn-danger", "worker_task", ("disabled" if(@project.status < 3))] %><br/>
             </div>
           </div>
         </div>
@@ -106,7 +95,7 @@
     </div>
   </div>
 
-  <div class="col-md-6">
+  <div class="col-md-7">
     <div class="panel panel-primary">
       <div class="panel-heading">
         <h3 class="panel-title">Project Logs</h3>
@@ -126,4 +115,5 @@
 
 <script type="text/javascript">
     refreshLogs('<%= project_read_logs_path(@project) %>');
+    updateProject('<%= project_check_project_status_path(@project) %>', '<%= @project.status %>')
 </script>

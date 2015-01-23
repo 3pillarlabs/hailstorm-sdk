@@ -31,13 +31,13 @@ module ApplicationHelper
       when 2
         "Configured"
       when 3
-        "Tests Set-up"
+        "ready to start"
       when 4
-        "Tests Started"
+        "Started"
       when 5
-        "Tests Stopped"
+        "Stopped"
       when 6
-        "Tests Aborted"
+        "Aborted"
       else
         "Empty"
     end

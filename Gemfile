@@ -39,3 +39,5 @@ gem "paperclip", "~> 4.2"
 gem 'sidekiq'
 
 gem "hailstorm", :path => "/home/ravish/hailstorm_projects/hailstorm-gem/"
+
+gem 'rubyzip'
