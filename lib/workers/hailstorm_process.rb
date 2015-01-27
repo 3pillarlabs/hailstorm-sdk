@@ -11,7 +11,7 @@ class HailstormProcess
 
   @@hailstorm_pool = {}
 
-  def perform(app_name, app_root_path, app_process, project_id=nil, callback=nil, upload_directory_path=nil, environment_data=nil)
+  def perform(app_name, app_root_path, app_process, project_id=nil, callback=nil, upload_directory_path=nil, environment_data=nil, result_ids = nil)
     puts "configure application"
     puts "app name : "+app_name
     puts "app root path : "+app_root_path
@@ -28,6 +28,10 @@ class HailstormProcess
         project_status(app_name, app_root_path, project_id, callback)
       when 'results'
         project_results(app_name, app_root_path, project_id)
+      when 'download'
+        project_results_download(app_name, app_root_path, project_id, result_ids)
+      when 'export'
+        project_results_export(app_name, app_root_path, project_id, result_ids)
     end
 
     puts "application configuration ended"
@@ -190,6 +194,30 @@ class HailstormProcess
     end
 
     puts "application status process ended"
+  end
+
+  def project_results_download(app_name, app_root_path, project_id, result_ids)
+    project_id_str = project_id.to_s
+    puts "in project results export worker of "+app_name
+
+    set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
+
+    #now process request for results
+    @@hailstorm_pool[project_id_str].interpret_command("results report "+result_ids)
+
+    puts "application result export process ended"
+  end
+
+  def project_results_export(app_name, app_root_path, project_id, result_ids)
+    project_id_str = project_id.to_s
+    puts "in project results download worker of "+app_name
+
+    set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
+
+    #now process request for results
+    @@hailstorm_pool[project_id_str].interpret_command("results export "+result_ids)
+
+    puts "application result download process ended"
   end
 
 end
