@@ -12,6 +12,7 @@ Rails.application.routes.draw do
     get "check_project_status"
     get "export_initiate"
     get "project_loadtest_results"
+    get "update_loadtest_results"
 	resources :test_plans
     resources :target_hosts, :except => [:edit,:update]
   end

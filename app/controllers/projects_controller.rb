@@ -1,9 +1,10 @@
 require 'rubygems'
 require 'zip'
 require "open-uri"
+require 'securerandom'
 
 class ProjectsController < ApplicationController
-  before_action :set_project, only: [:show, :edit, :update, :destroy, :interpret_task, :update_status, :read_logs, :check_project_status, :export_initiate, :project_loadtest_results]
+  before_action :set_project, only: [:show, :edit, :update, :destroy, :interpret_task, :update_status, :read_logs, :check_project_status, :export_initiate, :update_loadtest_results]
 
   # GET /projects
   # GET /projects.json
@@ -157,38 +158,48 @@ class ProjectsController < ApplicationController
     render :text => @project.status
   end
 
-  def project_loadtest_results
-    render :text => "sandeep"
+  def update_loadtest_results
+
+    puts params.inspect
+
+    #get load_test data
+    load_tests = LoadTest.where('project_id = :projectid and id > (:resultid)',:projectid => @project.id, :resultid => params[:resultid])
+    puts load_tests.inspect
+
+    render :json => load_tests.to_json
   end
 
   def export_initiate
-    download_report_path = File.join(Rails.configuration.project_setup_path, @project.title, "reports")
-    download_report_folders = {}
-    report_folder1 = File.join(download_report_path,"SEQUENCE-1")
-    report_folder2 = File.join(download_report_path,"SEQUENCE-3")
-
-    download_report_folders['folder1'] = report_folder1
-    download_report_folders['folder2'] = report_folder2
-
-    t = Tempfile.new("my-temp-filename-#{Time.now}")
-    Zip::OutputStream.open(t.path) do |z|
-      download_report_folders.each do |key,val|
-        Dir.glob(val+"/*").each do |item|
-          title = File.basename(item,".jtl")
-          title = title+key+".jtl"
-          z.put_next_entry("exportreports/#{title}")
-          url1 = item
-          url1_data = open(url1)
-          z.print IO.read(url1_data)
-        end
-      end
-    end
-
-    send_file t.path, :type => 'application/zip',
-              :disposition => 'attachment',
-              :filename => "exportreports.zip"
-
-    t.close
+    # download_report_path = File.join(Rails.configuration.project_setup_path, @project.title, "reports")
+    # download_report_folders = {}
+    # report_folder1 = File.join(download_report_path,"SEQUENCE-1")
+    # report_folder2 = File.join(download_report_path,"SEQUENCE-3")
+    #
+    # download_report_folders['folder1'] = report_folder1
+    # download_report_folders['folder2'] = report_folder2
+    #
+    # t = Tempfile.new("my-temp-filename-#{Time.now}")
+    # Zip::OutputStream.open(t.path) do |z|
+    #   download_report_folders.each do |key,val|
+    #     Dir.glob(val+"/*").each do |item|
+    #       title = File.basename(item,".jtl")
+    #       title = title+key+".jtl"
+    #       z.put_next_entry("exportreports/#{title}")
+    #       url1 = item
+    #       url1_data = open(url1)
+    #       z.print IO.read(url1_data)
+    #     end
+    #   end
+    # end
+    #
+    # send_file t.path, :type => 'application/zip',
+    #           :disposition => 'attachment',
+    #           :filename => "exportreports.zip"
+    #
+    # t.close
+    # render :text => "sandeep"+params.inspect
+    request_id = project_results_download(params[:process], params[:ids])
+    render text: request_id
   end
 
   private
@@ -226,6 +237,15 @@ class ProjectsController < ApplicationController
     def project_results
       puts "in project results"
       HailstormProcess.perform_async(@project.title, Rails.configuration.project_setup_path, 'results', @project.id)
+    end
+
+
+    def project_results_download(type, ids)
+      request_id = SecureRandom.hex
+      puts "in project results download for type: "+type+" and ids: "+ids
+      callback = url_for(:action => 'update_status', :status => type, :request_id => request_id)
+      HailstormProcess.perform_async(@project.title, Rails.configuration.project_setup_path, type, @project.id, nil, nil, nil, ids)
+      return request_id
     end
 
 end
