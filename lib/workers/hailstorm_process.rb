@@ -26,12 +26,10 @@ class HailstormProcess
         process_request(app_name, app_root_path, project_id, app_process, callback)
       when 'status'
         project_status(app_name, app_root_path, project_id, callback)
-      when 'results'
-        project_results(app_name, app_root_path, project_id)
       when 'download'
-        project_results_download(app_name, app_root_path, project_id, result_ids)
+        project_results_download(app_name, app_root_path, project_id, result_ids, callback)
       when 'export'
-        project_results_export(app_name, app_root_path, project_id, result_ids)
+        project_results_export(app_name, app_root_path, project_id, result_ids, callback)
     end
 
     puts "application configuration ended"
@@ -57,14 +55,12 @@ class HailstormProcess
       @@hailstorm_pool[project_id_str].set_hailstorm_configuration(app_name, app_boot_file_path, custom_logger)
     end
 
-    puts "2: project ids having objects in pool: "+@@hailstorm_pool.keys.inspect
-
-    # puts "****current project: "
-    # puts @@hailstorm_pool[project_id_str].current_project.inspect
   end
 
 
   def project_setup(app_name, app_root_path, callback, upload_directory_path, project_id, environment_data)
+    puts "application setup process started"
+
     project_id_str = project_id.to_s
     hailstormObj = Hailstorm::Application.new
     app_directory = File.join(app_root_path, app_name)
@@ -110,78 +106,86 @@ class HailstormProcess
     envstr = environment_template.result(:jmeter_config => jmeter_config_str, :ec2_config => ec2_config_str, :data_center_config => data_center_config_str)
     File.open(env_file_path, 'w') { |file| file.write(envstr) }
 
-    #setup database by initializing application
-    # app_boot_file_path = File.join(app_directory, 'config/boot.rb')
+    #get hailstorm object from pool
     set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
 
     #now setup app configuration
-    @@hailstorm_pool[project_id_str].interpret_command("setup")
+    @@hailstorm_pool[project_id_str].current_project.setup
 
-    system ("curl #{callback}")
+    #callback to web
+    project_callback(callback)
 
     puts "application setup process ended"
   end
 
   def process_request(app_name, app_root_path, project_id, command, callback)
-    project_id_str = project_id.to_s
-    puts "in "+command+" project worker of "+app_name
+    puts "application "+command+" process started for "+app_name
 
+    project_id_str = project_id.to_s
+
+    #get hailstorm object from pool
     set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
 
     #now process request command
-    @@hailstorm_pool[project_id_str].interpret_command(command)
+    @@hailstorm_pool[project_id_str].current_project.send(command)
 
     if(command == "start")
-      HailstormProcess.perform_async(app_name, app_root_path, 'status', project_id, callback, nil, nil)
+      HailstormProcess.perform_async(app_name, app_root_path, 'status', project_id, callback)
     end
 
-    puts "callback to: "+callback
-    system ("curl #{callback}")
+    #callback to web
+    project_callback(callback)
 
-    puts "application "+command+" process ended"
+    puts "application "+command+" process ended for "+app_name
   end
 
   def project_stop(app_name, app_root_path, project_id, callback)
-    project_id_str = project_id.to_s
     puts "in stop project worker of "+app_name
 
+    project_id_str = project_id.to_s
+
+    #get hailstorm object from pool
     set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
 
-    #now process request command
-    execution_cycle = @@hailstorm_pool[project_id_str].stop_test_and_get_execution_cycle_data()
+    #get execution cycle data
+    execution_cycle_data = @@hailstorm_pool[project_id_str].current_project.current_execution_cycle
 
-    #puts "execution cycle: "+execution_cycle.inspect
+    #stop project process
+    @@hailstorm_pool[project_id_str].current_project.stop
 
-    callback_stop = callback+"&"+execution_cycle.to_query
-    url = URI.parse(callback_stop)
-    req = Net::HTTP::Get.new(url.to_s)
-    res = Net::HTTP.start(url.host, url.port) {|http|
-      http.request(req)
-    }
-    #puts res.body
+    #format execution_cycle_data
+    execution_data = Hash.new
+    execution_data[:execution_cycle_id] = execution_cycle_data.id
+    execution_data[:project_id] = execution_cycle_data.project_id
+    execution_data[:total_threads_count] = execution_cycle_data.total_threads_count
+    execution_data[:avg_90_percentile] = execution_cycle_data.avg_90_percentile.to_s
+    execution_data[:avg_tps] = execution_cycle_data.avg_tps.round(2).to_s
+    execution_data[:started_at] = execution_cycle_data.started_at.strftime('%Y-%m-%d %H:%M')
+    execution_data[:stopped_at] = Time.now.utc.strftime('%Y-%m-%d %H:%M')
+
+    #callback to web
+    callback_stop = callback+"&"+execution_data.to_query
+    project_callback(callback_stop)
 
     puts "application stop process ended"
   end
 
-  def project_results(app_name, app_root_path, project_id)
-    project_id_str = project_id.to_s
-    puts "in project results worker of "+app_name
-
-    set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
-
-    #now process request for results
-    @@hailstorm_pool[project_id_str].interpret_command("results report")
-
-    puts "application result process ended"
-  end
-
   def project_status(app_name, app_root_path, project_id, callback)
-    project_id_str = project_id.to_s
-    puts "in project status worker of "+app_name
+    puts "application status process started for"+app_name
 
+    project_id_str = project_id.to_s
+
+    #get hailstorm object from pool
     set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
 
-    tests_status = @@hailstorm_pool[project_id_str].get_tests_status
+    #get status of project tests process
+    tests_status = nil
+    if(@@hailstorm_pool[project_id_str].current_project.current_execution_cycle.nil?)
+      tests_status = 'empty'
+    else
+      running_agents = @@hailstorm_pool[project_id_str].current_project.check_status()
+      tests_status = running_agents.empty? ? 'completed' : 'running'
+    end
 
     if(tests_status == 'completed')
       puts "all tests stopped now submitting job for stop"
@@ -193,31 +197,49 @@ class HailstormProcess
       HailstormProcess.perform_async(app_name, app_root_path, 'status', project_id, callback, nil, nil)
     end
 
-    puts "application status process ended"
+    puts "application status process ended for"+app_name
   end
 
-  def project_results_download(app_name, app_root_path, project_id, result_ids)
-    project_id_str = project_id.to_s
-    puts "in project results export worker of "+app_name
-
-    set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
-
-    #now process request for results
-    @@hailstorm_pool[project_id_str].interpret_command("results report "+result_ids)
-
-    puts "application result export process ended"
-  end
-
-  def project_results_export(app_name, app_root_path, project_id, result_ids)
-    project_id_str = project_id.to_s
+  def project_results_download(app_name, app_root_path, project_id, result_ids, callback)
     puts "in project results download worker of "+app_name
 
+    project_id_str = project_id.to_s
+
+    #get hailstorm object from pool
     set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
 
     #now process request for results
-    @@hailstorm_pool[project_id_str].interpret_command("results export "+result_ids)
+    @@hailstorm_pool[project_id_str].current_project.results("report", result_ids)
+
+    #callback to web
+    project_callback(callback)
 
     puts "application result download process ended"
+  end
+
+  def project_results_export(app_name, app_root_path, project_id, result_ids, callback)
+    puts "in project results export worker of "+app_name
+
+    project_id_str = project_id.to_s
+
+    #get hailstorm object from pool
+    set_hailstorm_in_pool_if_not_exists(project_id_str, app_name, app_root_path)
+
+    #now process request for results
+    @@hailstorm_pool[project_id_str].current_project.results(:export, result_ids)
+
+    #callback to web
+    project_callback(callback)
+
+    puts "applicationexportdownload process ended"
+  end
+
+  def project_callback(callback)
+    url = URI.parse(callback)
+    req = Net::HTTP::Get.new(url.to_s)
+    res = Net::HTTP.start(url.host, url.port) {|http|
+      http.request(req)
+    }
   end
 
 end

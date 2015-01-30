@@ -61,7 +61,7 @@ GEM
     builder (3.2.2)
     celluloid (0.16.0)
       timers (~> 4.0.0)
-    connection_pool (2.1.0)
+    connection_pool (2.1.1)
     erubis (2.7.0)
     hitimes (1.2.2-java)
     httparty (0.13.1)
