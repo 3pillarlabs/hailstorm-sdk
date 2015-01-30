@@ -10,6 +10,9 @@
       <strong>Status:</strong>
       <span id="project_status"><%= project_status(@project.status) %></span>
     </p>
+    <p>
+      <span id="project_download_status"></span>
+    </p>
   </div>
 
   <div class="col-md-7">
@@ -17,8 +20,8 @@
       <div class="panel-heading clearfix">
         <h3 class="panel-title pull-left">Tests Results</h3>
         <div class="pull-right">
-          <%= link_to "Download Results", project_export_initiate_path(@project,:process => "download"), class: "btn btn-primary btn-sm", id: "download-reports"  %>
-          <%= link_to "Export Results", project_export_initiate_path(@project,:process => "export"), class: "btn btn-primary btn-sm", id: "export-reports" %>
+          <%= link_to '<span class="glyphicon glyphicon-download" aria-hidden="true"></span> Download Results'.html_safe, project_interpret_task_path(@project,:process => "download"), class: "btn btn-primary btn-sm", id: "download-reports"  %>
+          <%= link_to '<span class="glyphicon glyphicon-floppy-save" aria-hidden="true"></span> Export Results'.html_safe, project_interpret_task_path(@project,:process => "export"), class: "btn btn-primary btn-sm", id: "export-reports" %>
         </div>
       </div>
 
@@ -31,16 +34,12 @@
           <th>Threads</th>
           <th>90 %tile</th>
           <th>TPS</th>
-          <!--<th>Started</th>-->
-          <!--<th>Stopped</th>-->
+          <th>Started</th>
+          <th>Stopped</th>
         </tr>
         </thead>
         <tbody id="project_results_div">
-        <% if @load_tests.blank? %>
-            <tr>
-              <td colspan="7" class="text-center">No results available.</td>
-            </tr>
-        <% else %>
+        <% if !@load_tests.blank? %>
             <% @load_tests.each.with_index(1) do |load_test, index| %>
                 <% last_result_id = load_test.id %>
                 <tr>
@@ -48,8 +47,8 @@
                   <td><%= load_test.total_threads_count %></td>
                   <td><%= load_test.avg_90_percentile %></td>
                   <td><%= load_test.avg_tps %></td>
-                  <!--<td><%= load_test.started_at %></td>-->
-                  <!--<td><%= load_test.stopped_at %></td>-->
+                  <td><%= load_test.started_at %></td>
+                  <td><%= load_test.stopped_at %></td>
                 </tr>
             <% end %>
 
@@ -79,16 +78,16 @@
 
           <div class="col-md-6">
             <div>
-              <%= link_to "setup", project_interpret_task_path(@project,:process => "setup"), id: "project_setup", class: ["btn","btn-primary", "worker_task", ("disabled" if(project_status(@project.status) != 'Configured'))] %><br/>
+              <%= link_to '<span class="glyphicon glyphicon-share-alt" aria-hidden="true"></span> Setup'.html_safe, project_interpret_task_path(@project,:process => "setup"), id: "project_setup", class: ["btn","btn-primary", "worker_task", ("disabled" if(project_status(@project.status) != 'Configured'))] %><br/>
             </div>
             <hr>
             <div>
-              <%= link_to "Start ", project_interpret_task_path(@project,:process => "start"), id: "project_start", class: ["btn", "btn-success", "worker_task", ("disabled" if(!(project_status(@project.status) == 'ready to start' || project_status(@project.status) == 'Stopped' || project_status(@project.status) == 'Aborted')))] %>&nbsp;
-              <%= link_to "Abort", project_interpret_task_path(@project,:process => "abort"), id: "project_abort", class: ["btn", "btn-warning", "worker_task", ("disabled" if(project_status(@project.status) != 'Started'))] %>&nbsp;
+              <%= link_to '<span class="glyphicon glyphicon-play" aria-hidden="true"></span> Start'.html_safe, project_interpret_task_path(@project,:process => "start"), id: "project_start", class: ["btn", "btn-success", "worker_task", ("disabled" if(!(project_status(@project.status) == 'Ready to start' || project_status(@project.status) == 'Stopped' || project_status(@project.status) == 'Aborted')))] %>&nbsp;
+              <%= link_to '<span class="glyphicon glyphicon-stop" aria-hidden="true"></span> Abort'.html_safe, project_interpret_task_path(@project,:process => "abort"), id: "project_abort", class: ["btn", "btn-warning", "worker_task", ("disabled" if(project_status(@project.status) != 'Started'))] %>&nbsp;
             </div>
             <hr>
             <div>
-              <%= link_to "Terminate", project_interpret_task_path(@project,:process => "terminate"), id: "project_terminate", class: ["btn", "btn-danger", "worker_task", ("disabled" if(@project.status < 3))] %><br/>
+              <%= link_to '<span class="glyphicon glyphicon-remove" aria-hidden="true"></span> Terminate'.html_safe, project_interpret_task_path(@project,:process => "terminate"), id: "project_terminate", class: ["btn", "btn-danger", "worker_task", ("disabled" if(@project.status < 4))] %><br/>
             </div>
           </div>
         </div>
@@ -115,8 +114,11 @@
 <p><%= link_to "Back to Projects", params[:page].blank? ? projects_path():projects_path(:page=>params[:page]) %></p>
 <span id="update_results_data_uri" class="hide"><%= project_update_loadtest_results_path(@project) %></span>
 <span id="last_result_id" class="hide"><%= last_result_id %></span>
+<span id="download_result_uri" class="hide"><%= project_download_results_path(@project) %></span>
+<span id="download_request_id" class="hide"></span>
 
 <script type="text/javascript">
     refreshLogs('<%= project_read_logs_path(@project) %>');
-    updateProject('<%= project_check_project_status_path(@project) %>', '<%= @project.status %>')
+    updateProject('<%= project_check_project_status_path(@project) %>', '<%= @project.status %>');
+    checkDownloadStatus('<%= project_check_download_status_path(@project) %>');
 </script>

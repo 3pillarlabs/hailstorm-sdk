@@ -3,6 +3,7 @@
 
 var intervalId = 0;
 var projectStatusIntervalId = 0;
+var projectDownloadIntervalId = 0;
 var continueLogs = false;
 
 function clrInterval()
@@ -19,6 +20,12 @@ function clrInterval()
         {
             clearInterval(projectStatusIntervalId);
             projectStatusIntervalId = 0;
+        }
+
+        if(projectDownloadIntervalId > 0)
+        {
+            clearInterval(projectDownloadIntervalId);
+            projectDownloadIntervalId = 0;
         }
     }
 }
@@ -62,7 +69,7 @@ function updateProject(project_status_uri, project_status)
                     jQuery("#project_setup").removeClass( "disabled" );
                 }
 
-                if(project_status_val == "ready to start")
+                if(project_status_val == "Ready to start")
                 {
                     jQuery("#project_start").removeClass( "disabled" );
                     jQuery("#project_terminate").removeClass( "disabled" );
@@ -89,32 +96,24 @@ function updateProject(project_status_uri, project_status)
                     update_results_uri = $("#update_results_data_uri").html();
                     update_results_uri = update_results_uri+"?resultid="+last_result_id;
 
-                    //alert(update_results_uri+" = "+last_result_id);
                     jQuery.ajax({url:update_results_uri, dataType : 'json', success:function(result){
 
                         if(result.length != 0)
                         {
-                            //alert(result.length);
                             var result_str = '';
                             var last_resultid = '';
                             $.each(result, function(index, element) {
                                 last_resultid = element.id;
 
-//                                started_date = Date.parse(element.started_at);
-//                                stopped_date = Date.parse(element.stopped_at);
-//                                utc_started_date = new Date(started_date);
-//                                utcstopped_date = new Date(stopped_date);
-
                                 result_str += '<tr>'+
                                     '<td><input type="checkbox" class="testsCheck" name="load_test[]" value="'+element.execution_cycle_id+'"></td>'+
                                     '<td>'+element.total_threads_count+'</td>'+
                                     '<td>'+element.avg_90_percentile.toFixed(1)+'</td>'+
-                                    '<td>'+element.avg_tps+'</td>';
-//                                    '<td>'+utc_started_date.toUTCString()+'</td>'+
-//                                    '<td>'+utcstopped_date.toUTCString()+'</td>';
+                                    '<td>'+element.avg_tps+'</td>'+
+                                    '<td>'+element.started_at+'</td>'+
+                                    '<td>'+element.stopped_at+'</td>';
 
                             });
-                            //alert(result_str);
 
                             $("#project_results_div").append(result_str);
                             $("#last_result_id").html(last_resultid);
@@ -124,6 +123,44 @@ function updateProject(project_status_uri, project_status)
                 }
 
         }});
+    }, 60000);
+}
+
+function checkDownloadStatus(check_download_status_uri)
+{
+
+    continueLogs = true;
+    projectDownloadIntervalId = setInterval(function(){
+        if(continueLogs)
+        {
+            continueLogs = false;
+        }
+
+        request_id = $("#download_request_id").html();
+        if(request_id!="")
+        {
+            check_download_status_uri = check_download_status_uri+"?request_id="+request_id;
+
+            jQuery.ajax({
+                url:check_download_status_uri,
+                success:function(result){
+                    result = parseInt(result);
+
+                    if(result==1)
+                    {
+                        $("#download_request_id").html("");
+                        download_link_uri = $("#download_result_uri").html()+"?request_id="+request_id;
+                        download_status_str = '<a href="'+download_link_uri+'" class="btn btn-success"><span aria-hidden="true" class="glyphicon glyphicon-save"></span> Download</a>';
+
+                        $("#project_download_status").html(download_status_str);
+
+                        $("#download-reports").removeClass( "disabled" );
+                        $("#export-reports").removeClass( "disabled" );
+                    }
+
+                }});
+        }
+
     }, 60000);
 }
 
@@ -138,15 +175,18 @@ function project_status_str(status)
             status_str = "Configured";
             break;
         case 3:
-            status_str = "ready to start";
+            status_str = "Setup in progress";
             break;
         case 4:
-            status_str = "Started";
+            status_str = "Ready to start";
             break;
         case 5:
-            status_str = "Stopped";
+            status_str = "Started";
             break;
         case 6:
+            status_str = "Stopped";
+            break;
+        case 7:
             status_str = "Aborted";
             break;
         default:
@@ -158,25 +198,48 @@ function project_status_str(status)
 
 var do_on_load = function() {
     // do some things
-    //alert('here the code');
 
     $("#checkUncheckAll").on("click", function() {
         $(".testsCheck").prop("checked", $(this).prop("checked"));
     });
 
-    $(".worker_task").on("click", function() {
-        $.ajax({
-            url : $(this).attr('href'),
-            dataType : 'json',
-            success:function(result){
-                $("#flash_messages").html('<div class="alert alert-info fade in"><button data-dismiss="alert" class="close">x</button>'+result['data']+'</div>');
-                $(".worker_task").addClass( "disabled" );
-            },
-            error: function() {
-                $("#flash_messages").html('<div class="alert alert-info fade in"><button data-dismiss="alert" class="close">x</button>An error occurred! please try again.</div>');
-            }
+    $(".worker_task").on("click", function(event) {
+        var action_id_str = $(this).attr('id');
+        if(action_id_str=="project_abort" || action_id_str=="project_terminate")
+        {
+            if(confirm("Are you sure! you want to "+action_str))
+            {
+                alert(action_str);
+                $.ajax({
+                    url : $(this).attr('href'),
+                    dataType : 'json',
+                    success:function(result){
+                        $("#flash_messages").html('<div class="alert alert-info fade in"><button data-dismiss="alert" class="close">x</button>'+result['data']+'</div>');
+                        $(".worker_task").addClass( "disabled" );
+                    },
+                    error: function() {
+                        $("#flash_messages").html('<div class="alert alert-info fade in"><button data-dismiss="alert" class="close">x</button>An error occurred! please try again.</div>');
+                    }
 
-        });
+                });
+            }
+        }
+        else
+        {
+            $.ajax({
+                url : $(this).attr('href'),
+                dataType : 'json',
+                success:function(result){
+                    $("#flash_messages").html('<div class="alert alert-info fade in"><button data-dismiss="alert" class="close">x</button>'+result['data']+'</div>');
+                    $(".worker_task").addClass( "disabled" );
+                },
+                error: function() {
+                    $("#flash_messages").html('<div class="alert alert-info fade in"><button data-dismiss="alert" class="close">x</button>An error occurred! please try again.</div>');
+                }
+
+            });
+        }
+
         return false;
     });
 
@@ -198,11 +261,16 @@ var do_on_load = function() {
         }
         else
         {
+            $("#download-reports").addClass( "disabled" );
+            $("#export-reports").addClass( "disabled" );
             var message = "Request for report "+type+" has been submitted, please wait while the request is processing."
             jQuery.ajax({
                 url : url+"&ids="+ids,
-                dataType : 'text',
+                dataType : 'json',
                 success:function(result){
+                    $("#download_request_id").html(result['request_id']);
+                    $("#project_download_status").html('Preparing Download... <img src="/assets/roller.gif" />');
+
                     jQuery("#flash_messages").html('<div class="alert alert-info fade in"><button data-dismiss="alert" class="close">x</button>'+message+'</div>');
                 },
                 error: function() {

@@ -2,7 +2,7 @@ Rails.application.routes.draw do
 
   root 'projects#index'
 
-  resources :projects do
+  resources :projects, :except => [:edit,:update, :destroy] do
     resources :clusters
     resources :data_centers, :controller => "clusters", :type => "DataCenter"
     resources :amazon_clouds, :controller => "clusters", :type => "AmazonCloud"
@@ -10,9 +10,9 @@ Rails.application.routes.draw do
     get "update_status"
     get "read_logs"
     get "check_project_status"
-    get "export_initiate"
-    get "project_loadtest_results"
     get "update_loadtest_results"
+    get "check_download_status"
+    get "download_results"
 	resources :test_plans
     resources :target_hosts, :except => [:edit,:update]
   end

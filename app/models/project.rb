@@ -4,6 +4,7 @@ class Project < ActiveRecord::Base
   has_many :load_tests, dependent: :destroy
   has_many :target_hosts
   delegate :data_centers, :amazon_clouds, to: :clusters
+  has_many :project_result_downloads
 
   validates :title, presence: true
   validates :title, uniqueness: true

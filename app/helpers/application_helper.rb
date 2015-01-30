@@ -31,12 +31,14 @@ module ApplicationHelper
       when 2
         "Configured"
       when 3
-        "ready to start"
+        "Setup in progress"
       when 4
-        "Started"
+        "Ready to start"
       when 5
-        "Stopped"
+        "Started"
       when 6
+        "Stopped"
+      when 7
         "Aborted"
       else
         "Empty"
