@@ -105,14 +105,20 @@ function updateProject(project_status_uri, project_status)
                             $.each(result, function(index, element) {
                                 last_resultid = element.id;
 
-                                result_str += '<tr>'+
-                                    '<td><input type="checkbox" class="testsCheck" name="load_test[]" value="'+element.execution_cycle_id+'"></td>'+
-                                    '<td>'+element.total_threads_count+'</td>'+
-                                    '<td>'+element.avg_90_percentile.toFixed(1)+'</td>'+
-                                    '<td>'+element.avg_tps+'</td>'+
-                                    '<td>'+element.started_at+'</td>'+
-                                    '<td>'+element.stopped_at+'</td>';
-
+                                result_str += '<div class="row">'+
+                                    '<div class="col-md-1"><input type="checkbox" class="testsCheck" name="load_test[]" value="'+element.execution_cycle_id+'"></div>'+
+                                    '<div class="col-md-11">'+
+                                    '<div class="row">'+
+                                    '<div class="col-md-7">'+element.total_threads_count+' Threads</div>'+
+                                    '<div class="col-md-5">'+element.started_at+' - '+element.stopped_at+'</div>'+
+                                    '</div>'+
+                                    '<div class="row">'+
+                                    '<div class="col-md-7">'+element.avg_90_percentile.toFixed(1)+' ms Response Time</div>'+
+                                    '<div class="col-md-5">'+element.avg_tps+' TPS</div>'+
+                                    '</div>'+
+                                    '</div>'+
+                                    '</div>'+
+                                    '<hr>';
                             });
 
                             $("#project_results_div").append(result_str);
@@ -205,11 +211,12 @@ var do_on_load = function() {
 
     $(".worker_task").on("click", function(event) {
         var action_id_str = $(this).attr('id');
+
         if(action_id_str=="project_abort" || action_id_str=="project_terminate")
         {
+            action_str = $(this).text().trim().toLowerCase();
             if(confirm("Are you sure! you want to "+action_str))
             {
-                alert(action_str);
                 $.ajax({
                     url : $(this).attr('href'),
                     dataType : 'json',
@@ -269,7 +276,7 @@ var do_on_load = function() {
                 dataType : 'json',
                 success:function(result){
                     $("#download_request_id").html(result['request_id']);
-                    $("#project_download_status").html('Preparing Download... <img src="/assets/roller.gif" />');
+                    $("#project_download_status").html('<img src="/assets/roller.gif" />');
 
                     jQuery("#flash_messages").html('<div class="alert alert-info fade in"><button data-dismiss="alert" class="close">x</button>'+message+'</div>');
                 },

@@ -3,3 +3,8 @@
 // You can use Sass (SCSS) here: http://sass-lang.com/
 hr{ margin-top: 5px; margin-bottom: 5px; }
 .logs-console{ background-color: #000000; color: #ffffff; height: 200px; overflow: scroll;}
+.testsCheck{margin-top: 12px !important;}
+#project_results_div{
+  max-height: 205px;
+  overflow-y:scroll;
+}

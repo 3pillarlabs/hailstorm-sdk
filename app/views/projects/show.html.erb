@@ -1,68 +1,21 @@
 <% last_result_id = "" %>
-<div class="row">
-  <div class="col-md-5">
-    <p class="h3">
-      <strong>Title:</strong>
-      <%= @project.title %>
-    </p>
-
-    <p class="h3">
-      <strong>Status:</strong>
-      <span id="project_status"><%= project_status(@project.status) %></span>
-    </p>
-    <p>
-      <span id="project_download_status"></span>
-    </p>
-  </div>
-
-  <div class="col-md-7">
-    <div class="panel panel-default">
-      <div class="panel-heading clearfix">
-        <h3 class="panel-title pull-left">Tests Results</h3>
-        <div class="pull-right">
-          <%= link_to '<span class="glyphicon glyphicon-download" aria-hidden="true"></span> Download Results'.html_safe, project_interpret_task_path(@project,:process => "download"), class: "btn btn-primary btn-sm", id: "download-reports"  %>
-          <%= link_to '<span class="glyphicon glyphicon-floppy-save" aria-hidden="true"></span> Export Results'.html_safe, project_interpret_task_path(@project,:process => "export"), class: "btn btn-primary btn-sm", id: "export-reports" %>
-        </div>
-      </div>
-
-      <div class="panel-body">
-        <div class="table-responsive">
-            <table class="table table-bordered">
-        <thead>
-        <tr>
-          <th><input type="checkbox" id="checkUncheckAll"></th>
-          <th>Threads</th>
-          <th>90 %tile</th>
-          <th>TPS</th>
-          <th>Started</th>
-          <th>Stopped</th>
-        </tr>
-        </thead>
-        <tbody id="project_results_div">
-        <% if !@load_tests.blank? %>
-            <% @load_tests.each.with_index(1) do |load_test, index| %>
-                <% last_result_id = load_test.id %>
-                <tr>
-                  <td><input type="checkbox" class="testsCheck" name="load_test[]" value="<%= load_test.execution_cycle_id %>"></td>
-                  <td><%= load_test.total_threads_count %></td>
-                  <td><%= load_test.avg_90_percentile %></td>
-                  <td><%= load_test.avg_tps %></td>
-                  <td><%= load_test.started_at %></td>
-                  <td><%= load_test.stopped_at %></td>
-                </tr>
-            <% end %>
-
-        <% end %>
-        </tbody>
-      </table>
-        </div>
-      </div>
-     </div>
+<div class="page-header">
+  <div class="row">
+    <div class="col-md-5 pull-right">
+      <h2 class="text-right">
+      <span id="project_status">
+        <%= project_status(@project.status) %>
+      </span>&nbsp;
+        <span id="project_download_status"></span>
+      </h2>
+    </div>
+    <div class="col-md-5">
+      <h2><%= @project.title %></h2>
+    </div>
   </div>
 </div>
 
 <div class="row">
-
   <div class="col-md-5">
     <div class="panel panel-default">
       <div class="panel-heading">
@@ -96,21 +49,72 @@
   </div>
 
   <div class="col-md-7">
-    <div class="panel panel-primary">
-      <div class="panel-heading">
-        <h3 class="panel-title">Project Logs</h3>
+    <div class="panel panel-default">
+      <div class="panel-heading clearfix">
+        <h3 class="panel-title pull-left"><input type="checkbox" id="checkUncheckAll"> Tests Results</h3>
+
+        <div class="pull-right">
+          <%= link_to '<span class="glyphicon glyphicon-download" aria-hidden="true"></span> Download Results'.html_safe, project_interpret_task_path(@project, :process => "download"), class: "btn btn-primary btn-sm", id: "download-reports" %>
+          <%= link_to '<span class="glyphicon glyphicon-floppy-save" aria-hidden="true"></span> Export Results'.html_safe, project_interpret_task_path(@project, :process => "export"), class: "btn btn-primary btn-sm", id: "export-reports" %>
+        </div>
       </div>
 
-      <div class="panel-body logs-console">
-        <div class="row">
-          <div class="col-md-12" id="logsResults">
-            <%= simple_format(@logs) %>
-          </div>
+      <div class="panel-body"  id="project_results_div">
+        <% if !@load_tests.blank? %>
+            <% @load_tests.each.with_index(1) do |load_test, index| %>
+                <% last_result_id = load_test.id %>
+                <div class="row">
+                  <div class="col-md-1">
+                    <input type="checkbox" class="testsCheck" name="load_test[]" value="<%= load_test.execution_cycle_id %>">
+                  </div>
+                  <div class="col-md-11">
+                    <div class="row">
+                      <div class="col-md-7">
+                        <%= load_test.total_threads_count %> Threads
+                      </div>
+                      <div class="col-md-5">
+                        <%= load_test.started_at.strftime("%b %e %l:%M %p") %> - <%= load_test.stopped_at.strftime("%b %e %l:%M %p") %>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col-md-7">
+                        <%= load_test.avg_90_percentile %> ms Response Time
+                      </div>
+                      <div class="col-md-5">
+                        <%= load_test.avg_tps %> TPS
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <hr>
+            <% end %>
+        <% end %>
+
+
+      </div>
+
+
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="panel panel-primary">
+    <div class="panel-heading">
+      <h3 class="panel-title">Project Logs</h3>
+    </div>
+
+    <div class="panel-body logs-console">
+      <div class="row">
+        <div class="col-md-12" id="logsResults">
+          <%= simple_format(@logs) %>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+
 <p><%= link_to "Back to Projects", params[:page].blank? ? projects_path():projects_path(:page=>params[:page]) %></p>
 <span id="update_results_data_uri" class="hide"><%= project_update_loadtest_results_path(@project) %></span>
 <span id="last_result_id" class="hide"><%= last_result_id %></span>

@@ -159,8 +159,8 @@ class ProjectsController < ApplicationController
       load_test_json_hash[:total_threads_count] = load_test.total_threads_count
       load_test_json_hash[:avg_90_percentile] = load_test.avg_90_percentile
       load_test_json_hash[:avg_tps] = load_test.avg_tps
-      load_test_json_hash[:started_at] = load_test.started_at.to_s
-      load_test_json_hash[:stopped_at] = load_test.stopped_at.to_s
+      load_test_json_hash[:started_at] = load_test.started_at.strftime("%b %e %l:%M %p").to_s
+      load_test_json_hash[:stopped_at] = load_test.stopped_at.strftime("%b %e %l:%M %p").to_s
       load_test_json_arr << load_test_json_hash
     end
     render :json => load_test_json_arr

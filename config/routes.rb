@@ -2,18 +2,19 @@ Rails.application.routes.draw do
 
   root 'projects#index'
 
+  get "projects/:project_id/interpret_task" => "projects#interpret_task", as:  :project_interpret_task
+  get "projects/:project_id/update_status" => "projects#update_status", as:  :project_update_status
+  get "projects/:project_id/read_logs" => "projects#read_logs", as:  :project_read_logs
+  get "projects/:project_id/check_project_status" => "projects#check_project_status", as:  :project_check_project_status
+  get "projects/:project_id/update_loadtest_results" => "projects#update_loadtest_results", as:  :project_update_loadtest_results
+  get "projects/:project_id/check_download_status" => "projects#check_download_status", as:  :project_check_download_status
+  get "projects/:project_id/download_results" => "projects#download_results", as:  :project_download_results
+
   resources :projects, :except => [:edit,:update, :destroy] do
     resources :clusters
     resources :data_centers, :controller => "clusters", :type => "DataCenter"
     resources :amazon_clouds, :controller => "clusters", :type => "AmazonCloud"
-    get "interpret_task"
-    get "update_status"
-    get "read_logs"
-    get "check_project_status"
-    get "update_loadtest_results"
-    get "check_download_status"
-    get "download_results"
-	resources :test_plans
+  	resources :test_plans
     resources :target_hosts, :except => [:edit,:update]
   end
 
