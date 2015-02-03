@@ -5,6 +5,8 @@ gemspec
 
 gem 'sidekiq'
 
-gem "hailstorm", :path => "/home/ravish/hailstorm_projects/hailstorm-gem/"
+gem "hailstorm"
+#use below path if hailstorm gem is not installed, then specify path here
+#gem "hailstorm", :path => "/home/ravish/hailstorm_projects/hailstorm-gem/"
 
 gem "activerecord-jdbcmysql-adapter"

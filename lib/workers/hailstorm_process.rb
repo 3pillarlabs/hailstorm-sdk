@@ -73,10 +73,11 @@ class HailstormProcess
       dbtext = File.read(app_database_file_path)
       File.write(app_database_file_path, dbtext.gsub(/password =/, "password = sa"))
 
+      #gem changes only require if hailstorm gem is not installed. change path accordingly and change GEM file too
       #change GEM hailstorm path
-      app_gem_file_path = File.join(app_directory, 'Gemfile')
-      gemtext = File.read(app_gem_file_path)
-      File.write(app_gem_file_path, gemtext.gsub(/"hailstorm"/, '"hailstorm", :path=> "/home/ravish/hailstorm_projects/hailstorm-gem/"'))
+      # app_gem_file_path = File.join(app_directory, 'Gemfile')
+      # gemtext = File.read(app_gem_file_path)
+      # File.write(app_gem_file_path, gemtext.gsub(/"hailstorm"/, '"hailstorm", :path=> "/home/ravish/hailstorm_projects/hailstorm-gem/"'))
 
     end
 
