@@ -73,7 +73,17 @@
                         <%= load_test.total_threads_count %> Threads
                       </div>
                       <div class="col-md-5">
-                        <%= load_test.started_at.strftime("%b %e %l:%M %p") %> - <%= load_test.stopped_at.strftime("%b %e %l:%M %p") %>
+                        <div class="row">
+                          <div class="col-md-5">
+                            <%= load_test.started_at.strftime("%b %e ") %><br/><%= load_test.started_at.strftime("%k:%M") %>
+                          </div>
+                          <div class="col-md-2">
+                            -
+                          </div>
+                          <div class="col-md-5">
+                            <%= load_test.stopped_at.strftime("%b %e ") %><br/><%= load_test.stopped_at.strftime("%k:%M") %>
+                          </div>
+                        </div>
                       </div>
                     </div>
                     <div class="row">

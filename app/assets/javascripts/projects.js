@@ -110,7 +110,13 @@ function updateProject(project_status_uri, project_status)
                                     '<div class="col-md-11">'+
                                     '<div class="row">'+
                                     '<div class="col-md-7">'+element.total_threads_count+' Threads</div>'+
-                                    '<div class="col-md-5">'+element.started_at+' - '+element.stopped_at+'</div>'+
+                                    '<div class="col-md-5">'+
+                                    '<div class="row">'+
+                                    '<div class="col-md-5">'+element.started_at_date+'<br/>'+element.started_at_time+'</div>'+
+                                    '<div class="col-md-2">-</div>'+
+                                    '<div class="col-md-5">'+element.stopped_at_date+'<br/>'+element.stopped_at_time+'</div>'+
+                                    '</div>'+
+                                    '</div>'+
                                     '</div>'+
                                     '<div class="row">'+
                                     '<div class="col-md-7">'+element.avg_90_percentile.toFixed(1)+' ms Response Time</div>'+
