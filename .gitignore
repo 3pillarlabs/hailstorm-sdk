@@ -4,3 +4,4 @@ tmp/*
 .ruby-version
 .project
 .bundle/*
+features/data/keys.yml

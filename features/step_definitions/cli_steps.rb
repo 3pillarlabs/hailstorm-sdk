@@ -128,11 +128,11 @@ When(/^(?:I |)configure following amazon clusters$/) do |table|
 end
 
 When(/^(?:I |)configure target monitoring$/) do
-  identity_file = File.join(tmp_path, current_project, Hailstorm.db_dir,
+  identity_file = File.join(tmp_path, current_project, Hailstorm.config_dir,
                              'testroid_identity.pem')
   unless File.exists?(identity_file)
     FileUtils.cp(File.join(data_path, 'testroid_identity.pem'),
-               File.join(tmp_path, current_project, Hailstorm.db_dir))
+               File.join(tmp_path, current_project, Hailstorm.config_dir))
     File.chmod(0400, identity_file)
   end
 end
