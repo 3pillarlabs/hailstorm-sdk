@@ -1,2 +1,3 @@
-#Dir["lib/workers/*.rb"].each {|file| require file }
+require 'rubygems'
+require 'bundler/setup'
 require 'workers/hailstorm_process'

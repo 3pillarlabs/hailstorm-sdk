@@ -1,13 +1,13 @@
     # This is the JMeter configuration
     config.jmeter do |jmeter|
         <% test_plans_data.each do |test_plan| %>
+        <% next if test_plan['properties'].nil? %>
         jmeter.properties(:test_plan => '<%= test_plan['jmx_file_name'].sub! '.jmx', '' %>') do |map|
             <% jmx_properties = JSON.parse(test_plan['properties']) %>
             <% jmx_properties.each do |jmx_property| %>
             map['<%= jmx_property['name'] %>'] = <%= jmx_property['value']  %>
             <% end %>
         end
-
         <% end %>
     end
 
