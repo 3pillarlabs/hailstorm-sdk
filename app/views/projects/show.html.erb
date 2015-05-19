@@ -1,15 +1,15 @@
-<% last_result_id = "" %>
+<% last_result_id = '' %>
 <div class="page-header">
   <div class="row">
-    <div class="col-md-5 pull-right">
+    <div class="col-md-6 pull-right">
       <h2 class="text-right">
-      <span id="project_status">
-        <%= project_status(@project.status) %>
-      </span>&nbsp;
+        <span id="project_status">
+        <%= project_status(@project) %>
+        </span>&nbsp;
         <span id="project_download_status"></span>
       </h2>
     </div>
-    <div class="col-md-5">
+    <div class="col-md-6">
       <h2><%= @project.title %></h2>
     </div>
   </div>
@@ -24,23 +24,42 @@
       <div class="panel-body">
         <div class="row">
           <div class="col-md-6">
-            <%= link_to "Test Plans", project_test_plans_path(@project) %> (<%= @project.test_plans.count %>)<br/>
-            <%= link_to "Clusters", project_clusters_path(@project) %> (<%= @project.clusters.count %>)<br/>
-            <%= link_to "Target Hosts", project_target_hosts_path(@project) %> (<%= @project.target_hosts.count %>)<br/>
+            <%= link_to 'Test Plans & Data Files', project_test_plans_path(@project) %> (<%= @project.test_plans.count %>)<br/>
+            <%= link_to 'Clusters', project_clusters_path(@project) %> (<%= @project.clusters.count %>)<br/>
+            <%= link_to 'Target Hosts', project_target_hosts_path(@project) %> (<%= @project.target_hosts.count %>)<br/>
           </div>
 
           <div class="col-md-6">
-            <div>
-              <%= link_to '<span class="glyphicon glyphicon-share-alt" aria-hidden="true"></span> Setup'.html_safe, project_interpret_task_path(@project,:process => "setup"), id: "project_setup", class: ["btn","btn-primary", "worker_task", ("disabled" if(project_status(@project.status) != 'Configured'))] %><br/>
+            <div class="row">
+              <div class="col-md-6">
+                <%= link_to *setup_link_to_args do %>
+                    <span class="glyphicon glyphicon-share-alt" aria-hidden="true"></span> Setup
+                <% end %>
+              </div>
+              <div class="col-md-6">
+                <%= link_to *start_link_to_args  do %>
+                    <span class="glyphicon glyphicon-play" aria-hidden="true"></span> Start
+                <% end %>
+              </div>
+            </div>
+            <hr>
+            <div class="row">
+              <div class="col-md-6">
+                <%= link_to *stop_link_to_args do %>
+                    <span class="glyphicon glyphicon-stop" aria-hidden="true"></span> Stop
+                <% end %>
+              </div>
+              <div class="col-md-6">
+                <%= link_to *abort_link_to_args do %>
+                    <span class="glyphicon glyphicon-stop" aria-hidden="true"></span> Abort
+                <% end %>
+              </div>
             </div>
             <hr>
             <div>
-              <%= link_to '<span class="glyphicon glyphicon-play" aria-hidden="true"></span> Start'.html_safe, project_interpret_task_path(@project,:process => "start"), id: "project_start", class: ["btn", "btn-success", "worker_task", ("disabled" if(!(project_status(@project.status) == 'Ready to start' || project_status(@project.status) == 'Stopped' || project_status(@project.status) == 'Aborted')))] %>&nbsp;
-              <%= link_to '<span class="glyphicon glyphicon-stop" aria-hidden="true"></span> Abort'.html_safe, project_interpret_task_path(@project,:process => "abort"), id: "project_abort", class: ["btn", "btn-warning", "worker_task", ("disabled" if(project_status(@project.status) != 'Started'))] %>&nbsp;
-            </div>
-            <hr>
-            <div>
-              <%= link_to '<span class="glyphicon glyphicon-remove" aria-hidden="true"></span> Terminate'.html_safe, project_interpret_task_path(@project,:process => "terminate"), id: "project_terminate", class: ["btn", "btn-danger", "worker_task", ("disabled" if(@project.status < 4))] %><br/>
+              <%= link_to *terminate_link_to_args do %>
+                  <span class="glyphicon glyphicon-remove" aria-hidden="true"></span> Terminate
+              <% end %>
             </div>
           </div>
         </div>
@@ -99,11 +118,7 @@
                 <hr>
             <% end %>
         <% end %>
-
-
       </div>
-
-
     </div>
   </div>
 </div>
@@ -114,12 +129,8 @@
       <h3 class="panel-title">Project Logs</h3>
     </div>
 
-    <div class="panel-body logs-console">
-      <div class="row">
-        <div class="col-md-12" id="logsResults">
-          <%= simple_format(@logs) %>
-        </div>
-      </div>
+    <div class="panel-body logs-console" id="logsResults">
+      <%= simple_format(@logs) %>
     </div>
   </div>
 </div>
@@ -133,6 +144,6 @@
 
 <script type="text/javascript">
     refreshLogs('<%= project_read_logs_path(@project) %>');
-    updateProject('<%= project_check_project_status_path(@project) %>', '<%= @project.status %>');
+    updateProject('<%= project_check_project_status_path(@project) %>');
     checkDownloadStatus('<%= project_check_download_status_path(@project) %>');
 </script>

@@ -2,7 +2,9 @@
   <div class="page-header">
     <div class="btn-toolbar pull-right">
       <div class="btn-group">
-        <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add'.html_safe, new_project_path, class: 'btn btn-info' %>
+        <%= link_to new_project_path, class: 'btn btn-info' do %>
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add
+        <% end %>
       </div>
     </div>
     <h2>Projects</h2>
@@ -31,12 +33,11 @@
         <% @projects.each.with_index(1) do |project, index| %>
             <tr>
               <td><%= project.title %></td>
-              <td><%= project_status(project.status) %></td>
+              <td><%= project_status(project) %></td>
               <td><%= project.created_at.strftime('%F') %></td>
               <td><%= project.updated_at.strftime('%F') %></td>
               <td>
-                <%= link_to 'Open', params[:page].blank? ? project_path(project):project_path(project,:page=>params[:page]) %>
-                <%#= link_to 'Edit', edit_project_path(project), class:"btn btn-warning" %>
+                <%= link_to 'Edit', project_path(project,:page=>params[:page]) %>
                 <%#= link_to 'Destroy', project, method: :delete, data: { confirm: 'Are you sure?' }, class:"btn btn-danger" %>
               </td>
             </tr>

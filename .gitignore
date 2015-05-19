@@ -16,3 +16,6 @@
 /tmp
 .idea/*
 Gemfile.lock
+/.project
+.ruby-version
+uploads

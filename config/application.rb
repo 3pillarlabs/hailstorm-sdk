@@ -26,11 +26,5 @@ module HailstormWeb
     # The default locale is :en and all translations from config/locales/*.rb,yml are auto loaded.
     # config.i18n.load_path += Dir[Rails.root.join('my', 'locales', '*.{rb,yml}').to_s]
     # config.i18n.default_locale = :de
-    config.items_per_page = 10
-    config.uploads_directory = 'uploads'
-    config.uploads_path = ":rails_root/"+config.uploads_directory
-    config.data_center_default_user_name = "ubuntu"
-    config.project_setup_path = "/home/ravish/hailstorm_projects/hailstorm_projects"
-    config.project_logs_file = "hailstorm_status.log"
   end
 end

@@ -28,13 +28,14 @@ class TestPlansController < ApplicationController
   # GET /test_plans/1/edit
   def edit
     @test_plan_properties = Array.new
-    test_plan = TestPlan.new
-    test_plan_properties_json = test_plan.getTestPlanProperties(params[:id])
-    if(!test_plan_properties_json.nil?)
+    test_plan = TestPlan.where(id: params[:id], project_id: params[:project_id]).take!
+    # test_plan_properties_json = test_plan.getTestPlanProperties(params[:id])
+    test_plan_properties_json = test_plan.properties
+    unless test_plan_properties_json.nil?
       @test_plan_properties = JSON.parse(test_plan_properties_json)
     end
 
-    #:todo remove edit from set_test_plan
+    @test_plan_content = test_plan.content()
   end
 
   # POST /test_plans

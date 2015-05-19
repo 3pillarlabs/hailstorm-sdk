@@ -24,25 +24,4 @@ module ApplicationHelper
     nil
   end
 
-  def project_status(status)
-    case status
-      when 1
-        "Partial Configured"
-      when 2
-        "Configured"
-      when 3
-        "Setup in progress"
-      when 4
-        "Ready to start"
-      when 5
-        "Started"
-      when 6
-        "Stopped"
-      when 7
-        "Aborted"
-      else
-        "Empty"
-    end
-  end
-
 end

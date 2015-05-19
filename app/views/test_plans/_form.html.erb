@@ -11,49 +11,44 @@
     </div>
   <% end %>
 
-    <div class="row-fluid">
-        <div class="container">
-          <div class="col-md-6">
-            <div class="table-responsive">
-              <table class="table table-hover table-bordered" width="50%">
-                <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Value</th>
-                </tr>
-                </thead>
+    <div class="row">
+      <div class="col-md-6">
+        <table class="table table-hover table-bordered">
+          <thead>
+          <tr>
+            <th>Name</th>
+            <th>Value</th>
+          </tr>
+          </thead>
 
-                <tbody id="test_plan_properties_body">
-                <% if !@test_plan_properties.empty? %>
-                    <% @test_plan_properties.each do |property| %>
-                        <tr>
-                          <td>
-                            <input type="text" value="<%= property["name"] %>" name="test_plan[property_name][]">
-                          </td>
-                          <td>
-                            <input type="text" value="<%= property["value"] %>" name="test_plan[property_value][]">
-                          </td>
-                        </tr>
-                    <% end %>
-                <% else %>
-                    <tr>
-                      <td>
-                        <input type="text" name="test_plan[property_name][]">
-                      </td>
-                      <td>
-                        <input type="text" name="test_plan[property_value][]">
-                      </td>
-                    </tr>
-                <% end %>
-                </tbody>
-              </table>
-
-            </div>
-          </div>
-          <div align="left" class="col-md-6">
-            <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>'.html_safe, "javascript:void(0);", :class => "btn btn-info btn-xs", :onclick => "add_property_fields();" %>
-          </div>
-        </div>
+          <tbody id="test_plan_properties_body">
+          <% if !@test_plan_properties.empty? %>
+              <% @test_plan_properties.each do |property| %>
+                  <tr>
+                    <td>
+                      <input type="text" value="<%= property["name"] %>" name="test_plan[property_name][]">
+                    </td>
+                    <td>
+                      <input type="text" value="<%= property["value"] %>" name="test_plan[property_value][]">
+                    </td>
+                  </tr>
+              <% end %>
+          <% else %>
+              <tr>
+                <td>
+                  <input type="text" name="test_plan[property_name][]">
+                </td>
+                <td>
+                  <input type="text" name="test_plan[property_value][]">
+                </td>
+              </tr>
+          <% end %>
+          </tbody>
+        </table>
+      </div>
+      <div class="col-md-6">
+        <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>'.html_safe, "javascript:void(0);", :class => "btn btn-info btn-xs pull-right", :onclick => "add_property_fields();" %>
+      </div>
     </div>
 
     <p>

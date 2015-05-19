@@ -1,11 +1,12 @@
 require 'rubygems'
 require 'zip'
-require "open-uri"
+require 'open-uri'
+require 'json'
 
 class ProjectsController < ApplicationController
-  #before_action :set_project, only: [:show, :interpret_task, :update_status, :read_logs, :check_project_status, :export_initiate, :download_results]
-  before_action :set_project, except: [:index, :new, :create, :update_loadtest_results, :check_download_status]
 
+  before_action :set_project, except: [:index, :new, :create, :update_loadtest_results, :check_download_status]
+  skip_before_action :verify_authenticity_token, only: [:job_error, :update_status]
 
   # GET /projects
   # GET /projects.json
@@ -18,16 +19,15 @@ class ProjectsController < ApplicationController
   # GET /projects/1
   # GET /projects/1.json
   def show
-    file_name = File.join(Rails.configuration.project_setup_path, @project.title, "log", Rails.configuration.project_logs_file)
-    if(File.exist? (file_name))
+    file_name = File.join(Rails.configuration.project_setup_path, @project.title, 'log', Rails.configuration.project_logs_file)
+    if File.exist?(file_name)
       @logs = File.read(file_name)
     else
-      @logs = ""
+      @logs = ''
     end
 
-    #get load_test data
-    @load_tests = LoadTest.where(:project_id=>@project.id)
-
+    # get load_test data
+    @load_tests = LoadTest.where(project_id: @project.id)
   end
 
   # GET /projects/new
@@ -53,102 +53,108 @@ class ProjectsController < ApplicationController
 
   #interprete gem tasks and call appropriate method
   def interpret_task
-    respond_to do |format|
-      case params[:process]
-        when "setup"
-          #update project status for Setup in progress
-          params[:project] = Hash[:status => 3]
-          @project.update(project_params)
 
-          setup_project
-          format.html { redirect_to project_path(@project, :submit_action => "setup"), notice: 'Request for project set-up has been submitted.' }
-          format.json {render :json => {"data" => 'Request for project set-up has been submitted.'}}
-        when "start", "stop", "abort", "terminate"
-          submit_process(params[:process])
+    command = params[:process].to_sym
+    respond_to do |format|
+      case command
+        when :setup
+          setup_project() if @project.may_setup?
+          @project.setup! # TODO refactor setup_project as a :before callback to event
+
+          format.html { redirect_to project_path(@project, :submit_action => 'setup'), notice: 'Request for project set-up has been submitted.' }
+          format.json {render :json => {'data' => 'Request for project set-up has been submitted.'}.merge(state_snapshot)}
+        when :start, :stop, :abort, :terminate
+          submit_process(command) if @project.send("may_#{command}?")
+          @project.send("#{command}!") # TODO refactor as a :before callback to events
           format.html { redirect_to project_path(@project, :submit_action => params[:process]), notice: 'Request for project '+params[:process]+' has been submitted.' }
-          format.json {render :json => {"data" => 'Request for project '+params[:process]+' has been submitted.'}}
-        when "download", "export"
-          #save data for selected results
+          format.json {render :json => {'data' => 'Request for project '+params[:process]+' has been submitted.'}.merge(state_snapshot)}
+        when :download, :export
+          # save data for selected results
           result_download_data = Hash.new
           result_download_data[:test_ids] = params[:ids]
           result_download_data[:project_id] = @project.id
           result_download_data[:result_type] = params[:process]
           result_download = ProjectResultDownload.new(result_download_data)
-          result_download.save
+          result_download.save!
 
-          project_results_download(params[:process], params[:ids].split(","), result_download.id)
+          project_results_download(params[:process], params[:ids].split(','), result_download.id)
 
-          format.json {render :json => {"request_id"=>result_download.id,"status"=>0}}
+          format.json {render :json => {'request_id' => result_download.id, 'status' => 0}}
         else
           format.html { redirect_to project_path(@project), notice: 'Unidentified process command.' }
-          format.json {render :json => {"data" => 'Unidentified process command.'}}
+          format.json {render :json => {'data' => 'Unidentified process command.'}}
       end
 
     end
   end
 
-  #update data on callback
+  # update data on callback
   def update_status
-    status = 0
-    case params[:status]
-      when "terminate"
-        status = 2
-      when 'setup'
-        status = 4
-      when 'start'
-        status = 5
-      when 'stop'
-        status = 6
 
-        #save return result data
-        load_test_data = Hash.new
-        load_test_data[:execution_cycle_id] = params[:execution_cycle_id]
-        load_test_data[:project_id] = params[:project_id]
-        load_test_data[:total_threads_count] = params[:total_threads_count]
-        load_test_data[:avg_90_percentile] = params[:avg_90_percentile]
-        load_test_data[:avg_tps] = params[:avg_tps]
-        load_test_data[:started_at] = params[:started_at]
-        load_test_data[:stopped_at] = params[:stopped_at]
-        load_test = LoadTest.new(load_test_data)
-        load_test.save
-      when 'abort'
-        status = 7
-      when "download", "export"
+    command = params[:status].to_sym
+    case command
+      when :setup, :start, :abort, :terminate
+        @project.send("#{command}_done!")
+      when :stop
+        @project.stop_done!
+        # save return result data
+        raw_data = params[:data]
+        results = JSON.parse(raw_data)
+        results.each {|result| LoadTest.create!(result.merge(project_id: @project.id))}
+
+      when :download, :export
         result_download_parms = {}
         result_download_parms[:status] = 1
-        ProjectResultDownload.update(params[:request_id],result_download_parms)
+        ProjectResultDownload.update(params[:request_id], result_download_parms)
+
+      when :status
+        status_data = params[:status_data]
+        unless status_data.blank?
+          if JSON.parse(status_data).empty?
+            if @project.may_stop?
+              submit_process(:stop)
+              @project.stop! # TODO refactor as a :before callback to events
+            end
+          end
+        end
+      else
+        raise "Unknown command for status update: #{command}"
     end
 
-    if status> 0 then
-      params[:project] = Hash[:status => status]
-      if @project.update(project_params)
-        puts "status updated successfully"
-      else
-        raise "Some error occur, please try again."
-      end
-    end
+    flash[:notice] = "#{command} completed successfully!"
     render nothing: true
   end
 
-  #read project logs
+  # read project logs
   def read_logs
-    file_name = File.join(Rails.configuration.project_setup_path, @project.title, "log", Rails.configuration.project_logs_file)
-    if(File.exist? (file_name))
-      render :text => File.read(file_name).gsub!(/\n/, '<br />')
+
+    file_name = File.join(Rails.configuration.project_setup_path, @project.project_key, 'log', Rails.configuration.project_logs_file)
+    file_contents = nil
+    if File.exist?(file_name)
+      offset = (params[:offset] || 0).to_i
+      File.open(file_name) { |f| f.seek(offset) if offset > 0; file_contents = f.read(); }
+    end
+
+    if not file_contents.blank?
+      render text: file_contents
     else
-      render :nothing => true
+      render nothing: true
     end
   end
 
-  #return project status to update status and operation's links
+  # project status to update status and operation's links
+  # if state_reason is not empty, it is the error message with last command.
   def check_project_status
-    render :text => @project.status
+    submit_process(:status)
+    render json: state_snapshot
   end
 
   #get load test new results
   def update_loadtest_results
     #get load_test data
-    load_tests = LoadTest.where('project_id = :projectid and id > (:resultid)',:projectid => params[:project_id], :resultid => params[:resultid])
+    load_tests = LoadTest.where('project_id = :projectid and id > (:resultid)',
+                                :projectid => params[:project_id],
+                                :resultid => params[:resultid])
 
 
     load_test_json_arr = []
@@ -177,18 +183,19 @@ class ProjectsController < ApplicationController
   #prepare download based on type
   def download_results
     download_result_data = ProjectResultDownload.find(params[:request_id])
-    export_id_arr = download_result_data.test_ids.split(",")
+    export_id_arr = download_result_data.test_ids.split(',')
 
-    download_report_path = File.join(Rails.configuration.project_setup_path, @project.title, "reports")
+    download_report_path = File.join(Rails.configuration.project_setup_path, @project.project_key, 'reports')
 
-    if(download_result_data.result_type == "export")
+    if download_result_data.result_type == 'export'
       t = Tempfile.new("my-temp-filename-#{Time.now}")
       Zip::OutputStream.open(t.path) do |z|
         export_id_arr.each do |val|
-          export_dir_path = File.join(download_report_path,"SEQUENCE-"+val)
-          Dir.glob(export_dir_path+"/*").each do |item|
-            title = File.basename(item,".jtl")
-            title = title+"-"+val+".jtl"
+          export_dir_path = File.join(download_report_path, "SEQUENCE-#{val}")
+          Dir.glob(export_dir_path + '/*').each do |item|
+            # title = File.basename(item, '.jtl')
+            # title = title+"-"+val+".jtl"
+            title = "#{File.basename(item, '.jtl')}-#{val}.jtl"
             z.put_next_entry("exportreports/#{title}")
             url1 = item
             url1_data = open(url1)
@@ -197,57 +204,89 @@ class ProjectsController < ApplicationController
         end
       end
 
-      send_file t.path, :type => 'application/zip', :disposition => 'attachment', :filename => "exportreports.zip"
-
+      send_file t.path, :type => 'application/zip', :disposition => 'attachment', :filename => 'exportreports.zip'
       t.close
-    elsif(download_result_data.result_type == "download")
-      start_id = export_id_arr[0]
-      end_id = export_id_arr[export_id_arr.length-1]
-      report_file_name = "#{@project.title}-#{start_id}-#{end_id}.docx"
-      download_file_path = File.join(download_report_path,report_file_name)
 
-      send_file download_file_path, :type=>"application/doc", :disposition => 'attachment'
+    elsif download_result_data.result_type == 'download'
+      start_id = export_id_arr[0]
+      end_id = export_id_arr[export_id_arr.length - 1]
+      report_file_name = "#{@project.project_key}-#{start_id}-#{end_id}.docx"
+      download_file_path = File.join(download_report_path, report_file_name)
+
+      send_file download_file_path, :type => 'application/doc', :disposition => 'attachment', :filename => report_file_name
     else
       render :nothing => true
     end
+  end
 
-
+  # Indicates an error in a submitted job
+  # POST /projects/1/job_error
+  def job_error
+    command = params[:command].to_sym
+    message = params[:message]
+    @project.send("#{command}_fail!", nil, message)
+    head :ok
   end
 
   private
-    # Never trust parameters from the scary internet, only allow the white list through.
-    def project_params
-      params.require(:project).permit(:title, :status)
-    end
+  # Never trust parameters from the scary internet, only allow the white list through.
+  def project_params
+    params.require(:project).permit(:title, :status)
+  end
 
-    def setup_project
-      environment_data = Hash.new
+  def setup_project
 
-      #Get test plan data for the project
-      environment_data['test_plans_data'] = @project.test_plans.as_json
+    upload_directory_path = Rails.root.join(Rails.configuration.uploads_directory)
 
-      #Get amazon cloud data for the project
-      environment_data['amazon_clouds_data'] = @project.amazon_clouds.as_json
+    callback = url_for(:action => 'update_status', :status => 'setup')
 
-      #Get data center data for the project
-      environment_data['data_centers_data'] = @project.data_centers.as_json
+    # Submit job for project setup
+    HailstormProcess.perform_async(@project.project_key, Rails.configuration.project_setup_path, 'setup', @project.id, callback, upload_directory_path, env_data_for_worker, nil, error_callback)
+  end
 
-      upload_directory_path = Rails.root.join(Rails.configuration.uploads_directory)
+  def env_data_for_worker
+    environment_data = Hash.new
 
-      callback = url_for(:action => 'update_status', :status => "setup")
+    # Get test plan data for the project
+    environment_data['test_plans_data'] = @project.test_plans.as_json
 
-      #Submit job for project setup
-      HailstormProcess.perform_async(@project.title, Rails.configuration.project_setup_path, 'setup', @project.id, callback, upload_directory_path, environment_data)
-    end
+    # Get amazon cloud data for the project
+    environment_data['amazon_clouds_data'] = @project.amazon_clouds.as_json
 
-    def submit_process(process)
-      callback = url_for(:action => 'update_status', :status => process)
-      HailstormProcess.perform_async(@project.title, Rails.configuration.project_setup_path, process, @project.id, callback)
-    end
+    # Get data center data for the project
+    environment_data['data_centers_data'] = @project.data_centers.as_json
+    environment_data
+  end
 
-    def project_results_download(type, test_ids, request_id)
-      callback = url_for(:action => 'update_status', :status => type, :request_id => request_id)
-      HailstormProcess.perform_async(@project.title, Rails.configuration.project_setup_path, type, @project.id, callback, nil, nil, test_ids)
-    end
+  def submit_process(process)
+    upload_directory_path = Rails.root.join(Rails.configuration.uploads_directory)
+    callback = url_for(:action => 'update_status', :status => process.to_s)
+    HailstormProcess.perform_async(@project.project_key, Rails.configuration.project_setup_path, process.to_s, @project.id, callback, upload_directory_path, env_data_for_worker, nil, error_callback)
+  end
+
+  def project_results_download(type, test_ids, request_id)
+    callback = url_for(:action => 'update_status', :status => type, :request_id => request_id)
+    HailstormProcess.perform_async(@project.project_key, Rails.configuration.project_setup_path, type, @project.id, callback, nil, nil, test_ids, error_callback)
+  end
+
+  def error_callback
+    url_for(action: 'job_error')
+  end
+
+  def state_snapshot
+    {
+        state_code: @project.aasm.current_state,
+        state_title: @project.status_title,
+        state_reason: @project.state_reason,
+        state_triggers: {
+          setup: @project.may_setup?,
+          start: @project.may_start?,
+          stop:  @project.may_stop?,
+          abort: @project.may_abort?,
+          term:  @project.may_terminate?
+        },
+        any_op_in_progress: @project.anything_in_progress?
+    }
+  end
 
 end

@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20150127133933) do
+ActiveRecord::Schema.define(version: 20150514174021) do
 
   create_table "clusters", force: true do |t|
     t.integer  "project_id",                null: false
@@ -37,8 +37,8 @@ ActiveRecord::Schema.define(version: 20150127133933) do
     t.integer  "execution_cycle_id"
     t.integer  "project_id"
     t.integer  "total_threads_count"
-    t.float    "avg_90_percentile"
-    t.float    "avg_tps"
+    t.float    "avg_90_percentile",   limit: 24
+    t.float    "avg_tps",             limit: 24
     t.datetime "started_at"
     t.datetime "stopped_at"
   end
@@ -53,10 +53,13 @@ ActiveRecord::Schema.define(version: 20150127133933) do
   end
 
   create_table "projects", force: true do |t|
-    t.string   "title",                  null: false
-    t.integer  "status",     default: 0, null: false
+    t.string   "title",                    null: false
+    t.integer  "status",       default: 0, null: false
     t.datetime "created_at"
     t.datetime "updated_at"
+    t.string   "aasm_state"
+    t.string   "state_reason"
+    t.string   "project_key"
   end
 
   create_table "target_hosts", force: true do |t|

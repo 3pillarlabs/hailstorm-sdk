@@ -2,9 +2,12 @@
 // They will automatically be included in application.css.
 // You can use Sass (SCSS) here: http://sass-lang.com/
 hr{ margin-top: 5px; margin-bottom: 5px; }
-.logs-console{ background-color: #000000; color: #ffffff; height: 200px; overflow: scroll;}
+.logs-console{ background-color: #000000; color: #ffffff; height: 200px; overflow: scroll; font-family: monospace;}
 .testsCheck{margin-top: 18px !important;}
 #project_results_div{
   max-height: 210px;
   overflow-y:scroll;
+}
+pre.jmx {
+  height: 30.0em;
 }

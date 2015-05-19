@@ -5,7 +5,7 @@
         <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add'.html_safe, new_project_test_plan_path, :class => "btn btn-info" %>
       </div>
     </div>
-    <h2>Test plans</h2>
+    <h2>Test Plans &amp; Data Files</h2>
   </div>
 </div>
 
@@ -21,7 +21,7 @@
         <table class="table table-hover table-bordered">
           <thead>
               <tr>
-                <th>JMX File Name</th>
+                <th>File Name</th>
                 <th>Action</th>
               </tr>
           </thead>
@@ -30,7 +30,9 @@
           <% @test_plans.each do |test_plan| %>
               <tr>
                 <td><%= link_to test_plan.jmx_file_name, project_test_plan_path(test_plan.project_id, test_plan, format: :xml) %></td>
+                <% if test_plan.test_plan? %>
                 <td><%= link_to 'Set Properties', params[:page].blank? ? edit_project_test_plan_path(test_plan.project_id, test_plan):edit_project_test_plan_path(test_plan.project_id, test_plan,:page=>params[:page]), class: "btn btn-warning" %></td>
+                <% end %>
               </tr>
           <% end %>
           </tbody>
