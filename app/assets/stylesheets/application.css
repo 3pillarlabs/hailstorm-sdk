@@ -29,6 +29,6 @@
 }
 
 /* For fixed panel, required by BS */
-body {
-    padding-bottom: 70px;
+body > .container {
+    padding-top: 60px;
 }

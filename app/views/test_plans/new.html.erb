@@ -1,17 +1,9 @@
 <%= content_for :project_header do %>
-    <% unless @project.blank? %>
+    <% unless @project.nil? %>
         <%= link_to @project.title, project_path(@project) %>
     <% end %>
 <% end %>
-<div class="row-fluid">
-    <div class="span12">
-      <div class="page-header">
-        <h2>
-          Add a test plan
-        </h2>
-      </div>
-    </div>
-</div>
+<h2 class="page-header">Add a Test Plan</h2>
 <%= form_for ([@project,@test_plan]), :html => {:multipart => true} do |f| %>
     <p>
       <%= f.label :jmx, "Jmeter File" %>

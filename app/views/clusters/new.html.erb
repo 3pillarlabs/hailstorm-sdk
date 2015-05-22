@@ -1,17 +1,9 @@
 <%= content_for :project_header do %>
-    <% unless @project.blank? %>
+    <% unless @project.nil? %>
         <%= link_to @project.title, project_path(@project) %>
     <% end %>
 <% end %>
-<div class="row-fluid">
-  <div class="span12">
-    <div class="page-header">
-      <h2>
-        Add Cluster
-      </h2>
-    </div>
-  </div>
-</div>
+<h2 class="page-header"> Add Cluster </h2>
 <p>
 <%= render 'form' %>
 </p>

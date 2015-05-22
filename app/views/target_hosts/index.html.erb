@@ -1,13 +1,14 @@
-<div class="row-fluid">
-  <div class="page-header">
-    <div class="btn-toolbar pull-right">
-      <div class="btn-group">
-        <%= link_to 'Configure', new_project_target_host_path, class: 'btn btn-info' %>
-      </div>
-    </div>
-    <h2>Target Hosts</h2>
+<%= content_for :project_header do %>
+    <% unless @project.nil? %>
+        <%= link_to @project.title, project_path(@project) %>
+    <% end %>
+<% end %>
+<h2 class="page-header">
+  <div class="row">
+    <div class="col-md-9">Target Hosts</div>
+    <div class="col-md-3"><%= link_to 'Configure', new_project_target_host_path, class: 'btn btn-primary pull-right' %></div>
   </div>
-</div>
+</h2>
 
 <%#= debug @target_hosts %>
 <% if @target_hosts.blank? %>

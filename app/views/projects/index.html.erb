@@ -1,15 +1,13 @@
-<div class="row-fluid">
-  <div class="page-header">
-    <div class="btn-toolbar pull-right">
-      <div class="btn-group">
-        <%= link_to new_project_path, class: 'btn btn-info' do %>
-            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add
-        <% end %>
-      </div>
+<h2 class="page-header">
+  <div class="row">
+    <div class="col-md-6">Projects</div>
+    <div class="col-md-6">
+      <%= link_to new_project_path, class: 'btn btn-primary pull-right' do %>
+          <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add
+      <% end %>
     </div>
-    <h2>Projects</h2>
   </div>
-</div>
+</h2>
 
 <% if @projects.blank? %>
     <div role="alert" class="alert alert-warning">

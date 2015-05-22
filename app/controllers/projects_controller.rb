@@ -1,6 +1,7 @@
 class ProjectsController < ApplicationController
 
-  before_action :set_project, except: [:index, :new, :create, :update_loadtest_results, :check_download_status]
+  # before_action :set_project, except: [:index, :new, :create, :update_loadtest_results, :check_download_status]
+  skip_before_action :set_project, only: [:index, :new, :create, :update_loadtest_results, :check_download_status]
   skip_before_action :verify_authenticity_token, only: [:job_error, :update_status]
 
   # GET /projects

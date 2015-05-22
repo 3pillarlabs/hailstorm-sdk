@@ -1,18 +1,18 @@
 <%= content_for :project_header do %>
-    <% unless @project.blank? %>
+    <% unless @project.nil? %>
         <%= link_to @project.title, project_path(@project) %>
     <% end %>
 <% end %>
-<div class="row-fluid">
-  <div class="page-header">
-    <div class="btn-toolbar pull-right">
-      <div class="btn-group">
-        <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add'.html_safe, new_project_test_plan_path, :class => "btn btn-info" %>
-      </div>
+<h2 class="page-header">
+  <div class="row">
+    <div class="col-md-6">Test Plans &amp; Data Files</div>
+    <div class="col-md-6">
+      <span class="pull-right"><%= link_to new_project_test_plan_path, class: 'btn btn-primary' do %>
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add
+        <% end %></span>
     </div>
-    <h2>Test Plans &amp; Data Files</h2>
   </div>
-</div>
+</h2>
 
 <% if @test_plans.blank? %>
 

@@ -3,11 +3,13 @@ class ApplicationController < ActionController::Base
   # For APIs, you may want to use :null_session instead.
   protect_from_forgery with: :exception
 
+  before_action :set_project
+
   private
 
   # Use callbacks to share common setup or constraints between actions for project.
   def set_project
-    @project = Project.find(params.has_key?(:project_id) ? params[:project_id] : params[:id])
+    @project = Project.find(params[:project_id] || params[:id])
   end
 
 end

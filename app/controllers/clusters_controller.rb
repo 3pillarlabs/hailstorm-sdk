@@ -1,6 +1,5 @@
 class ClustersController < ApplicationController
   before_action :set_cluster, :except => [:index, :new, :create]
-  before_filter :set_project
   before_action :set_project_id, only: [:create, :update]
   before_action :convert_machines_json_to_array, :only => [:edit]
 
