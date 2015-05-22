@@ -38,8 +38,8 @@ gem 'paperclip', '~> 4.2'
 
 gem 'sidekiq'
 
-gem 'rubyzip'
-
 gem 'aasm'
+
+gem 'font-awesome-rails', '~> 4.3.0.0'
 
 gem 'minitest-rails', group: :test
