@@ -165,7 +165,7 @@ class HailstormProcess
     app_path = File.join(app_root_path, app_name)
     args = %w[export]
     args.push(result_ids.join(':')) unless result_ids.nil? or result_ids.empty?
-    execute_hailstorm_command(app_path, :results, args)
+    execute_hailstorm_command(app_path, :results, args, :zip)
 
     #callback to web
     project_callback(callback)
@@ -211,7 +211,6 @@ class HailstormProcess
     system_args.push('--args', args.join(',')) unless args.nil?
     system_args.push('--format', format) unless format.nil?
 
-    # system(system_args.join(' '))
     `#{system_args.join(' ')}`
   end
 
