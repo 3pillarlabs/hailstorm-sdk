@@ -529,6 +529,26 @@ Continue using old version?
                         })
              }.to_json
       end
+    elsif :export == operation
+      if :zip == format.to_sym
+        reports_path = File.join(Hailstorm.root, Hailstorm.reports_dir)
+        timestamp = Time.now.strftime('%Y%m%d%H%M%S')
+        zip_file_path = File.join(reports_path, "jtl-#{timestamp}.zip")
+        FileUtils.safe_unlink zip_file_path
+        Zip::File.open(zip_file_path, Zip::File::CREATE) do |zf|
+          data.each do
+            # @type [Hailstorm::Model::ExecutionCycle] ex
+            |ex|
+
+            seq_dir = "SEQUENCE-#{ex.id}"
+            zf.mkdir(seq_dir)
+            Dir["#{reports_path}/#{seq_dir}/*.jtl"].each do |jtl_file|
+              ze = "#{seq_dir}/#{File.basename(jtl_file)}"
+              zf.add(ze, jtl_file) { true }
+            end
+          end
+        end
+      end
     end
   end
 
