@@ -1,3 +1,8 @@
+<%= content_for :project_header do %>
+    <% unless @project.blank? %>
+        <%= link_to @project.title, project_path(@project) %>
+    <% end %>
+<% end %>
 <div class="row">
   <div class="page-header">
     <h2>
