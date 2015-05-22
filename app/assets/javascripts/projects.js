@@ -1,324 +1,366 @@
 // Place all the behaviors and hooks related to the matching controller here.
 // All this logic will automatically be available in application.js.
 
-if (window.Hailstorm === undefined) {
-    window.Hailstorm = {};
-}
+var Hailstorm = Hailstorm || {};
+Hailstorm.Project = {};
 
-Hailstorm.Project = {
-    appendLog: function(data) {
-        var contentLen = data.trim().length;
-        if (contentLen > 0) {
-            logOffset += data.length;
-            // auto-scroll
-            var appender = jQuery("#logsResults");
-            appender.append(data.replace(/\n/g, '<br/>'));
-            var sch = appender.prop("scrollHeight");
-            var h = appender.height();
-            if (sch > h) {
-                appender.animate({scrollTop: sch});
-            }
-        }
-    },
+Hailstorm.Project.Tracker = function(options) {
+    this.readLogsPath = options.readLogsPath;
+    this.projectStatusPath = options.projectStatusPath;
+    this.downloadStatusPath = options.downloadStatusPath;
+    this.anythingInProgress = options.anythingInProgress;
+    this.logOffset = options.logOffset;
+    this.updateResultsPath = options.updateResultsPath;
+    this.generatedReportsPath = options.generatedReportsPath;
 
-    synchProjectState: function(result) {
-        jQuery("#project_status").html(result.state_title);
-        var state_code = result.state_code;
-        var triggers = result.state_triggers;
-        anythingInProgress = result.any_op_in_progress;
+    this.projectStatusIntervalId = 0;
+    this.downloadStatusIntervalId = 0;
+    this.refreshLogsIntervalId = 0;
 
-        if (triggers.setup) {
-            jQuery("#project_setup").removeClass( "disabled" );
-        } else {
-            jQuery("#project_setup").addClass( "disabled" );
-        }
-
-        if (triggers.start) {
-            jQuery("#project_start").removeClass( "disabled" );
-        } else {
-            jQuery("#project_start").addClass( "disabled" );
-        }
-
-        if (triggers.stop) {
-            jQuery("#project_stop").removeClass( "disabled" );
-        } else {
-            jQuery("#project_stop").addClass( "disabled" );
-        }
-
-        if (triggers.abort) {
-            jQuery("#project_abort").removeClass( "disabled" );
-        } else {
-            jQuery("#project_abort").addClass( "disabled" );
-        }
-
-        if (triggers.term) {
-            jQuery("#project_terminate").removeClass( "disabled" );
-        } else {
-            jQuery("#project_terminate").addClass( "disabled" );
-        }
-
-        if (state_code == "ready_start")
-        {
-            $("#flash_messages").html('<div class="alert alert-info fade in"><button data-dismiss="alert" class="close">x</button>Please check results.</div>');
-
-            //send ajax call to update results
-            var last_result_id = $("#last_result_id").html();
-            var update_results_uri = $("#update_results_data_uri").html();
-            var update_results_uri = update_results_uri+"?resultid="+last_result_id;
-
-            jQuery.ajax({url:update_results_uri, dataType : 'json', success:function(result){
-
-                if(result.length != 0)
-                {
-                    var result_str = '';
-                    var last_resultid = '';
-                    jQuery.each(result, function(index, element) {
-                        last_resultid = element.id;
-
-                        result_str += '<div class="row">'+
-                        '<div class="col-md-1"><input type="checkbox" class="testsCheck" name="load_test[]" value="'+element.execution_cycle_id+'"></div>'+
-                        '<div class="col-md-11">'+
-                        '<div class="row">'+
-                        '<div class="col-md-7">'+element.total_threads_count+' Threads</div>'+
-                        '<div class="col-md-5">'+
-                        '<div class="row">'+
-                        '<div class="col-md-5">'+element.started_at_date+'<br/>'+element.started_at_time+'</div>'+
-                        '<div class="col-md-2">-</div>'+
-                        '<div class="col-md-5">'+element.stopped_at_date+'<br/>'+element.stopped_at_time+'</div>'+
-                        '</div>'+
-                        '</div>'+
-                        '</div>'+
-                        '<div class="row">'+
-                        '<div class="col-md-7">'+element.avg_90_percentile.toFixed(1)+' ms Response Time</div>'+
-                        '<div class="col-md-5">'+element.avg_tps+' TPS</div>'+
-                        '</div>'+
-                        '</div>'+
-                        '</div>'+
-                        '<hr>';
-                    });
-
-                    jQuery("#project_results_div").append(result_str);
-                    jQuery("#last_result_id").html(last_resultid);
-                }
-
-            }});
-        }
-
-        if (result.state_reason) {
-            jQuery("#flash_messages").html('<div class="danger alert-danger fade in"><button data-dismiss="danger" class="close">x</button>An error occurred - ' + result.state_reason + '</div>');
-        }
-    },
-
-    updateTestResults: function(result, request_id) {
-        result = parseInt(result);
-        console.debug("result: " + result);
-        if (result == 1)
-        {
-            $("#download_request_id").html("");
-            download_link_uri = $("#download_result_uri").html()+"?request_id="+request_id;
-            download_status_str = '<a href="'+download_link_uri+'" class="btn btn-success"><span aria-hidden="true" class="glyphicon glyphicon-save"></span> Download</a>';
-
-            $("#project_download_status").html(download_status_str);
-
-            $("#download-reports").removeClass( "disabled" );
-            $("#export-reports").removeClass( "disabled" );
-        }
-    }
+    this.alertCloseBtnMarkup = '<button type="button" data-dismiss="alert" class="close" aria-label="Close"><span aria-hidden="true" class="small">&times;</span></button>';
 };
 
+Hailstorm.Project.Tracker.prototype.start = function() {
 
+    var self = this;
+    this.clrInterval();
+    jQuery(document).ready(this.clrInterval.apply(this));
+    jQuery(document).on('page:load', this.clrInterval.apply(this));
 
-var intervalId = 0;
-var projectStatusIntervalId = 0;
-var projectDownloadIntervalId = 0;
-var continueLogs = false;
-var logOffset = 0;
-var anythingInProgress = false;
-
-function clrInterval()
-{
-    if(continueLogs == false)
-    {
-        if(intervalId > 0)
-        {
-            clearInterval(intervalId);
-            intervalId = 0;
-        }
-
-        if(projectStatusIntervalId > 0)
-        {
-            clearInterval(projectStatusIntervalId);
-            projectStatusIntervalId = 0;
-        }
-
-        if(projectDownloadIntervalId > 0)
-        {
-            clearInterval(projectDownloadIntervalId);
-            projectDownloadIntervalId = 0;
-        }
-    }
-}
-
-jQuery(document).ready(clrInterval);
-jQuery(document).on('page:load', clrInterval);
-
-function refreshLogs(logsUri) {
-    continueLogs = true;
-    intervalId = setInterval(function(){
-        if(continueLogs)
-        {
-            continueLogs = false;
-        }
-
-        if (anythingInProgress) {
-            jQuery.ajax(logsUri, {
-                data: {offset: logOffset},
-                success: Hailstorm.Project.appendLog
-            });
-        }
-    }, 30000);
-}
-
-function updateProject(project_status_uri)
-{
-    continueLogs = true;
-    projectStatusIntervalId = setInterval(function(){
-        if(continueLogs)
-        {
-            continueLogs = false;
-        }
-        if (anythingInProgress) {
-            jQuery.getJSON(project_status_uri, Hailstorm.Project.synchProjectState);
-        }
-    }, 60000);
-}
-
-function checkDownloadStatus(check_download_status_uri)
-{
-
-    continueLogs = true;
-    projectDownloadIntervalId = setInterval(function(){
-        if(continueLogs)
-        {
-            continueLogs = false;
-        }
-
-        var request_id = $("#download_request_id").html();
-        if (request_id != "")
-        {
-            check_download_status_uri = check_download_status_uri+"?request_id="+request_id;
-
-            jQuery.ajax({
-                url: check_download_status_uri,
-                success: function(data) {
-                    Hailstorm.Project.updateTestResults(data, request_id)
-                }
-            });
-        }
-
-    }, 60000);
-}
-
-var do_on_load = function() {
-    // do some things
-
+    // check/uncheck all for test results
     $("#checkUncheckAll").on("click", function() {
         $(".testsCheck").prop("checked", $(this).prop("checked"));
     });
 
+    // set up handlers for triggers
     $(".worker_task").on("click", function(event) {
-        var action_id_str = $(this).attr('id');
-
-        if (action_id_str == "project_abort" || action_id_str == "project_terminate" || action_id_str == "project_stop")
-        {
-            var action_str = $(this).text().trim().toLowerCase();
-            if(confirm("Are you sure! you want to " + action_str))
-            {
-                $.ajax({
-                    url : $(this).attr('href'),
-                    dataType : 'json',
-                    success:function(result){
-                        $("#flash_messages").html('<div class="alert alert-info fade in"><button data-dismiss="alert" class="close">x</button>'+result['data']+'</div>');
-                        $(".worker_task").addClass( "disabled" );
-                    },
-                    error: function() {
-                        $("#flash_messages").html('<div class="alert alert-info fade in"><button data-dismiss="alert" class="close">x</button>An error occurred! please try again.</div>');
-                    }
-                });
-            }
-        }
-        else
-        {
-            $.ajax({
-                url : $(this).attr('href'),
-                dataType : 'json',
-                success:function(result){
-                    $("#flash_messages").html('<div class="alert alert-info fade in"><button data-dismiss="alert" class="close">x</button>'+result['data']+'</div>');
-                    Hailstorm.Project.synchProjectState(result);
-                },
-                error: function() {
-                    $("#flash_messages").html('<div class="alert alert-info fade in"><button data-dismiss="alert" class="close">x</button>An error occurred! please try again.</div>');
-                }
-            });
-        }
-
-        return false;
+        self.handleTaskTriggers(this);
+        event.preventDefault();
+        event.stopPropagation();
     });
 
-    function getCheckedResultsIds()
-    {
-        var checkedValues = $('.testsCheck:checked').map(function() {
-            return this.value;
-        }).get();
-        return checkedValues;
+    $("#download-reports").click(function(event) {
+        var url = jQuery(this).attr('href');
+        self.getTestResults(url, 'download');
+        event.preventDefault();
+        event.stopPropagation();
+    });
+
+    $("#export-reports").click(function(event) {
+        var url = jQuery(this).attr('href');
+        self.getTestResults(url, 'export');
+        event.preventDefault();
+        event.stopPropagation();
+    });
+
+    if (this.anythingInProgress) {
+        this.projectStatusIntervalId = window.setInterval(this.periodicProjectSync.bind(this), 60000);
+        this.refreshLogsIntervalId = window.setInterval(this.refreshLogs.bind(this), 10000);
     }
 
-    function getTestResults(url, type)
-    {
-        ids = getCheckedResultsIds();
+    // listen for closed alerts and replace with original content
+    $(document).on("close.bs.alert", function() {
+       $("#project_fm").html('<br/><br/><br/>');
+    });
 
-        if(ids.length == 0 )
-        {
-            jQuery("#flash_messages").html('<div class="alert alert-danger fade in"><button data-dismiss="alert" class="close">x</button>Please select results to '+type+'.</div>');
+    $('a[data-toggle="tab"]').on("show.bs.tab", function(event) {
+        var tabContentId = $(event.target).attr("aria-controls");
+        if (tabContentId == "gen_reports") {
+            self.showGeneratedReports();
         }
-        else
-        {
-            $("#download-reports").addClass( "disabled" );
-            $("#export-reports").addClass( "disabled" );
-            var message = "Request for report "+type+" has been submitted, please wait while the request is processing."
-            jQuery.ajax({
-                url : url+"&ids="+ids,
-                dataType : 'json',
-                success:function(result){
-                    $("#download_request_id").html(result['request_id']);
-                    $("#project_download_status").html('<img src="/assets/roller.gif" />');
+    });
+};
 
-                    jQuery("#flash_messages").html('<div class="alert alert-info fade in"><button data-dismiss="alert" class="close">x</button>'+message+'</div>');
+Hailstorm.Project.Tracker.prototype.showError = function(message) {
+    var messageText = '<div class="alert alert-danger fade in">' +
+        this.alertCloseBtnMarkup + ' An error occurred';
+    if (message) {
+        messageText += ': ' + message;
+    }
+    messageText += '. Please try again.</div>';
+    $("#project_fm").html(messageText);
+};
+
+Hailstorm.Project.Tracker.prototype.showSuccess = function(message) {
+    var messageText = '<div class="alert alert-success fade in">' + this.alertCloseBtnMarkup + ' ' + message + '</div>';
+    $("#project_fm").html(messageText);
+};
+
+Hailstorm.Project.Tracker.prototype.showInfo = function(message) {
+    var messageText = '<div class="alert alert-info fade in">' + this.alertCloseBtnMarkup + ' ' + message + '</div>';
+    $("#project_fm").html(messageText);
+};
+
+Hailstorm.Project.Tracker.prototype.showWarn = function(message) {
+    var messageText = '<div class="alert alert-warning fade in">' + this.alertCloseBtnMarkup + ' ' + message + '</div>';
+    $("#project_fm").html(messageText);
+};
+
+Hailstorm.Project.Tracker.prototype.clrInterval = function() {
+
+    if (this.projectStatusIntervalId > 0) {
+        window.clearInterval(this.projectStatusIntervalId);
+        this.projectStatusIntervalId = 0;
+    }
+
+    if (this.downloadStatusIntervalId > 0) {
+        window.clearInterval(this.downloadStatusIntervalId);
+        this.downloadStatusIntervalId = 0;
+    }
+
+    if (this.refreshLogsIntervalId > 0) {
+        window.clearInterval(this.refreshLogsIntervalId);
+        this.refreshLogsIntervalId = 0;
+    }
+};
+
+Hailstorm.Project.Tracker.prototype.refreshLogs = function() {
+
+    jQuery.ajax(this.readLogsPath, {
+        data: {offset: this.logOffset},
+        success: this.appendLog.bind(this)
+    });
+};
+
+Hailstorm.Project.Tracker.prototype.periodicProjectSync = function() {
+
+    var self = this;
+    jQuery.getJSON(this.projectStatusPath, function(data) {
+        self.synchProjectState(data);
+    });
+};
+
+Hailstorm.Project.Tracker.prototype.checkDownloadStatus = function() {
+
+    var self = this;
+    if (this.downloadRequestId) {
+        jQuery.ajax({
+            url: this.downloadStatusPath,
+            data: {request_id: this.downloadRequestId},
+            success: function(data) {
+                self.updateTestResults(data);
+            }
+        });
+    }
+};
+
+Hailstorm.Project.Tracker.prototype.handleTaskTriggers = function(trigger) {
+
+    var self = this;
+    var actionCode = $(trigger).attr('id');
+    this.lastActionCode = actionCode;
+    if (actionCode == "project_abort" || actionCode == "project_terminate" || actionCode == "project_stop") {
+
+        var modalSelector = "#" + actionCode + "-confirm-modal";
+        $(modalSelector).modal("show");
+        var modalOkSelector = modalSelector + " a.btn-danger";
+        var yesFn = function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            $(modalSelector).modal("hide");
+            $.ajax({
+                url : $(trigger).attr("href"),
+                dataType : "json",
+                success: function(result){
+                    self.synchProjectState(result);
+                    self.showInfo("Proceeding with " + actionCode.split("_")[1] + "...");
                 },
-                error: function() {
-                    jQuery("#flash_messages").html('<div class="alert alert-danger fade in"><button data-dismiss="alert" class="close">x</button>An error occurred! please try again.</div>');
-                }
+                error: self.showError.apply(self)
             });
+        };
+
+        $(modalOkSelector).one("click", yesFn);
+    } else {
+        $.ajax({
+            url : $(trigger).attr("href"),
+            dataType : "json",
+            success:function(result){
+                self.synchProjectState(result);
+                var msg = (actionCode == "project_setup" ? "The load testing environment is being setup and make take a long time. Once setup completes, this page will be auto-updated." : "Your tests will start in a short while.");
+                self.showInfo(msg);
+            },
+            error: self.showError.apply(self)
+        });
+    }
+
+    return false;
+};
+
+Hailstorm.Project.Tracker.prototype.getCheckedResultsIds = function() {
+    return $('.testsCheck:checked').map(function() {
+        return this.value;
+    }).get();
+};
+
+Hailstorm.Project.Tracker.prototype.getTestResults = function(url, type) {
+
+    var self = this;
+    var ids = this.getCheckedResultsIds();
+    if (ids.length > 0 ) {
+        $("#download-reports").addClass( "disabled" );
+        $("#export-reports").addClass( "disabled" );
+        var message = "Request for report "+type+" has been submitted, please wait while the request is processing.";
+        jQuery.ajax({
+            url : url,
+            data: {ids: ids},
+            dataType : 'json',
+            success: function(result) {
+                self.downloadRequestId = result['request_id'];
+                // when the gen_reports tab is shown, self.showGeneratedReports will
+                // trigger an event after showing existing reports. Add a one time
+                // listener for this event to add in progress message.
+                $(document).one("hailstorm:event:gen_reports_showed", function() {
+                    $("#generated_reports").prepend('<div id="gen_report_progress"><span class="fa fa-cog fa-spin"></span> Generating report...</div><br/>');
+                });
+
+                $('a[href="#gen_reports"]').tab('show');
+                self.showInfo(message);
+                $(".testsCheck").prop("checked", false);
+                $("#checkUncheckAll").prop("checked", false);
+                self.downloadStatusIntervalId = window.setInterval(self.checkDownloadStatus.bind(self), 5000);
+                self.refreshLogsIntervalId = window.setInterval(self.refreshLogs.bind(self), 1000);
+            },
+            error: self.showError.apply(self)
+        });
+    } else {
+        this.showWarn("Please select results to " + type + ".");
+    }
+};
+
+Hailstorm.Project.Tracker.prototype.appendLog = function(data) {
+
+    var contentLen = data.trim().length;
+    if (contentLen > 0) {
+        this.logOffset += data.length;
+        // auto-scroll
+        var appender = jQuery("#logsResults");
+        appender.append(data.replace(/\n/g, "<br/>"));
+        var sch = appender.prop("scrollHeight");
+        var h = appender.height();
+        if (sch > h) {
+            appender.animate({scrollTop: sch});
+        }
+    }
+};
+
+Hailstorm.Project.Tracker.prototype.synchProjectState = function(result) {
+
+    var stateCode = result.state_code;
+    var triggers = result.state_triggers;
+    var shaking = result.any_op_in_progress;
+
+    // start all kinds of refreshers if it shaking or clear them
+    if (shaking) {
+        if (this.projectStatusIntervalId == 0) {
+            this.projectStatusIntervalId = window.setInterval(this.periodicProjectSync.bind(this), 60000);
         }
 
-    };
+        if (this.refreshLogsIntervalId == 0) {
+            this.refreshLogsIntervalId = window.setInterval(this.refreshLogs.bind(this), 10000);
+        }
+    } else {
+        window.clearInterval(this.projectStatusIntervalId);
+        this.projectStatusIntervalId = 0;
+        window.clearInterval(this.refreshLogsIntervalId);
+        this.refreshLogsIntervalId = 0;
+    }
 
+    var statusHtml = null;
+    var stateIcon = null;
+    if (stateCode == "empty") {
+        stateIcon = "glyphicon glyphicon-unchecked";
+    } else if (stateCode == "partial_configured") {
+        stateIcon = "glyphicon glyphicon-edit";
+    } else if (stateCode == "configured") {
+        stateIcon = "glyphicon glyphicon-check";
+    } else if (stateCode == "ready_start") {
+        stateIcon = "glyphicon glyphicon-send";
+    } else {
+        statusHtml = '<i class="fa fa-cog fa-spin"></i> ' + result.state_title;
+    }
 
-    jQuery("#download-reports").click(function(event){
-        var url = jQuery(this).attr('href');
-        getTestResults(url, 'download');
-        event.preventDefault();
-    });
+    if (stateIcon) {
+        statusHtml = '<span class="' + stateIcon + '"></span> ' + result.state_title;
+    }
 
+    jQuery("#project_status").html(statusHtml);
 
+    if (triggers.setup) {
+        jQuery("#project_setup").removeClass( "disabled" );
+    } else {
+        jQuery("#project_setup").addClass( "disabled" );
+    }
 
-    jQuery("#export-reports").click(function(event){
-        var url = jQuery(this).attr('href');
-        getTestResults(url, 'export');
-        event.preventDefault();
-    });
+    if (triggers.start) {
+        jQuery("#project_start").removeClass( "disabled" );
+    } else {
+        jQuery("#project_start").addClass( "disabled" );
+    }
 
-}
-//$(document).ready(do_on_load)
-$(window).bind('page:change', do_on_load);
+    if (triggers.stop) {
+        jQuery("#project_stop").removeClass( "disabled" );
+    } else {
+        jQuery("#project_stop").addClass( "disabled" );
+    }
 
+    if (triggers.abort) {
+        jQuery("#project_abort").removeClass( "disabled" );
+    } else {
+        jQuery("#project_abort").addClass( "disabled" );
+    }
+
+    if (triggers.term) {
+        jQuery("#project_terminate").removeClass( "disabled" );
+    } else {
+        jQuery("#project_terminate").addClass( "disabled" );
+    }
+
+    if (this.lastActionCode == "project_start") {
+        if (stateCode == "ready_start") {
+            var self = this;
+            // send ajax call to update results
+            jQuery.ajax({url: this.updateResultsPath, success: function(result) {
+                $("#project_results").html(result);
+                $('#result_options a[href="#test_results"]').tab('show');
+                self.showSuccess("Test results for run added.");
+            }});
+        } else if (stateCode == "started") {
+            this.showSuccess("Tests have been started.");
+        } else if (stateCode == "stop_progress") {
+            this.showInfo("Tests have concluded, fetching test results...");
+        }
+    }
+
+    if (result.state_reason) {
+        this.showError(result.state_reason);
+    }
+};
+
+Hailstorm.Project.Tracker.prototype.updateTestResults = function(result) {
+
+    var self = this;
+    result = parseInt(result);
+    if (result == 1) {
+        this.downloadRequestId = null;
+        this.showGeneratedReports(function() {
+            $("#download-reports").removeClass( "disabled" );
+            $("#export-reports").removeClass( "disabled" );
+            self.showSuccess("Report generation completed.");
+            self.clrInterval();
+        });
+    }
+};
+
+// optional argument - a function pointer to apply on success
+Hailstorm.Project.Tracker.prototype.showGeneratedReports = function() {
+    var onSuccess = arguments.length > 0 ? arguments[0] : null;
+    $.get(this.generatedReportsPath)
+        .done(function(data) {
+            $("#generated_reports").html(data);
+            if (onSuccess) {
+                onSuccess();
+            }
+
+            $(document).trigger("hailstorm:event:gen_reports_showed");
+        });
+};

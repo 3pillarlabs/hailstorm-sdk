@@ -32,12 +32,12 @@
         <tbody>
         <% @projects.each.with_index(1) do |project, index| %>
             <tr>
-              <td><%= project.title %></td>
-              <td><%= project_status(project) %></td>
+              <td><%= link_to project.title, project_path(project,:page=>params[:page]) %></td>
+              <td><%= raw project_status(project) %></td>
               <td><%= project.created_at.strftime('%F') %></td>
               <td><%= project.updated_at.strftime('%F') %></td>
               <td>
-                <%= link_to 'Edit', project_path(project,:page=>params[:page]) %>
+                <%= link_to 'Open', project_path(project, :page=>params[:page]) %>
                 <%#= link_to 'Destroy', project, method: :delete, data: { confirm: 'Are you sure?' }, class:"btn btn-danger" %>
               </td>
             </tr>

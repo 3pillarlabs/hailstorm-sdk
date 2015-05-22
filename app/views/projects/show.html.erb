@@ -1,12 +1,8 @@
-<% last_result_id = '' %>
 <div class="page-header">
   <div class="row">
     <div class="col-md-6 pull-right">
-      <h2 class="text-right">
-        <span id="project_status">
-        <%= project_status(@project) %>
-        </span>&nbsp;
-        <span id="project_download_status"></span>
+      <h2 class="text-right" id="project_status">
+        <%= raw(project_status(@project)) %>
       </h2>
     </div>
     <div class="col-md-6">
@@ -16,134 +12,196 @@
 </div>
 
 <div class="row">
-  <div class="col-md-5">
-    <div class="panel panel-default">
-      <div class="panel-heading">
-        <h3 class="panel-title">Configuration</h3>
-      </div>
-      <div class="panel-body">
-        <div class="row">
-          <div class="col-md-6">
-            <%= link_to 'Test Plans & Data Files', project_test_plans_path(@project) %> (<%= @project.test_plans.count %>)<br/>
-            <%= link_to 'Clusters', project_clusters_path(@project) %> (<%= @project.clusters.count %>)<br/>
-            <%= link_to 'Target Hosts', project_target_hosts_path(@project) %> (<%= @project.target_hosts.count %>)<br/>
+  <div class="col-md-6">
+    <div id="project_fm"><br/><br/><br/></div>
+    <div class="row">
+      <div class="col-md-6">
+        <div class="panel panel-info">
+          <div class="panel-heading">
+            <h3 class="panel-title">Configuration</h3>
           </div>
+          <ul class="list-group">
+            <li class="list-group-item">
+              <h5><%= link_to 'Test Plans & Data Files', project_test_plans_path(@project) %> (<%= @project.test_plans.count %>)</h5>
+            </li>
+            <li class="list-group-item">
+              <h5><%= link_to 'Clusters', project_clusters_path(@project) %> (<%= @project.clusters.count %>)</h5>
+            </li>
+            <li class="list-group-item">
+              <h5><%= link_to 'Target Hosts', project_target_hosts_path(@project) %> (<%= @project.target_hosts.count %>)</h5>
+            </li>
+          </ul>
+        </div>
+      </div>
 
-          <div class="col-md-6">
-            <div class="row">
-              <div class="col-md-6">
-                <%= link_to *setup_link_to_args do %>
-                    <span class="glyphicon glyphicon-share-alt" aria-hidden="true"></span> Setup
-                <% end %>
-              </div>
-              <div class="col-md-6">
-                <%= link_to *start_link_to_args  do %>
-                    <span class="glyphicon glyphicon-play" aria-hidden="true"></span> Start
-                <% end %>
-              </div>
-            </div>
-            <hr>
-            <div class="row">
-              <div class="col-md-6">
-                <%= link_to *stop_link_to_args do %>
-                    <span class="glyphicon glyphicon-stop" aria-hidden="true"></span> Stop
-                <% end %>
-              </div>
-              <div class="col-md-6">
-                <%= link_to *abort_link_to_args do %>
-                    <span class="glyphicon glyphicon-stop" aria-hidden="true"></span> Abort
-                <% end %>
-              </div>
-            </div>
-            <hr>
-            <div>
-              <%= link_to *terminate_link_to_args do %>
-                  <span class="glyphicon glyphicon-remove" aria-hidden="true"></span> Terminate
+      <div class="col-md-6">
+        <div class="panel panel-primary">
+          <ul class="list-group">
+            <li class="list-group-item">
+              <%= link_to *setup_link_to_args do %>
+                  <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span> Setup
               <% end %>
+            </li>
+            <li class="list-group-item">
+              <br/>
+              <%= link_to *start_link_to_args  do %>
+                  <span class="glyphicon glyphicon-play" aria-hidden="true"></span> Start
+              <% end %>
+            </li>
+            <li class="list-group-item">
+              <br/>
+              <br/>
+              <div class="row">
+                <div class="col-md-6">
+                  <%= link_to *stop_link_to_args do %>
+                      <span class="glyphicon glyphicon-stop" aria-hidden="true"></span> Stop
+                  <% end %>
+                </div>
+                <div class="col-md-6">
+                  <%= link_to *abort_link_to_args do %>
+                      <span class="glyphicon glyphicon-trash" aria-hidden="true"></span> Abort
+                  <% end %>
+                </div>
+              </div>
+            </li>
+            <li class="list-group-item">
+              <br/>
+              <br/>
+              <br/>
+              <div>
+                <%= link_to *terminate_link_to_args do %>
+                    <span class="glyphicon glyphicon-fire" aria-hidden="true"></span> Terminate
+                <% end %>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div role="tabpanel">
+      <ul class="nav nav-tabs" role="tablist" id="result_options">
+        <li role="presentation" class="active">
+          <a href="#test_results" aria-controls="test_results" role="tab" data-toggle="tab">Results</a>
+        </li>
+        <li role="presentation">
+          <a href="#gen_reports" aria-controls="gen_reports" role="tab" data-toggle="tab">Reports</a>
+        </li>
+      </ul>
+      <div class="tab-content">
+        <div role="tabpanel" class="tab-pane active" id="test_results">
+          <br/>
+          <div class="row">
+            <div class="col-md-2">
+              <p>
+                <span class="glyphicon glyphicon-ok"></span> <input type="checkbox" id="checkUncheckAll">
+              </p>
             </div>
+            <div class="col-md-7 col-md-offset-3 text-right">
+              <p>
+                <%= link_to project_interpret_task_path(@project, process: 'download'), class: 'btn btn-primary btn-sm', id: 'download-reports' do %>
+                  <span class="glyphicon glyphicon-download" aria-hidden="true"></span> Generate Report
+                <% end %>
+                <%= link_to project_interpret_task_path(@project, process: 'export'), class: 'btn btn-default btn-sm', id: 'export-reports' do %>
+                  <span class="glyphicon glyphicon-floppy-save" aria-hidden="true"></span> Export JTL
+                <% end %>
+              </p>
+            </div>
+          </div>
+          <div class="panel panel-default">
+            <ul class="list-group results-list" id="project_results">
+              <%= render(partial: 'load_tests/item', collection: @load_tests) unless @load_tests.nil? %>
+            </ul>
+          </div>
+        </div>
+        <div role="tabpanel" class="tab-pane" id="gen_reports">
+          <p></p>
+          <div class="panel panel-default">
+            <ul class="list-group results-list" id="generated_reports"></ul>
           </div>
         </div>
       </div>
     </div>
   </div>
+</div>
 
-  <div class="col-md-7">
-    <div class="panel panel-default">
-      <div class="panel-heading clearfix">
-        <h3 class="panel-title pull-left"><input type="checkbox" id="checkUncheckAll"> Tests Results</h3>
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title">Project Logs</h3>
+  </div>
+  <div class="panel-body logs-console results-list" id="logsResults">
+  </div>
+</div>
 
-        <div class="pull-right">
-          <%= link_to '<span class="glyphicon glyphicon-download" aria-hidden="true"></span> Download Results'.html_safe, project_interpret_task_path(@project, :process => "download"), class: "btn btn-primary btn-sm", id: "download-reports" %>
-          <%= link_to '<span class="glyphicon glyphicon-floppy-save" aria-hidden="true"></span> Export Results'.html_safe, project_interpret_task_path(@project, :process => "export"), class: "btn btn-primary btn-sm", id: "export-reports" %>
-        </div>
+
+<p><%= link_to 'Back to Projects', params[:page].blank? ? projects_path():projects_path(:page=>params[:page]) %></p>
+<%= content_for :modals do %>
+<div id="project_stop-confirm-modal" class="modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-body">
+        You should only stop the test if you have one or more plans that loop forever.
+        <p>
+          The application tracks the status of your tests and if your plan executes for
+          finite time or number of loops, the test results will be automatically downloaded
+          once the tests finish; continuing in this case will lead to failure. If you wish to
+          abort the test, please 'Abort' instead.<br/><br/>
+          Continue to stop the test?
+        </p>
       </div>
-
-      <div class="panel-body"  id="project_results_div">
-        <% if !@load_tests.blank? %>
-            <% @load_tests.each.with_index(1) do |load_test, index| %>
-                <% last_result_id = load_test.id %>
-                <div class="row">
-                  <div class="col-md-1">
-                    <input type="checkbox" class="testsCheck" name="load_test[]" value="<%= load_test.execution_cycle_id %>">
-                  </div>
-                  <div class="col-md-11">
-                    <div class="row">
-                      <div class="col-md-7">
-                        <%= load_test.total_threads_count %> Threads
-                      </div>
-                      <div class="col-md-5">
-                        <div class="row">
-                          <div class="col-md-5">
-                            <%= load_test.started_at.strftime("%b %e ") %><br/><%= load_test.started_at.strftime("%k:%M") %>
-                          </div>
-                          <div class="col-md-2">
-                            -
-                          </div>
-                          <div class="col-md-5">
-                            <%= load_test.stopped_at.strftime("%b %e ") %><br/><%= load_test.stopped_at.strftime("%k:%M") %>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="row">
-                      <div class="col-md-7">
-                        <%= load_test.avg_90_percentile %> ms Response Time
-                      </div>
-                      <div class="col-md-5">
-                        <%= load_test.avg_tps %> TPS
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <hr>
-            <% end %>
-        <% end %>
+      <div class="modal-footer">
+        <a href="#" class="btn btn-danger">Yes</a>
+        <a href="#" class="btn btn-success" data-dismiss="modal">No</a>
       </div>
     </div>
   </div>
 </div>
 
-<div class="row">
-  <div class="panel panel-primary">
-    <div class="panel-heading">
-      <h3 class="panel-title">Project Logs</h3>
-    </div>
-
-    <div class="panel-body logs-console" id="logsResults">
-      <%= simple_format(@logs) %>
+<div id="project_abort-confirm-modal" class="modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-body">
+        Are you sure you want to abort the test?<br><br>
+        The results of the current test will not be collected.
+      </div>
+      <div class="modal-footer">
+        <a href="#" class="btn btn-danger">Yes</a>
+        <a href="#" class="btn btn-success" data-dismiss="modal">No</a>
+      </div>
     </div>
   </div>
 </div>
 
-
-<p><%= link_to "Back to Projects", params[:page].blank? ? projects_path():projects_path(:page=>params[:page]) %></p>
-<span id="update_results_data_uri" class="hide"><%= project_update_loadtest_results_path(@project) %></span>
-<span id="last_result_id" class="hide"><%= last_result_id %></span>
-<span id="download_result_uri" class="hide"><%= project_download_results_path(@project) %></span>
-<span id="download_request_id" class="hide"></span>
-
+<div id="project_terminate-confirm-modal" class="modal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-body">
+        Are you sure you want to terminate the session? If you have some actions pending,
+        you should only terminate in case of unknown failures.
+      </div>
+      <div class="modal-footer">
+        <a href="#" class="btn btn-danger">Yes</a>
+        <a href="#" class="btn btn-success" data-dismiss="modal">No</a>
+      </div>
+    </div>
+  </div>
+</div>
+<% end %>
 <script type="text/javascript">
-    refreshLogs('<%= project_read_logs_path(@project) %>');
-    updateProject('<%= project_check_project_status_path(@project) %>');
-    checkDownloadStatus('<%= project_check_download_status_path(@project) %>');
+    var hpt = null;
+    jQuery(document).ready(function() {
+        hpt = new Hailstorm.Project.Tracker({
+            readLogsPath: '<%= project_read_logs_path(@project) %>',
+            projectStatusPath: '<%= project_check_project_status_path(@project) %>',
+            downloadStatusPath: '<%= project_check_download_status_path(@project) %>',
+            anythingInProgress: <%= @project.anything_in_progress? %>,
+            logOffset: <%= @logOffset %>,
+            updateResultsPath: '<%= project_update_loadtest_results_path(@project) %>',
+            generatedReportsPath: '<%= generated_reports_project_path(@project) %>'
+        });
+
+        hpt.start();
+    });
 </script>

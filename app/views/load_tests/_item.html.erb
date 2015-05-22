@@ -1,0 +1,19 @@
+<li class="list-group-item">
+  <div class="row">
+    <div class="col-md-1">
+      <input type="checkbox" class="testsCheck" name="load_test[]" value="<%= item.execution_cycle_id %>">
+    </div>
+    <div class="col-md-2">
+      <strong><%= item.total_threads_count %></strong> <em>Threads</em>
+    </div>
+    <div class="col-md-6">
+      <%= item.avg_90_percentile %> ms <em>Avg. Response Time</em> <br/>
+      <%= item.avg_tps %> <em>TPS</em>
+    </div>
+    <div class="col-md-3">
+      <em>On</em> <%= item.started_at.strftime('%b %e')%>,<br/>
+      <%= item.started_at.strftime('%k:%M %p') %>,<br/>
+      <%= item.duration_hms %>
+    </div>
+  </div>
+</li>

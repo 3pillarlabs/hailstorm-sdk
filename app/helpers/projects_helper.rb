@@ -2,7 +2,25 @@ module ProjectsHelper
 
   # @param project [Project]
   def project_status(project)
-    project.status.blank? ? 'Empty' : project.status_title()
+    state_icon = case project.aasm_state.to_sym
+                   when :empty
+                     'glyphicon glyphicon-unchecked'
+                   when :partial_configured
+                     'glyphicon glyphicon-edit'
+                   when :configured
+                     'glyphicon glyphicon-check'
+                   when :ready_start
+                     'glyphicon glyphicon-send'
+                   else
+                     html = "<i class=\"fa fa-cog fa-spin\"></i> #{project.status_title}"
+                     nil
+                 end
+
+    unless state_icon.nil?
+      html = "<span class=\"#{state_icon}\"></span> #{project.status_title}"
+    end
+
+    html
   end
 
   # Determines the CSS class for task buttons based on project state
@@ -53,11 +71,10 @@ module ProjectsHelper
     [
         project_interpret_task_path(@project, process: 'stop'),
         {
-            data: {
-                confirm: 'Are you sure you want to stop the test?\n\nYou should only do this if you have a test that is set to loop forever without a maximum duration. If you want to discard this test, try "Abort" instead.'
-            },
             id: 'project_stop',
-            class: stop_button_class
+            class: stop_button_class,
+            'data-toggle' => 'modal',
+            'data-target' => '#stop-confirm-modal'
         }
     ]
   end
@@ -70,7 +87,9 @@ module ProjectsHelper
                 confirm: 'Are you sure you want to abort the test?\n\nThe results from the current test will be discarded'
             },
             id: 'project_abort',
-            class: abort_button_class
+            class: abort_button_class,
+            'data-toggle' => 'modal',
+            'data-target' => '#abort-confirm-modal'
         }
     ]
   end
@@ -79,11 +98,10 @@ module ProjectsHelper
     [
         project_interpret_task_path(@project, process: 'terminate'),
         {
-            data: {
-                confirm: 'Are you sure you want to terminate the session?'
-            },
             id: 'project_terminate',
-            class: terminate_button_class
+            class: terminate_button_class,
+            'data-toggle' => 'modal',
+            'data-target' => '#terminate-confirm-modal'
         }
     ]
   end

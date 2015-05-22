@@ -8,10 +8,13 @@ Rails.application.routes.draw do
   get "projects/:project_id/check_project_status" => "projects#check_project_status", as:  :project_check_project_status
   get "projects/:project_id/update_loadtest_results" => "projects#update_loadtest_results", as:  :project_update_loadtest_results
   get "projects/:project_id/check_download_status" => "projects#check_download_status", as:  :project_check_download_status
-  get "projects/:project_id/download_results" => "projects#download_results", as:  :project_download_results
   post 'projects/:project_id/job_error' => 'projects#job_error', as: :project_job_error
 
-  resources :projects, :except => [:edit,:update, :destroy] do
+  resources :projects, :except => [:edit, :update, :destroy] do
+    member do
+      get 'generated_reports'
+      get 'report'
+    end
     resources :clusters
     resources :data_centers, :controller => "clusters", :type => "DataCenter"
     resources :amazon_clouds, :controller => "clusters", :type => "AmazonCloud"

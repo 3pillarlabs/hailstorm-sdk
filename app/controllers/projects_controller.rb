@@ -1,8 +1,3 @@
-require 'rubygems'
-require 'zip'
-require 'open-uri'
-require 'json'
-
 class ProjectsController < ApplicationController
 
   before_action :set_project, except: [:index, :new, :create, :update_loadtest_results, :check_download_status]
@@ -19,15 +14,16 @@ class ProjectsController < ApplicationController
   # GET /projects/1
   # GET /projects/1.json
   def show
-    file_name = File.join(Rails.configuration.project_setup_path, @project.title, 'log', Rails.configuration.project_logs_file)
+    file_name = project_log_path
     if File.exist?(file_name)
-      @logs = File.read(file_name)
+      @logOffset = File.size(file_name)
     else
-      @logs = ''
+      @logOffset = 0
     end
 
     # get load_test data
-    @load_tests = LoadTest.where(project_id: @project.id)
+    @load_tests = LoadTest.where(project_id: @project.id).reverse_chronological_list
+    @last_test = @load_tests.first
   end
 
   # GET /projects/new
@@ -69,15 +65,17 @@ class ProjectsController < ApplicationController
           format.html { redirect_to project_path(@project, :submit_action => params[:process]), notice: 'Request for project '+params[:process]+' has been submitted.' }
           format.json {render :json => {'data' => 'Request for project '+params[:process]+' has been submitted.'}.merge(state_snapshot)}
         when :download, :export
+
+          id_ary = params[:ids].map(&:to_i).reverse
           # save data for selected results
           result_download_data = Hash.new
-          result_download_data[:test_ids] = params[:ids]
+          result_download_data[:test_ids] = id_ary.join(',')
           result_download_data[:project_id] = @project.id
           result_download_data[:result_type] = params[:process]
           result_download = ProjectResultDownload.new(result_download_data)
           result_download.save!
 
-          project_results_download(params[:process], params[:ids].split(','), result_download.id)
+          project_results_download(params[:process], id_ary, result_download.id)
 
           format.json {render :json => {'request_id' => result_download.id, 'status' => 0}}
         else
@@ -128,7 +126,7 @@ class ProjectsController < ApplicationController
   # read project logs
   def read_logs
 
-    file_name = File.join(Rails.configuration.project_setup_path, @project.project_key, 'log', Rails.configuration.project_logs_file)
+    file_name = project_log_path
     file_contents = nil
     if File.exist?(file_name)
       offset = (params[:offset] || 0).to_i
@@ -145,78 +143,27 @@ class ProjectsController < ApplicationController
   # project status to update status and operation's links
   # if state_reason is not empty, it is the error message with last command.
   def check_project_status
-    submit_process(:status)
+    submit_process(:status) if @project.started?
     render json: state_snapshot
   end
 
-  #get load test new results
+  # get load test new results
   def update_loadtest_results
-    #get load_test data
-    load_tests = LoadTest.where('project_id = :projectid and id > (:resultid)',
-                                :projectid => params[:project_id],
-                                :resultid => params[:resultid])
+    # get load_test data
+    load_tests = LoadTest.where('project_id = :projectid',
+                                :projectid => params[:project_id]).reverse_chronological_list
 
-
-    load_test_json_arr = []
-    load_tests.each do |load_test|
-      load_test_json_hash = {}
-      load_test_json_hash[:id] = load_test.id
-      load_test_json_hash[:execution_cycle_id] = load_test.execution_cycle_id
-      load_test_json_hash[:total_threads_count] = load_test.total_threads_count
-      load_test_json_hash[:avg_90_percentile] = load_test.avg_90_percentile
-      load_test_json_hash[:avg_tps] = load_test.avg_tps
-      load_test_json_hash[:started_at_date] = load_test.started_at.strftime("%b %e ").to_s
-      load_test_json_hash[:started_at_time] = load_test.started_at.strftime("%k:%M").to_s
-      load_test_json_hash[:stopped_at_date] = load_test.stopped_at.strftime("%b %e ").to_s
-      load_test_json_hash[:stopped_at_time] = load_test.stopped_at.strftime("%k:%M").to_s
-      load_test_json_arr << load_test_json_hash
-    end
-    render :json => load_test_json_arr
+    render(partial: 'load_tests/item', collection: load_tests)
   end
 
-  #check status of project result download
+  # check status of project result download
   def check_download_status
     download_result_data = ProjectResultDownload.find(params[:request_id])
-    render :text => download_result_data.status
-  end
-
-  #prepare download based on type
-  def download_results
-    download_result_data = ProjectResultDownload.find(params[:request_id])
-    export_id_arr = download_result_data.test_ids.split(',')
-
-    download_report_path = File.join(Rails.configuration.project_setup_path, @project.project_key, 'reports')
-
-    if download_result_data.result_type == 'export'
-      t = Tempfile.new("my-temp-filename-#{Time.now}")
-      Zip::OutputStream.open(t.path) do |z|
-        export_id_arr.each do |val|
-          export_dir_path = File.join(download_report_path, "SEQUENCE-#{val}")
-          Dir.glob(export_dir_path + '/*').each do |item|
-            # title = File.basename(item, '.jtl')
-            # title = title+"-"+val+".jtl"
-            title = "#{File.basename(item, '.jtl')}-#{val}.jtl"
-            z.put_next_entry("exportreports/#{title}")
-            url1 = item
-            url1_data = open(url1)
-            z.print IO.read(url1_data)
-          end
-        end
-      end
-
-      send_file t.path, :type => 'application/zip', :disposition => 'attachment', :filename => 'exportreports.zip'
-      t.close
-
-    elsif download_result_data.result_type == 'download'
-      start_id = export_id_arr[0]
-      end_id = export_id_arr[export_id_arr.length - 1]
-      report_file_name = "#{@project.project_key}-#{start_id}-#{end_id}.docx"
-      download_file_path = File.join(download_report_path, report_file_name)
-
-      send_file download_file_path, :type => 'application/doc', :disposition => 'attachment', :filename => report_file_name
-    else
-      render :nothing => true
+    if download_result_data.status.to_i == 1
+      download_result_data.destroy!
     end
+
+    render :text => download_result_data.status
   end
 
   # Indicates an error in a submitted job
@@ -226,6 +173,35 @@ class ProjectsController < ApplicationController
     message = params[:message]
     @project.send("#{command}_fail!", nil, message)
     head :ok
+  end
+
+  # Fetches generated reports
+  # GET /projects/1/generated_reports
+  def generated_reports
+
+    files = []
+    @project.generated_reports do |file_path|
+      file_name = File.basename(file_path)
+      files << {title: file_name, path: report_project_path(@project, file_name: file_name)}
+    end
+
+    render partial: 'generated_reports/list', object: files
+  end
+
+  # Downloads a report
+  # GET /project/1/report?file_name=foo.docx
+  def report
+    report_file_name = params[:file_name]
+    download_file_path = File.join(@project.reports_dir_path, report_file_name)
+    file_type = case report_file_name
+                  when /\.docx$/
+                    'application/doc'
+                  when /\.zip$/
+                    'application/zip'
+                  else
+                    'application/x-octet-stream'
+                end
+    send_file download_file_path, :type => file_type, :disposition => 'attachment', :filename => report_file_name
   end
 
   private
@@ -287,6 +263,11 @@ class ProjectsController < ApplicationController
         },
         any_op_in_progress: @project.anything_in_progress?
     }
+  end
+
+  # @return [String]
+  def project_log_path
+    File.join(Rails.configuration.project_setup_path, @project.project_key, 'log', Rails.configuration.project_logs_file)
   end
 
 end

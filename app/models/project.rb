@@ -6,13 +6,13 @@ class Project < ActiveRecord::Base
       empty:                {id: -1, title: 'Empty'},
       partial_configured:   {id: 1, title: 'Partially Configured'},
       configured:           {id: 2, title: 'Configured'},
-      setup_progress:       {id: 3, title: 'Setup in progress'},
-      ready_start:          {id: 4, title: 'Ready to start'},
-      start_progress:       {id: 9, title: 'Start in progress'},
-      started:              {id: 5, title: 'Started'},
-      stop_progress:        {id: 6, title: 'Stop in progress'},
-      abort_progress:       {id: 7, title: 'Abort in progress'},
-      term_progress:        {id: 8, title: 'Terminate in progress'}
+      setup_progress:       {id: 3, title: 'Setting up...'},
+      ready_start:          {id: 4, title: 'Ready'},
+      start_progress:       {id: 9, title: 'Starting...'},
+      started:              {id: 5, title: 'Running'},
+      stop_progress:        {id: 6, title: 'Stopping...'},
+      abort_progress:       {id: 7, title: 'Aborting...'},
+      term_progress:        {id: 8, title: 'Terminating...'}
   }
 
   has_many :clusters, dependent: :destroy
@@ -138,6 +138,28 @@ class Project < ActiveRecord::Base
 
   def anything_in_progress?
     setup_progress? || start_progress? || stop_progress? || abort_progress? || term_progress? || started?
+  end
+
+  def reports_dir_path
+    File.join(Rails.configuration.project_setup_path, project_key, 'reports')
+  end
+
+  def generated_reports(&block)
+    files = [];
+    Dir["#{reports_dir_path}/*.docx", "#{reports_dir_path}/*.zip"].each do |rpt_file_path|
+      mtime = File.mtime(rpt_file_path)
+      files << {f: rpt_file_path, m: mtime}
+    end
+
+    files.sort! {|a, b| b[:m] <=> a[:m]}
+
+    if block_given?
+      files.each do |f|
+        yield f[:f]
+      end
+    else
+      files
+    end
   end
 
   private
