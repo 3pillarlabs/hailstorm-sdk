@@ -72,9 +72,6 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
     reported_execution_cyles = self.execution_cycles_for_report(project, cycle_ids)
 
-    start_id = reported_execution_cyles.first.id
-    end_id = reported_execution_cyles.last.id
-
     builder = Hailstorm::Support::ReportBuilder.new()
     builder.title = project.project_code.humanize
 
@@ -151,7 +148,8 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     end
 
     reports_path = File.join(Hailstorm.root, Hailstorm.reports_dir)
-    report_file_name = "#{project.project_code}-#{start_id}-#{end_id}" # minus extn
+    timestamp = Time.now.strftime('%Y%m%d%H%M%S')
+    report_file_name = "#{project.project_code}-#{timestamp}" # minus extn
 
     builder.build(reports_path, report_file_name) # returns path to generated file
   end
