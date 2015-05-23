@@ -102,7 +102,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
         if agent.running?
           stop_agent(agent)
           agent.public_ip_address = nil
-		  agent.private_ip_address = nil
+		      agent.private_ip_address = nil
           agent.save!
         end
       end
@@ -237,6 +237,6 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     SSH_USER            = 'ubuntu'
     SSH_IDENTITY        = 'server.pem'
     TITLE               = 'Hailstorm'
-    JAVA_VERSION        = '1.6'
+    JAVA_VERSION        = '1.(6|7)'
   end
 end
