@@ -28,6 +28,13 @@
             </li>
           </ul>
         </div>
+        <% if @project.empty? %>
+        <div class="panel panel-info">
+          <div class="panel-body bg-info text-primary">
+            <span class="glyphicon glyphicon-info-sign"></span> Start out by adding a test plan and a cluster to generate load.
+          </div>
+        </div>
+        <% end %>
       </div>
 
       <div class="col-md-6">
@@ -108,7 +115,11 @@
           </div>
           <div class="panel panel-default">
             <ul class="list-group results-list" id="project_results">
-              <%= render(partial: 'load_tests/item', collection: @load_tests) unless @load_tests.nil? %>
+              <% if not @load_tests.empty? %>
+              <%= render(partial: 'load_tests/item', collection: @load_tests) %>
+              <% else %>
+              <li class="list-group-item list-group-item-info">No test results to show.</li>
+              <% end %>
             </ul>
           </div>
         </div>
