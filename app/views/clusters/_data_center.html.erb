@@ -1,0 +1,75 @@
+<div class="form-group">
+  <%= data_center.label :ssh_identity, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <% if @cluster.ssh_identity_file_name.blank? %>
+        <%= data_center.file_field :ssh_identity %>
+    <% else %>
+        <%= @cluster.ssh_identity_file_name%>
+    <% end %>
+  </div>
+</div>
+<div class="form-group">
+  <div><%= data_center.label :title, class: 'col-sm-3 control-label' %></div>
+  <div class="col-sm-9">
+    <%= data_center.text_field :title, class: 'form-control' %>
+    <% if @cluster.errors[:title].present? %>
+        <div class="alert alert-danger" role="alert">
+          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+          <span class="sr-only">Error:</span>
+          <%= @cluster.errors.full_message(:title, @cluster.errors[:title].first) %>
+        </div>
+    <% end %>
+  </div>
+</div>
+
+<div class="form-group">
+  <%= data_center.label :user_name, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <%= data_center.text_field :user_name, class: 'form-control' %>
+    <% if @cluster.errors[:user_name].present? %>
+        <div class="alert alert-danger" role="alert">
+          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+          <span class="sr-only">Error:</span>
+          <%= @cluster.errors.full_message(:user_name, @cluster.errors[:user_name].first) %>
+        </div>
+    <% end %>
+  </div>
+</div>
+
+<div class="form-group">
+  <%= data_center.label :machines, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <div class="row">
+      <div class="col-xs-11" id="cluster_machines">
+        <input type="text" name="data_center[machines][]" class = "form-control" placeholder="IP address or host name" value="<%= @cluster.machines.first %>">
+        <% @cluster.machines[1..-1].each_with_index do |machine, index| %>
+            <span data-clusterMachine="true" data-cmIndex="<%= index %>">
+              <br/>
+              <div class="row">
+                <div class="col-sm-11">
+                  <input type="text" name="data_center[machines][]" class="form-control" placeholder="IP address or host name" value="<%= machine %>">
+                </div>
+                <div class="col-sm-1">
+                  <button type="button" tabindex="-1" class="close" data-cmRemove="cm-<%= index %>" aria-label="Close" onclick="Hailstorm.Cluster.removeHostRow(<%= index %>); return false;">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+              </div>
+            </span>
+        <% end %>
+      </div>
+      <div class="col-xs-1">
+        <a href="#" class="btn btn-info btn-xs" onclick="Hailstorm.Cluster.addMachinesFields(); return false;">
+          <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+        </a>
+      </div>
+    </div>
+    <% if @cluster.errors[:machines].present? %>
+        <div class="alert alert-danger" role="alert">
+          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+          <span class="sr-only">Error:</span>
+          <%= @cluster.errors.full_message(:machines, @cluster.errors[:machines].first) %>
+        </div>
+    <% end %>
+  </div>
+</div>

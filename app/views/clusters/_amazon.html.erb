@@ -1,0 +1,62 @@
+<div class="form-group">
+  <%= amazon.label :ssh_identity, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <% if @cluster.ssh_identity_file_name.blank? %>
+        <%= amazon.file_field :ssh_identity %>
+    <% else %>
+        <%= @cluster.ssh_identity_file_name%>
+    <% end %>
+  </div>
+</div>
+<div class="form-group">
+  <%= amazon.label :access_key, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <%= amazon.text_field :access_key, class: 'form-control' %>
+    <% if @cluster.errors[:access_key].present? %>
+        <div class="alert alert-danger" role="alert">
+          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+          <span class="sr-only">Error:</span>
+          <%= @cluster.errors.full_message(:access_key, @cluster.errors[:access_key].first) %>
+        </div>
+    <% end %>
+  </div>
+</div>
+<div class="form-group">
+  <%= amazon.label :secret_key, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <%= amazon.password_field :secret_key, class: 'form-control' %>
+    <% if @cluster.errors[:secret_key].present? %>
+        <div class="alert alert-danger" role="alert">
+          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+          <span class="sr-only">Error:</span>
+          <%= @cluster.errors.full_message(:secret_key, @cluster.errors[:secret_key].first) %>
+        </div>
+    <% end %>
+  </div>
+</div>
+<div class="form-group">
+  <%= amazon.label :region, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <%= amazon.select :region, options_for_select(Cluster::AMAZON_CLUSTER_REGIONS.sort, @cluster.region.blank? ? 'us-east-1' : @cluster.region),{},{ :class => 'form-control' } %>
+    <% if @cluster.errors[:region].present? %>
+        <div class="alert alert-danger" role="alert">
+          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+          <span class="sr-only">Error:</span>
+          <%= @cluster.errors.full_message(:region, @cluster.errors[:region].first) %>
+        </div>
+    <% end %>
+  </div>
+</div>
+<div class="form-group">
+  <%= amazon.label :instance_type, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <%= amazon.select :instance_type, options_for_select(Cluster::AMAZON_INSTANCE_TYPES.sort,@cluster.instance_type.blank? ? "m1.small" : @cluster.instance_type),{},{ :class => "form-control" } %>
+    <% if @cluster.errors[:instance_type].present? %>
+        <div class="alert alert-danger" role="alert">
+          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+          <span class="sr-only">Error:</span>
+          <%= @cluster.errors.full_message(:instance_type, @cluster.errors[:instance_type].first) %>
+        </div>
+    <% end %>
+  </div>
+</div>

@@ -3,7 +3,10 @@
         <%= link_to @project.title, project_path(@project) %>
     <% end %>
 <% end %>
-<h2 class="page-header"> Add Cluster </h2>
-<p>
-<%= render 'form' %>
-</p>
+<h2 class="page-header"> Add <%= params[:type].to_s.titlecase %> Cluster </h2>
+<br/>
+<div class="row">
+  <div class="col-md-8 col-md-offset-2">
+    <%= render 'form' %>
+  </div>
+</div>
