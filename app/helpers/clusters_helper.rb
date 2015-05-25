@@ -34,7 +34,7 @@ module ClustersHelper
     |cluster|
       row = case cluster_type
         when 'AmazonCloud'
-          [cluster.region, cluster.instance_type, cluster.access_key]
+          [cluster.region_title, cluster.instance_type, cluster.access_key]
         when 'DataCenter'
           [cluster.title, cluster.machines, cluster.user_name]
       end
@@ -94,10 +94,14 @@ module ClustersHelper
     end
   end
 
+  # @param [Array] ary
+  # @return [String] array elements joined with a <br/> tag
   def to_list(ary)
     ary.map { |e| h(e) }.join('<br/>')
   end
 
+  # Renders the appropriate form based on param[:type]
+  # @param [Hash] options
   def form_for_cluster(options = {})
     view_part = case params[:type]
             when 'AmazonCloud'
@@ -108,6 +112,35 @@ module ClustersHelper
               raise('should not happen?')
           end
     render({partial: view_part}.merge(options))
+  end
+
+  # adds an Other option at the end
+  # @param [Array] options
+  def instance_types_with_other_option(options)
+    options.map { |e| e}.push(OpenStruct.new(id: '', name: 'Other'))
+  end
+
+  # Disables access & secret key
+  # @param [Cluster] cluster
+  def disable_keys_fields?(cluster = @cluster)
+    cluster.persisted? && cluster.errors[:access_key].empty? && cluster.errors[:secret_key].empty?
+  end
+
+  # a select or input based on conditions
+  # @param [ActionView::Helpers::FormBuilder] form
+  # @param [Cluster] cluster
+  def instance_type_field(form, cluster = @cluster)
+    # when instance_type is known, show drop down else a text field
+    if cluster.instance_type.blank? or cluster.known_instance_type?
+      concat(form.collection_select(:instance_type,
+                                    instance_types_with_other_option(AmazonCloud.instance_types),
+                                    :id, :name, {}, {:class => 'form-control'}))
+      concat(form.text_field :instance_type, disabled: true, class: 'form-control hidden')
+    else
+      concat(form.text_field :instance_type, class: 'form-control')
+    end
+
+    nil
   end
 
 end

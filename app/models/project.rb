@@ -71,7 +71,7 @@ class Project < ActiveRecord::Base
     end
 
     event :setup, :before => :clear_state_reason do
-      transitions from: :configured,          to: :setup_progress
+      transitions from: [:configured, :ready_start],  to: :setup_progress
     end
 
     event :setup_done do

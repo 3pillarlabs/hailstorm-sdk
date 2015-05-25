@@ -77,7 +77,7 @@ class ClustersController < ApplicationController
   end
 
   def amazon_cloud_params
-    params.require(:amazon_cloud).permit(:access_key, :secret_key, :ssh_identity, :region, :instance_type)
+    params.require(:amazon_cloud).permit(:access_key, :secret_key, :ssh_identity, :region, :instance_type, :max_threads_per_agent)
   end
 
   def data_center_params

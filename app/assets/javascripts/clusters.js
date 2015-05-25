@@ -33,3 +33,23 @@ Hailstorm.Cluster.addMachinesFields = function() {
 Hailstorm.Cluster.removeHostRow = function(index) {
     $('span[data-clusterMachine="true"][data-cmIndex="' + index + '"]').remove();
 };
+
+Hailstorm.Cluster.instanceTypeChooser = function(tpaMatrix) {
+    // 'this' refers to the element
+    var htmlOpts = this.options;
+    var selectedValue = htmlOpts[htmlOpts.selectedIndex].value;
+    if (!selectedValue) {
+        var id = $(this).attr("id");
+        $(this).attr("disabled", true).addClass("hidden");
+        $("input#" + id).attr("disabled", false).removeClass("hidden");
+    } else {
+        $("#amazon_cloud_max_threads_per_agent").val(tpaMatrix[selectedValue]);
+    }
+};
+
+Hailstorm.Cluster.changeKeysHandler = function(event) {
+    event.stopPropagation();
+    event.preventDefault();
+    $("div.keys-form-group").removeClass("hidden");
+    $("div.keys-form-group input").val("").attr("disabled", false);
+};

@@ -8,10 +8,10 @@
     <% end %>
   </div>
 </div>
-<div class="form-group">
+<div class="form-group keys-form-group">
   <%= amazon.label :access_key, class: 'col-sm-3 control-label' %>
   <div class="col-sm-9">
-    <%= amazon.text_field :access_key, class: 'form-control' %>
+    <%= amazon.text_field :access_key, class: 'form-control', disabled: disable_keys_fields? %>
     <% if @cluster.errors[:access_key].present? %>
         <div class="alert alert-danger" role="alert">
           <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
@@ -21,10 +21,10 @@
     <% end %>
   </div>
 </div>
-<div class="form-group">
+<div class="form-group keys-form-group">
   <%= amazon.label :secret_key, class: 'col-sm-3 control-label' %>
   <div class="col-sm-9">
-    <%= amazon.password_field :secret_key, class: 'form-control' %>
+    <%= amazon.password_field :secret_key, class: 'form-control', disabled: disable_keys_fields? %>
     <% if @cluster.errors[:secret_key].present? %>
         <div class="alert alert-danger" role="alert">
           <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
@@ -34,10 +34,17 @@
     <% end %>
   </div>
 </div>
+<% if @cluster.persisted? %>
+<div class="form-group">
+  <div class="col-sm-9 col-sm-offset-3">
+    <a href="#" class="btn btn-warning" id="amazon_cluster_change_keys">Change Keys</a>
+  </div>
+</div>
+<% end %>
 <div class="form-group">
   <%= amazon.label :region, class: 'col-sm-3 control-label' %>
   <div class="col-sm-9">
-    <%= amazon.select :region, options_for_select(Cluster::AMAZON_CLUSTER_REGIONS.sort, @cluster.region.blank? ? 'us-east-1' : @cluster.region),{},{ :class => 'form-control' } %>
+    <%= amazon.collection_select(:region, AmazonCloud.regions, :id, :name, {}, {:class => 'form-control'}) %>
     <% if @cluster.errors[:region].present? %>
         <div class="alert alert-danger" role="alert">
           <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
@@ -50,7 +57,7 @@
 <div class="form-group">
   <%= amazon.label :instance_type, class: 'col-sm-3 control-label' %>
   <div class="col-sm-9">
-    <%= amazon.select :instance_type, options_for_select(Cluster::AMAZON_INSTANCE_TYPES.sort,@cluster.instance_type.blank? ? "m1.small" : @cluster.instance_type),{},{ :class => "form-control" } %>
+    <%= instance_type_field(amazon) %>
     <% if @cluster.errors[:instance_type].present? %>
         <div class="alert alert-danger" role="alert">
           <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
@@ -60,3 +67,22 @@
     <% end %>
   </div>
 </div>
+<div class="form-group">
+  <%= amazon.label :max_threads_per_agent, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <%= amazon.text_field :max_threads_per_agent, class: 'form-control', placeholder: 'Pick the default...  ' %>
+    <% if @cluster.errors[:max_threads_per_agent].present? %>
+        <div class="alert alert-danger" role="alert">
+          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+          <span class="sr-only">Error:</span>
+          <%= @cluster.errors.full_message(:max_threads_per_agent, @cluster.errors[:max_threads_per_agent].first) %>
+        </div>
+    <% end %>
+  </div>
+</div>
+<script>
+    $("select#amazon_cloud_instance_type").change(function() {
+        Hailstorm.Cluster.instanceTypeChooser.bind(this)(<%= raw AmazonCloud.max_threads_per_agent_matrix.to_json %>);
+    });
+    $("a#amazon_cluster_change_keys").click(Hailstorm.Cluster.changeKeysHandler);
+</script>
