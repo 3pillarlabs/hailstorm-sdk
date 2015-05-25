@@ -232,6 +232,10 @@ class ProjectsController < ApplicationController
 
     # Get data center data for the project
     environment_data['data_centers_data'] = @project.data_centers.as_json
+
+    # target host data
+    environment_data['monitoring'] = TargetHost.as_json(@project)
+
     environment_data
   end
 
