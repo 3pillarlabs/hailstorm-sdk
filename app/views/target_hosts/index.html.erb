@@ -6,15 +6,25 @@
 <h2 class="page-header">
   <div class="row">
     <div class="col-md-9">Target Hosts</div>
-    <div class="col-md-3"><%= link_to 'Configure', new_project_target_host_path, class: 'btn btn-primary pull-right' %></div>
+    <div class="col-md-3">
+      <% if @target_hosts.blank? %>
+          <%= link_to new_project_target_host_path, class: 'btn btn-primary pull-right' do %>
+            <span class="glyphicon glyphicon-plus"></span> Add
+          <% end %>
+      <% else %>
+          <%= link_to new_project_target_host_path, class: 'btn btn-primary pull-right' do %>
+              <span class="glyphicon glyphicon-pencil"></span> Edit
+          <% end %>
+      <% end %>
+    </div>
   </div>
 </h2>
 
 <%#= debug @target_hosts %>
 <% if @target_hosts.blank? %>
-    <div role="alert" class="alert alert-warning">
-      <span aria-hidden="true" class="glyphicon glyphicon-warning-sign"></span>
-      Target host not configured.
+    <div role="alert" class="alert alert-info">
+      <span aria-hidden="true" class="glyphicon glyphicon-info-sign"></span>
+      No target hosts added for monitoring.
     </div>
 <% else %>
     <p>

@@ -1,55 +1,55 @@
 <%= form_for([@project,@target_host],multipart: true) do |f| %>
 
     <div class="form-group">
-      <div><%= f.label :executable_path %></div>
-      <div><%= f.text_field :executable_path,class:"form-control",placeholder:"Enter executable path",:value=>@target_host_data[:executable_path] %></div>
-    </div>
-    <% if @target_host.errors[:executable_path].present? %>
-        <div class="alert alert-danger" role="alert">
-          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-          <span class="sr-only">Error:</span>
-          <%= @target_host.errors.full_message(:executable_path, @target_host.errors[:executable_path].first) %>
-        </div>
-    <% end %>
-
-    <div class="form-group">
-      <div><%= f.label :ssh_identity %></div>
-      <div>
-        <%= f.file_field :ssh_identity %>
-        <%#= @target_host_data[:ssh_identity_file_name] %>
+      <%= f.label :executable_path %>
+      <%= f.text_field :executable_path,class:"form-control",placeholder:'Full path to nmon on target hosts',:value=>@target_host_data[:executable_path] %>
+      <% if @target_host.errors[:executable_path].present? %>
+      <div class="alert alert-danger" role="alert">
+        <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+        <span class="sr-only">Error:</span>
+        <%= @target_host.errors.full_message(:executable_path, @target_host.errors[:executable_path].first) %>
       </div>
+      <% end %>
     </div>
-    <% if @target_host.errors[:ssh_identity_file_name].present? %>
-        <div class="alert alert-danger" role="alert">
-          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-          <span class="sr-only">Error:</span>
-          <%= @target_host.errors.full_message(:ssh_identity_file_name, @target_host.errors[:ssh_identity_file_name].first) %>
-        </div>
-    <% end %>
 
     <div class="form-group">
-      <div><%= f.label :user_name %></div>
-      <div><%= f.text_field :user_name,class:"form-control",placeholder:"Enter user name",:value=>@target_host_data[:user_name] %></div>
+      <%= f.label :ssh_identity %>
+      <%= f.file_field :ssh_identity %>
+      <% if @target_host.errors[:ssh_identity_file_name].present? %>
+      <div class="alert alert-danger" role="alert">
+        <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+        <span class="sr-only">Error:</span>
+        <%= @target_host.errors.full_message(:ssh_identity_file_name, @target_host.errors[:ssh_identity_file_name].first) %>
+      </div>
+      <% end %>
     </div>
-    <% if @target_host.errors[:user_name].present? %>
-        <div class="alert alert-danger" role="alert">
-          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-          <span class="sr-only">Error:</span>
-          <%= @target_host.errors.full_message(:user_name, @target_host.errors[:user_name].first) %>
-        </div>
-    <% end %>
 
     <div class="form-group">
-      <div><%= f.label :sampling_interval %></div>
-      <div><%= f.text_field :sampling_interval,class:"form-control",placeholder:"Enter sampling interval",:value=>@target_host_data[:sampling_interval] %></div>
+      <%= f.label :user_name %>
+      <%= f.text_field :user_name,class:"form-control",placeholder:'User for SSH to any target host',:value=>@target_host_data[:user_name] %>
+      <% if @target_host.errors[:user_name].present? %>
+      <div class="alert alert-danger" role="alert">
+        <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+        <span class="sr-only">Error:</span>
+        <%= @target_host.errors.full_message(:user_name, @target_host.errors[:user_name].first) %>
+      </div>
+      <% end %>
     </div>
-    <% if @target_host.errors[:sampling_interval].present? %>
-        <div class="alert alert-danger" role="alert">
-          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-          <span class="sr-only">Error:</span>
-          <%= @target_host.errors.full_message(:sampling_interval, @target_host.errors[:sampling_interval].first) %>
-        </div>
-    <% end %>
+
+    <div class="form-group">
+      <%= f.label :sampling_interval %>
+      <div class="input-group">
+        <%= f.text_field :sampling_interval,class:"form-control",:value=>@target_host_data[:sampling_interval] %>
+        <span class="input-group-addon">seconds</span>
+      </div>
+      <% if @target_host.errors[:sampling_interval].present? %>
+      <div class="alert alert-danger" role="alert">
+        <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+        <span class="sr-only">Error:</span>
+        <%= @target_host.errors.full_message(:sampling_interval, @target_host.errors[:sampling_interval].first) %>
+      </div>
+      <% end %>
+    </div>
 
     <div class="form-group-sm page-header">
       <label for="target_host_roles">Roles</label>
@@ -106,6 +106,10 @@
 
 
     <input type="hidden" id="role_count" value="<%= @target_host_data[:roles].blank? ? 1 : @target_host_data[:roles].count %>" />
-    <%= f.submit "Save",{class:"btn btn-primary"} %>
-    <%= link_to "Cancel", params[:page].blank? ? project_target_hosts_path : project_target_hosts_path(:page=>params[:page]), :class => "btn btn-default" %>
+    <div class="form-group">
+      <div class="row">
+        <div class="col-md-6"><%= f.submit "Save",{class:"btn btn-primary"} %></div>
+        <div class="col-md-6"><%= link_to "Cancel", project_target_hosts_path(page: params[:page]), class: "btn btn-default pull-right" %></div>
+      </div>
+    </div>
 <% end %>

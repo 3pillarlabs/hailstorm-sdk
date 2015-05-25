@@ -34,7 +34,6 @@ class TargetHostsController < ApplicationController
   # POST /target_hosts
   # POST /target_hosts.json
   def create
-    #@target_host = TargetHost.new(target_host_params)
     #delete all records related to project
     old_ts = TargetHost.where(:project_id => @project.id)
     puts old_ts.inspect
@@ -73,10 +72,10 @@ class TargetHostsController < ApplicationController
 
       if process_status==1
         delete_target_hosts(old_ts)
-        format.html { redirect_to project_target_hosts_path(@project), notice: 'Target host successfully configured.' }
+        format.html { redirect_to project_target_hosts_path(@project), flash: {success: 'Target host successfully configured.'} }
       else
         @target_host = TargetHost.new(target_host_parameter)
-        if !@target_host.valid?
+        unless @target_host.valid?
           formatted_target_host_data
           format.html { render :new }
         end
@@ -89,8 +88,6 @@ class TargetHostsController < ApplicationController
 
   private
     def delete_target_hosts(target_hosts_k)
-      #puts "in delete"
-      #puts target_hosts.inspect
       target_hosts_k.each do |host|
         host.destroy
       end
@@ -98,7 +95,7 @@ class TargetHostsController < ApplicationController
 
     def formatted_target_host_data
       @target_host_data = TargetHost.where(:project_id=>params[:project_id]).group_by(&:role_name)
-      if !@target_host_data.blank?
+      unless @target_host_data.blank?
         @target_host_data = format_target_host(@target_host_data)
       end
     end
