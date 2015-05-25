@@ -24,8 +24,8 @@ Hailstorm.Project.Tracker.prototype.start = function() {
 
     var self = this;
     this.clrInterval();
-    jQuery(document).ready(this.clrInterval.apply(this));
-    jQuery(document).on('page:load', this.clrInterval.apply(this));
+    jQuery(document).ready(this.clrInterval.bind(this));
+    jQuery(document).on('page:load', this.clrInterval.bind(this));
 
     // check/uncheck all for test results
     $("#checkUncheckAll").on("click", function() {
@@ -165,7 +165,7 @@ Hailstorm.Project.Tracker.prototype.handleTaskTriggers = function(trigger) {
                     self.synchProjectState(result);
                     self.showInfo("Proceeding with " + actionCode.split("_")[1] + "...");
                 },
-                error: self.showError.apply(self)
+                error: self.showError.bind(self)
             });
         };
 
@@ -174,12 +174,12 @@ Hailstorm.Project.Tracker.prototype.handleTaskTriggers = function(trigger) {
         $.ajax({
             url : $(trigger).attr("href"),
             dataType : "json",
-            success:function(result){
+            success: function(result){
                 self.synchProjectState(result);
                 var msg = (actionCode == "project_setup" ? "The load testing environment is being setup and make take a long time. Once setup completes, this page will be auto-updated." : "Your tests will start in a short while.");
                 self.showInfo(msg);
             },
-            error: self.showError.apply(self)
+            error: self.showError.bind(self)
         });
     }
 
@@ -220,7 +220,7 @@ Hailstorm.Project.Tracker.prototype.getTestResults = function(url, type) {
                 self.downloadStatusIntervalId = window.setInterval(self.checkDownloadStatus.bind(self), 5000);
                 self.refreshLogsIntervalId = window.setInterval(self.refreshLogs.bind(self), 1000);
             },
-            error: self.showError.apply(self)
+            error: self.showError.bind(self)
         });
     } else {
         this.showWarn("Please select results to " + type + ".");
@@ -328,6 +328,10 @@ Hailstorm.Project.Tracker.prototype.synchProjectState = function(result) {
             this.showSuccess("Tests have been started.");
         } else if (stateCode == "stop_progress") {
             this.showInfo("Tests have concluded, fetching test results...");
+        }
+    } else if (this.lastActionCode == "project_setup") {
+        if (stateCode == "ready_start") {
+            this.showSuccess("Setup concluded successfully, you can now start tests.");
         }
     }
 
