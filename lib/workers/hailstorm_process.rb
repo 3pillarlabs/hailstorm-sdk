@@ -87,25 +87,35 @@ class HailstormProcess
     destjmx_file_path = File.join(app_directory, 'jmeter/')
     FileUtils.cp_r sourcejmx_file_path, destjmx_file_path
 
-    # copy ssh identity file to config
-    source_sshidentity_filepath = File.join(upload_dir_path, 'ssh_identity_Files', project_id.to_s, '/.')
-    if File.exist? source_sshidentity_filepath
-      dest_sshidentity_filepath = File.join(app_directory, 'config/')
-      FileUtils.cp_r source_sshidentity_filepath, dest_sshidentity_filepath
-    end
+    copy_ssh_identity_files(app_directory, project_id, upload_dir_path, 'ssh_identity_Files')
+    copy_ssh_identity_files(app_directory, project_id, upload_dir_path, 'target_hosts_ssh_identity_Files')
 
     environment_template = Erubis::Eruby.new(File.read(template_directory + '/environment.erb'))
     jmeter_template = Erubis::Eruby.new(File.read(template_directory + '/jmeter_config.erb'))
     ec2_config_template = Erubis::Eruby.new(File.read(template_directory + '/ec2_config.erb'))
     data_center_template = Erubis::Eruby.new(File.read(template_directory + '/data_center.erb'))
+    monitor_template = Erubis::Eruby.new(File.read(File.join(template_directory, 'monitor.erb')))
 
     jmeter_config_str = environment_data['test_plans_data'].blank? ? '' : jmeter_template.result(:test_plans_data => environment_data['test_plans_data'])
     ec2_config_str = environment_data['amazon_clouds_data'].blank? ? '' : ec2_config_template.result(:amazon_clouds_data => environment_data['amazon_clouds_data'])
     data_center_config_str = environment_data['data_centers_data'].blank? ? '' : data_center_template.result(:data_centers_data => environment_data['data_centers_data'])
+    monitor_config_str = environment_data['monitoring'] ? monitor_template.result(environment_data['monitoring']) : ''
 
-    env_file_path = File.join(app_directory, 'config/environment.rb')
-    envstr = environment_template.result(:jmeter_config => jmeter_config_str, :ec2_config => ec2_config_str, :data_center_config => data_center_config_str)
+    env_file_path = File.join(app_directory, 'config', 'environment.rb')
+    envstr = environment_template.result(:jmeter_config => jmeter_config_str,
+                                         :ec2_config => ec2_config_str,
+                                         :data_center_config => data_center_config_str,
+                                         :monitor_config => monitor_config_str)
     File.open(env_file_path, 'w') { |file| file.write(envstr) }
+  end
+
+  # copy ssh identity file to config
+  def copy_ssh_identity_files(app_directory, project_id, upload_dir_path, ssh_dir)
+    ssh_identity_path = File.join(upload_dir_path, ssh_dir, project_id.to_s)
+    if File.exist? ssh_identity_path
+      dest_ssh_identity_path = File.join(app_directory, 'config')
+      FileUtils.cp_r ssh_identity_path, dest_ssh_identity_path
+    end
   end
 
   # Process 'start', 'abort', 'terminate'
