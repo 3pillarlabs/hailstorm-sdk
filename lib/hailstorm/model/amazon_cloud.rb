@@ -19,8 +19,6 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   validate :identity_file_exists, :if => proc {|r| r.active?}
 
-  validate :instance_type_supported, :if => proc {|r| r.active?}
-
   before_save :set_availability_zone, :if => proc {|r| r.active?}
 
   before_save :create_agent_ami, :if => proc {|r| r.active? and r.agent_ami.nil?}
@@ -255,7 +253,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   def set_defaults()
     self.security_group = Defaults::SECURITY_GROUP if self.security_group.blank?
     self.user_name ||= Defaults::SSH_USER
-    self.instance_type ||= InstanceTypes::Hydrogen
+    self.instance_type ||= Defaults::INSTANCE_TYPE
     self.max_threads_per_agent ||= default_max_threads_per_agent()
 
     if self.ssh_identity.nil?
@@ -481,15 +479,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     "#{version == '2.4' ? 'jakarta' : 'apache'}-jmeter-#{version}"
   end
 
-  # Architecture as per instance_type - i386 or x86_64, if internal is true,
-  # 32-bit or 64-bit. Everything other than m1.small instance_type is x86_64.
+  # Architecture as per instance_type - everything is 64-bit.
   def arch(internal = false)
-
-    if self.instance_type == InstanceTypes::Hydrogen
-      internal ? '32-bit' : 'i386'
-    else
-      internal ? '64-bit' : 'x86_64'
-    end
+    internal ? '64-bit' : 'x86_64'
   end
 
   # The AMI ID to search for and create
@@ -508,32 +500,31 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   def region_base_ami_map()
     @region_base_ami_map ||= {
       'ap-northeast-1' => { # Asia Pacific (Tokyo)
-          '64-bit' => 'ami-60c77761',
-          '32-bit' => 'ami-5ec7775f'
+          '64-bit' => 'ami-936d9d93'
       },
       'ap-southeast-1' => { # Asia Pacific (Singapore)
-          '64-bit' => 'ami-a4ca8df6',
-          '32-bit' => 'ami-a6ca8df4'
+          '64-bit' => 'ami-96f1c1c4'
       },
       'eu-west-1' => {  # Europe West (Ireland)
-          '64-bit' => 'ami-e1e8d395',
-          '32-bit' => 'ami-e7e8d393'
+          '64-bit' => 'ami-47a23a30'
       },
       'sa-east-1' => { # South America (Sao Paulo)
-          '64-bit' => 'ami-8cd80691',
-          '32-bit' => 'ami-92d8068f'
+          '64-bit' => 'ami-4d883350'
       },
       'us-east-1' => { # US East (Virginia)
-          '64-bit' => 'ami-a29943cb',
-          '32-bit' => 'ami-ac9943c5'
+          '64-bit' => 'ami-d05e75b8'
       },
       'us-west-1' => { # US West (N. California)
-          '64-bit' => 'ami-87712ac2',
-          '32-bit' => 'ami-85712ac0'
+          '64-bit' => 'ami-df6a8b9b'
       },
       'us-west-2' => { # US West (Oregon)
-          '64-bit' => 'ami-20800c10',
-          '32-bit' => 'ami-3e800c0e'
+          '64-bit' => 'ami-5189a661'
+      },
+      'eu-central-1' => {  # Europe Central (Frankfurt)
+          '64-bit' => 'ami-accff2b1'
+      },
+      'ap-southeast-2' => { # Asia Pacific (Sydney)
+          '64-bit' => 'ami-69631053'
       }
     }
   end
@@ -554,14 +545,6 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         '32-bit' => 'jre1.6.0_31',
         '64-bit' => 'jre1.6.0_33'
     }[arch(true)]
-  end
-
-  def instance_type_supported()
-
-    unless InstanceTypes.valid?(self.instance_type)
-      errors.add(:instance_type,
-                 "not in supported list (#{InstanceTypes.allowed})")
-    end
   end
 
   # @return [String] thead-safe name for the downloaded environment file
@@ -606,43 +589,23 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   def default_max_threads_per_agent()
     @default_max_threads_per_agent ||= {
-        InstanceTypes::Hydrogen => 50,
-        InstanceTypes::Calcium => 200,
-        InstanceTypes::Ebony => 800,
-        InstanceTypes::Steel => 1000
+        Defaults::INSTANCE_TYPE => 50,
+        'm3.large' => 200,
+        'c3.2xlarge' => 800,
+        'c3.4xlarge' => 1000
     }
     @default_max_threads_per_agent[self.instance_type]
   end
 
   # EC2 default settings
   class Defaults
-    AMI_ID              = "brickred-hailstorm"
-    SECURITY_GROUP      = "Hailstorm"
-    SECURITY_GROUP_DESC = "Allows traffic to port 22 from anywhere and internal TCP, UDP and ICMP traffic"
+    AMI_ID              = 'brickred-hailstorm'
+    SECURITY_GROUP      = 'Hailstorm'
+    SECURITY_GROUP_DESC = 'Allows traffic to port 22 from anywhere and internal TCP, UDP and ICMP traffic'
     BUCKET_NAME         = 'brickred-perftest'
     SSH_USER            = 'ubuntu'
     SSH_IDENTITY        = 'hailstorm'
-  end
-
-  class InstanceTypes
-    Hydrogen = 'm1.small'
-    Calcium  = 'm1.large'
-    Ebony    = 'm1.xlarge'
-    Steel    = 'c1.xlarge'
-    # HVM cluster compute instances are not supported due to limited availability
-    # (only on us-east-1), different operating system and creation strategy
-    # Titanium = 'cc1.4xlarge'
-    # Diamond  = 'cc2.8xlarge'
-
-    def self.valid?(instance_type)
-      self.allowed.include?(instance_type)
-    end
-
-    def self.allowed()
-      self.constants()
-          .collect {|c| eval("#{self.name}::#{c}") }
-    end
-
+    INSTANCE_TYPE       = 'm3.medium'
   end
 
 end
