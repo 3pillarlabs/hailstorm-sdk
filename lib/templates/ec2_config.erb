@@ -1,10 +1,12 @@
     # EC2 configuration
-    <% amazon_clouds_data.each do |amazon_cloud| %>
+    <%- amazon_clouds_data.each do |amazon_cloud| %>
     config.clusters(:amazon_cloud) do |cluster|
         cluster.access_key = '<%= amazon_cloud['access_key'] %>'
         cluster.secret_key = '<%= amazon_cloud['secret_key'] %>'
         cluster.region = '<%= amazon_cloud['region'] %>'
         cluster.instance_type = '<%= amazon_cloud['instance_type'] %>'
+        <%- if amazon_cloud['max_threads_per_agent'] %>
+        cluster.max_threads_per_agent = <%= amazon_cloud['max_threads_per_agent'] %>
+        <%- end %>
     end
-
-    <% end %>
+    <%- end %>
