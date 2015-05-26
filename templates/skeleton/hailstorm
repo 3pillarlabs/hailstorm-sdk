@@ -67,5 +67,9 @@ else
 
   # Start loading the gems and required files.
   require File.expand_path('../../config/boot', __FILE__)
-  Hailstorm.application.interpret_command(options)
+  begin
+    Hailstorm.application.interpret_command(options)
+  rescue StandardError => error
+    $stderr.puts error.message
+  end
 end

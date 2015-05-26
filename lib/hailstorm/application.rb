@@ -65,15 +65,15 @@ class Hailstorm::Application
   end
 
   # Initializes the application - creates directory structure and support files
-  def create_project(invocation_path, arg_app_name)
+  def create_project(invocation_path, arg_app_name, quiet = false)
 
     root_path = File.join(invocation_path, arg_app_name)
     FileUtils.mkpath(root_path)
-    puts "(in #{invocation_path})"
-    puts "  created directory: #{arg_app_name}"
-    create_app_structure(root_path, arg_app_name)
-    puts ""
-    puts "Done!"
+    puts "(in #{invocation_path})" unless quiet
+    puts "  created directory: #{arg_app_name}" unless quiet
+    create_app_structure(root_path, arg_app_name, quiet)
+    puts '' unless quiet
+    puts 'Done!' unless quiet
 
     return root_path
   end
@@ -368,7 +368,8 @@ Continue using old version?
   # directories
   # @param [String] root_path the path this application will be rooted at
   # @param [String] arg_app_name the argument provided for creating project
-  def create_app_structure(root_path, arg_app_name)
+  # @param [Boolean] quiet
+  def create_app_structure(root_path, arg_app_name, quiet = false)
 
     # create directory structure
     dirs = [
@@ -384,7 +385,7 @@ Continue using old version?
 
     dirs.each do |dir|
       FileUtils.mkpath(File.join(root_path, dir))
-      puts "    created directory: #{File.join(arg_app_name, dir)}"
+      puts "    created directory: #{File.join(arg_app_name, dir)}" unless quiet
     end
 
     skeleton_path = File.join(Hailstorm.templates_path, 'skeleton')
@@ -396,23 +397,23 @@ Continue using old version?
     File.open(File.join(root_path, 'Gemfile'), 'w') do |f|
       f.print(engine.render(:file => File.join(skeleton_path, 'Gemfile')))
     end
-    puts "    wrote #{File.join(arg_app_name, 'Gemfile')}"
+    puts "    wrote #{File.join(arg_app_name, 'Gemfile')}" unless quiet
 
     # Copy to script/hailstorm
     hailstorm_script = File.join(root_path, Hailstorm.script_dir, 'hailstorm')
     FileUtils.copy(File.join(skeleton_path, 'hailstorm'), hailstorm_script)
     FileUtils.chmod(0775, hailstorm_script) # make it executable
-    puts "    wrote #{File.join(arg_app_name, Hailstorm.script_dir, 'hailstorm')}"
+    puts "    wrote #{File.join(arg_app_name, Hailstorm.script_dir, 'hailstorm')}" unless quiet
 
     # Copy to config/environment.rb
     FileUtils.copy(File.join(skeleton_path, 'environment.rb'),
                    File.join(root_path, Hailstorm.config_dir))
-    puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'environment.rb')}"
+    puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'environment.rb')}" unless quiet
 
     # Copy to config/database.properties
     FileUtils.copy(File.join(skeleton_path, 'database.properties'),
                    File.join(root_path, Hailstorm.config_dir))
-    puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'database.properties')}"
+    puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'database.properties')}" unless quiet
 
     # Process to config/boot.rb
     engine = ActionView::Base.new()
@@ -420,7 +421,7 @@ Continue using old version?
     File.open(File.join(root_path, Hailstorm.config_dir, 'boot.rb'), 'w') do |f|
       f.print(engine.render(:file => File.join(skeleton_path, 'boot')))
     end
-    puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'boot.rb')}"
+    puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'boot.rb')}" unless quiet
   end
 
   # Sets up the load agents and targets.
