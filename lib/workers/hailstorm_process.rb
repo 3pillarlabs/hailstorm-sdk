@@ -65,7 +65,7 @@ class HailstormProcess
     template_directory = File.join(Dir.pwd, 'lib', 'templates')
 
     # create app directory structure
-    app_directory = hailstorm_inst.create_project(app_root_path, app_name)
+    app_directory = hailstorm_inst.create_project(app_root_path, app_name, true)
 
     # copy log4j.xml to config directory
     FileUtils.cp File.join(template_directory, 'log4j.xml'), File.join(app_directory, 'config')
@@ -84,7 +84,7 @@ class HailstormProcess
 
   def configure_project(environment_data, project_id, template_directory, upload_dir_path, app_directory)
     sourcejmx_file_path = File.join(upload_dir_path, 'Jmx_Files', project_id.to_s, '/.')
-    destjmx_file_path = File.join(app_directory, 'jmeter/')
+    destjmx_file_path = File.join(app_directory, 'jmeter')
     FileUtils.cp_r sourcejmx_file_path, destjmx_file_path
 
     copy_ssh_identity_files(app_directory, project_id, upload_dir_path, 'ssh_identity_Files')
@@ -111,7 +111,7 @@ class HailstormProcess
 
   # copy ssh identity file to config
   def copy_ssh_identity_files(app_directory, project_id, upload_dir_path, ssh_dir)
-    ssh_identity_path = File.join(upload_dir_path, ssh_dir, project_id.to_s)
+    ssh_identity_path = File.join(upload_dir_path, ssh_dir, project_id.to_s, '/.')
     if File.exist? ssh_identity_path
       dest_ssh_identity_path = File.join(app_directory, 'config')
       FileUtils.cp_r ssh_identity_path, dest_ssh_identity_path
@@ -166,7 +166,7 @@ class HailstormProcess
     # callback to web
     project_callback(callback)
 
-    puts 'application result download process ended'
+    puts 'application result report process ended'
   end
 
   def project_results_export(app_name, app_root_path, project_id, result_ids, callback)
@@ -180,7 +180,7 @@ class HailstormProcess
     #callback to web
     project_callback(callback)
 
-    puts 'applicationexportdownload process ended'
+    puts 'application results export process ended'
   end
 
   def project_callback(callback, data = {})
@@ -210,18 +210,23 @@ class HailstormProcess
   # @param [Symbol] format
   def execute_hailstorm_command(app_path, command, args = nil, format = nil)
 
-    system_args = [
-        'cd',
-        "#{app_path};HAILSTORM_ENV=sidekiq",
+    script_args = [
         'script/hailstorm',
         '--cmd',
         "#{command}"
     ]
 
-    system_args.push('--args', args.join(',')) unless args.nil?
-    system_args.push('--format', format) unless format.nil?
+    script_args.push('--args', args.join(',')) unless args.nil?
+    script_args.push('--format', format) unless format.nil?
 
-    `#{system_args.join(' ')}`
+    ENV['HAILSTORM_ENV'] = 'sidekiq'
+    process = Java::JavaLang::Runtime.getRuntime.exec(script_args.to_java(:string), nil, Java::JavaIo::File.new(app_path))
+    out_io = process.getInputStream.to_io
+    err_io = process.getErrorStream.to_io
+    process.waitFor()
+    err_msg = err_io.read
+    raise(err_msg) unless err_msg.nil? or err_msg.empty?
+    out_io.read unless out_io.nil? # return output captured on child stdout
   end
 
 end
