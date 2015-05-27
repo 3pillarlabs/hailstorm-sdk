@@ -15,11 +15,11 @@
     <div class="form-group">
       <%= f.label :ssh_identity %>
       <%= f.file_field :ssh_identity %>
-      <% if @target_host.errors[:ssh_identity_file_name].present? %>
+      <% if @target_host.errors[:ssh_identity].present? %>
       <div class="alert alert-danger" role="alert">
         <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
         <span class="sr-only">Error:</span>
-        <%= @target_host.errors.full_message(:ssh_identity_file_name, @target_host.errors[:ssh_identity_file_name].first) %>
+        <%= @target_host.errors.full_message(:ssh_identity, @target_host.errors[:ssh_identity].first) %>
       </div>
       <% end %>
     </div>

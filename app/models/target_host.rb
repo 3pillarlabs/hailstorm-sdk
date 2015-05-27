@@ -10,6 +10,7 @@ class TargetHost < ActiveRecord::Base
                     :path => "#{Rails.configuration.uploads_path}/#{SSH_IDENTITY_BASE_DIR}/:project_id/:basename.:extension",
                     :url => "/#{SSH_IDENTITY_BASE_DIR}/:project_id/:basename.:extension"
   validates_attachment_file_name :ssh_identity, :matches => [/pem\Z/]
+  validates_presence_of :ssh_identity
 
   def initialize(*args)
     super
