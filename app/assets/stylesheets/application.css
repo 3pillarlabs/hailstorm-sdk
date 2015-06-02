@@ -28,6 +28,15 @@
     url('../assets/glyphicons-halflings-regular.svg#glyphicons_halflingsregular') format('svg');
 }
 
+@font-face {
+    font-family: 'Digital Dream Regular';
+    src: url('digital-dream-regular/DIGITALDREAM-webfont.eot');
+    src: url('digital-dream-regular/DIGITALDREAM-webfont.eot?#iefix') format('embedded-opentype'),
+    url('digital-dream-regular/DIGITALDREAM-webfont.woff') format('woff'),
+    url('digital-dream-regular/DIGITALDREAM-webfont.ttf') format('truetype'),
+    url('digital-dream-regular/DIGITALDREAM-webfont.svg#digital_dream_regular') format('svg');
+}
+
 /* For fixed panel, required by BS */
 body > .container {
     padding-top: 60px;
