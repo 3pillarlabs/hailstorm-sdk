@@ -1,14 +1,13 @@
 class TargetHostsController < ApplicationController
-  before_action :set_target_host, only: [:show]
-  before_filter :set_project
-  before_action :set_project_id, only: [:create]
+
+  before_action :set_target_host, except: [:index, :new, :create]
 
   # GET /target_hosts
   # GET /target_hosts.json
   def index
-    @target_hosts = TargetHost.where(:project_id=>params[:project_id]).group_by(&:role_name)
-    if !@target_hosts.blank?
-      @target_hosts = format_target_host(@target_hosts)
+    @target_hosts = @project.target_hosts
+    if @target_hosts.empty?
+      flash.now[:info] = 'No target hosts added for monitoring.'
     end
   end
 
@@ -25,66 +24,45 @@ class TargetHostsController < ApplicationController
   # GET /target_hosts/new
   def new
     @target_host = TargetHost.new
-    @target_host_data = TargetHost.where(:project_id=>params[:project_id]).group_by(&:role_name)
-    if !@target_host_data.blank?
-      @target_host_data = format_target_host(@target_host_data)
-    end
   end
 
   # POST /target_hosts
   # POST /target_hosts.json
   def create
-    #delete all records related to project
-    old_ts = TargetHost.where(:project_id => @project.id)
-    puts old_ts.inspect
-    process_status = 0
-    target_host_parameter = {}
-    target_host_parameter[:executable_path] = params[:target_host][:executable_path]
-    target_host_parameter[:user_name] = params[:target_host][:user_name]
-    target_host_parameter[:sampling_interval] = params[:target_host][:sampling_interval]
-    target_host_parameter[:project_id] = params[:target_host][:project_id]
-    target_host_parameter[:ssh_identity] = params[:target_host][:ssh_identity]
-
+    @target_host = TargetHost.new(target_host_params)
+    @target_host.project_id = @project.id
     respond_to do |format|
-      params[:target_host][:host_name].each do |key,value|
-        #if role not empty then
-        if !params[:target_host][:role_name][key].blank?
-          target_host_parameter[:role_name] = params[:target_host][:role_name][key]
-          value.each do |host|
-            target_host_parameter[:host_name] = ''
-
-            #if host not empty then
-            if !host.blank?
-              target_host_parameter[:host_name] = host
-
-              @target_host = TargetHost.new(target_host_parameter)
-              if !@target_host.save
-                formatted_target_host_data
-                format.html { render :new }
-              else
-                process_status = 1
-              end
-            end
-          end
-
-        end
-      end
-
-      if process_status==1
-        delete_target_hosts(old_ts)
-        format.html { redirect_to project_target_hosts_path(@project), flash: {success: 'Target host successfully configured.'} }
+      if @target_host.save
+        format.html { redirect_to project_target_hosts_path(@project), flash: {success: 'New host for monitoring added.'} }
       else
-        @target_host = TargetHost.new(target_host_parameter)
-        unless @target_host.valid?
-          formatted_target_host_data
-          format.html { render :new }
-        end
+        format.html { render :new }
       end
-
     end
-
   end
 
+  def edit
+    # go conventions!
+  end
+
+  def update
+    respond_to do |format|
+      if @target_host.update(target_host_params)
+        format.html { redirect_to project_target_hosts_path(@project), flash: {success: 'Host information updated.'} }
+      else
+        format.html { render :edit }
+      end
+    end
+  end
+
+  def destroy
+    respond_to do |format|
+      if @target_host.destroy
+        format.html { redirect_to project_target_hosts_path(@project, @target_host), flash: {success: 'Target host successfully removed from monitoring.'} }
+      else
+        format.html { redirect_to project_target_hosts_path(@project, @target_host), alert: "Could not remove target host: #{@target_host.errors.full_messages.join(';')}" }
+      end
+    end
+  end
 
   private
     def delete_target_hosts(target_hosts_k)
@@ -102,16 +80,12 @@ class TargetHostsController < ApplicationController
 
     # Use callbacks to share common setup or constraints between actions.
     def set_target_host
-      @target_host = TargetHost.find(params[:id])
+      @target_host = TargetHost.where(project_id: @project.id).find(params[:id])
     end
 
     # Never trust parameters from the scary internet, only allow the white list through.
     def target_host_params
-      params.require(:target_host).permit(:project_id, :host_name, :role_name, :executable_path, :user_name, :sampling_interval, :ssh_identity)
-    end
-
-    def set_project_id
-      params[:target_host][:project_id] = @project.id
+      params.require(:target_host).permit(:host_name, :role_name, :executable_path, :user_name, :sampling_interval, :ssh_identity)
     end
 
     def format_target_host(hosts)
@@ -128,13 +102,14 @@ class TargetHostsController < ApplicationController
           data[:sampling_interval] = value.first.sampling_interval
           data[:ssh_identity_file_name] = value.first.ssh_identity_file_name
         end
-        if !key.blank?
+        unless key.blank?
           role[:name]= key
           role[:hosts] = []
           value.each do |h|
-            if !h[:host_name].blank?
+            unless h[:host_name].blank?
               role_host = {}
               role_host[:host_name] = h[:host_name]
+              role_host[:monitor] = h
               role[:hosts] << role_host
             end
           end

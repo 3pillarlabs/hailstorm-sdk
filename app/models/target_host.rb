@@ -5,12 +5,14 @@ class TargetHost < ActiveRecord::Base
   belongs_to :project
 
   validates :executable_path, :user_name, :sampling_interval, presence: true
-  validates_presence_of :role_name, :host_name, :message => 'Configuration must have at least 1 role and 1 host'
+  validates_presence_of :role_name, :host_name
   has_attached_file :ssh_identity,
                     :path => "#{Rails.configuration.uploads_path}/#{SSH_IDENTITY_BASE_DIR}/:project_id/:basename.:extension",
                     :url => "/#{SSH_IDENTITY_BASE_DIR}/:project_id/:basename.:extension"
   validates_attachment_file_name :ssh_identity, :matches => [/pem\Z/]
-  validates_presence_of :ssh_identity
+  validates_attachment_presence :ssh_identity, on: :create
+
+  include Deletable
 
   def initialize(*args)
     super

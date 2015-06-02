@@ -7,64 +7,56 @@
   <div class="row">
     <div class="col-md-9">Target Hosts</div>
     <div class="col-md-3">
-      <% if @target_hosts.blank? %>
-          <%= link_to new_project_target_host_path, class: 'btn btn-primary pull-right' do %>
-            <span class="glyphicon glyphicon-plus"></span> Add
-          <% end %>
-      <% else %>
-          <%= link_to new_project_target_host_path, class: 'btn btn-primary pull-right' do %>
-              <span class="glyphicon glyphicon-pencil"></span> Edit
-          <% end %>
+      <%= link_to new_project_target_host_path, class: 'btn btn-primary pull-right' do %>
+          <span class="glyphicon glyphicon-plus"></span> Add
       <% end %>
     </div>
   </div>
 </h2>
 
-<%#= debug @target_hosts %>
-<% if @target_hosts.blank? %>
-    <div role="alert" class="alert alert-info">
-      <span aria-hidden="true" class="glyphicon glyphicon-info-sign"></span>
-      No target hosts added for monitoring.
-    </div>
-<% else %>
-    <p>
-      <strong>Type:</strong>
-      <%= @target_hosts[:target_host_type] %>
-    </p>
+<%- grouped_by_role(@target_hosts).each do
+# @type role_name [String]
+# @type target_host [Array]
+|role_name, target_hosts| %>
 
-    <p>
-      <strong>Executable path:</strong>
-      <%= @target_hosts[:executable_path] %>
-    </p>
-
-
-    <p>
-      <strong>User name:</strong>
-      <%= @target_hosts[:user_name] %>
-    </p>
-
-    <p>
-      <strong>Sampling interval:</strong>
-      <%= @target_hosts[:sampling_interval] %>
-    </p>
-
-    <p>
-      <strong>SSH identity:</strong>
-      <%= @target_hosts[:ssh_identity_file_name].blank? ? "" : link_to(@target_hosts[:ssh_identity_file_name], project_target_host_path(@project,:id=>@target_hosts[:id], format: :pem)) %>
-    </p>
-
-
-    <% @target_hosts[:roles].each do |roles| %>
-        <p>
-          <strong>Role Name:</strong>
-          <%= roles[:name] %>
-        </p>
-        <% roles[:hosts].each do |host| %>
-            <p class="col-md-offset-1">
-              <strong>Host Name:</strong>
-              <%= host[:host_name] %>
-            </p>
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title"><%= role_name %></h3>
+  </div>
+  <table class="table">
+    <tr>
+      <th width="30%">Host</th>
+      <th width="20%">Executable Path</th>
+      <th width="10%">User Name</th>
+      <th width="10%">Sampling Interval</th>
+      <th width="20%">SSH Identity File</th>
+      <th width="10%">Actions</th>
+    </tr>
+    <%- target_hosts.each do
+    # @type target_host [TargetHost]
+    |target_host| %>
+    <tr>
+      <td><%= link_to target_host.host_name, edit_project_target_host_path(@project, target_host) %></td>
+      <td><%= target_host.executable_path %></td>
+      <td><%= target_host.user_name %></td>
+      <td><%= target_host.sampling_interval %></td>
+      <td><%= link_to(target_host.ssh_identity_file_name, project_target_host_path(@project, target_host, format: :pem)) %></td>
+      <td>
+        <%= link_to edit_project_target_host_path(@project, target_host), class: 'btn btn-primary' do %>
+            <span class="glyphicon glyphicon-edit"></span>
         <% end %>
-    <% end %>
-<% end %>
-<p><%= link_to "Back to Project", project_path(@project) %></p>
+        <%= link_to project_target_host_path(@project, target_host), method: :delete, class: "btn text-danger#{target_host.can_delete? ? '' : ' disabled'}", data: {confirm: 'This host will not be monitored if you remove it from configuration. Proceed to remove host?'} do %>
+            <span class="glyphicon glyphicon-trash"></span>
+        <% end %>
+      </td>
+    </tr>
+    <%- end %>
+  </table>
+</div>
+<%- end %>
+
+<p>
+  <%= link_to project_path(@project), class: 'btn btn-default' do %>
+      Back to project
+  <% end %>
+</p>

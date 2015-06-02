@@ -1,6 +1,7 @@
 class DataCenter < Cluster
 
   validates :user_name, :machines, :title, presence: true
+  validates_attachment_presence :ssh_identity
 
   before_validation :remove_empty_machines
   before_save :convert_machines_ary_to_json
