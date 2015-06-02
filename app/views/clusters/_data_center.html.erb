@@ -1,24 +1,15 @@
 <div class="form-group">
   <%= data_center.label :ssh_identity, class: 'col-sm-3 control-label' %>
   <div class="col-sm-9">
-    <% if @cluster.ssh_identity_file_name.blank? %>
-        <%= data_center.file_field :ssh_identity %>
-    <% else %>
-        <%= @cluster.ssh_identity_file_name%>
-    <% end %>
+    <%= data_center.file_field :ssh_identity %>
+    <%= errors_if_present @cluster, :ssh_identity %>
   </div>
 </div>
 <div class="form-group">
   <div><%= data_center.label :title, class: 'col-sm-3 control-label' %></div>
   <div class="col-sm-9">
     <%= data_center.text_field :title, class: 'form-control' %>
-    <% if @cluster.errors[:title].present? %>
-        <div class="alert alert-danger" role="alert">
-          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-          <span class="sr-only">Error:</span>
-          <%= @cluster.errors.full_message(:title, @cluster.errors[:title].first) %>
-        </div>
-    <% end %>
+    <%= errors_if_present @cluster, :title %>
   </div>
 </div>
 
@@ -26,13 +17,7 @@
   <%= data_center.label :user_name, class: 'col-sm-3 control-label' %>
   <div class="col-sm-9">
     <%= data_center.text_field :user_name, class: 'form-control' %>
-    <% if @cluster.errors[:user_name].present? %>
-        <div class="alert alert-danger" role="alert">
-          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-          <span class="sr-only">Error:</span>
-          <%= @cluster.errors.full_message(:user_name, @cluster.errors[:user_name].first) %>
-        </div>
-    <% end %>
+    <%= errors_if_present @cluster, :user_name %>
   </div>
 </div>
 
@@ -64,12 +49,6 @@
         </a>
       </div>
     </div>
-    <% if @cluster.errors[:machines].present? %>
-        <div class="alert alert-danger" role="alert">
-          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-          <span class="sr-only">Error:</span>
-          <%= @cluster.errors.full_message(:machines, @cluster.errors[:machines].first) %>
-        </div>
-    <% end %>
+    <%= errors_if_present @cluster, :machines %>
   </div>
 </div>

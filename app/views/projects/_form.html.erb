@@ -1,20 +1,20 @@
-<p>
-<%= form_for(@project) do |f| %>
-  <div class="form-group">
-    <%= f.label :title, "Title : " %>
-    <%= f.text_field :title,class:"form-control",placeholder:"Enter title" %>
+<div class="row">
+  <div class="col-md-6 col-md-offset-3">
+    <%= form_for(@project) do |f| %>
+        <div class="form-group">
+          <%= f.label :title %>
+          <%= f.text_field :title, class: 'form-control', placeholder: 'Examples: Acme portal priming, Midas Spike Tests' %>
+          <%= errors_if_present @project, :title %>
+        </div>
+        <br/>
+        <div class="row">
+          <div class="col-xs-6">
+            <%= f.submit 'Save', {class: 'btn btn-primary'} %>
+          </div>
+          <div class="col-xs-6">
+            <%= link_to 'Cancel', projects_path, :class => 'btn btn-default pull-right' %>
+          </div>
+        </div>
+    <% end %>
   </div>
-  <% if @project.errors.any? %>
-    <div class="alert alert-danger" role="alert">
-      <% @project.errors.full_messages.each do |message| %>
-          <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-          <span class="sr-only">Error:</span>
-          <%= message %>
-      <% end %>
-    </div>
-  <% end %>
-
-    <%= f.submit "Save",{class:"btn btn-primary"} %>
-    <%= link_to "Cancel", projects_path, :class => "btn btn-default" %>
-<% end %>
-</p>
+</div>

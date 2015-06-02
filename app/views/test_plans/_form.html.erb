@@ -22,7 +22,7 @@
           </thead>
 
           <tbody id="test_plan_properties_body">
-          <% if !@test_plan_properties.empty? %>
+          <% if !@test_plan_properties.blank? %>
               <% @test_plan_properties.each do |property| %>
                   <tr>
                     <td>
@@ -51,9 +51,13 @@
       </div>
     </div>
 
-    <p>
+    <div class="row">
+      <div class="col-md-6">
         <%= f.submit "Save", :class => "btn btn-primary" %>
-        <%= link_to "Cancel", params[:page].blank? ? project_test_plans_path : project_test_plans_path(:page=>params[:page]), :class => "btn btn-default" %>
-    </p>
+      </div>
+      <div class="col-md-6">
+        <%= link_to "Cancel", project_test_plans_path(:page=>params[:page]), :class => 'btn btn-default pull-right' %>
+      </div>
+    </div>
 
 <% end %>
