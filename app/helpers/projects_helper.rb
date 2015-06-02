@@ -11,6 +11,8 @@ module ProjectsHelper
                      'glyphicon glyphicon-check'
                    when :ready_start
                      'glyphicon glyphicon-send'
+                   when :inactive
+                     'glyphicon glyphicon-glass'
                    else
                      html = "<i class=\"fa fa-cog fa-spin\"></i> #{project.status_title}"
                      nil

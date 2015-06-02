@@ -13,6 +13,8 @@ class TestPlan < ActiveRecord::Base
 
   after_create :transition_project
 
+  include Deletable
+
   def getProjectTestPlans(projectId)
     TestPlan.where(:project_id => projectId)
   end
@@ -22,9 +24,9 @@ class TestPlan < ActiveRecord::Base
   end
 
   def transition_project
-    self.project.test_plan_upload! # trigger event
+    self.project.test_plan_upload! if self.project.may_test_plan_upload? # trigger event
     unless self.project.clusters.empty?
-      self.project.config_completed!
+      self.project.config_completed! if self.project.may_config_completed?
     end
   end
 

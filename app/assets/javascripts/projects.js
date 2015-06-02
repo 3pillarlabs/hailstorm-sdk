@@ -69,6 +69,49 @@ Hailstorm.Project.Tracker.prototype.start = function() {
             self.showGeneratedReports();
         }
     });
+
+    // display results of load tests
+    $('#project_results').on("ajax:success", ".load-result-excluder", function(event, data) {
+        $("#project_results").html(data);
+        self.showSuccess("Result was excluded successfully.")
+    });
+
+    // load tests view options
+    $('#load_tests_view_opts ul.dropdown-menu li a').on("ajax:success", function(event, data) {
+        $("#project_results").html(data);
+        // toggle the ok glyph
+        var opts = $('#load_tests_view_opts ul.dropdown-menu li a');
+        var okg = opts.find('span');
+        okg.detach();
+        $(this).find('small').before(okg);
+        $('#load_tests_view_opts').removeClass("open");
+    });
+
+    // include/reactivate load test
+    $('#project_results').on("ajax:success", ".load-result-includer", function(event, data) {
+        $("#project_results").html(data);
+        self.showSuccess("Result was included back successfully.")
+    });
+
+    // results tab update on delete of item
+    $("#generated_reports").on("ajax:success", 'a', function(event, data) {
+       $("#generated_reports").html(data);
+    });
+
+    // toggle dangerous settings and angle direction
+    $("#danger_settings_toggle").on("click", function() {
+        if ($(this).hasClass("active")) {
+            $(this).find("span").removeClass("fa-angle-up").addClass("fa-angle-down");
+            $("#danger_settings_content").addClass("hidden");
+        } else {
+            $(this).find("span").removeClass("fa-angle-down").addClass("fa-angle-up");
+            $("#danger_settings_content").removeClass("hidden");
+        }
+    });
+
+    if (this.anythingInProgress) {
+        this.periodicProjectSync();
+    }
 };
 
 Hailstorm.Project.Tracker.prototype.showError = function(message) {
@@ -169,7 +212,10 @@ Hailstorm.Project.Tracker.prototype.handleTaskTriggers = function(trigger) {
             });
         };
 
-        $(modalOkSelector).one("click", yesFn);
+        $(modalOkSelector).one("click", yesFn)
+            .one("hidden.bs.modal", function() {
+                $(modalOkSelector).unbind();
+            });
     } else {
         $.ajax({
             url : $(trigger).attr("href"),
@@ -210,9 +256,8 @@ Hailstorm.Project.Tracker.prototype.getTestResults = function(url, type) {
                 // trigger an event after showing existing reports. Add a one time
                 // listener for this event to add in progress message.
                 $(document).one("hailstorm:event:gen_reports_showed", function() {
-                    $("#generated_reports").prepend('<div id="gen_report_progress"><span class="fa fa-cog fa-spin"></span> Generating report...</div><br/>');
+                    $("#generated_reports").prepend('<li class="list-group-item"><span class="fa fa-cog fa-spin"></span> Generating report...</li>');
                 });
-
                 $('a[href="#gen_reports"]').tab('show');
                 self.showInfo(message);
                 $(".testsCheck").prop("checked", false);
@@ -332,6 +377,18 @@ Hailstorm.Project.Tracker.prototype.synchProjectState = function(result) {
     } else if (this.lastActionCode == "project_setup") {
         if (stateCode == "ready_start") {
             this.showSuccess("Setup concluded successfully, you can now start tests.");
+        }
+    } else if (this.lastActionCode == "project_stop") {
+        if (stateCode == "ready_start") {
+            this.showSuccess("Tests have been stopped successfully.");
+        }
+    } else if (this.lastActionCode == "project_abort") {
+        if (stateCode == "ready_start") {
+            this.showSuccess("Tests have been aborted successfully.");
+        }
+    } else if (this.lastActionCode == "project_terminate") {
+        if (stateCode == "configured") {
+            this.showSuccess("Test environment terminated successfully.");
         }
     }
 

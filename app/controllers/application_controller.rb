@@ -9,7 +9,7 @@ class ApplicationController < ActionController::Base
 
   # Use callbacks to share common setup or constraints between actions for project.
   def set_project
-    @project = Project.find(params[:project_id] || params[:id])
+    @project = Project.where.not(aasm_state: :inactive).find(params[:project_id] || params[:id])
   end
 
 end

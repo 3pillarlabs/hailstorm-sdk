@@ -1,5 +1,5 @@
 <%= content_for :project_header do %>
-    <% unless @project.blank? %>
+    <% unless @project.nil? %>
         <%= link_to @project.title, project_path(@project) %>
     <% end %>
 <% end %>
@@ -10,3 +10,4 @@
     <%= render 'form' %>
   </div>
 </div>
+<br/>

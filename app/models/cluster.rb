@@ -14,6 +14,8 @@ class Cluster < ActiveRecord::Base
 
   after_create :transition_project
 
+  include Deletable
+
   def self.pagination(current_page, items_per_page)
     self.paginate(page: current_page, per_page: items_per_page).order("updated_at DESC")
   end

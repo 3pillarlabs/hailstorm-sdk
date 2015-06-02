@@ -21,33 +21,42 @@
   </div>
 </h2>
 
-<% cluster_groups(@clusters).each_pair do
+<%- if not @clusters.empty? %>
+    <% cluster_groups(@clusters).each_pair do
 # @type cluster_type [String]
 # @type cluster [Cluster]
-|cluster_type, clusters| %>
-    <div class="panel panel-default">
-      <div class="panel-heading"><%= cluster_type.titlecase %></div>
-      <table class="table table-hover">
-      <% cluster_table(cluster_type, clusters) do |ct| %>
-        <% ct.header do |header| %>
-        <tr>
-          <% header.cols.each do |colspec| %>
-          <th width="<%= colspec[:width] %>%"><%= colspec[:title] %></th>
-          <% end %>
-          <th>Actions</th>
-        </tr>
-        <% end %>
-        <% ct.rows.each do |row| %>
-          <tr>
-            <% row.cols.each do |col| %>
-            <td><%= col.is_a?(Array) ? raw(to_list(col)) : col %></td>
+    |cluster_type, clusters| %>
+        <div class="panel panel-default">
+          <div class="panel-heading"><%= cluster_type.titlecase %></div>
+          <table class="table table-hover">
+            <% cluster_table(cluster_type, clusters) do |ct| %>
+                <% ct.header do |header| %>
+                    <tr>
+                      <% header.cols.each do |colspec| %>
+                          <th width="<%= colspec[:width] %>%"><%= colspec[:title] %></th>
+                      <% end %>
+                      <th>Actions</th>
+                    </tr>
+                <% end %>
+                <% ct.rows.each do |row| %>
+                    <tr>
+                      <% row.cols.each do |col| %>
+                          <td><%= col.is_a?(Array) ? raw(to_list(col)) : col %></td>
+                      <% end %>
+                      <td><%= row.edit_link %> <%= row.delete_link %></td>
+                    </tr>
+                <% end %>
             <% end %>
-            <td><%= row.edit_link %></td>
-          </tr>
-        <% end %>
-      <% end %>
-      </table>
+          </table>
+        </div>
+    <% end %>
+<%- else %>
+    <div role="alert" class="alert alert-warning">
+      <span aria-hidden="true" class="glyphicon glyphicon-warning-sign"></span>
+      No clusters add yet for this project. You can not start tests without this step.
     </div>
-<% end %>
+<%- end %>
 
-<p><%= link_to 'Back to Project', project_path(@project) %></p>
+<p><%= link_to project_path(@project), class: 'btn btn-default' do %>
+      Back to project
+  <% end %></p>

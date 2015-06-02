@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20150525140122) do
+ActiveRecord::Schema.define(version: 20150530184832) do
 
   create_table "clusters", force: true do |t|
     t.integer  "project_id",                null: false
@@ -42,6 +42,7 @@ ActiveRecord::Schema.define(version: 20150525140122) do
     t.float    "avg_tps",             limit: 24
     t.datetime "started_at"
     t.datetime "stopped_at"
+    t.boolean  "active",                         default: true
   end
 
   create_table "project_result_downloads", force: true do |t|

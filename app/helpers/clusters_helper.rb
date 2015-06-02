@@ -27,28 +27,62 @@ module ClustersHelper
                     when 'DataCenter'
                       [{'Title' => 30}, {'Hosts' => 20}, {'User' => 20}, {'SSH Identity' => 20}]
                     else
-                      raise('Should never happen?')
+                      raise('Unknown cluster type')
                   end
     rows = clusters.map do
     # @type cluster [Cluster]
     |cluster|
+      row_group = {}
       row = case cluster_type
         when 'AmazonCloud'
-          [cluster.region_title, cluster.instance_type, cluster.access_key]
+          [link_to(cluster.region_title, edit_project_amazon_cloud_path(@project, cluster, page: params[:page])),
+           cluster.instance_type, cluster.access_key]
         when 'DataCenter'
-          [cluster.title, cluster.machines, cluster.user_name]
+          [link_to(cluster.title, edit_project_data_center_path(@project, cluster, page: params[:page])),
+           cluster.machines, cluster.user_name]
       end
 
       ident_file_path = cluster.ssh_identity_file_name.blank? ? '' : link_to(cluster.ssh_identity_file_name, project_cluster_path(@project, cluster, format: :pem))
       row << ident_file_path
-      row << case cluster.type
-               when 'AmazonCloud'
-                 link_to 'Edit', edit_project_amazon_cloud_path(@project, cluster, page: params[:page])
-               when 'DataCenter'
-                 link_to 'Edit', edit_project_data_center_path(@project, cluster, page: params[:page])
-               else
-                 raise('should never happen?')
-             end
+      row_group[:row] = row
+
+      ag = TableModel::ActionGroup.new
+      edit_link_args = case cluster.type
+                         when 'AmazonCloud'
+                           [edit_project_amazon_cloud_path(@project, cluster)]
+                         when 'DataCenter'
+                           [edit_project_data_center_path(@project, cluster)]
+                         else
+                           raise('Unknown cluster type')
+                       end
+
+      edit_link_args << {
+          class: 'btn btn-primary'
+      }
+      ag.edit_link = link_to(*edit_link_args) { raw '<span class="glyphicon glyphicon-edit"></span>' }
+
+      delete_link_args = case cluster.type
+                           when 'AmazonCloud'
+                             [project_amazon_cloud_path(@project, cluster)]
+                           when 'DataCenter'
+                             [project_data_center_path(@project, cluster)]
+                           else
+                             raise('Unknown cluster type')
+                         end
+      delete_link_args << {
+          method: :delete,
+          data: {
+              confirm: 'This will delete this cluster from your configuration. Proceed to delete?',
+              confirm_title: 'Warning',
+              confirm_context: 'danger'
+          },
+          class: "btn text-danger#{cluster.can_delete? ? '' : ' disabled'}"
+      }
+      ag.delete_link = link_to(*delete_link_args) { raw '<span class="glyphicon glyphicon-trash"></span>' }
+
+      row_group[:actions] = ag
+
+      row_group
     end
 
     yield TableModel.new(header_cols, rows)
@@ -85,13 +119,22 @@ module ClustersHelper
       end
 
       def cols
-        @row.slice(0..-2)
+        @row[:row]
       end
 
       def edit_link
-        @row.last
+        @row[:actions].edit_link
+      end
+
+      def delete_link
+        @row[:actions].delete_link
       end
     end
+
+    class ActionGroup
+      attr_accessor :edit_link, :delete_link
+    end
+
   end
 
   # @param [Array] ary
@@ -109,7 +152,7 @@ module ClustersHelper
             when 'DataCenter'
               'clusters/data_center'
             else
-              raise('should not happen?')
+              raise('Unknown cluster type')
           end
     render({partial: view_part}.merge(options))
   end

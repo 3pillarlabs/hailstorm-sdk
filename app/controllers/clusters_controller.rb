@@ -57,6 +57,16 @@ class ClustersController < ApplicationController
     end
   end
 
+  def destroy
+    respond_to do |format|
+      if @cluster.destroy
+        format.html { redirect_to project_clusters_path(@project), flash: {success: "#{@cluster.type.to_s.titlecase} cluster was successfully deleted."} }
+      else
+        format.html { redirect_to project_clusters_path(@project), alert: "#{@cluster.type.to_s.titlecase} cluster could not be removed: #{@cluster.errors.full_messages.join(';')}"}
+      end
+    end
+  end
+
   private
 
   def set_cluster

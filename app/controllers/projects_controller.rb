@@ -1,7 +1,6 @@
 class ProjectsController < ApplicationController
 
-  # before_action :set_project, except: [:index, :new, :create, :update_loadtest_results, :check_download_status]
-  skip_before_action :set_project, only: [:index, :new, :create, :update_loadtest_results, :check_download_status]
+  skip_before_action :set_project, only: [:index, :new, :create, :check_download_status]
   skip_before_action :verify_authenticity_token, only: [:job_error, :update_status]
 
   # GET /projects
@@ -9,7 +8,7 @@ class ProjectsController < ApplicationController
   def index
     @items_per_page = Rails.configuration.items_per_page
     @current_page = params[:page].blank? ? 1 : params[:page]
-    @projects = Project.all.pagination(@current_page, @items_per_page)
+    @projects = Project.where.not(aasm_state: :inactive).pagination(@current_page, @items_per_page)
   end
 
   # GET /projects/1
@@ -23,8 +22,7 @@ class ProjectsController < ApplicationController
     end
 
     # get load_test data
-    @load_tests = LoadTest.where(project_id: @project.id).reverse_chronological_list
-    @last_test = @load_tests.first
+    @load_tests = @project.load_tests.reverse_chronological_list #LoadTest.where(project_id: @project.id).reverse_chronological_list
   end
 
   # GET /projects/new
@@ -39,7 +37,7 @@ class ProjectsController < ApplicationController
 
     respond_to do |format|
       if @project.save
-        format.html { redirect_to @project, notice: 'Project was successfully created.' }
+        format.html { redirect_to @project, flash: {success: 'Project was successfully created.'} }
         format.json { render :show, status: :created, location: @project }
       else
         format.html { render :new }
@@ -120,7 +118,7 @@ class ProjectsController < ApplicationController
         raise "Unknown command for status update: #{command}"
     end
 
-    flash[:notice] = "#{command} completed successfully!"
+    flash[:success] = "#{command} completed successfully!"
     render nothing: true
   end
 
@@ -148,15 +146,6 @@ class ProjectsController < ApplicationController
     render json: state_snapshot
   end
 
-  # get load test new results
-  def update_loadtest_results
-    # get load_test data
-    load_tests = LoadTest.where('project_id = :projectid',
-                                :projectid => params[:project_id]).reverse_chronological_list
-
-    render(partial: 'load_tests/item', collection: load_tests)
-  end
-
   # check status of project result download
   def check_download_status
     download_result_data = ProjectResultDownload.find(params[:request_id])
@@ -176,36 +165,17 @@ class ProjectsController < ApplicationController
     head :ok
   end
 
-  # Fetches generated reports
-  # GET /projects/1/generated_reports
-  def generated_reports
-
-    files = []
-    @project.generated_reports do |file_path|
-      file_name = File.basename(file_path)
-      files << {title: file_name, path: report_project_path(@project, file_name: file_name)}
+  def destroy
+    if @project.may_inactivate?
+      @project.inactivate!
+      redirect_to projects_path
+    else
+      redirect_to project_path(@project), {flash: {error: 'Can not delete project in current state.'}}
     end
-
-    render partial: 'generated_reports/list', object: files
-  end
-
-  # Downloads a report
-  # GET /project/1/report?file_name=foo.docx
-  def report
-    report_file_name = params[:file_name]
-    download_file_path = File.join(@project.reports_dir_path, report_file_name)
-    file_type = case report_file_name
-                  when /\.docx$/
-                    'application/doc'
-                  when /\.zip$/
-                    'application/zip'
-                  else
-                    'application/x-octet-stream'
-                end
-    send_file download_file_path, :type => file_type, :disposition => 'attachment', :filename => report_file_name
   end
 
   private
+
   # Never trust parameters from the scary internet, only allow the white list through.
   def project_params
     params.require(:project).permit(:title, :status)

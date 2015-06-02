@@ -12,7 +12,8 @@ class Project < ActiveRecord::Base
       started:              {id: 5, title: 'Running'},
       stop_progress:        {id: 6, title: 'Stopping...'},
       abort_progress:       {id: 7, title: 'Aborting...'},
-      term_progress:        {id: 8, title: 'Terminating...'}
+      term_progress:        {id: 8, title: 'Terminating...'},
+      inactive:             {id: -2, title: 'Inactive'}
   }
 
   has_many :clusters, dependent: :destroy
@@ -21,6 +22,8 @@ class Project < ActiveRecord::Base
   has_many :target_hosts
   delegate :data_centers, :amazon_clouds, to: :clusters
   has_many :project_result_downloads
+
+  has_one  :most_recent_finished_load_test, -> { unscope(:where).where.not(stopped_at: nil).order('stopped_at DESC').limit(1) }, class_name: 'LoadTest'
 
   validates :title, presence: true
   validates :title, uniqueness: true
@@ -55,10 +58,10 @@ class Project < ActiveRecord::Base
     state :stop_progress
     state :abort_progress
     state :term_progress
+    state :inactive
 
     event :test_plan_upload do
       transitions from: :empty,               to: :partial_configured
-      transitions from: :partial_configured,  to: :partial_configured
     end
 
     event :cluster_configuration do
@@ -134,6 +137,10 @@ class Project < ActiveRecord::Base
       transitions from: :term_progress,       to: :ready_start,    after: ->(*args) { set_state_reason(args[0]) }
       transitions from: :ready_start,         to: :ready_start
     end
+
+    event :inactivate do
+      transitions from: [:empty, :partial_configured, :configured], to: :inactive
+    end
   end
 
   def anything_in_progress?
@@ -158,7 +165,7 @@ class Project < ActiveRecord::Base
         yield f[:f]
       end
     else
-      files
+      files.map { |f| f[:f]}
     end
   end
 
