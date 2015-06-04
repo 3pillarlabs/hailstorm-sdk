@@ -48,5 +48,5 @@ test:
 production:
   <<: *default
   database: hailstorm-web_production
-  username: hailstorm-web
-  password: <%= ENV['HAILSTORM-WEB_DATABASE_PASSWORD'] %>
+  username: hailstorm
+  password: <%= ENV['HAILSTORM_WEB_DATABASE_PASSWORD'] %>
