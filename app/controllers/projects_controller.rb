@@ -185,7 +185,7 @@ class ProjectsController < ApplicationController
 
     upload_directory_path = Rails.root.join(Rails.configuration.uploads_directory)
 
-    callback = url_for(:action => 'update_status', :status => 'setup')
+    callback = build_callback(:action => 'update_status', :status => 'setup')
 
     # Submit job for project setup
     HailstormProcess.perform_async(@project.project_key, Rails.configuration.project_setup_path, 'setup', @project.id, callback, upload_directory_path, env_data_for_worker, nil, error_callback)
@@ -211,17 +211,17 @@ class ProjectsController < ApplicationController
 
   def submit_process(process)
     upload_directory_path = Rails.root.join(Rails.configuration.uploads_directory)
-    callback = url_for(:action => 'update_status', :status => process.to_s)
+    callback = build_callback(:action => 'update_status', :status => process.to_s)
     HailstormProcess.perform_async(@project.project_key, Rails.configuration.project_setup_path, process.to_s, @project.id, callback, upload_directory_path, env_data_for_worker, nil, error_callback)
   end
 
   def project_results_download(type, test_ids, request_id)
-    callback = url_for(:action => 'update_status', :status => type, :request_id => request_id)
+    callback = build_callback(:action => 'update_status', :status => type, :request_id => request_id)
     HailstormProcess.perform_async(@project.project_key, Rails.configuration.project_setup_path, type, @project.id, callback, nil, nil, test_ids, error_callback)
   end
 
   def error_callback
-    url_for(action: 'job_error')
+    build_callback(action: 'job_error')
   end
 
   def state_snapshot
@@ -243,6 +243,16 @@ class ProjectsController < ApplicationController
   # @return [String]
   def project_log_path
     File.join(Rails.configuration.project_setup_path, @project.project_key, 'log', Rails.configuration.project_logs_file)
+  end
+
+  # @param [Hash] components
+  # @return [String]
+  def build_callback(components = {})
+    if not config.sidekiq_callback_url.nil?
+      components.merge!(host: config.sidekiq_callback_url)
+    end
+
+    url_for(components)
   end
 
 end
