@@ -248,11 +248,8 @@ class ProjectsController < ApplicationController
   # @param [Hash] components
   # @return [String]
   def build_callback(components = {})
-    if not config.sidekiq_callback_url.nil?
-      components.merge!(host: config.sidekiq_callback_url)
-    end
-
-    url_for(components)
+    options = Rails.configuration.sidekiq_worker_callback if Rails.configuration.respond_to? :sidekiq_worker_callback
+    url_for(components.merge(options || {}))
   end
 
 end
