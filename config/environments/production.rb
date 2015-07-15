@@ -66,6 +66,6 @@ Rails.application.configure do
   config.active_record.dump_schema_after_migration = false
 
   # callback URL for Sidekiq workers
-  config.sidekiq_worker_callback = {host: 'localhost', port: 800}
+  config.sidekiq_worker_callback = {host: 'localhost', port: 80}
 
 end
