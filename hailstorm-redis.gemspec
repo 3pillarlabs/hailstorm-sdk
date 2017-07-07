@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.version       = Hailstorm::Redis::VERSION
   spec.authors       = ["Sandeep Bohra"]
   spec.email         = ["sandeep.bohra@3pillarglobal.com"]
-  spec.summary       = %q{TODO: Write a short summary. Required.}
-  spec.description   = %q{TODO: Write a longer description. Optional.}
+  spec.summary       = %q{Hailstorm Redis worker}
+  # spec.description   = %q{TODO: Write a longer description. Optional.}
   spec.homepage      = ""
   spec.license       = "MIT"
 
