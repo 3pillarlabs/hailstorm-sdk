@@ -70,7 +70,7 @@ Vagrant.configure(2) do |config|
   # SHELL
 
 	# STACK
-	# 
+	#
 	# +--------------------+   +------------------------------------------+
 	# |  ***************** |   |  *******************  *****************  |
 	# |  * hailstorm-web * |   |  * hailstorm-redis *  * hailstorm-gem *  |
@@ -91,38 +91,56 @@ Vagrant.configure(2) do |config|
 	#                  * Mysql Server *
 	#                  ****************
 	# Tools:
-	#   git 
+	#   git
 	#   npm
 
+  config.vm.provision "apt", :type => :shell, :inline => <<-SHELL
+    last_apt_update_path=/var/cache/last_apt_update
+    if [ ! -e $last_apt_update_path ] || [ `expr $(date "+%s") - $(stat -c "%Y" $last_apt_update_path)` -gt 86400 ]; then
+      apt-get update && touch $last_apt_update_path
+    fi
+  SHELL
+
 	# mysql-server
-	config.vm.provision :shell, :path => 'install-mysql-server.sh'
+	config.vm.provision "mysql", :type => :shell, :path => 'install-mysql-server.sh'
 
 	# redis-server
-	config.vm.provision :shell, :inline => 'sudo apt-get install -y redis-server'
+	config.vm.provision "redis", :type => :shell, :inline => <<-SHELL
+    which redis-server >/dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      sudo apt-get install -y redis-server
+    fi
+  SHELL
 
 	# nginx
-	config.vm.provision :shell, :inline => 'sudo apt-get install -y nginx'
-	config.vm.network   'forwarded_port', :guest => 80, :host => 8080, :autocorrect => true
+	config.vm.provision "nginx", :type => :shell, :inline => <<-SHELL
+    which nginx >/dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      sudo apt-get install -y nginx
+    fi
+  SHELL
+
+	config.vm.network 'forwarded_port', :guest => 80, :host => 8080, :autocorrect => true
 
 	# oracle java 7
-	config.vm.provision :shell, :path => 'install-oracle-java7.sh'
+	config.vm.provision "java", :type => :shell, :path => 'install-oracle-java7.sh'
 
 	# rvm
-	config.vm.provision :shell, :path => 'install-rvm.sh', :args => 'stable'
+	config.vm.provision "rvm", :type => :shell, :path => 'install-rvm.sh', :args => 'stable'
 
 	# git
-	config.vm.provision :shell, :inline => 'sudo apt-get install -y git'
+	config.vm.provision "git", :type => :shell, :inline => 'sudo apt-get install -y git'
 
 	# jruby
-	config.vm.provision :shell, :path => 'install-jruby.sh'
+	config.vm.provision "jruby", :type => :shell, :path => 'install-jruby.sh'
 
 	# ruby-mri
-	config.vm.provision :shell, :path => 'install-ruby-mri.sh'
+	config.vm.provision "mri", :type => :shell, :path => 'install-ruby-mri.sh'
 
 	# hailstorm-redis
-	config.vm.provision :shell, :path => 'install-hailstorm-redis.sh'
+	config.vm.provision "hailstorm-redis", :type => :shell, :path => 'install-hailstorm-redis.sh'
 
 	# hailstorm-web
-	config.vm.provision :shell, :path => 'install-hailstorm-web.sh'
+	config.vm.provision "hailstorm-web", :type => :shell, :path => 'install-hailstorm-web.sh'
 
 end

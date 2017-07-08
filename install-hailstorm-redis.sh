@@ -22,7 +22,8 @@ fi
 
 # install hailstorm-redis & dependencies
 if [ ! -e $hailstorm_redis_home ]; then
-	git clone -b develop http://labs.3pillarglobal.com:12000/hailstorm/hailstorm-redis.git
+	cp -r /vagrant/hailstorm-gem $install_path/
+	cp -r /vagrant/hailstorm-redis $install_path/
 	cp /vagrant/Gemfile.hailstorm-redis $hailstorm_redis_home/Gemfile
 	chown -R $vagrant_user:$vagrant_user $hailstorm_redis_home
 	cd $hailstorm_redis_home
@@ -34,4 +35,3 @@ fi
 cp /vagrant/sidekiq.conf /etc/init/sidekiq.conf
 
 exit
-

@@ -1,0 +1,9 @@
+[submodule "hailstorm-gem"]
+	path = hailstorm-gem
+	url = git@atg.3pillarglobal.com:hailstorm/hailstorm-gem.git
+[submodule "hailstorm-redis"]
+	path = hailstorm-redis
+	url = git@atg.3pillarglobal.com:hailstorm/hailstorm-redis.git
+[submodule "hailstorm-web"]
+	path = hailstorm-web
+	url = git@atg.3pillarglobal.com:hailstorm/hailstorm-web.git

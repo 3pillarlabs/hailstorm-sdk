@@ -28,26 +28,30 @@ fi
 
 # install hailstorm-web & dependencies
 if [ ! -e $hailstorm_web_home ]; then
-	git clone -b develop http://labs.3pillarglobal.com:12000/hailstorm/hailstorm-web.git
+	cp -r /vagrant/hailstorm-web $install_path/
 	cp /vagrant/unicorn.conf.rb $hailstorm_web_home/unicorn.conf.rb
 	cp /vagrant/hailstorm_prod_secret_kb $hailstorm_web_home/hailstorm_prod_secret_kb
 	chown -R $vagrant_user:$vagrant_user $hailstorm_web_home
 	cd $hailstorm_web_home
 	bundle install
 	echo $ruby_version > .ruby-version
-	mysql -uroot -proot <<< 'grant all privileges on *.* to "hailstorm"@"localhost" identified by "hailstorm"'
+	mysql -uroot <<< 'grant all privileges on *.* to "hailstorm"@"localhost" identified by "hailstorm"'
 	export HAILSTORM_WEB_DATABASE_PASSWORD=hailstorm
 	RAILS_ENV=production rake db:setup
 	mkdir -p tmp/cache tmp/pids tmp/sessions tmp/sockets
+	chown -R vagrant:vagrant $hailstorm_web_home
 fi
 
 # install upstart conf for unicorn
 cp /vagrant/unicorn.conf /etc/init/unicorn.conf
+start unicorn
 
 # set nginx-unicorn as default (root) site
 rm -f /etc/nginx/sites-enabled/default # just a symlink
 cp /vagrant/nginx-unicorn.conf /etc/nginx/sites-available/hailstorm-web
-ln -s /etc/nginx/sites-available/hailstorm-web /etc/nginx/sites-enabled/hailstorm-web
+if [ ! -e /etc/nginx/sites-enabled/hailstorm-web ]; then
+	ln -s /etc/nginx/sites-available/hailstorm-web /etc/nginx/sites-enabled/hailstorm-web
+	service nginx reload
+fi
 
 exit
-

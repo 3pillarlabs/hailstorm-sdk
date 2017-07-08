@@ -5,7 +5,6 @@ gemspec
 
 gem 'sidekiq'
 
-gem 'hailstorm', :git => 'http://labs.3pillarglobal.com:12000/hailstorm/hailstorm-gem.git', :branch => 'dev'
+gem 'hailstorm', :path => '../hailstorm-gem'
 
 gem 'activerecord-jdbcmysql-adapter'
-
