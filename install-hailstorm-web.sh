@@ -31,7 +31,6 @@ if [ ! -e $hailstorm_web_home ]; then
 	cp -r /vagrant/hailstorm-web $install_path/
 	cp /vagrant/unicorn.conf.rb $hailstorm_web_home/unicorn.conf.rb
 	cp /vagrant/hailstorm_prod_secret_kb $hailstorm_web_home/hailstorm_prod_secret_kb
-	chown -R $vagrant_user:$vagrant_user $hailstorm_web_home
 	cd $hailstorm_web_home
 	bundle install
 	echo $ruby_version > .ruby-version
@@ -39,7 +38,7 @@ if [ ! -e $hailstorm_web_home ]; then
 	export HAILSTORM_WEB_DATABASE_PASSWORD=hailstorm
 	RAILS_ENV=production rake db:setup
 	mkdir -p tmp/cache tmp/pids tmp/sessions tmp/sockets
-	chown -R vagrant:vagrant $hailstorm_web_home
+	chown -R $vagrant_user:$vagrant_user $hailstorm_web_home
 fi
 
 # install upstart conf for unicorn

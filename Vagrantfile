@@ -43,13 +43,17 @@ Vagrant.configure(2) do |config|
   # backing providers for Vagrant. These expose provider-specific options.
   # Example for VirtualBox:
   #
-	config.vm.provider "virtualbox" do |vb|
-  #   # Display the VirtualBox GUI when booting the machine
-  #   vb.gui = true
-  #
-		# Customize the amount of memory on the VM:
-		vb.memory = "1024"
-	end
+  config.vm.define "dev", :primary => true do |dev|
+  	dev.vm.provider "virtualbox" do |vb|
+    #   # Display the VirtualBox GUI when booting the machine
+    #   vb.gui = true
+    #
+  		# Customize the amount of memory on the VM:
+  		vb.memory = "2048"
+      vb.cpus = 2
+      vb.customize ["modifyvm", :id, "--nictype1", "virtio"]
+  	end
+  end
   #
   # View the documentation for the provider you are using for more
   # information on available options.
@@ -101,6 +105,8 @@ Vagrant.configure(2) do |config|
     fi
   SHELL
 
+  config.vm.provision "vagrant_user", :type => :shell, :path => 'create_vagrant_user.sh'
+
 	# mysql-server
 	config.vm.provision "mysql", :type => :shell, :path => 'install-mysql-server.sh'
 
@@ -138,9 +144,37 @@ Vagrant.configure(2) do |config|
 	config.vm.provision "mri", :type => :shell, :path => 'install-ruby-mri.sh'
 
 	# hailstorm-redis
-	config.vm.provision "hailstorm-redis", :type => :shell, :path => 'install-hailstorm-redis.sh'
+	config.vm.provision "hailstorm_redis", :type => :shell, :path => 'install-hailstorm-redis.sh'
 
 	# hailstorm-web
-	config.vm.provision "hailstorm-web", :type => :shell, :path => 'install-hailstorm-web.sh'
+	config.vm.provision "hailstorm_web", :type => :shell, :path => 'install-hailstorm-web.sh'
+
+  config.vm.define "awsdemo", autostart: false do |demo|
+    demo.vm.box = "dummy"
+    demo.vm.synced_folder ".", "/vagrant", type: "rsync", rsync__exclude: [".git/", ".gitignore/"]
+
+    demo.vm.provider :aws do |aws, override|
+      aws.access_key_id = ENV['AWS_ACCESS_KEY_ID']
+      aws.secret_access_key = ENV['AWS_SECRET_ACCESS_KEY']
+      aws.keypair_name = "all_purpose"
+
+      aws.ami = "ami-fce3c696"
+
+      aws.instance_type = "t2.medium"
+      aws.elastic_ip = true
+      aws.region = "us-east-1"
+      aws.security_groups = ["sg-0ca04c74"]
+      aws.subnet_id = "subnet-f1e550a8"
+      aws.tags = {
+        Name: "Vagrant - Hailstorm Web"
+      }
+      aws.terminate_on_shutdown = false
+
+      aws.block_device_mapping = [{"DeviceName" => "/dev/sda1", "Ebs.VolumeSize" => 80}]
+
+      override.ssh.username = "ubuntu"
+      override.ssh.private_key_path = "all_purpose.pem"
+    end
+  end
 
 end
