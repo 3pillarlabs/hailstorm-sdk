@@ -96,6 +96,9 @@ Vagrant.configure(2) do |config|
 	# ruby-mri
 	config.vm.provision "mri", :type => :shell, :path => 'install-ruby-mri.sh'
 
+  # hailstom-apps
+	config.vm.provision "hailstorm_apps", :type => :shell, :path => 'install-hailstorm-apps.sh'
+
 	# hailstorm-redis
 	config.vm.provision "hailstorm_redis", :type => :shell, :path => 'install-hailstorm-redis.sh'
 
