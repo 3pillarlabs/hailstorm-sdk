@@ -65,13 +65,13 @@ class Hailstorm::Application
   end
 
   # Initializes the application - creates directory structure and support files
-  def create_project(invocation_path, arg_app_name, quiet = false)
+  def create_project(invocation_path, arg_app_name, quiet = false, gem_path = nil)
 
     root_path = File.join(invocation_path, arg_app_name)
     FileUtils.mkpath(root_path)
     puts "(in #{invocation_path})" unless quiet
     puts "  created directory: #{arg_app_name}" unless quiet
-    create_app_structure(root_path, arg_app_name, quiet)
+    create_app_structure(root_path, arg_app_name, quiet, gem_path)
     puts '' unless quiet
     puts 'Done!' unless quiet
 
@@ -369,7 +369,7 @@ Continue using old version?
   # @param [String] root_path the path this application will be rooted at
   # @param [String] arg_app_name the argument provided for creating project
   # @param [Boolean] quiet
-  def create_app_structure(root_path, arg_app_name, quiet = false)
+  def create_app_structure(root_path, arg_app_name, quiet = false, gem_path = nil)
 
     # create directory structure
     dirs = [
@@ -393,7 +393,7 @@ Continue using old version?
     # Process Gemfile - add additional platform specific gems
     engine = ActionView::Base.new()
     engine.assign({:jruby_pageant => !File::ALT_SEPARATOR.nil?,  # File::ALT_SEPARATOR is nil on non-windows
-                   :gem_source => Hailstorm.gem_source})
+                   :gem_source => Hailstorm.gem_source, :gem_path => gem_path})
     File.open(File.join(root_path, 'Gemfile'), 'w') do |f|
       f.print(engine.render(:file => File.join(skeleton_path, 'Gemfile')))
     end
