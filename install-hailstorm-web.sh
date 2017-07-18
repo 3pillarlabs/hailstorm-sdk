@@ -27,19 +27,16 @@ if [ $? -ne 0 ]; then
 fi
 
 # install hailstorm-web & dependencies
-if [ ! -e $hailstorm_web_home ]; then
-	cp -r /vagrant/hailstorm-web $install_path/
-	cp /vagrant/unicorn.conf.rb $hailstorm_web_home/unicorn.conf.rb
-	cp /vagrant/hailstorm_prod_secret_kb $hailstorm_web_home/hailstorm_prod_secret_kb
-	cd $hailstorm_web_home
-	bundle install
-	echo $ruby_version > .ruby-version
-	mysql -uroot <<< 'grant all privileges on *.* to "hailstorm"@"localhost" identified by "hailstorm"'
-	export HAILSTORM_WEB_DATABASE_PASSWORD=hailstorm
-	RAILS_ENV=production rake db:setup
-	mkdir -p tmp/cache tmp/pids tmp/sessions tmp/sockets
-	chown -R $vagrant_user:$vagrant_user $hailstorm_web_home
-fi
+cp /vagrant/unicorn.conf.rb $hailstorm_web_home/unicorn.conf.rb
+cp /vagrant/hailstorm_prod_secret_kb $hailstorm_web_home/hailstorm_prod_secret_kb
+cd $hailstorm_web_home
+bundle install
+echo $ruby_version > .ruby-version
+mysql -uroot <<< 'grant all privileges on *.* to "hailstorm"@"localhost" identified by "hailstorm"'
+export HAILSTORM_WEB_DATABASE_PASSWORD=hailstorm
+RAILS_ENV=production rake db:setup
+mkdir -p tmp/cache tmp/pids tmp/sessions tmp/sockets
+chown -R $vagrant_user:$vagrant_user $hailstorm_web_home
 
 # install upstart conf for unicorn
 cp /vagrant/unicorn.conf /etc/init/unicorn.conf
