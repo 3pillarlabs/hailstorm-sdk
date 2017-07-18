@@ -1,7 +1,13 @@
+<%- if @gem_path.nil? -%>
 source '<%= @gem_source %>'
+<%- end -%>
 source "https://rubygems.org"
 
+<%- if @gem_path -%>
+gem "hailstorm", :path => "<%= @gem_path %>"
+<%- else -%>
 gem "hailstorm"
+<%- end -%>
 gem "activerecord-jdbcmysql-adapter"
 <%- if @jruby_pageant %>
 gem "jruby-pageant", "= 1.1.1"
