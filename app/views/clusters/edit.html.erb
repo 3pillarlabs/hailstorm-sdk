@@ -1,0 +1,13 @@
+<%= content_for :project_header do %>
+    <% unless @project.nil? %>
+        <%= link_to @project.title, project_path(@project) %>
+    <% end %>
+<% end %>
+<h2 class="page-header"> Edit <%= params[:type].to_s.titlecase %> Cluster </h2>
+<br/>
+<div class="row">
+  <div class="col-md-8 col-md-offset-2">
+    <%= render 'form' %>
+  </div>
+</div>
+<br/>

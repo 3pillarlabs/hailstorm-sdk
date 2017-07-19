@@ -1,0 +1,19 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <strong>Project:</strong>
+  <%= @test_plan.project_id %>
+</p>
+
+<p>
+  <strong>Status:</strong>
+  <%= @test_plan.status %>
+</p>
+
+<p>
+  <strong>Jmx:</strong>
+  <%= @test_plan.jmx_file_name %>
+</p>
+
+<%= link_to 'Edit', edit_project_test_plan_path %> |
+<%= link_to 'Back', project_test_plans_path %>

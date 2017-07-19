@@ -10,9 +10,9 @@
 #   http://dev.mysql.com/doc/refman/5.0/en/old-client.html
 #
 default: &default
-  adapter: mysql
-  username: root
-  password:
+  adapter: mysql2
+  username: hailstorm
+  password: hailstorm
   host: localhost
 
 development:
@@ -48,5 +48,5 @@ test:
 production:
   <<: *default
   database: hailstorm-web_production
-  username: hailstorm-web
-  password: <%= ENV['HAILSTORM-WEB_DATABASE_PASSWORD'] %>
+  username: hailstorm
+  password: <%= ENV['HAILSTORM_WEB_DATABASE_PASSWORD'] %>

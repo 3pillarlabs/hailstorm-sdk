@@ -1,14 +1,70 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>HailstormWeb</title>
+  <title>Hailstorm Web</title>
   <%= stylesheet_link_tag    'application', media: 'all', 'data-turbolinks-track' => true %>
   <%= javascript_include_tag 'application', 'data-turbolinks-track' => true %>
   <%= csrf_meta_tags %>
 </head>
 <body>
 
-<%= yield %>
+<!-- Fixed navbar -->
+<nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <%= link_to root_path, class: 'navbar-brand' do %>
+          <%= image_tag('3PG_LogoColorRGB-navbar.png', alt:'3Pillar Global') %> Hailstorm
+      <% end %>
+    </div>
+    <div class="collapse navbar-collapse">
+      <ul class="nav navbar-nav">
+        <li class="active"><%= yield :project_header %></li>
+      </ul>
+    </div>
+  </div>
+</nav>
 
+<!-- Begin page content -->
+<div class="container">
+  <div id="flash_messages"><%= flash_messages %></div>
+  <%= yield %>
+</div>
+
+
+<div class="footer">
+  <div class="panel-footer text-center">
+    Brought to you by the <span class="label label-primary">Advanced Technology Group</span> @ <span class="label label-success">3Pillar Global</span>
+  </div>
+</div>
+<%- if content_for? :modals %>
+<%= yield :modals %>
+<%- end %>
+<div id="application_modal" class="modal fade in" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header"></div>
+      <div class="modal-body"></div>
+      <div class="modal-footer">
+        <a href="#no" class="btn btn-success" data-dismiss="modal">No</a>
+        <a href="#yes" class="btn btn-danger">Yes</a>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
+<% if content_for? :autofocus %>
+    <%= yield :autofocus %>
+<% else %>
+<script>
+  (function($) {
+      $(":input:enabled:visible:first").focus();
+  })(jQuery);
+</script>
+<% end %>
 </html>

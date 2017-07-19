@@ -1,0 +1,9 @@
+// Place all the styles related to the Projects controller here.
+// They will automatically be included in application.css.
+// You can use Sass (SCSS) here: http://sass-lang.com/
+.logs-console{ font-family: monospace; height: 200px; }
+.results-list { overflow-x: hidden; overflow-y: auto; };
+#project_results { height: 280px; }
+#generated_reports { height: 330px; }
+pre.jmx { height: 400px; }
+#test_timer span.clock { font-family: 'Digital Dream Regular' }

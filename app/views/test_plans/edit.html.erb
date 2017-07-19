@@ -1,0 +1,14 @@
+<%= content_for :project_header do %>
+    <% unless @project.nil? %>
+        <%= link_to @project.title, project_path(@project) %>
+    <% end %>
+<% end %>
+<h2 class="page-header"> Set plan properties </h2>
+<div class="row">
+  <div class="col-md-6">
+    <pre class="jmx"><%= @test_plan_content %></pre>
+  </div>
+  <div class="col-md-6">
+    <%= render 'form' %>
+  </div>
+</div>
