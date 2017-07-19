@@ -1,0 +1,63 @@
+<%= form_for ([@project,@test_plan]) do |f| %>
+  <% if @test_plan.errors.any? %>
+    <div id="error_explanation">
+      <h2><%= pluralize(@test_plan.errors.count, "error") %> prohibited this test_plan from being saved:</h2>
+
+      <ul>
+      <% @test_plan.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+    <div class="row">
+      <div class="col-md-6">
+        <table class="table table-hover table-bordered">
+          <thead>
+          <tr>
+            <th>Name</th>
+            <th>Value</th>
+          </tr>
+          </thead>
+
+          <tbody id="test_plan_properties_body">
+          <% if !@test_plan_properties.blank? %>
+              <% @test_plan_properties.each do |property| %>
+                  <tr>
+                    <td>
+                      <input type="text" value="<%= property["name"] %>" name="test_plan[property_name][]">
+                    </td>
+                    <td>
+                      <input type="text" value="<%= property["value"] %>" name="test_plan[property_value][]">
+                    </td>
+                  </tr>
+              <% end %>
+          <% else %>
+              <tr>
+                <td>
+                  <input type="text" name="test_plan[property_name][]">
+                </td>
+                <td>
+                  <input type="text" name="test_plan[property_value][]">
+                </td>
+              </tr>
+          <% end %>
+          </tbody>
+        </table>
+      </div>
+      <div class="col-md-6">
+        <%= link_to '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>'.html_safe, "javascript:void(0);", :class => "btn btn-info btn-xs pull-right", :onclick => "add_property_fields();" %>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <%= f.submit "Save", :class => "btn btn-primary" %>
+      </div>
+      <div class="col-md-6">
+        <%= link_to "Cancel", project_test_plans_path(:page=>params[:page]), :class => 'btn btn-default pull-right' %>
+      </div>
+    </div>
+
+<% end %>

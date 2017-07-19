@@ -1,0 +1,5 @@
+<% if not list.empty? %>
+<%= render partial: 'generated_reports/item', collection: list %>
+<% else %>
+<li class="list-group-item list-group-item-info">You have no previously generated reports.</li>
+<% end %>

@@ -1,0 +1,36 @@
+<%= content_for :project_header do %>
+    <% unless @project.nil? %>
+        <%= link_to @project.title, project_path(@project) %>
+    <% end %>
+<% end %>
+<h2 class="page-header">Add a Test Plan</h2>
+<div class="row">
+  <div class="col-md-6 col-md-offset-3">
+    <%= form_for ([@project,@test_plan]), :html => {:multipart => true} do |f| %>
+        <div class="form-group">
+          <%= f.label :jmx, 'Jmeter Plan or Data File' %>
+          <%= f.file_field :jmx %>
+        </div>
+
+        <% if @test_plan.errors.any? %>
+            <div class="alert alert-danger" role="alert">
+              <% @test_plan.errors.full_messages.each do |message| %>
+                  <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+                  <span class="sr-only">Error:</span>
+                  <%= message %>
+              <% end %>
+            </div>
+        <% end %>
+        <br/>
+        <div class="row">
+          <div class="col-md-6">
+            <%= f.submit 'Save', :class => 'btn btn-primary' %>
+          </div>
+          <div class="col-md-6">
+            <%= link_to 'Cancel', { action: 'index' }, :class => 'btn btn-default pull-right' %>
+          </div>
+        </div>
+    <% end %>
+
+  </div>
+</div>

@@ -1,0 +1,5 @@
+<% if not list.empty? %>
+    <%= render(partial: 'load_tests/item', collection: list) %>
+<% else %>
+    <li class="list-group-item list-group-item-info">No test results to show.</li>
+<% end %>

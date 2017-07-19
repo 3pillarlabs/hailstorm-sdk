@@ -1,0 +1,54 @@
+<div class="form-group">
+  <%= data_center.label :ssh_identity, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <%= data_center.file_field :ssh_identity %>
+    <%= errors_if_present @cluster, :ssh_identity %>
+  </div>
+</div>
+<div class="form-group">
+  <div><%= data_center.label :title, class: 'col-sm-3 control-label' %></div>
+  <div class="col-sm-9">
+    <%= data_center.text_field :title, class: 'form-control' %>
+    <%= errors_if_present @cluster, :title %>
+  </div>
+</div>
+
+<div class="form-group">
+  <%= data_center.label :user_name, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <%= data_center.text_field :user_name, class: 'form-control' %>
+    <%= errors_if_present @cluster, :user_name %>
+  </div>
+</div>
+
+<div class="form-group">
+  <%= data_center.label :machines, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <div class="row">
+      <div class="col-xs-11" id="cluster_machines">
+        <input type="text" name="data_center[machines][]" class = "form-control" placeholder="IP address or host name" value="<%= @cluster.machines.first %>">
+        <% @cluster.machines[1..-1].each_with_index do |machine, index| %>
+            <span data-clusterMachine="true" data-cmIndex="<%= index %>">
+              <br/>
+              <div class="row">
+                <div class="col-sm-11">
+                  <input type="text" name="data_center[machines][]" class="form-control" placeholder="IP address or host name" value="<%= machine %>">
+                </div>
+                <div class="col-sm-1">
+                  <button type="button" tabindex="-1" class="close" data-cmRemove="cm-<%= index %>" aria-label="Close" onclick="Hailstorm.Cluster.removeHostRow(<%= index %>); return false;">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+              </div>
+            </span>
+        <% end %>
+      </div>
+      <div class="col-xs-1">
+        <a href="#" class="btn btn-info btn-xs" onclick="Hailstorm.Cluster.addMachinesFields(); return false;">
+          <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+        </a>
+      </div>
+    </div>
+    <%= errors_if_present @cluster, :machines %>
+  </div>
+</div>

@@ -1,0 +1,59 @@
+<div class="form-group">
+  <%= amazon.label :ssh_identity, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <% if @cluster.ssh_identity_file_name.blank? %>
+        <%= amazon.file_field :ssh_identity %>
+    <% else %>
+        <%= @cluster.ssh_identity_file_name%>
+    <% end %>
+  </div>
+</div>
+<div class="form-group keys-form-group">
+  <%= amazon.label :access_key, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <%= amazon.text_field :access_key, class: 'form-control', disabled: disable_keys_fields? %>
+    <%= errors_if_present @cluster, :access_key %>
+  </div>
+</div>
+<div class="form-group keys-form-group">
+  <%= amazon.label :secret_key, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <%= amazon.password_field :secret_key, class: 'form-control', disabled: disable_keys_fields? %>
+    <%= errors_if_present @cluster, :secret_key %>
+  </div>
+</div>
+<% if @cluster.persisted? %>
+<div class="form-group">
+  <div class="col-sm-9 col-sm-offset-3">
+    <a href="#" class="btn btn-warning" id="amazon_cluster_change_keys">Change Keys</a>
+  </div>
+</div>
+<% end %>
+<div class="form-group">
+  <%= amazon.label :region, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <%= amazon.collection_select(:region, AmazonCloud.regions, :id, :name, {}, {:class => 'form-control'}) %>
+    <%= errors_if_present @cluster, :region %>
+  </div>
+</div>
+<div class="form-group">
+  <%= amazon.label :instance_type, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <%= instance_type_field(amazon) %>
+    <%= errors_if_present @cluster, :instance_type %>
+  </div>
+</div>
+<div class="form-group">
+  <%= amazon.label :max_threads_per_agent, class: 'col-sm-3 control-label' %>
+  <div class="col-sm-9">
+    <%= amazon.text_field :max_threads_per_agent, class: 'form-control', placeholder: 'Pick the default...  ' %>
+    <span class="help-block">This is a recommended thread count. You can increase or decrease as per your environment.</span>
+    <%= errors_if_present @cluster, :max_threads_per_agent %>
+  </div>
+</div>
+<script>
+    $("select#amazon_cloud_instance_type").change(function() {
+        Hailstorm.Cluster.instanceTypeChooser.bind(this)(<%= raw AmazonCloud.max_threads_per_agent_matrix.to_json %>);
+    });
+    $("a#amazon_cluster_change_keys").click(Hailstorm.Cluster.changeKeysHandler);
+</script>

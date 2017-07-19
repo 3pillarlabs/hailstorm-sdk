@@ -1,0 +1,62 @@
+<%= content_for :project_header do %>
+    <% unless @project.nil? %>
+        <%= link_to @project.title, project_path(@project) %>
+    <% end %>
+<% end %>
+<h2 class="page-header">
+  <div class="row">
+    <div class="col-md-6">Clusters</div>
+    <div class="col-md-6">
+      <span class="pull-right"></span>
+      <div class="btn-group pull-right">
+        <a href="#" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+          <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add <span class="caret"></span>
+        </a>
+        <ul class="dropdown-menu" role="menu">
+          <li><%= link_to 'Amazon Cloud', new_project_amazon_cloud_path %></li>
+          <li><%= link_to 'Data Center', new_project_data_center_path %></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</h2>
+
+<%- if not @clusters.empty? %>
+    <% cluster_groups(@clusters).each_pair do
+# @type cluster_type [String]
+# @type cluster [Cluster]
+    |cluster_type, clusters| %>
+        <div class="panel panel-default">
+          <div class="panel-heading"><%= cluster_type.titlecase %></div>
+          <table class="table table-hover">
+            <% cluster_table(cluster_type, clusters) do |ct| %>
+                <% ct.header do |header| %>
+                    <tr>
+                      <% header.cols.each do |colspec| %>
+                          <th width="<%= colspec[:width] %>%"><%= colspec[:title] %></th>
+                      <% end %>
+                      <th>Actions</th>
+                    </tr>
+                <% end %>
+                <% ct.rows.each do |row| %>
+                    <tr>
+                      <% row.cols.each do |col| %>
+                          <td><%= col.is_a?(Array) ? raw(to_list(col)) : col %></td>
+                      <% end %>
+                      <td><%= row.edit_link %> <%= row.delete_link %></td>
+                    </tr>
+                <% end %>
+            <% end %>
+          </table>
+        </div>
+    <% end %>
+<%- else %>
+    <div role="alert" class="alert alert-warning">
+      <span aria-hidden="true" class="glyphicon glyphicon-warning-sign"></span>
+      No clusters add yet for this project. You can not start tests without this step.
+    </div>
+<%- end %>
+
+<p><%= link_to project_path(@project), class: 'btn btn-default' do %>
+      Back to project
+  <% end %></p>

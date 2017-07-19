@@ -1,0 +1,67 @@
+<div class="row-fluid">
+  <div class="span12">
+    <div class="page-header">
+      <h3>
+        Cluster configuration
+      </h3>
+    </div>
+  </div>
+</div>
+<p>
+  <strong>Type:</strong>
+  <%= @cluster.type %>
+</p>
+
+<% if @cluster.type == "AmazonCloud" %>
+<p>
+  <strong>Ssh identity:</strong>
+  <%= @cluster.ssh_identity_file_name.blank? ? "" : link_to(@cluster.ssh_identity_file_name, project_cluster_path(@project,@cluster, format: :pem)) %>
+</p>
+
+<p>
+  <strong>Access key:</strong>
+  <%= @cluster.access_key %>
+</p>
+
+<p>
+  <strong>Secret key:</strong>
+  <%= @cluster.secret_key %>
+</p>
+
+<p>
+  <strong>Region:</strong>
+  <%= @cluster.region %>
+</p>
+
+<p>
+  <strong>Instance type:</strong>
+  <%= @cluster.instance_type %>
+</p>
+<% elsif  @cluster.type == "DataCenter" %>
+
+    <p>
+      <strong>User name:</strong>
+      <%= @cluster.user_name %>
+    </p>
+
+    <p>
+      <strong>Machines:</strong>
+      <%
+         if !@cluster.machines.blank?
+           machines = JSON.parse(@cluster.machines)
+         end
+      %>
+    <% if(machines.kind_of?(Array))  %> <%= machines.join(", ") %> <% end %>
+    </p>
+
+<% end %>
+<p>
+  <% if(@cluster.type == "AmazonCloud") %>
+      <%= link_to 'Edit', edit_project_amazon_cloud_path(@project,@cluster) %> |
+      <%= link_to 'Back', project_amazon_clouds_path %>
+  <% elsif(@cluster.type == "DataCenter") %>
+      <%= link_to 'Edit', edit_project_data_center_path(@project,@cluster) %> |
+      <%= link_to 'Back', project_data_centers_path %>
+  <% end %>
+
+</p>
