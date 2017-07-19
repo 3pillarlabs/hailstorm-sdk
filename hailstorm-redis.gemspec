@@ -1,15 +1,15 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'demosidekiq/version'
+require 'hailstorm/redis/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "demosidekiq"
-  spec.version       = Demosidekiq::VERSION
-  spec.authors       = ["eash khatri"]
-  spec.email         = ["eash.khatri@3pillarglobal.com"]
-  spec.summary       = %q{TODO: Write a short summary. Required.}
-  spec.description   = %q{TODO: Write a longer description. Optional.}
+  spec.name          = "hailstorm-redis"
+  spec.version       = Hailstorm::Redis::VERSION
+  spec.authors       = ["Sandeep Bohra"]
+  spec.email         = ["sandeep.bohra@3pillarglobal.com"]
+  spec.summary       = %q{Hailstorm Redis worker}
+  # spec.description   = %q{TODO: Write a longer description. Optional.}
   spec.homepage      = ""
   spec.license       = "MIT"
 

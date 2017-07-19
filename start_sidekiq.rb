@@ -1,1 +1,3 @@
-  require 'workers/hailstorm_setup'
+require 'rubygems'
+require 'bundler/setup'
+require 'workers/hailstorm_process'
