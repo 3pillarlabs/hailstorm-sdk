@@ -1,7 +1,7 @@
 # Report builder
 
 require 'nokogiri'
-require 'zip/zipfilesystem'
+require 'zip/filesystem'
 
 require 'hailstorm/support'
 
@@ -325,7 +325,7 @@ class Hailstorm::Support::ReportBuilder
   def extract_docx_template()
     FileUtils.mkdir_p(current_report_path)
 
-    Zip::ZipFile.foreach(canned_doc_path) do |zip_entry|
+    Zip::File.foreach(canned_doc_path) do |zip_entry|
       disk_dir = File.dirname(zip_entry.to_s)
       FileUtils.mkdir_p(File.join(current_report_path, disk_dir))
       zip_entry.extract(File.join(current_report_path, zip_entry.to_s)) { true } # overwrite existing files
@@ -388,7 +388,7 @@ class Hailstorm::Support::ReportBuilder
 
     FileUtils.safe_unlink(report_file_path)
 
-    Zip::ZipFile.open(report_file_path, Zip::ZipFile::CREATE) do |zipfile|
+    Zip::File.open(report_file_path, Zip::File::CREATE) do |zipfile|
       Dir[*patterns].sort.each do |entry|
         zip_entry = entry.gsub(rexp, '')
         if File.directory?(entry)

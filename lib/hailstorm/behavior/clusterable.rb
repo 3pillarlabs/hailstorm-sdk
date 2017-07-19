@@ -14,9 +14,11 @@ require 'hailstorm/behavior'
 require 'hailstorm/model/jmeter_plan'
 require 'hailstorm/model/slave_agent'
 require 'hailstorm/model/master_agent'
+require "hailstorm/behavior/loggable"
 
 module Hailstorm::Behavior::Clusterable
-  
+
+  include Hailstorm::Behavior::Loggable
  
   # Implement this method to start the agent and update load_agent
   # attributes for persistence.
@@ -55,6 +57,14 @@ module Hailstorm::Behavior::Clusterable
   # the implementation will have to check and take appropriate actions.
   # @param [Boolean] force Implementation may redo actions even if already done.
   def setup(force = false)
+    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
+  end
+
+  # Implement to get load agent count for each cluster type
+  # @param [Hailstorm::Model::JmeterPlan] jmeter_plan
+  # @return [Int] count of required load agents to run the test
+  # @abstract
+  def required_load_agent_count(jmeter_plan)
     raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
   
@@ -137,7 +147,8 @@ module Hailstorm::Behavior::Clusterable
     recipient.has_many(:slave_agents, :as => :clusterable)
 
     recipient.has_many(:client_stats, :as => :clusterable, :dependent => :destroy,
-                       :include => :jmeter_plan)
+            #  :include => :jmeter_plan # There's no need to use includes for immediate associations
+                       )
 
     recipient.after_commit(:disable_agents, :unless => proc {|r| r.active?})
   end  
@@ -216,7 +227,7 @@ module Hailstorm::Behavior::Clusterable
           :active => true
       }
 
-      required_count = jmeter_plan.required_load_agent_count(self)
+      required_count = required_load_agent_count(jmeter_plan)
 
       if self.project.master_slave_mode?
         query = self.master_agents
@@ -247,7 +258,7 @@ module Hailstorm::Behavior::Clusterable
         begin
           create_or_enable(common_attributes, required_count, :master_agents)
         rescue Exception => e
-          logger.error(e.message)
+          logger.debug(e.message)
           logger.debug { "\n".concat(e.backtrace().join("\n")) }
           raise(Hailstorm::AgentCreationFailure)
         end

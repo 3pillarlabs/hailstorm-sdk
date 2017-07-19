@@ -3,8 +3,11 @@
 # @author Sayantam Dey
 
 require 'hailstorm/behavior'
+require "hailstorm/behavior/loggable"
 
 module Hailstorm::Behavior::Moniterable
+
+  include Hailstorm::Behavior::Loggable
 
   # An "abstract" method definition. Implementation should start resource
   # monitoring on the target host.

@@ -16,30 +16,38 @@ require 'hailstorm/model/project'
 
 require 'hailstorm/model/nmon'
 
+require 'hailstorm/behavior/loggable'
+
 class Hailstorm::Application
-  
+
+  include Hailstorm::Behavior::Loggable
 
   # Initialize the application and connects to the database
   # @param [String] app_name the application name
   # @param [String] boot_file_path full path to application config/boot.rb
   # @return nil
   def self.initialize!(app_name, boot_file_path)
-    
+
+    # in included gem version of i18n this value is set to null by default
+    # this will switch to default locale if in case of invalid locale
+    I18n.config.enforce_available_locales = true
+
     Hailstorm.app_name = app_name
-    Hailstorm.root = File.expand_path("../..", boot_file_path)
+    Hailstorm.root = File.expand_path('../..', boot_file_path)
     # set JAVA classpath
     # Add config/log4j.xml if it exists
     custom_log4j = File.join(Hailstorm.root, Hailstorm.config_dir, 'log4j.xml')
     if File.exists?(custom_log4j)
-      $CLASSPATH << custom_log4j
+      $CLASSPATH << File.dirname(custom_log4j)
     end
-    # Add all Java Jars to classpath
+
+    # Add all Java Jars and log4j.xml (will not be added if already added in above case) to classpath
     java_lib = File.expand_path('../java/lib', __FILE__)
     $CLASSPATH << java_lib
     Dir[File.join(java_lib, '*.jar')].each do |jar|
       require(jar)
     end
-    java.lang.System.setProperty("hailstorm.log.dir",
+    java.lang.System.setProperty('hailstorm.log.dir',
                                  File.join(Hailstorm.root, Hailstorm.log_dir))
 
     ActiveRecord::Base.logger = logger
@@ -57,15 +65,17 @@ class Hailstorm::Application
   end
 
   # Initializes the application - creates directory structure and support files
-  def create_project(invocation_path, arg_app_name)
+  def create_project(invocation_path, arg_app_name, quiet = false, gem_path = nil)
 
     root_path = File.join(invocation_path, arg_app_name)
     FileUtils.mkpath(root_path)
-    puts "(in #{invocation_path})"
-    puts "  created directory: #{arg_app_name}"
-    create_app_structure(root_path, arg_app_name)
-    puts ""
-    puts "Done!"
+    puts "(in #{invocation_path})" unless quiet
+    puts "  created directory: #{arg_app_name}" unless quiet
+    create_app_structure(root_path, arg_app_name, quiet, gem_path)
+    puts '' unless quiet
+    puts 'Done!' unless quiet
+
+    return root_path
   end
 
   # Processes the user commands and options
@@ -155,7 +165,7 @@ Type help to get started...
 
       save_history(command_line)
     end
-    puts ""
+    puts ''
     logger.debug { ["\n", '-' * 80, "Application ended at #{Time.now.to_s}", '*' * 80].join("\n") }
   end
 
@@ -237,37 +247,50 @@ Continue using old version?
   end
 
   # Interpret the command (parse & execute)
-  # @param [String] command
+  # @param [Array] args
   # @return [String] command or nil if help is invoked
-  def interpret_command(command)
+  def interpret_command(*args)
 
-    if [:exit, :quit].include?(command.to_sym)
+    format = nil
+    command = nil
+    if args.last.is_a? Hash
+      options = args.last
+      ca = (options[:args] || []).join(' ')
+      command = "#{options[:command]} #{ca}".strip.to_sym
+      format = options[:format]
+    else
+      command = args.last.to_sym
+    end
+
+    if [:exit, :quit].include?(command)
       if @exit_command_counter == 0 and !exit_ok?
         @exit_command_counter += 1
         logger.warn {"You have running load agents: terminate first or #{command} again"}
       else
-        puts "Bye"
+        puts 'Bye'
         @exit_command_counter = -1 # "express" exit
       end
 
     else
       @exit_command_counter = 0 # reset exit intention
       match_data = nil
-      grammar().each do |rule|
-        match_data = rule.match(command)
+      grammar.each do |rule|
+        match_data = rule.match(command.to_s)
         break unless match_data.nil?
       end
 
       unless match_data.nil?
-        method_name = match_data[1].to_sym()
-        method_args = match_data.to_a
-        .slice(2, match_data.length - 1)
-        .compact()
-        .collect(&:strip)
-        if method_args.length == 1 and method_args.first == "help"
+        method_name = match_data[1].to_sym
+        method_args = match_data
+                          .to_a
+                          .slice(2, match_data.length - 1)
+                          .compact()
+                          .collect(&:strip)
+        if method_args.length == 1 and method_args.first == 'help'
           help(method_name)
         else
           # defer to application for further processing
+          method_args.push(format) unless format.nil?
           self.send(method_name, *method_args)
           return method_name
         end
@@ -277,18 +300,22 @@ Continue using old version?
     end
   end
 
-  def clear_tmp_dir()
+  def clear_tmp_dir
     Dir["#{Hailstorm.tmp_path}/*"].each do |e|
       File.directory?(e) ? FileUtils.rmtree(e) : File.unlink(e)
     end
   end
 
-  private
+  def logger=(new_logger)
+    @logger = new_logger
+  end
 
   def current_project
     Hailstorm::Model::Project.where(:project_code => Hailstorm.app_name)
-                             .first_or_create!()
+    .first_or_create!()
   end
+
+  private
 
   def database_name()
     Hailstorm.app_name
@@ -341,7 +368,8 @@ Continue using old version?
   # directories
   # @param [String] root_path the path this application will be rooted at
   # @param [String] arg_app_name the argument provided for creating project
-  def create_app_structure(root_path, arg_app_name)
+  # @param [Boolean] quiet
+  def create_app_structure(root_path, arg_app_name, quiet = false, gem_path = nil)
 
     # create directory structure
     dirs = [
@@ -357,7 +385,7 @@ Continue using old version?
 
     dirs.each do |dir|
       FileUtils.mkpath(File.join(root_path, dir))
-      puts "    created directory: #{File.join(arg_app_name, dir)}"
+      puts "    created directory: #{File.join(arg_app_name, dir)}" unless quiet
     end
 
     skeleton_path = File.join(Hailstorm.templates_path, 'skeleton')
@@ -365,27 +393,27 @@ Continue using old version?
     # Process Gemfile - add additional platform specific gems
     engine = ActionView::Base.new()
     engine.assign({:jruby_pageant => !File::ALT_SEPARATOR.nil?,  # File::ALT_SEPARATOR is nil on non-windows
-                   :gem_source => Hailstorm.gem_source})
+                   :gem_source => Hailstorm.gem_source, :gem_path => gem_path})
     File.open(File.join(root_path, 'Gemfile'), 'w') do |f|
       f.print(engine.render(:file => File.join(skeleton_path, 'Gemfile')))
     end
-    puts "    wrote #{File.join(arg_app_name, 'Gemfile')}"
+    puts "    wrote #{File.join(arg_app_name, 'Gemfile')}" unless quiet
 
     # Copy to script/hailstorm
     hailstorm_script = File.join(root_path, Hailstorm.script_dir, 'hailstorm')
     FileUtils.copy(File.join(skeleton_path, 'hailstorm'), hailstorm_script)
     FileUtils.chmod(0775, hailstorm_script) # make it executable
-    puts "    wrote #{File.join(arg_app_name, Hailstorm.script_dir, 'hailstorm')}"
+    puts "    wrote #{File.join(arg_app_name, Hailstorm.script_dir, 'hailstorm')}" unless quiet
 
     # Copy to config/environment.rb
     FileUtils.copy(File.join(skeleton_path, 'environment.rb'),
                    File.join(root_path, Hailstorm.config_dir))
-    puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'environment.rb')}"
+    puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'environment.rb')}" unless quiet
 
     # Copy to config/database.properties
     FileUtils.copy(File.join(skeleton_path, 'database.properties'),
                    File.join(root_path, Hailstorm.config_dir))
-    puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'database.properties')}"
+    puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'database.properties')}" unless quiet
 
     # Process to config/boot.rb
     engine = ActionView::Base.new()
@@ -393,7 +421,7 @@ Continue using old version?
     File.open(File.join(root_path, Hailstorm.config_dir, 'boot.rb'), 'w') do |f|
       f.print(engine.render(:file => File.join(skeleton_path, 'boot')))
     end
-    puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'boot.rb')}"
+    puts "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'boot.rb')}" unless quiet
   end
 
   # Sets up the load agents and targets.
@@ -412,7 +440,6 @@ Continue using old version?
 
   # Starts the load generation and monitoring on targets
   def start(*args)
-
     logger.info("Starting load generation and monitoring on targets...")
     redeploy = (args.empty? ? false : true)
     current_project.start(redeploy)
@@ -453,30 +480,76 @@ Continue using old version?
   end
 
   def results(*args)
-    operation = (args.first || 'show').to_sym
-    sequences = args[1]
-    unless sequences.nil?
-      if sequences.match(/^(\d+)\-(\d+)$/)
-        sequences = ($1..$2).to_a.collect(&:to_i)
+    case args.length
+      when 3
+        operation, sequences, format = args
+      when 2
+        operation, sequences = args
       else
-        sequences = sequences.split(/\s*,\s*/).collect(&:to_i)
+        operation, = args
+    end
+    operation = (operation || 'show').to_sym
+    extract_last = false
+    unless sequences.nil?
+      if sequences == 'last'
+        extract_last = true
+        sequences = nil
+      elsif sequences.match(/^(\d+)\-(\d+)$/) # range
+        sequences = ($1..$2).to_a.collect(&:to_i)
+      else # comma or colon separated
+        sequences = sequences.split(/\s*[,:]\s*/).collect(&:to_i)
       end
     end
-    rval = current_project.results(operation, sequences)
+    data = current_project.results(operation, sequences)
+    display_data = (extract_last && !data.empty?) ? [data.last] : data
     if :show == operation
-      text_table = Terminal::Table.new()
-      text_table.headings = ['TEST', 'Threads', '90 %tile', 'TPS', 'Started', 'Stopped']
-      text_table.rows = rval.collect do |execution_cycle|
-        [
-            execution_cycle.id,
-            execution_cycle.total_threads_count,
-            execution_cycle.avg_90_percentile,
-            execution_cycle.avg_tps.round(2),
-            execution_cycle.formatted_started_at,
-            execution_cycle.formatted_stopped_at
-        ]
+      if format.nil?
+        text_table = Terminal::Table.new()
+        text_table.headings = ['TEST', 'Threads', '90 %tile', 'TPS', 'Started', 'Stopped']
+        text_table.rows = display_data.collect do |execution_cycle|
+          [
+              execution_cycle.id,
+              execution_cycle.total_threads_count,
+              execution_cycle.avg_90_percentile,
+              execution_cycle.avg_tps.round(2),
+              execution_cycle.formatted_started_at,
+              execution_cycle.formatted_stopped_at
+          ]
+        end
+
+        puts text_table.to_s
+      else
+        puts display_data.reduce([]) {|acc, execution_cycle|
+               acc.push({
+                            :execution_cycle_id => execution_cycle.id,
+                            :total_threads_count => execution_cycle.total_threads_count,
+                            :avg_90_percentile => execution_cycle.avg_90_percentile,
+                            :avg_tps => execution_cycle.avg_tps.round(2),
+                            :started_at => execution_cycle.formatted_started_at,
+                            :stopped_at => execution_cycle.formatted_stopped_at
+                        })
+             }.to_json
       end
-      puts text_table.to_s
+    elsif :export == operation
+      if :zip == format.to_sym
+        reports_path = File.join(Hailstorm.root, Hailstorm.reports_dir)
+        timestamp = Time.now.strftime('%Y%m%d%H%M%S')
+        zip_file_path = File.join(reports_path, "jtl-#{timestamp}.zip")
+        FileUtils.safe_unlink zip_file_path
+        Zip::File.open(zip_file_path, Zip::File::CREATE) do |zf|
+          data.each do
+            # @type [Hailstorm::Model::ExecutionCycle] ex
+            |ex|
+
+            seq_dir = "SEQUENCE-#{ex.id}"
+            zf.mkdir(seq_dir)
+            Dir["#{reports_path}/#{seq_dir}/*.jtl"].each do |jtl_file|
+              ze = "#{seq_dir}/#{File.basename(jtl_file)}"
+              zf.add(ze, jtl_file) { true }
+            end
+          end
+        end
+      end
     end
   end
 
@@ -505,21 +578,31 @@ Continue using old version?
 
   def status(*args)
 
+    format, = args
     unless current_project.current_execution_cycle.nil?
       running_agents = current_project.check_status()
       unless running_agents.empty?
-        logger.info "Load generation running on following load agents:"
+        logger.info 'Load generation running on following load agents:'
         text_table = Terminal::Table.new()
         text_table.headings = ['Cluster', 'Agent', 'PID']
         text_table.rows = running_agents.collect {|agent|
           [agent.clusterable.slug, agent.public_ip_address, agent.jmeter_pid]
         }
-        puts text_table.to_s
+
+        if format and format.to_sym == :json
+          puts running_agents.to_json
+        else
+          puts text_table.to_s
+        end
+
       else
-        logger.info "Load generation finished on all load agents"
+        logger.info 'Load generation finished on all load agents'
+        if format and format.to_sym == :json
+          puts [].to_json
+        end
       end
     else
-      logger.info "No tests have been started"
+      logger.info 'No tests have been started'
     end
   end
 
@@ -538,7 +621,7 @@ Continue using old version?
 
 
   # Defines the grammar for the rules
-  def grammar()
+  def grammar
 
     @grammar ||= [
         Regexp.new('^(help)(\s+setup|\s+start|\s+stop|\s+abort|\s+terminate|\s+results|\s+purge|\s+show|\s+status)?$'),
@@ -546,7 +629,7 @@ Continue using old version?
         Regexp.new('^(start)(\s+redeploy|\s+help)?$'),
         Regexp.new('^(stop)(\s+suspend|\s+wait|\s+suspend\s+wait|\s+wait\s+suspend|\s+help)?$'),
         Regexp.new('^(abort)(\s+suspend|\s+help)?$'),
-        Regexp.new('^(results)(\s+show|\s+exclude|\s+include|\s+report|\s+export|\s+help)?(\s+[\d,\-]+)?$'),
+        Regexp.new('^(results)(\s+show|\s+exclude|\s+include|\s+report|\s+export|\s+help)?(\s+[\d,\-:]+|\s+last)?$'),
         Regexp.new('^(purge)(\s+tests|\s+clusters|\s+all|\s+help)?$'),
         Regexp.new('^(show)(\s+jmeter|\s+cluster|\s+monitor|\s+all|\s+help)?$'),
         Regexp.new('^(terminate)(\s+help)?$'),
@@ -777,6 +860,7 @@ Options
 Options
 
       show    [TEST]  Displays successfully stopped tests (default).
+              last    Displays the last successfully stopped tests
       exclude [TEST]  Exclude TEST from reports.
                       Without a TEST argument, no tests will be excluded.
       include [TEST]  Include TEST in reports.

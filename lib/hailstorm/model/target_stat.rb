@@ -18,7 +18,7 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
 
   after_create :write_blobs
 
-  default_scope select(DefaultSelectColumns.collect{|e| "target_stats.#{e}"}.join(','))
+  default_scope {select(DefaultSelectColumns.collect{|e| "target_stats.#{e}"}.join(','))}
 
   attr_accessor :log_file_paths
 

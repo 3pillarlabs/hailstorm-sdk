@@ -34,7 +34,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   after_initialize :set_defaults
 
   def self.create_client_stats(execution_cycle, jmeter_plan_id,
-                                  clusterable, stat_file_paths)
+      clusterable, stat_file_paths)
 
     # Collate statistics file if needed
     stat_file_path = nil

@@ -3,14 +3,18 @@ require 'java'
 require 'ostruct'
 require 'active_support/all'
 require 'active_record'
+require 'action_dispatch/http/mime_type'
 require 'action_view'
 
 require "hailstorm/version"
+
 require "hailstorm/behavior/loggable"
 
 # Defines the namespace and module static accessors.
 # @author Sayantam Dey
 module Hailstorm
+
+  include Hailstorm::Behavior::Loggable
 
   # The application root path. Access this by calling <tt>Hailstorm.root</tt>
   @@root = nil
@@ -81,11 +85,8 @@ module Hailstorm
     'http://labs.3pillarglobal.com:8808'
   end
 
-end
+  def self.log4j_dir
+    File.join(self.config_dir, 'log4j')
+  end
 
-# inject a logger method to Kernel so it's available everywhere
-# TODO: Developer doc
-class Object
-  include Hailstorm::Behavior::Loggable
 end
-

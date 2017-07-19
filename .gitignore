@@ -2,3 +2,6 @@ lib/hailstorm/java/bin
 tmp/*
 .idea
 .ruby-version
+.project
+.bundle/*
+features/data/keys.yml

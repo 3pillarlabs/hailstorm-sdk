@@ -95,6 +95,10 @@ class Hailstorm::Support::Configuration
     
     # Set to true if this cluster should be considered for setup/load generation
     attr_accessor :active
+
+    def aws_required?
+      false
+    end
     
   end
   
@@ -138,6 +142,28 @@ class Hailstorm::Support::Configuration
     # If the number of threads in the JMeter thread group is higher than this
     # value, multiple load agents will be spawned with equal thread distribution.
     attr_accessor :max_threads_per_agent
+
+    def aws_required?
+      true
+    end
+  end
+
+
+  # Settings for Data Center. The class name should correspond to class name
+  # in Hailstorm::Model namespace. Select this using the :data_center clusters
+  # parameter.
+  class DataCenter < ClusterBase
+    #datacenter display identifier
+    attr_accessor :title
+
+    # Datacenter password
+    attr_accessor :user_name
+
+    # Datacenter access ssh key file
+    attr_accessor :ssh_identity
+
+    # Array of ip_addresses
+    attr_accessor :machines
   end
 
   # Settings for one more monitors. Multiple monitors of different types can
@@ -254,7 +280,7 @@ class Hailstorm::Support::Configuration
         end
       end
     end
-    
+
     return host_defs
   end
   

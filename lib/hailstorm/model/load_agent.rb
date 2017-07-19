@@ -20,7 +20,7 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
   
   after_commit :upload_scripts, :if => proc {|r| r.active? && !r.public_ip_address.nil?}, :on => :create
 
-  scope :active, where(:active => true)
+  scope :active, -> {where(:active => true)}
 
   def first_use?
     @first_use
@@ -61,7 +61,6 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
 
       Hailstorm::Support::SSH.start(self.public_ip_address,
         self.clusterable.user_name, self.clusterable.ssh_options) do |ssh|
-
         unless directory_hierarchy.nil?
           logger.debug{"Creating directory structure...#{directory_hierarchy.inspect}"}
           create_directory_hierarchy(ssh, self.clusterable.user_home, directory_hierarchy)
@@ -103,7 +102,7 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
     logger.debug { "#{self.class}##{__method__}" }
     Hailstorm::Support::SSH.start(self.public_ip_address, self.clusterable.user_name,
       self.clusterable.ssh_options) do |ssh|
-      
+
       logger.debug { command }
       ssh.exec!(command)
       remote_pid = ssh.find_process_id(self.jmeter_plan

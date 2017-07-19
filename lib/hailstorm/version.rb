@@ -1,3 +1,3 @@
 module Hailstorm
-  VERSION = '3.6.3'
+  VERSION = '4.0.0'
 end

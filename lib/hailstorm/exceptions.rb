@@ -44,8 +44,8 @@ module Hailstorm
   class AgentCreationFailure < DiagnosticAwareException
     def diagnostics
       %{One or more agents could not be prepared for load generation.
-        This can happen due to issues in your cluster such as Amazon or
-        your data-center or a misconfiguration. Try 'setup force'.}
+        This can happen due to issues in your cluster(Amazon or data-center)
+        or a misconfiguration. Try 'setup force'.}
     end
   end
 
@@ -88,5 +88,53 @@ module Hailstorm
     end
   end
 
+  class DataCenterAccessFailure < DiagnosticAwareException
 
+    attr_reader :agent_machine, :user_name, :ssh_identity
+
+    # @param [String] user_name  ssh user name
+    # @param [String] machines comma separated ip addresses of machines
+    # @param [String] ssh_identity ssh ssh identity
+    def initialize(user_name, agent_machine, ssh_identity)
+      @agent_machine   = agent_machine
+      @user_name    = user_name
+      @ssh_identity = ssh_identity
+    end
+
+    def diagnostics
+      %{HailStrom is not able to connect to agent##{agent_machine} using user name '#{user_name}'
+      and ssh identity file '#{ssh_identity}'. System might not be running at the moment or
+      user and/or ssh identity used are not allowed to connect to specified machine}
+    end
+  end
+
+  class DataCenterJavaFailure < DiagnosticAwareException
+    attr_reader :java_version
+    # @param [String] java_version
+    def initialize(java_version)
+      @java_version = java_version
+    end
+
+    def diagnostics
+      %{Either Java is not installed or required version '#{java_version}' is not available
+      on one of the machines specified. Please make sure:
+      1) Required Java/JRE version is installed
+      2) JAVA_HOME/JRE_HOME and required path variable are set and accessible}
+    end
+  end
+
+  class DataCenterJMeterFailure < DiagnosticAwareException
+    attr_reader :jmeter_version
+    # @param [String] jmeter_version
+    def initialize(jmeter_version)
+      @jmeter_version = jmeter_version
+    end
+
+    def diagnostics
+      %{Either JMeter is not installed or required version '#{jmeter_version}' is not available
+      on one of one of the machines specified. Please make sure:
+      1) Required JMeter version is installed
+      2) JMETER_HOME and required path variable are set and accessible}
+    end
+  end
 end

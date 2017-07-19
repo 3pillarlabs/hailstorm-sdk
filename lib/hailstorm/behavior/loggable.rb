@@ -17,7 +17,7 @@ module Hailstorm::Behavior::Loggable
 
     recipient.class_eval do
       def logger()
-        Hailstorm::Support::Log4jBackedLogger.get_logger(self.class)
+        @logger || Hailstorm::Support::Log4jBackedLogger.get_logger(self.class)
       end
     end
 

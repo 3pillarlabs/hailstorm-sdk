@@ -5,8 +5,11 @@
 require 'aws'
 require "hailstorm/support"
 require "hailstorm/model/amazon_cloud"
+require "hailstorm/behavior/loggable"
 
 class Hailstorm::Support::AmazonAccountCleaner
+
+  include Hailstorm::Behavior::Loggable
 
   REQUIRED_AWS_KEYS = [:access_key_id, :secret_access_key]
 

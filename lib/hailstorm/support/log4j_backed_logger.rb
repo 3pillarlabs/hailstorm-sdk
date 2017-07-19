@@ -5,8 +5,8 @@ require 'hailstorm/support'
 
 class Hailstorm::Support::Log4jBackedLogger
 
-  def self.get_logger(klass)
-    self.new(backing_logger_impl.getLogger(klass.name))
+  def self.get_logger(klass_or_name)
+    self.new(backing_logger_impl.getLogger(klass_or_name.respond_to?(:name) ? klass_or_name.name : klass_or_name.to_s))
   end
 
   def initialize(log4j_logger)

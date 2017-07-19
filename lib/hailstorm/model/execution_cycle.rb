@@ -3,7 +3,7 @@
 # @author Sayantam Dey
 
 require 'erubis/engine/eruby'
-require 'zip/zipfilesystem'
+require 'zip/filesystem'
 
 require 'hailstorm/model'
 require 'hailstorm/model/project'
@@ -28,7 +28,6 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   def collect_client_stats(cluster_instance)
     
     logger.debug { "#{self.class}.#{__method__}" }
-
     jmeter_plan_results_map = {}
     result_mutex = Mutex.new()
     llp = local_log_path()
@@ -72,9 +71,6 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   def self.create_report(project, cycle_ids)
 
     reported_execution_cyles = self.execution_cycles_for_report(project, cycle_ids)
-
-    start_id = reported_execution_cyles.first.id
-    end_id = reported_execution_cyles.last.id
 
     builder = Hailstorm::Support::ReportBuilder.new()
     builder.title = project.project_code.humanize
@@ -152,7 +148,8 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     end
 
     reports_path = File.join(Hailstorm.root, Hailstorm.reports_dir)
-    report_file_name = "#{project.project_code}-#{start_id}-#{end_id}" # minus extn
+    timestamp = Time.now.strftime('%Y%m%d%H%M%S')
+    report_file_name = "#{project.project_code}-#{timestamp}" # minus extn
 
     builder.build(reports_path, report_file_name) # returns path to generated file
   end
