@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="HailstormCharts" default="dist">
+
+	<description>
+		Compiles and creates JAR file in lib
+	</description>
+	
+	<property name="src.dir" location="${basedir}/src"/>
+	<property name="bin.dir" location="${basedir}/bin"/>
+	<property name="lib.dir" location="${basedir}/lib"/>
+	<property name="dist.jar" location="${lib.dir}/hailstorm_charts.jar"/>
+	
+
+	<path id="build-classpath">
+		<pathelement location="${bin.dir}"/>
+		<fileset dir="${lib.dir}">
+			<include name="*.jar"/>
+		</fileset>
+	</path>
+	
+	<target name="dist" depends="compile">
+		<jar destfile="${dist.jar}" basedir="${bin.dir}" />
+	</target>
+	
+	<target name="compile">
+		<javac srcdir="${src.dir}" destdir="${bin.dir}" debug="true"
+			encoding="UTF-8">
+			
+			<classpath refid="build-classpath" />
+			<compilerarg value="-Xlint"/>
+		</javac>
+	</target>
+	
+</project>

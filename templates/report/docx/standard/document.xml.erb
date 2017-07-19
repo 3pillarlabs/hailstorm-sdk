@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document
+	xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:o="urn:schemas-microsoft-com:office:office"
+	xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+	xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"
+	xmlns:v="urn:schemas-microsoft-com:vml"
+	xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing"
+	xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+	xmlns:w10="urn:schemas-microsoft-com:office:word"
+	xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+	xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"
+	xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup"
+	xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk"
+	xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml"
+	xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"
+	mc:Ignorable="w14 wp14">
+	<w:body>
+		<w:p w:rsidR="003C6F5D" w:rsidRDefault="00FF7AE3" w:rsidP="00A10F11">
+			<w:pPr>
+				<w:pStyle w:val="Title" />
+			</w:pPr>
+			<w:r>
+				<w:t><%= @report.title %></w:t>
+			</w:r>
+		</w:p>
+		<w:p w:rsidR="00A10F11" w:rsidRDefault="00A10F11" w:rsidP="00A10F11">
+			<w:pPr>
+				<w:pStyle w:val="Subtitle" />
+			</w:pPr>
+			<w:r>
+				<w:t>Performance Test Report</w:t>
+			</w:r>
+		</w:p>
+        <w:sdt>
+          <w:sdtPr>
+            <w:id w:val="125901545"/>
+            <w:docPartObj>
+              <w:docPartGallery w:val="Table of Contents"/>
+              <w:docPartUnique/>
+            </w:docPartObj>
+          </w:sdtPr>
+          <w:sdtEndPr>
+            <w:rPr>
+              <w:rFonts w:asciiTheme="minorHAnsi" w:eastAsiaTheme="minorHAnsi"
+                        w:hAnsiTheme="minorHAnsi" w:cstheme="minorBidi"/>
+              <w:noProof/>
+              <w:color w:val="auto"/>
+              <w:sz w:val="22"/>
+              <w:szCs w:val="22"/>
+              <w:lang w:eastAsia="en-US"/>
+            </w:rPr>
+          </w:sdtEndPr>
+          <w:sdtContent>
+            <w:p w:rsidR="006E6637" w:rsidRDefault="006E6637">
+              <w:pPr>
+                <w:pStyle w:val="TOCHeading"/>
+                <w:numPr>
+                    <w:ilvl w:val="0" />
+                    <w:numId w:val="0" />
+                </w:numPr>
+                <w:ind w:left="432" w:hanging="432" />
+              </w:pPr>
+              <w:r>
+                <w:t>Contents</w:t>
+              </w:r>
+            </w:p>
+            <w:p w:rsidR="006E6637" w:rsidRDefault="006E6637">
+              <w:fldSimple w:instr=" TOC \o &quot;1-3&quot; \h \z \u ">
+                <w:r>
+                  <w:rPr>
+                    <w:b/>
+                    <w:bCs/>
+                    <w:noProof/>
+                  </w:rPr>
+                  <w:t>Click Contents to update table of contents</w:t>
+                </w:r>
+              </w:fldSimple>
+            </w:p>
+          </w:sdtContent>
+        </w:sdt>
+		<w:p w:rsidR="00A10F11" w:rsidRDefault="00A10F11">
+			<w:r>
+				<w:br w:type="page" />
+			</w:r>
+			<w:bookmarkStart w:id="0" w:name="_GoBack" />
+			<w:bookmarkEnd w:id="0" />
+		</w:p>
+		<w:p w:rsidR="00A10F11" w:rsidRDefault="00C35BF0" w:rsidP="00C35BF0">
+			<w:pPr>
+				<w:pStyle w:val="Heading1" />
+			</w:pPr>
+			<w:bookmarkStart w:id="1" w:name="_Toc320986803" />
+			<w:r>
+				<w:lastRenderedPageBreak />
+				<w:t>Introduction</w:t>
+			</w:r>l
+			<w:bookmarkEnd w:id="1" />
+		</w:p>
+		<w:p w:rsidR="00C35BF0" w:rsidRDefault="00C35BF0" w:rsidP="00C35BF0">
+			<w:r>
+				<w:t>
+				    <%= render :partial => 'introduction', :locals => {:report => @report}%>
+				</w:t>
+			</w:r>
+		</w:p>
+		<%= render :partial => 'workload_definition', :locals => {:jmeter_plans => @report.jmeter_plans} %>
+        <%= render :partial => 'workload_iterations', :locals => {:report => @report} %>
+		<%= render :partial => 'test_environment', :locals => {:report => @report} %>
+		<%= render :partial => 'response_vs_users', :locals => {:report => @report} %>
+		<%= render :partial => 'app_infra_vs_users', :locals => {:report => @report} %>
+		<%= render :partial => 'execution_item', :collection => @report.execution_detail_items %>
+		<w:p w:rsidR="000F7A9B" w:rsidRPr="000F7A9B" w:rsidRDefault="000F7A9B"
+			w:rsidP="000F7A9B" />
+		<w:sectPr w:rsidR="000F7A9B" w:rsidRPr="000F7A9B">
+			<w:headerReference w:type="default" r:id="rId10" />
+			<w:footerReference w:type="default" r:id="rId11" />
+			<w:pgSz w:w="12240" w:h="15840" />
+			<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"
+				w:header="720" w:footer="720" w:gutter="0" />
+			<w:cols w:space="720" />
+			<w:docGrid w:linePitch="360" />
+		</w:sectPr>
+	</w:body>
+</w:document>

@@ -1,0 +1,76 @@
+<w:p w:rsidR="00C35BF0" w:rsidRDefault="00C35BF0" w:rsidP="00C35BF0">
+    <w:pPr>
+        <w:pStyle w:val="Heading1" />
+    </w:pPr>
+    <w:bookmarkStart w:id="4" w:name="_Toc320986806" />
+    <w:r>
+        <w:t>Test Environment</w:t>
+    </w:r>
+    <w:bookmarkEnd w:id="4" />
+</w:p>
+<w:p w:rsidR="00C35BF0" w:rsidRDefault="00C35BF0" w:rsidP="00C35BF0">
+    <w:r>
+        <w:t>The test environment consisted of two main components - the load generation clusters and the application infrastructure. The Hailstorm application drove the load generation via the clusters<%= report.targets_by_role.empty? ? '' : ' and measured application performance metrics' %>.</w:t>
+    </w:r>
+</w:p>
+<w:p w:rsidR="00C35BF0" w:rsidRDefault="00C35BF0" w:rsidP="00C35BF0">
+    <w:pPr>
+        <w:pStyle w:val="Heading2" />
+    </w:pPr>
+    <w:bookmarkStart w:id="5" w:name="_Toc320986807" />
+    <w:r>
+        <w:t>Load Generation Clusters</w:t>
+    </w:r>
+    <w:bookmarkEnd w:id="5" />
+</w:p>
+<w:p w:rsidR="00C35BF0" w:rsidRDefault="00C35BF0" w:rsidP="00C35BF0">
+    <w:r>
+        <w:t>The following clusters were used for load generation:</w:t>
+    </w:r>
+</w:p>
+<%- report.all_clusters.each do |cluster| %>
+<w:p w:rsidR="001E209E" w:rsidRDefault="00AA68D5" w:rsidP="0014641F">
+  <w:pPr>
+    <w:pStyle w:val="ListParagraph"/>
+    <w:numPr>
+      <w:ilvl w:val="0"/>
+      <w:numId w:val="2"/>
+    </w:numPr>
+  </w:pPr>
+  <w:r>
+    <w:t><%= cluster.name %></w:t>
+  </w:r>
+</w:p>
+<%- end %>
+<%- unless report.targets_by_role.empty? %>
+<w:p w:rsidR="00C35BF0" w:rsidRDefault="00C35BF0" w:rsidP="00C35BF0">
+    <w:pPr>
+        <w:pStyle w:val="Heading2" />
+    </w:pPr>
+    <w:bookmarkStart w:id="6" w:name="_Toc320986807" />
+    <w:r>
+        <w:t>Application Infrastructure</w:t>
+    </w:r>
+    <w:bookmarkEnd w:id="6" />
+</w:p>
+<w:p w:rsidR="00C35BF0" w:rsidRDefault="00C35BF0" w:rsidP="00C35BF0">
+    <w:r>
+        <w:t>The following infrastructure components were monitored for usage metrics:</w:t>
+    </w:r>
+</w:p>
+<%- report.targets_by_role.each_pair do |role_name, host_names| %>
+<w:p w:rsidR="0014641F" w:rsidRDefault="0014641F" w:rsidP="0014641F">
+  <w:pPr>
+    <w:pStyle w:val="ListParagraph"/>
+    <w:numPr>
+      <w:ilvl w:val="0"/>
+      <w:numId w:val="3"/>
+    </w:numPr>
+  </w:pPr>
+  <w:r>
+    <w:t><%= role_name %>: <%= host_names.join(', ') %></w:t>
+  </w:r>
+</w:p>
+<%- end %>
+<%- end %>
+

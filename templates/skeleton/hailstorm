@@ -1,0 +1,75 @@
+#!/usr/bin/env jruby
+#
+# Hailstorm executable
+# @author Sayantam Dey
+
+if ARGV.empty?
+
+  # Start the progress bar while required gems and files are loaded
+  module Hailstorm
+    class Progressy
+
+      def initialize
+        @launched = false
+      end
+
+      attr_writer :launched
+
+      def show
+        until @launched
+          %w(| / - \\).each { |v| STDOUT.write "\r#{v}"; sleep 0.3 }
+        end
+        STDOUT.write "\r"
+      end
+    end
+  end
+
+  pb = Hailstorm::Progressy.new
+  t1 = Thread.new { pb.show() }
+
+  # Start loading the gems and required files.
+  require File.expand_path('../../config/boot', __FILE__)
+
+  # Instruct progress bar to disappear
+  pb.launched = true
+  t1.join()
+
+  # Start the shell to listen to commands
+  Hailstorm.application.process_commands()
+
+else
+
+  # command execution interface
+  require 'optparse'
+
+  options = {}
+
+  opt_parser = OptionParser.new do |opts|
+    opts.on('--cmd COMMAND', 'Execute COMMAND') do |c|
+      options[:command] = c
+    end
+
+    opts.on('--args a,b,c', Array, 'Arguments to command') do |args|
+      options[:args] = args
+    end
+
+    opts.on('--format [FORMAT]', 'Format of output') do |format|
+      options[:format] = format
+    end
+
+    opts.on_tail('-h', '--help', 'Show this help') do
+      puts opts
+      exit 0
+    end
+  end
+
+  opt_parser.parse!
+
+  # Start loading the gems and required files.
+  require File.expand_path('../../config/boot', __FILE__)
+  begin
+    Hailstorm.application.interpret_command(options)
+  rescue StandardError => error
+    $stderr.puts error.message
+  end
+end

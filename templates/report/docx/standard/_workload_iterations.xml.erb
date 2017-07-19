@@ -1,0 +1,199 @@
+<w:p w:rsidR="00C35BF0" w:rsidRDefault="00C35BF0" w:rsidP="00C35BF0">
+    <w:pPr>
+        <w:pStyle w:val="Heading1" />
+    </w:pPr>
+    <w:bookmarkStart w:id="3" w:name="_Toc320986805" />
+    <w:r>
+        <w:t>Workload Iterations</w:t>
+    </w:r>
+    <w:bookmarkEnd w:id="3" />
+</w:p>
+<w:p w:rsidR="00C35BF0" w:rsidRDefault="00C35BF0" w:rsidP="00C35BF0">
+    <w:r>
+        <w:t>The workload was applied <%= report.test_summary_rows.size %> times. The following table shows JMeter plans, the test duration<%= report.targets_by_role.empty? ? ' and' : ',' %> total number of virtual users<%= report.targets_by_role.empty? ? '' : ' and monitored servers for each iteration' %>.</w:t>
+    </w:r>
+</w:p>
+<w:tbl>
+  <w:tblPr>
+    <w:tblStyle w:val="TableGrid"/>
+    <w:tblW w:w="0" w:type="auto"/>
+    <w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1"
+               w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>
+  </w:tblPr>
+  <w:tblGrid>
+    <w:gridCol w:w="768"/>
+    <w:gridCol w:w="2160"/>
+    <w:gridCol w:w="1860"/>
+    <w:gridCol w:w="1530"/>
+    <%- unless report.targets_by_role.empty? %>
+    <w:gridCol w:w="3258"/>
+    <%- end %>
+  </w:tblGrid>
+  <w:tr w:rsidR="005A2513" w:rsidTr="009E24B2">
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="768" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="DBE5F1"
+               w:themeFill="accent1" w:themeFillTint="33"/>
+      </w:tcPr>
+      <w:p w:rsidR="005A2513" w:rsidRPr="005A2513" w:rsidRDefault="005A2513"
+           w:rsidP="00341CC1">
+        <w:pPr>
+          <w:rPr>
+            <w:b/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="005A2513">
+          <w:rPr>
+            <w:b/>
+          </w:rPr>
+          <w:t>#</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="2160" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="DBE5F1"
+               w:themeFill="accent1" w:themeFillTint="33"/>
+      </w:tcPr>
+      <w:p w:rsidR="005A2513" w:rsidRPr="005A2513" w:rsidRDefault="005A2513"
+           w:rsidP="00341CC1">
+        <w:pPr>
+          <w:rPr>
+            <w:b/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="005A2513">
+          <w:rPr>
+            <w:b/>
+          </w:rPr>
+          <w:t>JMeter Plan(s)</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1860" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="DBE5F1"
+               w:themeFill="accent1" w:themeFillTint="33"/>
+      </w:tcPr>
+      <w:p w:rsidR="005A2513" w:rsidRPr="005A2513" w:rsidRDefault="005A2513"
+           w:rsidP="00341CC1">
+        <w:pPr>
+          <w:rPr>
+            <w:b/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="005A2513">
+          <w:rPr>
+            <w:b/>
+          </w:rPr>
+          <w:t>Test Duration (hh:mm:ss)</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1530" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="DBE5F1"
+               w:themeFill="accent1" w:themeFillTint="33"/>
+      </w:tcPr>
+      <w:p w:rsidR="005A2513" w:rsidRPr="005A2513" w:rsidRDefault="005A2513"
+           w:rsidP="00341CC1">
+        <w:pPr>
+          <w:rPr>
+            <w:b/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="005A2513">
+          <w:rPr>
+            <w:b/>
+          </w:rPr>
+          <w:t>Total Virtual Users</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <%- unless report.targets_by_role.empty? %>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="3258" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="DBE5F1"
+               w:themeFill="accent1" w:themeFillTint="33"/>
+      </w:tcPr>
+      <w:p w:rsidR="005A2513" w:rsidRPr="005A2513" w:rsidRDefault="005A2513"
+           w:rsidP="00341CC1">
+        <w:pPr>
+          <w:rPr>
+            <w:b/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="005A2513">
+          <w:rPr>
+            <w:b/>
+          </w:rPr>
+          <w:t>Monitored Servers</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <%- end %>
+  </w:tr>
+  <%- report.test_summary_rows.each do |row| %>
+  <w:tr w:rsidR="005A2513" w:rsidTr="009E24B2">
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="768" w:type="dxa"/>
+      </w:tcPr>
+      <w:p w:rsidR="005A2513" w:rsidRDefault="005A2513" w:rsidP="00341CC1">
+        <w:r>
+          <w:t>Test <%= row.index %></w:t>
+        </w:r>
+        <w:bookmarkStart w:id="0" w:name="_GoBack"/>
+        <w:bookmarkEnd w:id="0"/>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="2160" w:type="dxa"/>
+      </w:tcPr>
+      <w:p w:rsidR="005A2513" w:rsidRDefault="005A2513" w:rsidP="00341CC1">
+        <w:r>
+          <w:t><%= row.jmeter_plans %></w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1860" w:type="dxa"/>
+      </w:tcPr>
+      <w:p w:rsidR="005A2513" w:rsidRDefault="005A2513" w:rsidP="00341CC1">
+        <w:r>
+          <w:t><%= row.test_duration %></w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1530" w:type="dxa"/>
+      </w:tcPr>
+      <w:p w:rsidR="005A2513" w:rsidRDefault="005A2513" w:rsidP="00341CC1">
+        <w:r>
+          <w:t><%= row.total_threads_count %></w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <%- unless report.targets_by_role.empty? %>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="3258" w:type="dxa"/>
+      </w:tcPr>
+      <w:p w:rsidR="005A2513" w:rsidRDefault="005A2513" w:rsidP="00341CC1">
+        <w:r>
+          <w:t><%= row.target_hosts %></w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <%- end %>
+  </w:tr>
+  <%- end %>
+</w:tbl>

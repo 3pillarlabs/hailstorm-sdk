@@ -1,0 +1,122 @@
+<w:p w:rsidR="00C35BF0" w:rsidRDefault="00C35BF0" w:rsidP="00C35BF0">
+    <w:pPr>
+        <w:pStyle w:val="Heading1" />
+    </w:pPr>
+    <w:bookmarkStart w:id="2" w:name="_Toc320986804" />
+    <w:r>
+        <w:t>Workload Definition</w:t>
+    </w:r>
+    <w:bookmarkEnd w:id="2" />
+</w:p>
+<w:p w:rsidR="00C35BF0" w:rsidRDefault="00C35BF0" w:rsidP="00C35BF0">
+    <w:r>
+        <w:t>The workload definition consists of the test scenarios and the steps for each scenario. The test scenarios that were executed to generate load on the application are outlined below:</w:t>
+    </w:r>
+</w:p>
+<%- jmeter_plans.each do |jmeter_plan| %>
+<w:p w:rsidR="00F253FF" w:rsidRDefault="00F253FF" w:rsidP="00F253FF">
+  <w:pPr>
+    <w:pStyle w:val="Heading2"/>
+  </w:pPr>
+  <w:r>
+    <w:t>Plan: <%= jmeter_plan.plan_name %></w:t>
+  </w:r>
+</w:p>
+<w:p w:rsidR="00F253FF" w:rsidRPr="00F253FF" w:rsidRDefault="00F253FF"
+     w:rsidP="00F253FF">
+  <w:r>
+    <w:t xml:space="preserve"><%= jmeter_plan.plan_description %></w:t>
+  </w:r>
+  <w:bookmarkStart w:id="0" w:name="_GoBack"/>
+  <w:bookmarkEnd w:id="0"/>
+</w:p>
+<w:tbl>
+  <w:tblPr>
+    <w:tblStyle w:val="TableGrid"/>
+    <w:tblW w:w="0" w:type="auto"/>
+    <w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1"
+               w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>
+  </w:tblPr>
+  <w:tblGrid>
+    <w:gridCol w:w="3708"/>
+    <w:gridCol w:w="5868"/>
+  </w:tblGrid>
+  <w:tr w:rsidR="00F253FF" w:rsidTr="00F253FF">
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="3708" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="C6D9F1"
+               w:themeFill="text2" w:themeFillTint="33"/>
+      </w:tcPr>
+      <w:p w:rsidR="00F253FF" w:rsidRPr="00F253FF" w:rsidRDefault="00F253FF"
+           w:rsidP="00F253FF">
+        <w:pPr>
+          <w:rPr>
+            <w:b/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="00F253FF">
+          <w:rPr>
+            <w:b/>
+          </w:rPr>
+          <w:t>Scenario</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="5868" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="C6D9F1"
+               w:themeFill="text2" w:themeFillTint="33"/>
+      </w:tcPr>
+      <w:p w:rsidR="00F253FF" w:rsidRPr="00F253FF" w:rsidRDefault="00F253FF"
+           w:rsidP="00F253FF">
+        <w:pPr>
+          <w:rPr>
+            <w:b/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="00F253FF">
+          <w:rPr>
+            <w:b/>
+          </w:rPr>
+          <w:t>Steps</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+  </w:tr>
+  <%- jmeter_plan.scenario_definitions.each do |definition| %>
+  <w:tr w:rsidR="00F253FF" w:rsidTr="00F253FF">
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="3708" w:type="dxa"/>
+      </w:tcPr>
+      <w:p w:rsidR="00F253FF" w:rsidRDefault="00F253FF" w:rsidP="00F253FF">
+        <w:r>
+          <w:t><%= definition.thread_group %></w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="5868" w:type="dxa"/>
+      </w:tcPr>
+      <%- definition.samplers.each do |step| %>
+      <w:p w:rsidR="00F253FF" w:rsidRDefault="00F253FF" w:rsidP="00F253FF">
+        <w:pPr>
+          <w:pStyle w:val="ListParagraph"/>
+          <w:numPr>
+            <w:ilvl w:val="0"/>
+            <w:numId w:val="3"/>
+          </w:numPr>
+        </w:pPr>
+        <w:r>
+          <w:t><%= step %></w:t>
+        </w:r>
+      </w:p>
+      <%- end %>
+    </w:tc>
+  </w:tr>
+  <%- end %>
+</w:tbl>
+<%- end %>
