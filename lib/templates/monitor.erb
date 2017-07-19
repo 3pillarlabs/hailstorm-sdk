@@ -1,0 +1,15 @@
+config.monitors(:<%= monitor_type %>) do |monitor|
+<%- groups.each do |group| %>
+    monitor.groups('<%= group['role_name'] %>') do |group|
+    <%- group['hosts'].each do |host| %>
+        group.hosts do |host|
+            host.host_name = '<%= host['host_name'] %>'
+            host.executable_path = '<%= host['executable_path'] %>'
+            host.user_name = '<%= host['user_name'] %>'
+            host.sampling_interval = <%= host['sampling_interval'] %>
+            host.ssh_identity = '<%= host['ssh_identity'] %>'
+        end
+    <%- end %>
+    end
+<%- end %>
+end
