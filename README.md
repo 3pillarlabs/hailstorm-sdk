@@ -51,6 +51,17 @@ bundle check
 ```
 This should display the Hailstorm prompt.
 
+#### hailstorm-gem Development
+
+Creating the environment for hacking on the gem development is simple. Make sure you are in a JRuby VM and -
+```
+rvm gemset create hailstorm-gem-dev
+gem install --no-rdoc --no-ri bundler
+bundle install
+```
+The next time you log into the VM, just ``rvm use @hailstorm-gem-dev``.
+
+
 ### Release
 
 TBD

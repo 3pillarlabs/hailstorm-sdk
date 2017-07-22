@@ -26,7 +26,7 @@ class Hailstorm::Application
   # @param [String] app_name the application name
   # @param [String] boot_file_path full path to application config/boot.rb
   # @return nil
-  def self.initialize!(app_name, boot_file_path)
+  def self.initialize!(app_name, boot_file_path, connection_spec = nil)
 
     # in included gem version of i18n this value is set to null by default
     # this will switch to default locale if in case of invalid locale
@@ -55,6 +55,7 @@ class Hailstorm::Application
     Hailstorm.application.clear_tmp_dir()
     Hailstorm.application.check_for_updates()
     Hailstorm.application.load_config(true)
+    Hailstorm.application.connection_spec = connection_spec
     Hailstorm.application.check_database()
   end
 
@@ -314,6 +315,10 @@ Continue using old version?
     Hailstorm::Model::Project.where(:project_code => Hailstorm.app_name)
     .first_or_create!()
   end
+
+  # Writer for @connection_spec
+  # @param [Hash] spec
+  attr_writer :connection_spec
 
   private
 
