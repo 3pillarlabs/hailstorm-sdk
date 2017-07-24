@@ -10,7 +10,7 @@ require 'hailstorm/support/ssh'
 require 'hailstorm/support/amazon_account_cleaner'
 
 class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
-  
+
   include Hailstorm::Behavior::Clusterable
 
   before_validation :set_defaults
@@ -495,24 +495,15 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     region_base_ami_map[self.region][arch(true)]
   end
 
-  # Static map of regions, architectures and AMI ID of latest stable Ubuntu LTS
-  # AMIs (Precise Pangolin - http://cloud-images.ubuntu.com/releases/precise/release/).
+  # Static map of regions, architectures and AMI ID of latest stable Ubuntu LTS AMIs
+  # On changes to this map, be sure to execute ``rspec -t integration``.
   def region_base_ami_map()
     @region_base_ami_map ||= {
-      'ap-northeast-1' => { # Asia Pacific (Tokyo)
-          '64-bit' => 'ami-936d9d93'
-      },
-      'ap-southeast-1' => { # Asia Pacific (Singapore)
-          '64-bit' => 'ami-96f1c1c4'
-      },
-      'eu-west-1' => {  # Europe West (Ireland)
-          '64-bit' => 'ami-47a23a30'
-      },
-      'sa-east-1' => { # South America (Sao Paulo)
-          '64-bit' => 'ami-4d883350'
-      },
       'us-east-1' => { # US East (Virginia)
           '64-bit' => 'ami-d05e75b8'
+      },
+      'us-east-2' => { # US East (Ohio)
+          '64-bit' => 'ami-8b92b4ee'
       },
       'us-west-1' => { # US West (N. California)
           '64-bit' => 'ami-df6a8b9b'
@@ -520,11 +511,35 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       'us-west-2' => { # US West (Oregon)
           '64-bit' => 'ami-5189a661'
       },
-      'eu-central-1' => {  # Europe Central (Frankfurt)
+      'ca-central-1' => { # Canada (Central)
+          '64-bit' => 'ami-b3d965d7'
+      },
+      'eu-west-1' => {  # EU (Ireland)
+          '64-bit' => 'ami-47a23a30'
+      },
+      'eu-central-1' => {  # EU (Frankfurt)
           '64-bit' => 'ami-accff2b1'
       },
+      'eu-west-2' => {  # EU (London)
+          '64-bit' => 'ami-cc7066a8'
+      },
+      'ap-northeast-1' => { # Asia Pacific (Tokyo)
+          '64-bit' => 'ami-785c491f'
+      },
+      'ap-southeast-1' => { # Asia Pacific (Singapore)
+          '64-bit' => 'ami-2378f540'
+      },
       'ap-southeast-2' => { # Asia Pacific (Sydney)
-          '64-bit' => 'ami-69631053'
+          '64-bit' => 'ami-e94e5e8a'
+      },
+      'ap-northeast-2' => { # Asia Pacific (Seoul)
+          '64-bit' => 'ami-94d20dfa'
+      },
+      'ap-south-1' => { # Asia Pacific (Mumbai)
+          '64-bit' => 'ami-49e59a26'
+      },
+      'sa-east-1' => { # South America (Sao Paulo)
+          '64-bit' => 'ami-34afc458'
       }
     }
   end
