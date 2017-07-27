@@ -9,18 +9,18 @@ Given(/^Amazon is chosen as the cluster$/) do
   @aws.secret_key = keys['secret_key']
 end
 
-When /^I choose the following regions$/ do |table|
-  @checked = {}
-  @region_ami_map = @aws.send(:region_base_ami_map)
-  table.hashes.each do |row|
-    region = row['region']
-    ami_id = @region_ami_map[region]['64-bit']
-    aws_config = @aws.send(:aws_config)
-    ec2 = AWS::EC2.new(aws_config).regions[region]
-    @checked[ami_id] = ec2.images[ami_id].exists?
+When /^I choose a region$/ do
+  @region_ami_map = @aws.send(:region_base_ami_map).reduce({}) do |a, e|
+    region = e.first
+    ami_id = e[1]['64-bit']
+    a.merge({region => ami_id})
   end
 end
 
-Then /^the AMI should exist$/ do
-  expect(@checked.values.count {|e| e == true}).to eq(@checked.values.length)
+Then /^(?:the AMI should exist |)for '(.+?)'$/ do |region|
+  ami_id = @region_ami_map[region]
+  expect(ami_id).to_not be_nil
+  aws_config = @aws.send(:aws_config)
+  ec2 = AWS::EC2.new(aws_config).regions[region]
+  expect(ec2.images[ami_id]).to exist
 end
