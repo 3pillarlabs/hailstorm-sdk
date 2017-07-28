@@ -1,6 +1,8 @@
+include DbHelper
+
 Given(/^Amazon is chosen as the cluster$/) do
   require 'hailstorm/application'
-  Hailstorm::Application.initialize!('aws_steps', '.', {adapter: 'jdbcsqlite3', database: '/tmp/aws_steps.db'})
+  Hailstorm::Application.initialize!('aws_steps', '.', db_props)
   require 'hailstorm/model/amazon_cloud'
   @aws = Hailstorm::Model::AmazonCloud.new()
   key_file_path = File.expand_path('../../data/keys.yml', __FILE__)
