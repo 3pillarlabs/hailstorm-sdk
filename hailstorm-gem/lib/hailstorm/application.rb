@@ -318,7 +318,9 @@ Continue using old version?
 
   # Writer for @connection_spec
   # @param [Hash] spec
-  attr_writer :connection_spec
+  def connection_spec=(spec)
+    @connection_spec = spec.symbolize_keys if spec
+  end
 
   private
 
