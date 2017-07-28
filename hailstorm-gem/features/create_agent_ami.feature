@@ -1,19 +1,23 @@
 Feature: Create Amazon Machine Image
 
-  Scenario: Choose the correct AMI for an AWS region
-    Given Amazon is chosen as the cluster
-    When I choose a region
-    Then the AMI should exist for 'us-east-1'
-    And for 'us-east-2'
-    And for 'us-west-1'
-    And for 'us-west-2'
-    And for 'ca-central-1'
-    And for 'eu-west-1'
-    And for 'eu-central-1'
-    And for 'eu-west-2'
-    And for 'ap-northeast-1'
-    And for 'ap-southeast-1'
-    And for 'ap-southeast-2'
-    And for 'ap-northeast-2'
-    And for 'ap-south-1'
-    And for 'sa-east-1'
+Scenario Outline: Choose the correct AMI for an AWS region
+  Given Amazon is chosen as the cluster
+  When I choose '<region>' region
+  Then the AMI should exist
+
+  Examples:
+  |region|
+  |us-east-1|
+  |us-east-2|
+  |us-west-1|
+  |us-west-2|
+  |ca-central-1|
+  |eu-west-1|
+  |eu-central-1|
+  |eu-west-2|
+  |ap-northeast-1|
+  |ap-southeast-1|
+  |ap-southeast-2|
+  |ap-northeast-2|
+  |ap-south-1|
+  |sa-east-1|
