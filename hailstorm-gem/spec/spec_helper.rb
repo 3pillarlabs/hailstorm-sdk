@@ -6,7 +6,8 @@
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
 RSpec.configure do |config|
   config.treat_symbols_as_metadata_keys_with_true_values = true
-  config.run_all_when_everything_filtered = false
+  config.run_all_when_everything_filtered = true
+  config.filter_run :focus
 
   # Run specs in random order to surface order dependencies. If you find an
   # order dependency and want to debug it, you can fix the order by providing
@@ -18,6 +19,10 @@ end
 $CLASSPATH << File.dirname(__FILE__)
 
 require 'hailstorm/application'
-db_file = '/tmp/hailstorm_spec.db'
-File.unlink(db_file) if File.exists?(db_file)
-Hailstorm::Application.initialize!('hailstorm_spec', '.', {adapter: 'jdbcsqlite3', database: db_file})
+require 'hailstorm/support/configuration'
+Hailstorm::Application.initialize!('hailstorm_spec', '.', {
+    adapter: 'jdbcmysql',
+    database: 'hailstorm_gem_test',
+    username: 'hailstorm_dev',
+    password: 'hailstorm_dev'
+}, Hailstorm::Support::Configuration.new)
