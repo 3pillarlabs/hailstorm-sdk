@@ -5,3 +5,4 @@ tmp/*
 .project
 .bundle/*
 features/data/keys.yml
+spec/keys.yml

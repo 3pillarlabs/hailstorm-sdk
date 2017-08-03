@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE log4j:configuration PUBLIC "-//LOGGER" "log4j.dtd">
+
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/" debug="false">
+
+  <appender name="STDOUT" class="org.apache.log4j.ConsoleAppender">
+    <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="[%p] %m%n"/>
+    </layout>
+    <filter class="com.brickred.tsg.hailstorm.MDCMatchFilter">
+      <param name="KeyToMatch" value="caller" />
+      <param name="ValueToMatch" value="aws-sdk" />
+      <param name="ThresholdLevel" value="WARN" />
+    </filter>
+    <filter class="com.brickred.tsg.hailstorm.MDCMatchFilter">
+      <param name="KeyToMatch" value="caller" />
+      <param name="ValueToMatch" value="net-ssh" />
+      <param name="ThresholdLevel" value="WARN" />
+    </filter>
+  </appender>
+
+  <root>
+    <priority value="DEBUG"/>
+    <appender-ref ref="STDOUT" />
+  </root>
+
+</log4j:configuration>
