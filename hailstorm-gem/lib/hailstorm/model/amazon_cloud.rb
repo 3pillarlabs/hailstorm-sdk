@@ -73,15 +73,29 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         end
       end
 
+      load_agent.ec2_instance = agent_ec2_instance
       # update attributes
       load_agent.identifier = agent_ec2_instance.instance_id
       load_agent.public_ip_address = agent_ec2_instance.public_ip_address
       load_agent.private_ip_address = agent_ec2_instance.private_ip_address
 
+      # reachability checks
+      logger.info { "agent##{load_agent.identifier} is running, waiting for system checks..." }
+      timeout_message("system checks on agent##{load_agent.identifier} to complete") do
+        wait_until do
+           ec2.client.describe_instance_status(:instance_ids => [load_agent.identifier])[:instance_status_set]
+            .reduce(true) do |state, e|
+              state &&= !e[:system_status][:details].select { |f|
+                f[:name] == 'reachability' && f[:status] == 'passed'
+              }.empty? && !e[:instance_status][:details].select { |f|
+                f[:name] == 'reachability' && f[:status] == 'passed'
+              }.empty?
+            end
+        end
+      end
+
       # SSH is available a while later even though status may be running
-      logger.info { "agent##{load_agent.identifier} is running, ensuring SSH access..." }
-      sleep(120)
-      logger.debug { "sleep over..."}
+      logger.info { "agent##{load_agent.identifier} passed system checks, ensuring SSH access..." }
       Hailstorm::Support::SSH.ensure_connection(load_agent.public_ip_address,
         self.user_name, ssh_options)
 
@@ -100,6 +114,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         timeout_message("#{agent_ec2_instance.id} to stop") do
           wait_until { agent_ec2_instance.status.eql?(:stopped) }
         end
+        load_agent.ec2_instance = nil
       end
     else
       logger.warn("Could not stop agent as identifier is not available")
@@ -292,7 +307,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
           jmeter_s3_object.content_length() # will fail if object does not exist
         rescue AWS::S3::Errors::NoSuchKey
           raise(Hailstorm::JMeterVersionNotFound.new(self.project.jmeter_version,
-                                                     Defaults::BUCKET_NAME))
+                                                     Defaults::BUCKET_NAME, jmeter_download_file_path))
         end
 
         # Check if the SSH security group exists, or create it
@@ -322,8 +337,14 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
             # install JAVA to /opt
             logger.info { "Installing Java for #{self.region} AMI..." }
             ssh.exec!("wget -q '#{java_download_url}' -O #{java_download_file()}")
-            ssh.exec!("chmod +x #{java_download_file}")
-            ssh.exec!("cd /opt && sudo #{self.user_home}/#{java_download_file}")
+            if java_download_file.match(/\.bin$/)
+              ssh.exec!("chmod +x #{java_download_file}")
+              ssh.exec!("cd /opt && sudo #{self.user_home}/#{java_download_file}")
+            elsif java_download_file.match(/\.tgz$/) or java_download_file.match(/\.tar\.gz$/)
+              ssh.exec!("cd /opt && sudo tar -xzf #{self.user_home}/#{java_download_file}")
+            else
+              raise(Hailstorm::JavaInstallationException.new(self.region, java_download_file))
+            end
             ssh.exec!("sudo ln -s /opt/#{jre_directory()} /opt/jre")
             # modify /etc/environment
             env_local_copy = File.join(Hailstorm.tmp_path, current_env_file_name)
@@ -544,10 +565,11 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     }
   end
 
-  def java_download_file()
+    # @return [String]
+    def java_download_file()
     @java_download_file ||= {
         '32-bit' => 'jre-6u31-linux-i586.bin',
-        '64-bit' => 'jre-6u33-linux-x64.bin'
+        '64-bit' => 'jre-8u144-linux-x64.tar.gz'
     }[arch(true)]
   end
 
@@ -558,7 +580,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   def jre_directory()
     @jre_directory ||= {
         '32-bit' => 'jre1.6.0_31',
-        '64-bit' => 'jre1.6.0_33'
+        '64-bit' => 'jre1.8.0_144'
     }[arch(true)]
   end
 
@@ -603,24 +625,31 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   end
 
   def default_max_threads_per_agent()
-    @default_max_threads_per_agent ||= {
-        Defaults::INSTANCE_TYPE => 50,
-        'm3.large' => 200,
-        'c3.2xlarge' => 800,
-        'c3.4xlarge' => 1000
-    }
-    @default_max_threads_per_agent[self.instance_type]
+    iclass, itype = self.instance_type.split(/\./).collect { |e| e.to_sym }
+    iclass ||= :m3
+    itype ||= :medium
+    iclass_factor = Defaults::INSTANCE_CLASS_SCALE_FACTOR[iclass] || 1
+    itype_factor = Defaults::INSTANCE_TYPE_STEP.call(Defaults::KNOWN_INSTANCE_TYPES.index(itype).to_i + 2)
+    iclass_factor * itype_factor * Defaults::MIN_THREADS_ONE_AGENT
   end
 
   # EC2 default settings
   class Defaults
-    AMI_ID              = 'brickred-hailstorm'
+    AMI_ID              = '3pg-hailstorm'
     SECURITY_GROUP      = 'Hailstorm'
     SECURITY_GROUP_DESC = 'Allows traffic to port 22 from anywhere and internal TCP, UDP and ICMP traffic'
     BUCKET_NAME         = 'brickred-perftest'
     SSH_USER            = 'ubuntu'
     SSH_IDENTITY        = 'hailstorm'
     INSTANCE_TYPE       = 'm3.medium'
+    INSTANCE_CLASS_SCALE_FACTOR = {
+        t2: 2, m4: 4, m3: 4, c4: 8, c3: 8, r4: 10, r3: 10, d2: 10, i2: 10, i3: 10, x1: 20
+    }.freeze
+    INSTANCE_TYPE_SCALE_FACTOR = 2
+    KNOWN_INSTANCE_TYPES = [:nano, :micro, :small, :medium, :large, :xlarge, '2xlarge'.to_sym, '4xlarge'.to_sym,
+                            '10xlarge'.to_sym, '16xlarge'.to_sym, '32xlarge'.to_sym].freeze
+    INSTANCE_TYPE_STEP = lambda {|n| a, b, s = 1, 1, 0; (n - 1).times {s = a + b; a = b; b = s }; s}
+    MIN_THREADS_ONE_AGENT = 2
   end
 
 end

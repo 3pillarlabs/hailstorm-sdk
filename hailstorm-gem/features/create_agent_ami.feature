@@ -1,5 +1,8 @@
 Feature: Create Amazon Machine Image
 
+Background: Hailstorm application is initialized
+  Given Hailstorm is initialized with a project 'create_agent_ami'
+
 Scenario Outline: Choose the correct AMI for an AWS region
   Given Amazon is chosen as the cluster
   When I choose '<region>' region
@@ -21,3 +24,14 @@ Scenario Outline: Choose the correct AMI for an AWS region
   |ap-northeast-2|
   |ap-south-1|
   |sa-east-1|
+
+
+Scenario: Create or use an existing base AMI
+  Given Amazon is chosen as the cluster
+  When I choose 'us-east-1' region
+  And the JMeter version for the project is '3.2'
+  And create the AMI
+  Then an AMI with name '3pg-hailstorm-j3.2-x86_64' should exist
+  And installed JMeter version should be '3.2'
+
+

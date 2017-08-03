@@ -13,6 +13,8 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
   belongs_to :jmeter_plan
   
   attr_writer :first_use
+
+  attr_accessor :ec2_instance
   
   after_initialize do |agent|
     self.first_use = agent.new_record?
