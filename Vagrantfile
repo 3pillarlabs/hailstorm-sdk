@@ -24,6 +24,7 @@ Vagrant.configure(2) do |config|
       vb.cpus = 2
       vb.customize ["modifyvm", :id, "--nictype1", "virtio"]
   	end
+    dev.vm.network "private_network", ip: "192.168.17.10"
   end
 
 	# STACK
@@ -104,6 +105,9 @@ Vagrant.configure(2) do |config|
 
 	# hailstorm-web
 	config.vm.provision "hailstorm_web", :type => :shell, :path => 'install-hailstorm-web.sh'
+
+	# hailstorm-web
+	config.vm.provision "hailstorm_site", :type => :shell, :path => 'install-hailstorm-site.sh'
 
   config.vm.define "awsdemo", autostart: false do |demo|
     demo.vm.box = "dummy"
