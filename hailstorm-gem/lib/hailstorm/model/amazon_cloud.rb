@@ -629,13 +629,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     iclass ||= :m3
     itype ||= :medium
     iclass_factor = Defaults::INSTANCE_CLASS_SCALE_FACTOR[iclass] || 1
-    itype_factor = Defaults::INSTANCE_TYPE_STEP.call(Defaults::KNOWN_INSTANCE_TYPES.index(itype).to_i + 1)
-    self.class.round_off_max_threads_per_agent(iclass_factor * itype_factor * Defaults::MIN_THREADS_ONE_AGENT)
-  end
-
-  def self.round_off_max_threads_per_agent(computed)
-    pivot = computed <= 10 ? 5 : (computed <= 50 ? 10 : 50)
-    (computed.to_f / pivot).round() * pivot
+    itype_factor = Defaults::INSTANCE_TYPE_STEP.call(Defaults::KNOWN_INSTANCE_TYPES.index(itype).to_i + 2)
+    iclass_factor * itype_factor * Defaults::MIN_THREADS_ONE_AGENT
   end
 
   # EC2 default settings
@@ -653,7 +648,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     INSTANCE_TYPE_SCALE_FACTOR = 2
     KNOWN_INSTANCE_TYPES = [:nano, :micro, :small, :medium, :large, :xlarge, '2xlarge'.to_sym, '4xlarge'.to_sym,
                             '10xlarge'.to_sym, '16xlarge'.to_sym, '32xlarge'.to_sym].freeze
-    INSTANCE_TYPE_STEP = lambda {|n| a, b, s = 1, 1, 1; (n - 1).times {s = a + b; a = b; b = s }; s}
+    INSTANCE_TYPE_STEP = lambda {|n| a, b, s = 1, 1, 0; (n - 1).times {s = a + b; a = b; b = s }; s}
     MIN_THREADS_ONE_AGENT = 2
   end
 
