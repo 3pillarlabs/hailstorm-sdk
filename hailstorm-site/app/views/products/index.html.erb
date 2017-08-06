@@ -1,8 +1,17 @@
 <p id="notice"><%= notice %></p>
 
-<h1>Products</h1>
+<div class="page-header">
+  <div class="row">
+    <div class="col-xs-10">
+      <h1>Products</h1>
+    </div>
+    <div class="col-xs-2">
+      <%= link_to 'New Product', new_product_path, class: 'btn btn-raised btn-info' %>
+    </div>
+  </div>
+</div>
 
-<table>
+<table class="table">
   <thead>
     <tr>
       <th>Sku</th>
@@ -20,14 +29,10 @@
         <td><%= product.title %></td>
         <td><%= product.description %></td>
         <td><%= product.price %></td>
-        <td><%= link_to 'Show', product %></td>
-        <td><%= link_to 'Edit', edit_product_path(product) %></td>
-        <td><%= link_to 'Destroy', product, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+        <td><%= link_to 'Show', product, {class: 'btn btn-info'} %></td>
+        <td><%= link_to 'Edit', edit_product_path(product), {class: 'btn btn-link'} %></td>
+        <td><%= link_to 'Destroy', product, method: :delete, data: { confirm: 'Are you sure?' }, class: 'btn btn-danger' %></td>
       </tr>
     <% end %>
   </tbody>
 </table>
-
-<br>
-
-<%= link_to 'New Product', new_product_path %>
