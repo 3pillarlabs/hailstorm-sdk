@@ -11,5 +11,11 @@ if [ $? -ne 0 ]; then
 	rvm gemset create hailstorm
 fi
 
-exit
+rvm list | grep 'ruby-2.4.1'
+if [ $? -ne 0 ]; then
+	rvm install ruby-2.4.1
+	rvm use ruby-2.4.1
+	rvm gemset create hailstorm
+fi
 
+exit
