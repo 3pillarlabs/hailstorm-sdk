@@ -66,5 +66,6 @@ Then(/^installed JMeter version should be '(.+?)'$/) do |expected_jmeter_version
     expect(jmeter_version_out).to include(expected_jmeter_version)
   ensure
     load_agent.ec2_instance.terminate() if load_agent.ec2_instance
+    @aws.cleanup()
   end
 end
