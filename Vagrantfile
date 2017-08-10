@@ -104,9 +104,15 @@ Vagrant.configure(2) do |config|
     credentials_file_path = File.join(ENV['HOME'], '.aws', 'credentials')
     if File.exist?(credentials_file_path)
       keys = File.open(credentials_file_path, 'r') do |f|
-        f.readlines.collect {|line| line.chomp}.reduce({}) {|k, e| var,val = e.split(/=/); k.merge(var => val.gsub("'", ""))}
+        f.readlines.collect {|line|
+          line.chomp
+        }
+        .reduce({}) {|k, e|
+            var,val = e.split(/\s*=\s*/)
+            val ? k.merge(var => val.gsub("'", "")) : k
+        }
       end
-      [keys['AWS_ACCESS_KEY_ID'], keys['AWS_SECRET_ACCESS_KEY']]
+      [keys['aws_access_key_id'], keys['aws_secret_access_key']]
     else
       [ENV['AWS_ACCESS_KEY_ID'], ENV['AWS_SECRET_ACCESS_KEY']]
     end
