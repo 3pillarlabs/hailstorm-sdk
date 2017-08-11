@@ -108,13 +108,22 @@ Vagrant.configure(2) do |config|
           line.chomp
         }
         .reduce({}) {|k, e|
-            var,val = e.split(/\s*=\s*/)
-            val ? k.merge(var => val.gsub("'", "")) : k
+            if e =~ /^\[(.+?)\]$/
+              profile = $1
+              k.merge(profile => {}, last: profile)
+            elsif e =~ /^(.+?)\s*=\s*['"]?(.+?)['"]?$/
+              profile = k[:last]
+              k[profile][$1] = $2
+              k
+            else
+              k
+            end
         }
       end
-      [keys['aws_access_key_id'], keys['aws_secret_access_key']]
+      profile = keys.fetch(ENV['AWS_PROFILE'] || 'default')
+      [profile['aws_access_key_id'], profile['aws_secret_access_key']]
     else
-      [ENV['AWS_ACCESS_KEY_ID'], ENV['AWS_SECRET_ACCESS_KEY']]
+      raise "#{credentials_file_path} not found"
     end
   end
 
