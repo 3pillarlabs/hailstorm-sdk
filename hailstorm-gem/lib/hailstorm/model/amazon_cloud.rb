@@ -66,6 +66,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
               self.zone.nil? ? {} : {:availability_zone => self.zone}
           )
         )
+        agent_ec2_instance.tag('Name', value: "#{self.project.project_code}-#{load_agent.class.name.underscore}-#{load_agent.id}")
         timeout_message("#{agent_ec2_instance.id} to start") do
           wait_until { agent_ec2_instance.exists? && agent_ec2_instance.status.eql?(:running) }
         end
