@@ -1,5 +1,3 @@
-# AmazonCloud model - models the configuration for creating load agent AMI
-# on the Amazon EC2 cloud.
 # @author Sayantam Dey
 
 require 'aws'
@@ -380,6 +378,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
             ssh.exec!("wget -q '#{jmeter_download_url}' -O #{jmeter_download_file}")
             ssh.exec!("tar -xzf #{jmeter_download_file}")
             ssh.exec!("ln -s #{self.user_home}/#{jmeter_directory} #{self.user_home}/jmeter")
+            ssh.exec!("echo '# Added by Hailstorm' >> #{self.user_home}/jmeter/bin/jmeter.properties")
+            ssh.exec!("echo 'jmeter.save.saveservice.hostname=true' >> #{self.user_home}/jmeter/bin/jmeter.properties")
+            ssh.exec!("echo 'jmeter.save.saveservice.thread_counts=true' >> #{self.user_home}/jmeter/bin/jmeter.properties")
 
           end # end ssh
 
