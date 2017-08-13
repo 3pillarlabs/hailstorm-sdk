@@ -38,6 +38,8 @@ Vagrant.configure(2) do |config|
 	#   git
 	#   npm
 
+  config.vm.provision "sync_clock", :type => :shell, :inline => 'ntpdate ntp.ubuntu.com', :run => 'always'
+
   config.vm.provision "vagrant_user", :type => :shell, :path => 'create_vagrant_user.sh'
 
   config.vm.provision "apt", :type => :shell, :inline => <<-SHELL
