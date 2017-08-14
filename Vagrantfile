@@ -201,7 +201,7 @@ Vagrant.configure(2) do |config|
     end
 
   	# hailstorm-site
-  	site.vm.provision "hailstorm_site", :type => :shell, :path => 'install-hailstorm-site.sh'
+  	site.vm.provision "hailstorm_site", :type => :shell, :path => 'install-hailstorm-site.sh', :run => 'always'
   end
 
 end
