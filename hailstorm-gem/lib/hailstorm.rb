@@ -6,9 +6,9 @@ require 'active_record'
 require 'action_dispatch/http/mime_type'
 require 'action_view'
 
-require "hailstorm/version"
+require 'hailstorm/version'
 
-require "hailstorm/behavior/loggable"
+require 'hailstorm/behavior/loggable'
 
 # Defines the namespace and module static accessors.
 # @author Sayantam Dey
@@ -33,20 +33,20 @@ module Hailstorm
 
   # Directory name used to store database and other files.
   def self.db_dir
-    "db"
+    'db'
   end
 
   # Directory name for application specific (JMeter) artifacts
   def self.app_dir
-    "jmeter"
+    'jmeter'
   end
 
   def self.log_dir
-    "log"
+    'log'
   end
 
   def self.tmp_dir
-    "tmp"
+    'tmp'
   end
 
   def self.tmp_path
@@ -79,10 +79,6 @@ module Hailstorm
 
   def self.env
     (ENV['HAILSTORM_ENV'] || 'production').to_sym
-  end
-
-  def self.gem_source
-    'http://labs.3pillarglobal.com:8808'
   end
 
   def self.log4j_dir
