@@ -14,10 +14,7 @@ Given(/^Amazon is chosen as the cluster$/) do
   require 'hailstorm/model/amazon_cloud'
   @aws = Hailstorm::Model::AmazonCloud.new()
   @aws.project = @project
-  key_file_path = File.expand_path('../../data/keys.yml', __FILE__)
-  keys = YAML.load_file(key_file_path)
-  @aws.access_key = keys['access_key']
-  @aws.secret_key = keys['secret_key']
+  @aws.access_key, @aws.secret_key = aws_keys()
   @aws.active = true
 end
 
