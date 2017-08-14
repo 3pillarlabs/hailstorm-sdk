@@ -34,14 +34,14 @@ describe Hailstorm::Model::JmeterPlan do
     end
   end
 
-  context 'when a property with default a value in plan is not defined in the model properties' do
+  context 'when a property with default value in plan is not defined in the model properties' do
     it 'should be valid' do
       @jmeter_plan.properties_map = { NumUsers: 10, Duration: 180, ServerName: 'foo.com' }.stringify_keys
       expect(@jmeter_plan).to be_valid
     end
   end
 
-  context 'when property with default value is defined in a model properties' do
+  context 'when property with default value is defined in model properties as well' do
     it 'the value from model properties takes precedence' do
       @jmeter_plan.properties_map = { NumUsers: 10, Duration: 180, ServerName: 'foo.com', RampUp: 10 }.stringify_keys
       @jmeter_plan.send(:extracted_property_names)
