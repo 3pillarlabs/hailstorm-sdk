@@ -25,7 +25,6 @@ Feature: Generate report
       | NumUsers       |    10 |
       | Duration       |   180 |
       | RampUp         |     0 |
-      | StartupDelay   |     0 |
     And configure following amazon clusters
       | region    | max_threads_per_agent |
       | us-east-1 |                       |
@@ -56,7 +55,6 @@ Feature: Generate report
       | NumUsers       |    20 |
       | Duration       |   180 |
       | RampUp         |     0 |
-      | StartupDelay   |     0 |
     And configure following amazon clusters
       | region    | max_threads_per_agent |
       | us-east-1 |                       |
@@ -80,7 +78,6 @@ Feature: Generate report
       | NumUsers       |    30 |
       | Duration       |   180 |
       | RampUp         |     0 |
-      | StartupDelay   |     0 |
     And configure following amazon clusters
       | region    | max_threads_per_agent |
       | us-east-1 | 25                    |
@@ -103,7 +100,6 @@ Feature: Generate report
       | NumUsers       |    20 |
       | Duration       |   180 |
       | RampUp         |     0 |
-      | StartupDelay   |     0 |
     And configure following amazon clusters
       | region    | max_threads_per_agent |
       | us-east-1 | 25                    |
@@ -125,7 +121,6 @@ Feature: Generate report
       | NumUsers       |    10 |
       | Duration       |   180 |
       | RampUp         |     0 |
-      | StartupDelay   |     0 |
     And configure following amazon clusters
       | region    | max_threads_per_agent |
       | us-east-1 | 25                    |
