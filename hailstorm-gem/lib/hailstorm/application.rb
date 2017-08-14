@@ -408,7 +408,7 @@ Continue using old version?
     # Process Gemfile - add additional platform specific gems
     engine = ActionView::Base.new()
     engine.assign({:jruby_pageant => !File::ALT_SEPARATOR.nil?,  # File::ALT_SEPARATOR is nil on non-windows
-                   :gem_source => Hailstorm.gem_source, :gem_path => gem_path})
+                   :gem_path => gem_path})
     File.open(File.join(root_path, 'Gemfile'), 'w') do |f|
       f.print(engine.render(:file => File.join(skeleton_path, 'Gemfile')))
     end
