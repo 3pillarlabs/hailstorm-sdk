@@ -379,9 +379,12 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
             ssh.exec!("wget -q '#{jmeter_download_url}' -O #{jmeter_download_file}")
             ssh.exec!("tar -xzf #{jmeter_download_file}")
             ssh.exec!("ln -s #{self.user_home}/#{jmeter_directory} #{self.user_home}/jmeter")
-            ssh.exec!("echo '# Added by Hailstorm' >> #{self.user_home}/jmeter/bin/jmeter.properties")
-            ssh.exec!("echo 'jmeter.save.saveservice.hostname=true' >> #{self.user_home}/jmeter/bin/jmeter.properties")
-            ssh.exec!("echo 'jmeter.save.saveservice.thread_counts=true' >> #{self.user_home}/jmeter/bin/jmeter.properties")
+
+            jmeter_props_remote_path = "#{self.user_home}/jmeter/bin/user.properties"
+            ssh.exec!("echo '# Added by Hailstorm' >> #{jmeter_props_remote_path}")
+            ssh.exec!("echo 'jmeter.save.saveservice.output_format=xml' >> #{jmeter_props_remote_path}")
+            ssh.exec!("echo 'jmeter.save.saveservice.hostname=true' >> #{jmeter_props_remote_path}")
+            ssh.exec!("echo 'jmeter.save.saveservice.thread_counts=true' >> #{jmeter_props_remote_path}")
 
           end # end ssh
 
