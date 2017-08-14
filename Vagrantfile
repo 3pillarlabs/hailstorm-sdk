@@ -38,6 +38,8 @@ Vagrant.configure(2) do |config|
 	#   git
 	#   npm
 
+  config.vm.provision "sync_clock", :type => :shell, :inline => 'ntpdate ntp.ubuntu.com', :run => 'always'
+
   config.vm.provision "vagrant_user", :type => :shell, :path => 'create_vagrant_user.sh'
 
   config.vm.provision "apt", :type => :shell, :inline => <<-SHELL
@@ -104,11 +106,26 @@ Vagrant.configure(2) do |config|
     credentials_file_path = File.join(ENV['HOME'], '.aws', 'credentials')
     if File.exist?(credentials_file_path)
       keys = File.open(credentials_file_path, 'r') do |f|
-        f.readlines.collect {|line| line.chomp}.reduce({}) {|k, e| var,val = e.split(/=/); k.merge(var => val.gsub("'", ""))}
+        f.readlines.collect {|line|
+          line.chomp
+        }
+        .reduce({}) {|k, e|
+            if e =~ /^\[(.+?)\]$/
+              profile = $1
+              k.merge(profile => {}, last: profile)
+            elsif e =~ /^(.+?)\s*=\s*['"]?(.+?)['"]?$/
+              profile = k[:last]
+              k[profile][$1] = $2
+              k
+            else
+              k
+            end
+        }
       end
-      [keys['AWS_ACCESS_KEY_ID'], keys['AWS_SECRET_ACCESS_KEY']]
+      profile = keys.fetch(ENV['AWS_PROFILE'] || 'default')
+      [profile['aws_access_key_id'], profile['aws_secret_access_key']]
     else
-      [ENV['AWS_ACCESS_KEY_ID'], ENV['AWS_SECRET_ACCESS_KEY']]
+      raise "#{credentials_file_path} not found"
     end
   end
 
@@ -184,7 +201,7 @@ Vagrant.configure(2) do |config|
     end
 
   	# hailstorm-site
-  	site.vm.provision "hailstorm_site", :type => :shell, :path => 'install-hailstorm-site.sh'
+  	site.vm.provision "hailstorm_site", :type => :shell, :path => 'install-hailstorm-site.sh', :run => 'always'
   end
 
 end

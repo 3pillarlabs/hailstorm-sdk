@@ -4,7 +4,7 @@ require 'yaml'
 require 'hailstorm/model/amazon_cloud'
 
 describe Hailstorm::Model::AmazonCloud do
-  before(:all) do
+  before(:each) do
     @aws = Hailstorm::Model::AmazonCloud.new()
   end
 
@@ -54,6 +54,15 @@ describe Hailstorm::Model::AmazonCloud do
       expect(Hailstorm::Model::AmazonCloud.round_off_max_threads_per_agent(75)).to eq(100)
       expect(Hailstorm::Model::AmazonCloud.round_off_max_threads_per_agent(155)).to eq(150)
       expect(Hailstorm::Model::AmazonCloud.round_off_max_threads_per_agent(375)).to eq(400)
+    end
+  end
+
+  context '#new' do
+    it 'should be valid with the keys and region' do
+      @aws.access_key = 'foo'
+      @aws.secret_key = 'bar'
+      @aws.region = 'ua-east-1'
+      expect(@aws).to be_valid
     end
   end
 end

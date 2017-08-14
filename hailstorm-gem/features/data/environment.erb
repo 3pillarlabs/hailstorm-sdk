@@ -6,7 +6,7 @@ Hailstorm.application.config do |config|
         # default properties for all app/**/*.jmx files
         jmeter.properties() do |map|
         <%- @properties.each do |p| %>
-            map['<%= p.property %>'] = <%= p.value =~ /[a-zA-Z]/ ? "'#{p.value}'" : p.value %>
+            map['<%= raw p.property %>'] = <%= raw(p.value =~ /[a-zA-Z]/ ? "'#{p.value}'": p.value) %>
         <%- end %>
         end
     end
@@ -26,12 +26,12 @@ Hailstorm.application.config do |config|
     # Target configuration
     config.monitors(:nmon) do |monitor|
         monitor.executable_path   = '/usr/bin/nmon'
-        monitor.ssh_identity      = 'testroid_identity'
-        monitor.user_name         = 'brickred'
+        monitor.ssh_identity      = 'all_purpose'
+        monitor.user_name         = 'ubuntu'
         monitor.sampling_interval = 5
 
         monitor.groups('Application Server') do |group|
-            group.hosts('testdroid.3pillarglobal.com')
+            group.hosts('<%= @monitor_host %>')
         end
     end
 

@@ -1,5 +1,3 @@
-# AmazonCloud model - models the configuration for creating load agent AMI
-# on the Amazon EC2 cloud.
 # @author Sayantam Dey
 
 require 'aws'
@@ -68,6 +66,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
               self.zone.nil? ? {} : {:availability_zone => self.zone}
           )
         )
+        agent_ec2_instance.tag('Name', value: "#{self.project.project_code}-#{load_agent.class.name.underscore}-#{load_agent.id}")
         timeout_message("#{agent_ec2_instance.id} to start") do
           wait_until { agent_ec2_instance.exists? && agent_ec2_instance.status.eql?(:running) }
         end
@@ -380,6 +379,12 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
             ssh.exec!("wget -q '#{jmeter_download_url}' -O #{jmeter_download_file}")
             ssh.exec!("tar -xzf #{jmeter_download_file}")
             ssh.exec!("ln -s #{self.user_home}/#{jmeter_directory} #{self.user_home}/jmeter")
+
+            jmeter_props_remote_path = "#{self.user_home}/jmeter/bin/user.properties"
+            ssh.exec!("echo '# Added by Hailstorm' >> #{jmeter_props_remote_path}")
+            ssh.exec!("echo 'jmeter.save.saveservice.output_format=xml' >> #{jmeter_props_remote_path}")
+            ssh.exec!("echo 'jmeter.save.saveservice.hostname=true' >> #{jmeter_props_remote_path}")
+            ssh.exec!("echo 'jmeter.save.saveservice.thread_counts=true' >> #{jmeter_props_remote_path}")
 
           end # end ssh
 

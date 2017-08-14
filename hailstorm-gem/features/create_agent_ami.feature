@@ -32,6 +32,14 @@ Scenario: Create or use an existing base AMI
   And the JMeter version for the project is '3.2'
   And create the AMI
   Then an AMI with name '3pg-hailstorm-j3.2-x86_64' should exist
-  And installed JMeter version should be '3.2'
+
+@terminate_instance
+Scenario: New Load Agent is created from existing base AMI
+  Given Amazon is chosen as the cluster
+  And I choose 'us-east-1' region
+  And an AMI with name '3pg-hailstorm-j3.2-x86_64' exists
+  When I start a new load agent
+  Then installed JMeter version should be '3.2'
+  And custom properties should be added
 
 

@@ -55,4 +55,7 @@ rm -f /etc/nginx/sites-enabled/hailstorm-site
 ln -s /etc/nginx/sites-available/hailstorm-site /etc/nginx/sites-enabled/hailstorm-site
 service nginx reload
 
+# nmon for server monitoring
+which nmon >/dev/null 2>&1 || apt-get install -y nmon
+
 exit
