@@ -21,8 +21,9 @@ class Hailstorm::Support::SSH
   def self.start(host, user, options = {}, &block)
     
     logger.debug { "#{self}.#{__method__}" }
+    ssh_options = { user_known_hosts_file: '/dev/null' }.merge(options)
     if block_given?
-      Net::SSH.start(host, user, options) do |ssh|
+      Net::SSH.start(host, user, ssh_options) do |ssh|
         ssh.extend(ConnectionSessionInstanceMethods)
         ssh.logger = logger
         ssh.class_eval do
@@ -32,7 +33,7 @@ class Hailstorm::Support::SSH
         yield ssh
       end
     else
-      ssh = Net::SSH.start(host, user, options)
+      ssh = Net::SSH.start(host, user, ssh_options)
       ssh.extend(ConnectionSessionInstanceMethods)
       ssh.logger = logger
       ssh.class_eval do
