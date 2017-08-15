@@ -25,8 +25,10 @@ class Hailstorm::Application
   # Initialize the application and connects to the database
   # @param [String] app_name the application name
   # @param [String] boot_file_path full path to application config/boot.rb
+  # @param [Hash] connection_spec map of properties for the database connection
+  # @param [Hailstorm::Support::Configuration] env_config config object
   # @return nil
-  def self.initialize!(app_name, boot_file_path)
+  def self.initialize!(app_name, boot_file_path, connection_spec = nil, env_config = nil)
 
     # in included gem version of i18n this value is set to null by default
     # this will switch to default locale if in case of invalid locale
@@ -54,7 +56,12 @@ class Hailstorm::Application
     Hailstorm.application = self.new
     Hailstorm.application.clear_tmp_dir()
     Hailstorm.application.check_for_updates()
-    Hailstorm.application.load_config(true)
+    if env_config
+      Hailstorm.application.config = env_config
+    else
+      Hailstorm.application.load_config(true)
+    end
+    Hailstorm.application.connection_spec = connection_spec
     Hailstorm.application.check_database()
   end
 
@@ -182,6 +189,8 @@ Type help to get started...
       return @config
     end
   end
+
+  attr_writer :config
 
   def check_database
 
@@ -315,6 +324,12 @@ Continue using old version?
     .first_or_create!()
   end
 
+  # Writer for @connection_spec
+  # @param [Hash] spec
+  def connection_spec=(spec)
+    @connection_spec = spec.symbolize_keys if spec
+  end
+
   private
 
   def database_name()
@@ -393,7 +408,7 @@ Continue using old version?
     # Process Gemfile - add additional platform specific gems
     engine = ActionView::Base.new()
     engine.assign({:jruby_pageant => !File::ALT_SEPARATOR.nil?,  # File::ALT_SEPARATOR is nil on non-windows
-                   :gem_source => Hailstorm.gem_source, :gem_path => gem_path})
+                   :gem_path => gem_path})
     File.open(File.join(root_path, 'Gemfile'), 'w') do |f|
       f.print(engine.render(:file => File.join(skeleton_path, 'Gemfile')))
     end

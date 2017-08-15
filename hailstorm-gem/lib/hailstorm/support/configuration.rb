@@ -112,7 +112,7 @@ class Hailstorm::Support::Configuration
     # Amazon EC2 secret key
     attr_accessor :secret_key
   
-    # Name of ssh_identity file. The file should be present in application db directory.
+    # Name of ssh_identity file. The file should be present in application config directory.
     attr_accessor :ssh_identity
     
     # Amazon EC2 region for creating the AMI

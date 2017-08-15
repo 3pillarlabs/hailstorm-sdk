@@ -35,9 +35,9 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   #   ${__property(a)}
   #   ${_P(a)}
   #   ${__property(a, 1)}
-  # In all cases above the regular expression will yield 'a' as the first (and only)
-  # subgroup.
-  PropertyNameRexp = Regexp.new('^\$\{__(?:P|property)\((.+?)(?:\)|\s*,\s*(?:.+?)\))\}$')
+  # In the first two cases above the regular expression will yield 'a' as the first (and only)
+  # subgroup, while the third case will yied the default value as the second subgroup
+  PROPERTY_NAME_REXP = Regexp.new('^\$\{__(?:P|property)\((.+?)(?:\)|\s*,\s*(.+?)\))\}$')
   
   JtlFileExtn = 'jtl'
   
@@ -580,7 +580,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   # extracts the property name from the property from the usage  
   def extract_property_name(property_content)
 
-    rexp_matcher = PropertyNameRexp.match(property_content.strip)
+    rexp_matcher = PROPERTY_NAME_REXP.match(property_content.strip)
     rexp_matcher.nil? ? nil : rexp_matcher[1]
   end
 
@@ -597,14 +597,16 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
       @extracted_property_names = []
       jmeter_document do |doc|
         doc.xpath('//*[contains(text(),"${__")]').each do |prop_element|
-          match_data = PropertyNameRexp.match(prop_element.content)
+          match_data = PROPERTY_NAME_REXP.match(prop_element.content)
           unless match_data.nil?
             property_name = match_data[1]
+            default_value = match_data[2] if match_data.size > 2
             parent_thread_group = prop_element.ancestors('ThreadGroup')
                                               .first()
 
             if parent_thread_group.nil? or (eval(parent_thread_group["enabled"]) rescue false)
               @extracted_property_names.push(property_name)
+              properties_map[property_name] = default_value unless properties_map.key?(property_name)
             end
           end
         end

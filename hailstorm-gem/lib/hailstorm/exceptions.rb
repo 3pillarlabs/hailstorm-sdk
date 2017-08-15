@@ -51,17 +51,19 @@ module Hailstorm
 
   class JMeterVersionNotFound < DiagnosticAwareException
     
-    attr_reader :jmeter_version, :bucket_name
+    attr_reader :jmeter_version, :bucket_name, :jmeter_file_path
 
     # @param [Object] jmeter_version
     # @param [String] bucket_name
-    def initialize(jmeter_version, bucket_name)
+    # @param [String] jmeter_file_path
+    def initialize(jmeter_version, bucket_name, jmeter_file_path)
       @jmeter_version = jmeter_version
       @bucket_name = bucket_name
+      @jmeter_file_path = jmeter_file_path
     end
 
     def diagnostics
-      %{The JMeter version '#{jmeter_version}' specified in
+      %{The JMeter version '#{jmeter_version}' from '#{jmeter_file_path}' specified in
         [config/environment.rb] cannot be installed. If you would like to use
         a custom JMeter package, make sure the associated {VERSION}.tgz file is
         uploaded to Amazon S3 bucket '#{bucket_name}'. If you are unsure,
@@ -84,7 +86,7 @@ module Hailstorm
       %{AMI could not be created in AWS region '#{region}'. The failure reason
         from Amazon is: "[#{reason.code}] #{reason.message}". The Amazon services for the affected
         region may be down. You can try the 'setup force' command. If the
-        problem perists, report the issue.}
+        problem persists, report the issue.}
     end
   end
 
@@ -137,4 +139,21 @@ module Hailstorm
       2) JMETER_HOME and required path variable are set and accessible}
     end
   end
+
+  class JavaInstallationException < AmiCreationFailure
+
+    def initialize(region, file_name)
+      @region = region
+      @file_name = file_name
+    end
+
+    def diagnostics
+      %{Hailstorm cannot install JRE from the configured installer. Expect the file to be either:
+      - An executable with extension .bin
+      - A tarball with extension .tgz or .tar.gz
+      The configured installer is - '#{@file_name}'
+      }
+    end
+  end
+
 end
