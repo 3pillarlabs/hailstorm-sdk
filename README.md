@@ -14,15 +14,14 @@ This SDK can be used to create a virtual machine that contains all the applicati
 1. For the AWS setup, you need to install the ``vagrant-aws`` plugin. Follow the instructions from the [project page](https://github.com/mitchellh/vagrant-aws).
 
 ## Setup
-Follow these steps for a development or release setup. If you plan to use Hailstorm for performance testing, use the release setup.
-
-### Development
-
-#### Local VM
+Follow these steps for a development or release setup. If you plan to use Hailstorm for performance testing, use the release setup. First you need to create the VM -
 ```bash
 vagrant up dev
 ```
 This will take a long time for creating and provisioning the VM with everything you need, so you can refill your coffee if you'd like!
+
+### Release
+Follow these steps for performance testing an application -
 
 ##### Hailstorm CLI
 
@@ -36,7 +35,7 @@ Next, set the hailstorm environment -
 ```bash
 rvm use @hailstorm
 ```
-You need to do this every time you SSH into the VM.
+You need to do this every time you SSH into the VM, you might want to add it to ``~/.bashrc`` or ``~/.bash_profile``.
 
 Suppose you wanted to create a new Hailstorm project named ``getting_started`` -
 ```bash
@@ -44,12 +43,14 @@ Suppose you wanted to create a new Hailstorm project named ``getting_started`` -
 ```
 
 This will create the skeleton structure. To get started with your project -
-```
+```bash
 cd getting_started
 bundle check
 ./script/hailstorm
 ```
 This should display the Hailstorm prompt.
+
+### Development
 
 #### hailstorm-gem Development
 
@@ -61,8 +62,3 @@ gem install --no-rdoc --no-ri bundler
 bundle install
 ```
 The next time you log into the VM, just ``rvm use @hailstorm-gem-dev``.
-
-
-### Release
-
-TBD
