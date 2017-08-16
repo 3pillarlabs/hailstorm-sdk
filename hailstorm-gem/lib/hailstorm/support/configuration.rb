@@ -25,6 +25,10 @@ class Hailstorm::Support::Configuration
     # for load generation. Multiple files can be specified using an array. File extensions
     # are not needed. If only one test plan is present, this configuration is not needed.
     attr_accessor :test_plans
+
+    # URL for a custom JMeter installer. The installer file must be a tar gzip and match:
+    # /^[a-zA-Z][a-zA-Z0-9_\-\.]*\.ta?r?\.?gz/
+    attr_accessor :custom_installer_url
     
     # Generic or test_plan specific properties. These will be used when constructing
     # and issuing a JMeter command
@@ -57,10 +61,10 @@ class Hailstorm::Support::Configuration
   def jmeter(&block)
 
     @jmeter ||= JMeter.new unless self.frozen?
-    if block_given? 
+    if block_given?
       yield(@jmeter)
     else
-      return (@jmeter || JMeter.new)
+      (@jmeter || JMeter.new)
     end
   end
   
@@ -192,7 +196,7 @@ class Hailstorm::Support::Configuration
       yield monitor
       @monitors.push(monitor)
     else
-      return (@monitors || [])
+      (@monitors || [])
     end
   end
   
@@ -281,7 +285,7 @@ class Hailstorm::Support::Configuration
       end
     end
 
-    return host_defs
+    host_defs
   end
   
   # Computes the SHA2 hash of the environment file and contents/structure of JMeter
