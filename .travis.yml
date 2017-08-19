@@ -14,7 +14,7 @@ jdk:
 install: bundle install
 gemfile: hailstorm-gem/Gemfile
 script:
-  - rspec
+  - ./run-travis-build.sh
 
 before_script:
   - mysql -e 'grant all privileges on *.* to "hailstorm"@"localhost" identified by "hailstorm";'
