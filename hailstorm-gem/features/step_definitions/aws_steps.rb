@@ -89,3 +89,13 @@ After do |scenario|
     end
   end
 end
+
+When(/^(?:the |)[jJ][mM]eter installer URL for the project is '(.+?)'$/) do |jmeter_installer_url|
+  @project.custom_jmeter_installer_url = jmeter_installer_url
+  @project.jmeter_version = @project.send(:jmeter_version_from_installer_url)
+end
+
+Then(/^the AMI to be created would be named '(.+?)'$/) do |expected_ami_name|
+  actual_ami_name = @aws.send(:ami_id)
+  expect(actual_ami_name).to eq(expected_ami_name)
+end
