@@ -17,4 +17,4 @@ script:
   - ./run-travis-build.sh
 
 before_script:
-  - mysql -e 'grant all privileges on *.* to "hailstorm"@"localhost" identified by "hailstorm";'
+  - mysql -e 'grant all privileges on *.* to "hailstorm_dev"@"localhost" identified by "hailstorm_dev";'
