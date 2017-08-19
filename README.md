@@ -62,3 +62,7 @@ gem install --no-rdoc --no-ri bundler
 bundle install
 ```
 The next time you log into the VM, just ``rvm use @hailstorm-gem-dev``.
+
+### Travis CI
+
+_In Progress_

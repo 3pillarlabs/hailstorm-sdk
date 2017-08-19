@@ -1,0 +1,20 @@
+# Travis Configuration
+sudo: enabled
+dist: trusty
+
+services:
+  - mysql
+
+language: ruby
+rvm:
+  - jruby
+jdk:
+  - oraclejdk8
+
+install: bundle install
+gemfile: hailstorm-gem/Gemfile
+script:
+  - ./run-travis-build.sh
+
+before_script:
+  - mysql -e 'grant all privileges on *.* to "hailstorm_dev"@"localhost" identified by "hailstorm_dev";'
