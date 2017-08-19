@@ -1,6 +1,8 @@
 # Project model.
 # @author Sayantam Dey
 
+require 'uri'
+
 require 'hailstorm'
 require 'hailstorm/model'
 require 'hailstorm/model/jmeter_plan'
@@ -21,27 +23,42 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   has_one  :current_execution_cycle, -> { where(status: "started") },
            :class_name => 'Hailstorm::Model::ExecutionCycle', :order => "started_at DESC"
 
+  validate :custom_jmeter_installer_url_format
+
   before_save :set_defaults
 
   # Sets up the project for first time or subsequent use
   def setup(force = false, invoked_from_start = false)
 
     if invoked_from_start or settings_modified? or force
-      logger.info("Setting up the project...")
+      logger.info('Setting up the project...')
 
-      self.update_attributes!(:serial_version => config.serial_version(),
-                              :master_slave_mode => config.master_slave_mode,
-                              :samples_breakup_interval => config.samples_breakup_interval,
-                              :jmeter_version => config.jmeter.version)
+      if config.jmeter.custom_installer_url
+        logger.warn {
+          "Ignoring configured version '#{config.jmeter.version}' because custom installer '#{config.jmeter.custom_installer_url}' specified"
+        } if config.jmeter.version
+
+        self.custom_jmeter_installer_url = config.jmeter.custom_installer_url
+        self.jmeter_version = jmeter_version_from_installer_url
+      else
+        self.jmeter_version = config.jmeter.version
+      end
+
+      updated_attrs = {
+          :serial_version => config.serial_version,
+          :master_slave_mode => config.master_slave_mode,
+          :samples_breakup_interval => config.samples_breakup_interval
+      }
+      self.update_attributes!(updated_attrs)
       
       begin
-        logger.info("Reading and validating JMeter plans...")
+        logger.info('Reading and validating JMeter plans...')
         Hailstorm::Model::JmeterPlan.setup(self)
 
-        logger.info("Setting up clusters...")
+        logger.info('Setting up clusters...')
         Hailstorm::Model::Cluster.configure_all(self, config, force)
 
-        logger.info("Setting up targets...")
+        logger.info('Setting up targets...')
         Hailstorm::Model::TargetHost.configure_all(self, config)
 
       rescue
@@ -50,7 +67,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       end
 
     else
-      raise(Hailstorm::Exception, "No changes to project configuration detected.")
+      raise(Hailstorm::Exception, 'No changes to project configuration detected.')
     end
   end
 
@@ -188,6 +205,19 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     end
   end
 
+  CUSTOM_JMETER_URL_REXP_1 = /[\-_]([\d\.\w]+)\.ta?r?\.?gz$/
+  CUSTOM_JMETER_URL_REXP_2 = /(\w+)\.ta?r?\.?gz$/
+
+  attr_accessor :custom_jmeter_installer_url
+
+  def custom_jmeter_installer_file
+    File.basename(URI(self.custom_jmeter_installer_url).path) if self.custom_jmeter_installer_url
+  end
+
+  def custom_jmeter_dir_name
+    /^(.+?)\.ta?r?\.?gz$/ =~ custom_jmeter_installer_file && $1
+  end
+
 ###################### PRIVATE METHODS #######################################
   private
 
@@ -206,7 +236,22 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   def set_defaults()
     self.master_slave_mode = Defaults::MASTER_SLAVE_MODE if self.master_slave_mode.nil?
     self.samples_breakup_interval ||= Defaults::SAMPLES_BREAKUP_INTERVAL
-    self.jmeter_version ||= Defaults::JMETER_VERSION
+    self.jmeter_version ||= Defaults::JMETER_VERSION if self.custom_jmeter_installer_url.blank?
+  end
+
+  def jmeter_version_from_installer_url
+    [CUSTOM_JMETER_URL_REXP_1, CUSTOM_JMETER_URL_REXP_2].each do |rexp|
+      match_data = rexp.match(self.custom_jmeter_installer_url)
+      return match_data[1] if match_data
+    end
+  end
+
+  def custom_jmeter_installer_url_format
+    if self.custom_jmeter_installer_url
+      if CUSTOM_JMETER_URL_REXP_1 !~ self.custom_jmeter_installer_url and CUSTOM_JMETER_URL_REXP_2 !~ self.custom_jmeter_installer_url
+        self.errors.add(:custom_jmeter_installer_url, 'must be a gzip tar ending with .tgz or .tar.gz')
+      end
+    end
   end
 
   # Default settings
