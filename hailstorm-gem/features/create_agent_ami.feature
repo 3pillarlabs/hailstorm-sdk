@@ -42,4 +42,10 @@ Scenario: New Load Agent is created from existing base AMI
   Then installed JMeter version should be '3.2'
   And custom properties should be added
 
+Scenario: Create or use an existing base AMI with custom JMeter installation
+  Given Amazon is chosen as the cluster
+  When I choose 'us-east-1' region
+  And the JMeter installer URL for the project is 'http://whodunit.org/my-jmeter-3.2_rhode.tgz'
+  Then the AMI to be created would be named '3pg-hailstorm-j3.2_rhode-create_agent_ami-x86_64'
+
 

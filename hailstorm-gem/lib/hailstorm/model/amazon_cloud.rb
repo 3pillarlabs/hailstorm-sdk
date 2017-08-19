@@ -1,6 +1,7 @@
 # @author Sayantam Dey
 
 require 'aws'
+
 require 'hailstorm'
 require 'hailstorm/model'
 require 'hailstorm/behavior/clusterable'
@@ -80,18 +81,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
       # reachability checks
       logger.info { "agent##{load_agent.identifier} is running, waiting for system checks..." }
-      timeout_message("system checks on agent##{load_agent.identifier} to complete") do
-        wait_until do
-           ec2.client.describe_instance_status(:instance_ids => [load_agent.identifier])[:instance_status_set]
-            .reduce(true) do |state, e|
-              state &&= !e[:system_status][:details].select { |f|
-                f[:name] == 'reachability' && f[:status] == 'passed'
-              }.empty? && !e[:instance_status][:details].select { |f|
-                f[:name] == 'reachability' && f[:status] == 'passed'
-              }.empty?
-            end
-        end
-      end
+      wait_for_system_checks(load_agent, "system checks on agent##{load_agent.identifier} to complete")
 
       # SSH is available a while later even though status may be running
       logger.info { "agent##{load_agent.identifier} passed system checks, ensuring SSH access..." }
@@ -283,9 +273,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     logger.debug { "#{self.class}##{__method__}" }
     if self.active? and self.agent_ami.nil?
 
-      rexp = Regexp.compile(ami_id())
+      rexp = Regexp.compile(ami_id)
       # check if this region already has the AMI...
-      logger.info { "Searching available AMI on #{self.region}..."}
+      logger.info { "Searching available AMI on #{self.region}..." }
       ec2.images()
          .with_owner(:self)
          .inject({}) {|acc, e| e.state == :available ? acc.merge(e.name => e.id) : acc}.each_pair do |name, id|
@@ -300,14 +290,6 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       if self.agent_ami.nil?
         # AMI does not exist
         logger.info("Creating agent AMI for #{self.region}...")
-
-        # Check if required JMeter version is present in our bucket
-        begin
-          jmeter_s3_object.content_length() # will fail if object does not exist
-        rescue AWS::S3::Errors::NoSuchKey
-          raise(Hailstorm::JMeterVersionNotFound.new(self.project.jmeter_version,
-                                                     Defaults::BUCKET_NAME, jmeter_download_file_path))
-        end
 
         # Check if the SSH security group exists, or create it
         security_group = find_or_create_security_group()
@@ -326,16 +308,14 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
         begin
           logger.info { "Clean instance at #{self.region} running, ensuring SSH access..." }
-          sleep(120)
-          Hailstorm::Support::SSH.ensure_connection(clean_instance.public_ip_address,
-            self.user_name, ssh_options)
+          wait_for_system_checks(clean_instance, "system checks on instance##{clean_instance.identifier} to complete")
+          Hailstorm::Support::SSH.ensure_connection(clean_instance.public_ip_address, self.user_name, ssh_options)
 
-          Hailstorm::Support::SSH.start(clean_instance.public_ip_address,
-            self.user_name, ssh_options) do |ssh|
+          Hailstorm::Support::SSH.start(clean_instance.public_ip_address, self.user_name, ssh_options) do |ssh|
 
             # install JAVA to /opt
             logger.info { "Installing Java for #{self.region} AMI..." }
-            ssh.exec!("wget -q '#{java_download_url}' -O #{java_download_file()}")
+            ssh.exec!("wget -q '#{java_download_url()}' -O #{java_download_file()}")
             if java_download_file.match(/\.bin$/)
               ssh.exec!("chmod +x #{java_download_file}")
               ssh.exec!("cd /opt && sudo #{self.user_home}/#{java_download_file}")
@@ -365,8 +345,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
                   envout.puts(lineout) unless lineout.blank?
                 end
-                envout.puts "export JRE_HOME=/opt/jre"
-                envout.puts "export CLASSPATH=/opt/jre/lib:."
+                envout.puts 'export JRE_HOME=/opt/jre'
+                envout.puts 'export CLASSPATH=/opt/jre/lib:.'
               end
             end
             ssh.upload(new_env_copy, "#{self.user_home}/environment")
@@ -375,6 +355,15 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
             ssh.exec!("sudo mv -f #{self.user_home}/environment /etc/environment")
 
             # install JMeter to self.user_home
+            unless self.project.custom_jmeter_installer_url
+              # Check if required JMeter version is present in our bucket
+              begin
+                jmeter_s3_object.content_length() # will fail if object does not exist
+              rescue AWS::S3::Errors::NoSuchKey
+                raise(Hailstorm::JMeterVersionNotFound.new(self.project.jmeter_version,
+                                                           Defaults::BUCKET_NAME, jmeter_download_file_path))
+              end
+            end
             logger.info { "Installing JMeter for #{self.region} AMI..." }
             ssh.exec!("wget -q '#{jmeter_download_url}' -O #{jmeter_download_file}")
             ssh.exec!("tar -xzf #{jmeter_download_file}")
@@ -393,7 +382,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
           new_ami = ec2.images.create(
             :name => ami_id,
             :instance_id => clean_instance.instance_id,
-            :description => "AMI for distributed performance testing with JMeter (TSG)"
+            :description => 'AMI for distributed performance testing with Hailstorm'
           )
           sleep(DOZE_TIME*12) while new_ami.state == :pending
 
@@ -464,7 +453,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   end
 
   def jmeter_download_url()
-    @jmeter_download_url ||= jmeter_s3_object().public_url(:secure => false)
+    @jmeter_download_url ||= (self.project.custom_jmeter_installer_url || jmeter_s3_object().public_url(:secure => false))
   end
 
   def jmeter_s3_object()
@@ -491,7 +480,11 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   end
 
   def jmeter_download_file()
-    "#{jmeter_directory}.tgz"
+    if self.project.custom_jmeter_installer_url.blank?
+      "#{jmeter_directory}.tgz"
+    else
+      self.project.custom_jmeter_installer_file
+    end
   end
 
   # Path relative to S3 bucket
@@ -501,8 +494,12 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   # Expanded JMeter directory
   def jmeter_directory
-    version = self.project.jmeter_version
-    "#{version == '2.4' ? 'jakarta' : 'apache'}-jmeter-#{version}"
+    if self.project.custom_jmeter_installer_url.blank?
+      version = self.project.jmeter_version
+      "#{version == '2.4' ? 'jakarta' : 'apache'}-jmeter-#{version}"
+    else
+      self.project.custom_jmeter_dir_name
+    end
   end
 
   # Architecture as per instance_type - everything is 64-bit.
@@ -511,8 +508,12 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   end
 
   # The AMI ID to search for and create
-  def ami_id
-    "#{Defaults::AMI_ID}-j#{self.project.jmeter_version}-#{arch()}"
+  def ami_id()
+    # "#{Defaults::AMI_ID}-j#{self.project.jmeter_version}-#{arch()}"
+    [Defaults::AMI_ID,
+     "j#{self.project.jmeter_version}"].tap { |lst|
+      self.project.custom_jmeter_installer_url ? lst.push(self.project.project_code) : lst
+    }.push(arch()).join('-')
   end
 
   # Base AMI to use to create Hailstorm AMI based on the region and instance_type
@@ -645,6 +646,21 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
               computed <= 50 ? 10 : 50
             end
     (computed.to_f / pivot).round() * pivot
+  end
+
+  def wait_for_system_checks(ec2_instance, message)
+    timeout_message(message) do
+      wait_until do
+        ec2.client.describe_instance_status(:instance_ids => [ec2_instance.identifier])[:instance_status_set]
+        .reduce(true) do |state, e|
+          state &&= !e[:system_status][:details].select { |f|
+            f[:name] == 'reachability' && f[:status] == 'passed'
+          }.empty? && !e[:instance_status][:details].select { |f|
+            f[:name] == 'reachability' && f[:status] == 'passed'
+          }.empty?
+        end
+      end
+    end
   end
 
   # EC2 default settings
