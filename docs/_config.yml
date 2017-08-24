@@ -20,7 +20,7 @@ description: > # this means to ignore newlines until "baseurl:"
   system by using Amazon AWS or physical machines in a data center. It can also monitor performance counters
   on test system components.
 baseurl: "/hailstorm-sdk" # the subpath of your site, e.g. /blog
-url: "http://3PillarGlobal.github.io" # the base hostname & protocol for your site, e.g. http://example.com
+url: "https://3PillarGlobal.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username: 3PillarGlobal
 github_username:  3PillarGlobal
 
