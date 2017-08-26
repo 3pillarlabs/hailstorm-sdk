@@ -1,5 +1,7 @@
 # Hailstorm SDK
 
+[![Build Status](https://travis-ci.org/3pillarlabs/hailstorm-sdk.svg?branch=master)](https://travis-ci.org/3pillarlabs/hailstorm-sdk)
+
 This SDK has all the Hailstorm applications -
 * hailstorm-gem
 * hailstorm-redis
@@ -62,7 +64,3 @@ gem install --no-rdoc --no-ri bundler
 bundle install
 ```
 The next time you log into the VM, just ``rvm use @hailstorm-gem-dev``.
-
-### Travis CI
-
-_In Progress_
