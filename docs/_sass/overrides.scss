@@ -24,3 +24,20 @@ h1, h2, h3, h4, h5, h6 {
   font-family: "Roboto Condensed",sans-serif;
   color: $site-title-color;
 }
+
+.banner {
+  background-color: #002F5F;
+  margin-top: $spacing-unit;
+  margin-bottom: $spacing-unit;
+  padding: $spacing-unit $spacing-unit;
+
+  .banner-title {
+    font-size: $base-font-size * 2.5;
+    color: #fff;
+  }
+
+  .banner-subtitle {
+    font-size: $base-font-size * 1.5;
+    color: #b3b9bc;
+  }
+}
