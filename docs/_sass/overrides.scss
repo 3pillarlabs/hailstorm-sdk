@@ -1,0 +1,26 @@
+$page-link-color: rgb(255, 121, 0);
+$site-title-color: rgb(57, 74, 91);
+$site-logo-height: 50px;
+
+.site-nav {
+  .page-link {
+    color: $page-link-color;
+  }
+}
+
+.site-title, .site-title:visited {
+  color: $site-title-color;
+}
+
+.site-title:hover {
+  text-decoration: none;
+}
+
+.site-logo {
+  height: $site-logo-height;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Roboto Condensed",sans-serif;
+  color: $site-title-color;
+}
