@@ -134,25 +134,23 @@ Vagrant.configure(2) do |config|
     aws.vm.synced_folder ".", "/vagrant", type: "rsync", rsync__exclude: [".git/", ".gitignore/"]
 
     aws.vm.provider :aws do |ec2, override|
-      ec2.access_key_id, ec2.secret_access_key = aws_keys()
-      ec2.keypair_name = "all_purpose"
-
       ec2.ami = "ami-841f46ff"
-
-      ec2.instance_type = "t2.medium"
+      ec2.access_key_id, ec2.secret_access_key = aws_keys()
+      aws_conf = YAML.load_file('vagrant-aws.yml').reduce({}) { |a, e| a.merge(e[0].to_sym => e[1]) }
+      ec2.keypair_name = aws_conf[:keypair_name]
+      ec2.instance_type = aws_conf[:instance_type] || "t2.medium"
       ec2.elastic_ip = true
-      ec2.region = "us-east-1"
-      ec2.security_groups = ["sg-4b1de53b"]
-      ec2.subnet_id = "subnet-f1e550a8"
+      ec2.region = aws_conf[:region] || "us-east-1"
+      ec2.security_groups = aws_conf[:security_groups]
+      ec2.subnet_id = aws_conf[:subnet_id] if aws_conf.key?(:subnet_id)
       ec2.tags = {
         Name: "Vagrant - Hailstorm Web"
       }
       ec2.terminate_on_shutdown = false
-
       ec2.block_device_mapping = [{"DeviceName" => "/dev/sda1", "Ebs.VolumeSize" => 80}]
 
       override.ssh.username = "ubuntu"
-      override.ssh.private_key_path = "all_purpose.pem"
+      override.ssh.private_key_path = aws_conf[:private_key_path]
     end
 
   	# redis-server
@@ -179,16 +177,15 @@ Vagrant.configure(2) do |config|
     site.vm.synced_folder ".", "/vagrant", type: "rsync", rsync__exclude: [".git/", ".gitignore/", "log/", "tmp/"]
 
     site.vm.provider :aws do |ec2, override|
-      ec2.access_key_id, ec2.secret_access_key = aws_keys()
-      ec2.keypair_name = "all_purpose"
-
       ec2.ami = "ami-841f46ff"
-
-      ec2.instance_type = "t2.medium"
+      ec2.access_key_id, ec2.secret_access_key = aws_keys()
+      aws_conf = YAML.load_file('vagrant-site.yml').reduce({}) { |a, e| a.merge(e[0].to_sym => e[1]) }
+      ec2.keypair_name = aws_conf[:keypair_name]
+      ec2.instance_type = aws_conf[:instance_type] || "t2.medium"
       ec2.elastic_ip = true
-      ec2.region = "us-east-1"
-      ec2.security_groups = ["sg-4b1de53b"]
-      ec2.subnet_id = "subnet-f1e550a8"
+      ec2.region = aws_conf[:region] || "us-east-1"
+      ec2.security_groups = aws_conf[:security_groups]
+      ec2.subnet_id = aws_conf[:subnet_id] if aws_conf.key?(:subnet_id)
       ec2.tags = {
         Name: "Vagrant - Hailstorm Site"
       }
@@ -197,7 +194,7 @@ Vagrant.configure(2) do |config|
       ec2.block_device_mapping = [{"DeviceName" => "/dev/sda1", "Ebs.VolumeSize" => 80}]
 
       override.ssh.username = "ubuntu"
-      override.ssh.private_key_path = "all_purpose.pem"
+      override.ssh.private_key_path = aws_conf[:private_key_path]
     end
 
   	# hailstorm-site

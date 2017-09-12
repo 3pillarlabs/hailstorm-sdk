@@ -2,3 +2,5 @@
 .*.swp
 *.pem
 *.log
+vagrant-aws.yml
+vagrant-site.yml
