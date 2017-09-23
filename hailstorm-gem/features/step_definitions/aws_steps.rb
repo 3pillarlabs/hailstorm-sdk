@@ -72,13 +72,14 @@ end
 Then(/^custom properties should be added$/) do
   require 'hailstorm/support/ssh'
   require 'tmpdir'
-  remote_jmeter_props_file = File.join(Dir.tmpdir, 'jmeter.properties')
+  remote_jmeter_props_file = File.join(Dir.tmpdir, 'user.properties')
   Hailstorm::Support::SSH.start(@load_agent.public_ip_address, @aws.user_name, @aws.ssh_options) do |ssh|
-    ssh.download("/home/#{@aws.user_name}/jmeter/bin/jmeter.properties", remote_jmeter_props_file)
+    ssh.download("/home/#{@aws.user_name}/jmeter/bin/user.properties", remote_jmeter_props_file)
   end
   remote_jmeter_props = File.readlines(remote_jmeter_props_file).collect(&:chomp)
   expect(remote_jmeter_props).to include('jmeter.save.saveservice.hostname=true')
   expect(remote_jmeter_props).to include('jmeter.save.saveservice.thread_counts=true')
+  expect(remote_jmeter_props).to include('jmeter.save.saveservice.output_format=xml')
 end
 
 After do |scenario|
@@ -98,4 +99,14 @@ end
 Then(/^the AMI to be created would be named '(.+?)'$/) do |expected_ami_name|
   actual_ami_name = @aws.send(:ami_id)
   expect(actual_ami_name).to eq(expected_ami_name)
+end
+
+
+And(/^VPC subnet is '(.+?)'$/) do |subnet_id|
+  @aws.vpc_subnet_id = subnet_id
+end
+
+
+And(/^instance type is '(.+?)'$/) do |instance_type|
+  @aws.instance_type = instance_type
 end

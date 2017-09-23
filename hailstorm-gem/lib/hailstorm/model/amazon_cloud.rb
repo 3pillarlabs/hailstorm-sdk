@@ -59,14 +59,14 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         end
       else
         logger.info("Starting new agent on #{self.region}...")
-        agent_ec2_instance = ec2.instances.create(
-          {:image_id => self.agent_ami,
+        agent_ec2_instance = ec2.instances.create({
+          :image_id => self.agent_ami,
           :key_name => self.ssh_identity,
-          :security_groups => self.security_group.split(/\s*,\s*/),
-          :instance_type => self.instance_type}.merge(
-              self.zone.nil? ? {} : {:availability_zone => self.zone}
-          )
-        )
+          :security_group_ids => self.security_group.split(/\s*,\s*/).map { |x| find_or_create_security_group(x) }.map(&:id),
+          :instance_type => self.instance_type,
+          :subnet => self.vpc_subnet_id
+        }.tap {|x| x.merge!(:availability_zone => self.zone) if self.zone}
+         .tap {|x| x.merge!(:associate_public_ip_address => true) if self.vpc_subnet_id})
         agent_ec2_instance.tag('Name', value: "#{self.project.project_code}-#{load_agent.class.name.underscore}-#{load_agent.id}")
         timeout_message("#{agent_ec2_instance.id} to start") do
           wait_until { agent_ec2_instance.exists? && agent_ec2_instance.status.eql?(:running) }
@@ -287,20 +287,22 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         end
       end
 
+      # Check if the SSH security group exists, or create it
+      security_group = find_or_create_security_group()
+
       if self.agent_ami.nil?
         # AMI does not exist
         logger.info("Creating agent AMI for #{self.region}...")
-
-        # Check if the SSH security group exists, or create it
-        security_group = find_or_create_security_group()
 
         # Launch base AMI
         clean_instance = ec2.instances.create({
           :image_id => base_ami(),
           :key_name => self.ssh_identity,
-          :security_groups => [security_group.name],
-          :instance_type => self.instance_type
-        }.merge(self.zone.nil? ? {} : {:availability_zone => self.zone}))
+          :security_group_ids => [security_group.id],
+          :instance_type => self.instance_type,
+          :subnet => self.vpc_subnet_id
+        }.tap {|x| x.merge!(:availability_zone => self.zone) if self.zone}
+         .tap {|x| x.merge!(:associate_public_ip_address => true) if self.vpc_subnet_id})
 
         timeout_message("#{clean_instance.id} to start") do
           wait_until { clean_instance.exists? && clean_instance.status.eql?(:running) }
@@ -406,16 +408,16 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     end # self.active? and self.agent_ami.nil?
   end
 
-  def find_or_create_security_group()
+  def find_or_create_security_group(group_name = Defaults::SECURITY_GROUP)
 
     logger.debug { "#{self.class}##{__method__}" }
-    security_group = ec2.security_groups
-                        .filter('group-name', Defaults::SECURITY_GROUP)
-                        .first()
+    vpc = ec2.subnets[self.vpc_subnet_id].vpc if self.vpc_subnet_id
+    security_groups = (vpc || ec2).security_groups
+    security_group = security_groups.filter('group-name', group_name).first()
     if security_group.nil?
-      logger.info("Creating #{Defaults::SECURITY_GROUP} security group on #{self.region}...")
-      security_group = ec2.security_groups.create(Defaults::SECURITY_GROUP,
-                        :description => Defaults::SECURITY_GROUP_DESC)
+      logger.info("Creating #{group_name} security group on #{self.region}...")
+      security_group = security_groups.create(group_name,
+                        :description => Defaults::SECURITY_GROUP_DESC, :vpc => vpc)
 
       security_group.authorize_ingress(:tcp, 22) # allow SSH from anywhere
       # allow incoming TCP to any port within the group
@@ -423,10 +425,10 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       # allow incoming UDP to any port within the group
       security_group.authorize_ingress(:udp, 0..65535, :group_id => security_group.id)
       # allow ICMP from anywhere
-      security_group.allow_ping()
+      security_group.allow_ping
     end
 
-    return security_group
+    security_group
   end
 
   def ec2

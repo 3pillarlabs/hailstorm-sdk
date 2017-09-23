@@ -147,6 +147,9 @@ class Hailstorm::Support::Configuration
     # value, multiple load agents will be spawned with equal thread distribution.
     attr_accessor :max_threads_per_agent
 
+    # Set the VPC Subnet ID to launch Hailstorm instance inside a VPC
+    attr_accessor :vpc_subnet_id
+
     def aws_required?
       true
     end
