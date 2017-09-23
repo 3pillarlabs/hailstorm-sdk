@@ -2,7 +2,7 @@
 # @author Sayantam Dey
 
 require 'hailstorm/support'
-require "hailstorm/behavior/loggable"
+require 'hailstorm/behavior/loggable'
 
 class Hailstorm::Support::Schema
 
@@ -24,30 +24,64 @@ class Hailstorm::Support::Schema
     :jtl_files
   ].freeze
 
-  
+  # List of updates to schema
+  SchemaUpdates = [
+      :add_vpc_subnet_id_to_amazon_clouds
+  ].freeze
+
+  class SchemaMigration < ActiveRecord::Base
+    # SchemaMigration
+  end
+
   def self.create_schema()
     schema = self.new
     schema.create()
+    schema.update()
   end
   
   # Creates the application schema in the application db directory.
   # A sqlite3 database is created. The database name is <tt>#{Hailstorm.app_name}.sqlite3</tt>.
   # If the tables already exist, nothing is changed.
-  def create()
-     
+  def create
+    create_schema_migrations()
+    table_migrations = SchemaMigration.all.collect { |r| r.migration_name }.select { |e| e =~ /^create_/ }
+                                      .collect { |e| e.gsub(/^create_/, '').to_sym }
     SchemaTables.each do |t|
-      create_table(t)
+      create_table(t) unless table_migrations.include?(t)
     end
   end
-  
+
+  # Updates the schema to add columns or data
+  def update
+    migrations = SchemaMigration.all.collect { |r| r.migration_name.to_sym }
+    SchemaUpdates.each do |name|
+      unless migrations.include?(name)
+        logger.debug { name }
+        self.send(name)
+        SchemaMigration.create!(migration_name: name)
+      end
+    end
+  end
+
   def create_table(table_name)
-      
-    unless ActiveRecord::Base.connection.table_exists?(table_name)
-      logger.debug("Creating #{table_name} table...")
-      self.send("create_#{table_name}")
+    logger.debug("Creating #{table_name} table...")
+    self.send("create_#{table_name}")
+    SchemaMigration.create!(migration_name: "create_#{table_name}")
+  end
+
+  def create_schema_migrations
+    unless ActiveRecord::Base.connection.table_exists?(:schema_migrations)
+      ActiveRecord::Migration.create_table(:schema_migrations) do |t|
+        t.string :migration_name, :null => false
+      end
+      SchemaTables.each do |tn|
+        if ActiveRecord::Base.connection.table_exists?(tn)
+          SchemaMigration.create!(migration_name: "create_#{tn}")
+        end
+      end
     end
   end
-  
+
   def create_projects
     ActiveRecord::Migration.create_table(:projects) do |t|
       t.string  :project_code, :null => false
@@ -193,6 +227,10 @@ class Hailstorm::Support::Schema
       t.integer     :chunk_sequence, :null => false
       t.binary      :data_chunk, :null => false
     end
+  end
+
+  def add_vpc_subnet_id_to_amazon_clouds
+    ActiveRecord::Migration.add_column(:amazon_clouds, :vpc_subnet_id, :string, {default: nil})
   end
 
 end
