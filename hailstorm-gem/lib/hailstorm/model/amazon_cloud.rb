@@ -59,14 +59,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         end
       else
         logger.info("Starting new agent on #{self.region}...")
-        agent_ec2_instance = ec2.instances.create({
-          :image_id => self.agent_ami,
-          :key_name => self.ssh_identity,
-          :security_group_ids => self.security_group.split(/\s*,\s*/).map { |x| find_or_create_security_group(x) }.map(&:id),
-          :instance_type => self.instance_type,
-          :subnet => self.vpc_subnet_id
-        }.tap {|x| x.merge!(:availability_zone => self.zone) if self.zone}
-         .tap {|x| x.merge!(:associate_public_ip_address => true) if self.vpc_subnet_id})
+        security_group_ids = self.security_group.split(/\s*,\s*/).map { |x| find_or_create_security_group(x) }.map(&:id)
+        agent_ec2_instance = create_ec2_instance(self.agent_ami, security_group_ids)
         agent_ec2_instance.tag('Name', value: "#{self.project.project_code}-#{load_agent.class.name.underscore}-#{load_agent.id}")
         timeout_message("#{agent_ec2_instance.id} to start") do
           wait_until { agent_ec2_instance.exists? && agent_ec2_instance.status.eql?(:running) }
@@ -295,14 +289,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         logger.info("Creating agent AMI for #{self.region}...")
 
         # Launch base AMI
-        clean_instance = ec2.instances.create({
-          :image_id => base_ami(),
-          :key_name => self.ssh_identity,
-          :security_group_ids => [security_group.id],
-          :instance_type => self.instance_type,
-          :subnet => self.vpc_subnet_id
-        }.tap {|x| x.merge!(:availability_zone => self.zone) if self.zone}
-         .tap {|x| x.merge!(:associate_public_ip_address => true) if self.vpc_subnet_id})
+        clean_instance = create_ec2_instance(base_ami, [security_group.id])
 
         timeout_message("#{clean_instance.id} to start") do
           wait_until { clean_instance.exists? && clean_instance.status.eql?(:running) }
@@ -663,6 +650,20 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         end
       end
     end
+  end
+
+  # @param [String] ami_id
+  # @param [Array] security_group_ids
+  # @return [AWS::EC2::Instance]
+  def create_ec2_instance(ami_id, security_group_ids)
+    ec2.instances.create({
+         :image_id => ami_id,
+         :key_name => self.ssh_identity,
+         :security_group_ids => security_group_ids,
+         :instance_type => self.instance_type,
+         :subnet => self.vpc_subnet_id
+    }.tap { |x| x.merge!(:availability_zone => self.zone) if self.zone }
+     .tap { |x| x.merge!(:associate_public_ip_address => true) if self.vpc_subnet_id })
   end
 
   # EC2 default settings
