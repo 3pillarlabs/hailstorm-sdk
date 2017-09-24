@@ -179,6 +179,9 @@ class Hailstorm::Model::Project < ActiveRecord::Base
         logger.info { "Results exported to:\n#{export_paths.join("\n")}" }
       end
 
+    elsif operation == :import
+      # TODO
+
     else # generate report
       logger.info("Creating report for stopped tests...")
       report_path = Hailstorm::Model::ExecutionCycle.create_report(self, cycle_ids)

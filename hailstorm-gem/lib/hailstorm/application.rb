@@ -349,11 +349,11 @@ Continue using old version?
       @connection_spec = {}
 
       # load the properties into a java.util.Properties instance
-      database_properties_file = java.io.File.new(File.join(Hailstorm.root,
+      database_properties_file = Java::JavaIo::File.new(File.join(Hailstorm.root,
                                                             Hailstorm.config_dir,
-                                                            "database.properties"))
-      properties = java.util.Properties.new()
-      properties.load(java.io.FileInputStream.new(database_properties_file))
+                                                            'database.properties'))
+      properties = Java::JavaUtil::Properties.new()
+      properties.load(Java::JavaIo::FileInputStream.new(database_properties_file))
 
       # load all properties without an empty value into the spec
       properties.each do |key, value|
@@ -376,7 +376,7 @@ Continue using old version?
       end
     end
 
-    return @connection_spec
+    @connection_spec
   end
 
   # Creates the application directory structure and adds files at appropriate
@@ -511,8 +511,25 @@ Continue using old version?
         sequences = nil
       elsif sequences.match(/^(\d+)\-(\d+)$/) # range
         sequences = ($1..$2).to_a.collect(&:to_i)
-      else # comma or colon separated
+      elsif sequences.match(/^[\d,:]+$/)
         sequences = sequences.split(/\s*[,:]\s*/).collect(&:to_i)
+      else
+        glob, opts = sequences.split(/\s+/).reduce([]) do |a, e|
+          if e =~ /=/
+            a.push({}) if a.last == nil or a.last.is_a?(String)
+            k, v = e.split(/=/)
+            a.last.merge!({k => v})
+          else
+            a.unshift(e)
+          end
+          a
+        end
+        if glob.is_a?(Hash)
+          opts = glob
+          glob = nil
+        end
+        sequences = [glob, opts]
+        logger.debug { "results(#{args}) -> #{sequences}" }
       end
     end
     data = current_project.results(operation, sequences)
@@ -644,7 +661,7 @@ Continue using old version?
         Regexp.new('^(start)(\s+redeploy|\s+help)?$'),
         Regexp.new('^(stop)(\s+suspend|\s+wait|\s+suspend\s+wait|\s+wait\s+suspend|\s+help)?$'),
         Regexp.new('^(abort)(\s+suspend|\s+help)?$'),
-        Regexp.new('^(results)(\s+show|\s+exclude|\s+include|\s+report|\s+export|\s+help)?(\s+[\d,\-:]+|\s+last)?$'),
+        Regexp.new('^(results)(\s+show|\s+exclude|\s+include|\s+report|\s+export|\s+import|\s+help)?(\s+[\d,\-:]+|\s+last)?(.*)$'),
         Regexp.new('^(purge)(\s+tests|\s+clusters|\s+all|\s+help)?$'),
         Regexp.new('^(show)(\s+jmeter|\s+cluster|\s+monitor|\s+all|\s+help)?$'),
         Regexp.new('^(terminate)(\s+help)?$'),
@@ -774,7 +791,7 @@ Continue using old version?
 
     terminate       Terminates load generation and target monitoring.
 
-    results         Operate on results to include, exclude or generate report
+    results         Include, exclude, export, import results or generate report
 
     purge           Purge specific or ALL data from database
 
@@ -886,6 +903,12 @@ Options
       export  [TEST]  Export the results as one or more JTL files.
                       Without a TEST argument, all successfully stopped tests
                       will be exported.
+      import  <GLOB>  Import the results from GLOB (ex. *.jtl). OPTS is a set of
+              [OPTS]  key value pairs, specified as key=value and multiple pairs
+                      are separated by whitespace. Known keys and when they are
+                      needed:
+                      jmeter=<plan name>
+                      cluster=<cluster id>
     RESULTS
   end
 
