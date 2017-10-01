@@ -11,7 +11,7 @@ describe Hailstorm::Application do
     end
     it 'should find valid "results import <pathspec>"' do
       app = Hailstorm::Application.new
-      expect(app.interpret_command('results import /tmp/b23d8/*.jtl')).to eql(:results)
+      expect(app.interpret_command('results import /tmp/b23d8/foo.jtl')).to eql(:results)
     end
   end
 
@@ -30,18 +30,19 @@ describe Hailstorm::Application do
           end
         end
       end
-      it 'should understand glob' do
-        @app.current_project.should_receive(:results).with(:import, ['*.jtl', nil])
-        @app.send(:results, 'import', '*.jtl')
+      it 'should understand file' do
+        @app.current_project.should_receive(:results).with(:import, ['foo.jtl', nil])
+        @app.send(:results, 'import', 'foo.jtl')
       end
       it 'should understand options' do
         @app.current_project.should_receive(:results).with(:import, [nil, {'foo' => '1', 'bar' => '2', 'baz' => '3'}])
         @app.send(:results, 'import', 'foo=1 bar=2 baz=3')
       end
-      it 'should understand glob and options' do
-        @app.current_project.should_receive(:results).with(:import, ['/tmp/*.jtl', {'foo' => '1', 'bar' => '2', 'baz' => '3'}])
-        @app.send(:results, 'import', '/tmp/*.jtl foo=1 bar=2 baz=3')
+      it 'should understand file and options' do
+        @app.current_project.should_receive(:results).with(:import, ['/tmp/foo.jtl', {'foo' => '1', 'bar' => '2', 'baz' => '3'}])
+        @app.send(:results, 'import', '/tmp/foo.jtl foo=1 bar=2 baz=3')
       end
+      it 'should understand execution cycle, file and options'
     end
   end
 

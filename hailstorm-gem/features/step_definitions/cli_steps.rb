@@ -3,11 +3,11 @@ require 'action_view/base'
 
 include CliStepHelper
 
-Given(/^I have hailstorm installed$/) do
+Given(/^I have [hH]ailstorm installed$/) do
   require 'hailstorm/application'
 end
 
-When(/^I create the project "([^"]*)"$/) do |project_name|
+When(/^I created? the project "([^"]*)"$/) do |project_name|
   project_path = File.join(tmp_path, project_name)
   unless File.exists?(project_path)
     Hailstorm::Application.new.create_project(tmp_path, project_name)
@@ -103,7 +103,7 @@ When /^(?:I |)wait for (\d+) seconds$/ do |wait_seconds|
   sleep(wait_seconds.to_i)
 end
 
-When /^(\d+) (total|reportable) execution cycles should exist$/ do |expected_count, total|
+When /^(\d+) (total|reportable) execution cycles? should exist$/ do |expected_count, total|
   if total.to_sym == :reportable
     Hailstorm::Model::ExecutionCycle.where(:status => 'stopped').count.should == expected_count.to_i
   else
@@ -113,4 +113,13 @@ end
 
 Then /^a report file should be created$/ do
   Dir[File.join(tmp_path, current_project, Hailstorm.reports_dir, '*.docx')].count.should == 1
+end
+
+
+And(/^results import '(.+?)'$/) do |file_path|
+  Hailstorm.application.interpret_command('purge')
+  expect(Hailstorm::Model::ExecutionCycle.count).to eql(0)
+  abs_path = File.expand_path(file_path, __FILE__)
+  Hailstorm.application.interpret_command("results import #{abs_path}")
+  expect(Hailstorm::Model::ExecutionCycle.count).to eql(1)
 end

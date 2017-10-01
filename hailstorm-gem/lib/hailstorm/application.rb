@@ -898,17 +898,17 @@ Options
       include [TEST]  Include TEST in reports.
                       Without a TEST, no tests will be included.
       report  [TEST]  Generate report for TEST.
-                      Without a TEST argument, all succefully stopped tests will
+                      Without a TEST argument, all successfully stopped tests will
                       be reported.
       export  [TEST]  Export the results as one or more JTL files.
                       Without a TEST argument, all successfully stopped tests
                       will be exported.
-      import  <GLOB>  Import the results from GLOB (ex. *.jtl). OPTS is a set of
+      import  <FILE>  Import the results from FILE(.jtl). OPTS is a set of
               [OPTS]  key value pairs, specified as key=value and multiple pairs
                       are separated by whitespace. Known keys and when they are
                       needed:
-                      jmeter=<plan name>
-                      cluster=<cluster id>
+                      jmeter=<plan name> # required if there are multiple plans
+                      cluster=<cluster id> # required if there are multiple clusters
     RESULTS
   end
 

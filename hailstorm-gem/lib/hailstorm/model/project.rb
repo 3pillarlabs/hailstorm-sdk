@@ -180,7 +180,18 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       end
 
     elsif operation == :import
-      # TODO
+      jtl_file_paths = []
+      file_path, options = cycle_ids
+      if file_path.nil?
+        glob = File.join(Hailstorm.root, Hailstorm.results_import_dir, '*.jtl')
+        Dir[glob].sort.each { |fp| jtl_file_paths << fp }
+      else
+        jtl_file_paths << file_path
+      end
+      jtl_file_paths.each do |jfp|
+        exec_cycle = self.execution_cycles.build(status: Hailstorm::Model::ExecutionCycle::States::STOPPED)
+        exec_cycle.import_results(jfp, (options || {}))
+      end
 
     else # generate report
       logger.info("Creating report for stopped tests...")
