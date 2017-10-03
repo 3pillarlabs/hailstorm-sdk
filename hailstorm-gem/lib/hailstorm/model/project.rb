@@ -13,13 +13,13 @@ require 'hailstorm/model/execution_cycle'
 class Hailstorm::Model::Project < ActiveRecord::Base
 
   has_many :clusters, :dependent => :destroy
-  
+
   has_many :jmeter_plans, :dependent => :destroy
-  
+
   has_many :target_hosts, :dependent => :destroy
-  
+
   has_many :execution_cycles, :dependent => :destroy
-  
+
   has_one  :current_execution_cycle, -> { where(status: "started") },
            :class_name => 'Hailstorm::Model::ExecutionCycle', :order => "started_at DESC"
 
@@ -28,6 +28,8 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   before_save :set_defaults
 
   # Sets up the project for first time or subsequent use
+  # @param [Boolean] force
+  # @param [Boolean] invoked_from_start
   def setup(force = false, invoked_from_start = false)
 
     if invoked_from_start or settings_modified? or force
@@ -50,7 +52,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
           :samples_breakup_interval => config.samples_breakup_interval
       }
       self.update_attributes!(updated_attrs)
-      
+
       begin
         logger.info('Reading and validating JMeter plans...')
         Hailstorm::Model::JmeterPlan.setup(self)
@@ -73,9 +75,9 @@ class Hailstorm::Model::Project < ActiveRecord::Base
 
   # Starts the load generation and target monitoring tasks
   def start(redeploy = false)
-   
+
     logger.debug { "#{self.class}##{__method__}" }
-    
+
     # add an execution_cycle
     if current_execution_cycle.nil?
       build_current_execution_cycle.save! # buildABC is provided by has_one :ABC relation
@@ -107,7 +109,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
 
   # Delegate to target_hosts and clusters
   def stop(wait = false, options = nil, aborted = false)
-   
+
     logger.debug { "#{self.class}##{__method__}" }
     unless current_execution_cycle.nil?
       load_gen_stopped = false
@@ -139,13 +141,13 @@ class Hailstorm::Model::Project < ActiveRecord::Base
 
   # Aborts everything immediately
   def abort(options = nil)
-    
+
     logger.debug { "#{self.class}##{__method__}" }
     stop(false, options, true)
   end
 
   def terminate()
-    
+
     logger.debug { "#{self.class}##{__method__}" }
     Hailstorm::Model::Cluster.terminate(self)
     Hailstorm::Model::TargetHost.terminate(self)
@@ -180,6 +182,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       end
 
     elsif operation == :import
+      self.setup(force = false, invoked_from_start = false) if settings_modified?
       jtl_file_paths = []
       file_path, options = cycle_ids
       if file_path.nil?
@@ -190,6 +193,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       end
       jtl_file_paths.each do |jfp|
         exec_cycle = self.execution_cycles.build(status: Hailstorm::Model::ExecutionCycle::States::STOPPED)
+
         exec_cycle.import_results(jfp, (options || {}))
       end
 
@@ -242,7 +246,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       Hailstorm.application.load_config() if modified
     end
   end
-  
+
   def config
     Hailstorm.application.config
   end

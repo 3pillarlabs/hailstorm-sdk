@@ -46,7 +46,7 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
   def self.configure_all(project, config)
 
     logger.debug { "#{self}.#{__method__}" }
-    # disable all hosts and delegate to monitor#setup to enable specific hosts 
+    # disable all hosts and delegate to monitor#setup to enable specific hosts
     moniterables(project, false).each {|t| t.update_column(:active, false)}
 
     config.target_hosts.each do |host_def|

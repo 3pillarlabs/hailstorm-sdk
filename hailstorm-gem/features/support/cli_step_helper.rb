@@ -38,12 +38,13 @@ module CliStepHelper
     @config_changed
   end
 
-  def write_config
+  def write_config(monitor_active = true)
     engine = ActionView::Base.new
     site_server_property = OpenStruct.new({property: 'ServerName', value: site_server_url})
     engine.assign(:properties => jmeter_properties.push(site_server_property),
                   :clusters => clusters,
-                  :monitor_host => site_server_url)
+                  :monitor_host => site_server_url,
+                  :monitor_active => monitor_active)
     File.open(File.join(tmp_path, current_project,
                         Hailstorm.config_dir, 'environment.rb'), 'w') do |env_file|
       env_file.print(engine.render(:file => File.join(data_path, 'environment')))

@@ -36,7 +36,7 @@ end
 
 When(/^I launch the hailstorm console within "([^"]*)" project$/) do |project_name|
   current_project(project_name)
-  write_config # reset
+  write_config(monitor_active = @monitor_active) # reset
   Dir[File.join(tmp_path, project_name, Hailstorm.reports_dir, '*')].each do |file|
     FileUtils.rm(file)
   end
@@ -122,4 +122,9 @@ And(/^results import '(.+?)'$/) do |file_path|
   abs_path = File.expand_path(file_path, __FILE__)
   Hailstorm.application.interpret_command("results import #{abs_path}")
   expect(Hailstorm::Model::ExecutionCycle.count).to eql(1)
+end
+
+
+And(/^disable target monitoring$/) do
+  @monitor_active = false
 end

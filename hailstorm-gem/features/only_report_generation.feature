@@ -11,8 +11,9 @@ Feature: Only generate report
         | Duration       |   180 |
         | RampUp         |     0 |
       And configure following amazon clusters
-        | region    | max_threads_per_agent |
-        | us-east-1 |                       |
+        | region    | max_threads_per_agent |  active |
+        | us-east-1 |                       |  false  |
+      And disable target monitoring
       And I launch the hailstorm console within "only_report_generation" project
       And results import '../../data/jmeter_log_sample.jtl'
       Then 1 reportable execution cycle should exist
