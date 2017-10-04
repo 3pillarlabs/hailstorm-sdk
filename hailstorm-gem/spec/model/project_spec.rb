@@ -37,9 +37,4 @@ describe Hailstorm::Model::Project do
       end
     end
   end
-
-  context '#results' do
-    context 'import' do
-    end
-  end
 end

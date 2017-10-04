@@ -291,10 +291,19 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     return paths
   end
 
-  # Imports the results into a new or current execution cycle.
-  # @param [String] file_path
-  # @param [Hash] options
-  def import_results(file_path, options = {})
+
+  # Import results from a JMeter results file (JTL)
+  # @param [Hailstorm::Model::JmeterPlan] jmeter_plan
+  # @param [Hailstorm::Behavior::Clusterable] cluster_instance
+  # @param [String] result_file_path
+  def import_results(jmeter_plan, cluster_instance, result_file_path)
+    logger.debug { "#{self.class}.#{__method__}" }
+    client_stat = Hailstorm::Model::ClientStat.create_client_stats(self, jmeter_plan.id, cluster_instance, [result_file_path],
+                                                                   rm_stat_file = false)
+    self.update_attributes!(
+        started_at: client_stat.first_sample_at,
+        stopped_at: client_stat.last_sample_at
+    )
   end
 
   private
