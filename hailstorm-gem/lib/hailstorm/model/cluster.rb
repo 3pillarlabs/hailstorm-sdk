@@ -18,8 +18,12 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   # @return [Class] the model class represented by cluster_type.
   def cluster_klass()
     if @cluster_klass.nil?
-      require self.cluster_type.underscore
-      @cluster_klass = self.cluster_type.constantize()
+      begin
+        @cluster_klass = self.cluster_type.constantize
+      rescue
+        require(self.cluster_type.underscore)
+        retry
+      end
     end
     @cluster_klass
   end

@@ -2,10 +2,11 @@ require 'spec_helper'
 require 'yaml'
 
 require 'hailstorm/model/amazon_cloud'
+require 'hailstorm/model/project'
 
 describe Hailstorm::Model::AmazonCloud do
   before(:each) do
-    @aws = Hailstorm::Model::AmazonCloud.new()
+    @aws = Hailstorm::Model::AmazonCloud.new
   end
 
   it 'maintains a mapping of AMI IDs for AWS regions' do
@@ -127,6 +128,66 @@ describe Hailstorm::Model::AmazonCloud do
     context '#jmeter_directory' do
       it 'should be the file name without .tgz' do
         expect(@aws.send(:jmeter_directory)).to match(/apache\-jmeter/)
+      end
+    end
+  end
+
+
+  context '#setup' do
+    context '#active=true' do
+      it 'should be persisted' do
+        aws = Hailstorm::Model::AmazonCloud.new
+        aws.project = Hailstorm::Model::Project.where(project_code: 'amazon_cloud_spec_8a202').first_or_create!
+        aws.access_key = 'dummy'
+        aws.secret_key = 'dummy'
+        aws.region = 'ua-east-1'
+
+        aws.stub(:identity_file_exists, nil)
+        aws.should_receive(:identity_file_exists)
+
+        aws.stub(:set_availability_zone, nil)
+        aws.should_receive(:set_availability_zone)
+
+        aws.stub(:create_agent_ami, nil)
+        aws.should_receive(:create_agent_ami)
+
+        aws.stub(:provision_agents, nil)
+        aws.should_receive(:provision_agents)
+
+        aws.stub(:secure_identity_file, nil)
+        aws.should_receive(:secure_identity_file)
+
+        aws.active = true
+        aws.setup
+        expect(aws).to be_persisted
+      end
+    end
+    context '#active=false' do
+      it 'should be persisted' do
+        aws = Hailstorm::Model::AmazonCloud.new
+        aws.project = Hailstorm::Model::Project.where(project_code: 'amazon_cloud_spec_96137').first_or_create!
+        aws.access_key = 'dummy'
+        aws.secret_key = 'dummy'
+        aws.region = 'ua-east-1'
+
+        aws.stub(:identity_file_exists, nil)
+        aws.should_not_receive(:identity_file_exists)
+
+        aws.stub(:set_availability_zone, nil)
+        aws.should_not_receive(:set_availability_zone)
+
+        aws.stub(:create_agent_ami, nil)
+        aws.should_not_receive(:create_agent_ami)
+
+        aws.stub(:provision_agents, nil)
+        aws.should_not_receive(:provision_agents)
+
+        aws.stub(:secure_identity_file, nil)
+        aws.should_not_receive(:secure_identity_file)
+
+        aws.active = false
+        aws.setup
+        expect(aws).to be_persisted
       end
     end
   end

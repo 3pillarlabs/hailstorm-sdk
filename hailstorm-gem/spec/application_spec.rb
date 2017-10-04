@@ -7,10 +7,12 @@ describe Hailstorm::Application do
   context '#interpret_command' do
     it 'should find valid "results import"' do
       app = Hailstorm::Application.new
+      app.stub(:current_project) { mock(Hailstorm::Model::Project).as_null_object }
       expect(app.interpret_command('results import')).to eql(:results)
     end
     it 'should find valid "results import <pathspec>"' do
       app = Hailstorm::Application.new
+      app.stub(:current_project) { mock(Hailstorm::Model::Project).as_null_object }
       expect(app.interpret_command('results import /tmp/b23d8/foo.jtl')).to eql(:results)
     end
   end

@@ -35,8 +35,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     if self.active?
       self.agent_ami = nil if force
       self.save!()
-      provision_agents()
-      File.chmod(0400, identity_file_path())
+      provision_agents
+      secure_identity_file
     else
       self.update_column(:active, false) if self.persisted?
     end
@@ -664,6 +664,10 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
          :subnet => self.vpc_subnet_id
     }.tap { |x| x.merge!(:availability_zone => self.zone) if self.zone }
      .tap { |x| x.merge!(:associate_public_ip_address => true) if self.vpc_subnet_id })
+  end
+
+  def secure_identity_file
+    File.chmod(0400, identity_file_path)
   end
 
   # EC2 default settings
