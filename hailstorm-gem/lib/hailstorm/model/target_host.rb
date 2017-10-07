@@ -13,7 +13,7 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
 
   has_many :target_stats
 
-  validates :host_name, :role_name, :presence => true, :if => proc {|r| r.active? }
+  validates :host_name, :role_name, :sampling_interval, :presence => true, :if => proc {|r| r.active? }
 
   scope :active, -> {where(:active => true)}
 
@@ -23,8 +23,12 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
   # @param [String] monitor_type fully qualified type of monitor
   # @return [Class] class from monitor_type     
   def self.moniterable_klass(monitor_type)
-    require(monitor_type.underscore)
-    monitor_type.constantize() 
+    begin
+      monitor_type.constantize
+    rescue
+      require(monitor_type.underscore)
+      retry
+    end
   end
 
   # Calls #setup() and saves changes on success.
