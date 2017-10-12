@@ -28,6 +28,7 @@ describe Hailstorm::Model::TargetHost do
         end
         Hailstorm::Model::TargetHost.configure_all(@project, config)
         expect(Hailstorm::Model::TargetHost.count).to eql(1)
+        expect(Hailstorm::Model::TargetHost.first).to be_active
       end
     end
     context '#active=false' do
@@ -36,13 +37,15 @@ describe Hailstorm::Model::TargetHost do
         config.monitors(:test_monitor) do |monitor|
           monitor.sampling_interval = 10
           monitor.groups('Database Server') do |group|
-            group.hosts('s02.hailstorm.com') do |host|
+            group.hosts do |host|
+              host.host_name = 's02.hailstorm.com'
               host.active = false
             end
           end
         end
         Hailstorm::Model::TargetHost.configure_all(@project, config)
         expect(Hailstorm::Model::TargetHost.count).to eql(1)
+        expect(Hailstorm::Model::TargetHost.first).to_not be_active
       end
     end
   end

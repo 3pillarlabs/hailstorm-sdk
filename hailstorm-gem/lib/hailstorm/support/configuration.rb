@@ -269,10 +269,8 @@ class Hailstorm::Support::Configuration
 
     host_defs = []
     monitors.each do |monitor|
-      next if monitor.active == false
       monitor.groups.each do |group|
         group.hosts.each do |host|
-          next if host.active == false
           hdef = host.instance_values.symbolize_keys
           hdef[:type] = monitor.monitor_type
           hdef[:role_name] = group.role

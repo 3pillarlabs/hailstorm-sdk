@@ -32,9 +32,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   def setup(force = false)
 
     logger.debug { "#{self.class}##{__method__}" }
+    self.agent_ami = nil if force
+    self.save!()
     if self.active?
-      self.agent_ami = nil if force
-      self.save!()
       provision_agents
       secure_identity_file
     else

@@ -82,12 +82,9 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
       cluster_type = "Hailstorm::Model::#{cluster_config.cluster_type.to_s.camelize}"
       cluster = project.clusters()
                        .where(:cluster_type => cluster_type)
-                       .first_or_initialize()
+                       .first_or_create!
 
-      if cluster.new_record? and cluster_config.active
-        cluster.save!()
-      end
-      cluster_line_items.push([cluster, cluster_config, force]) if cluster.persisted?
+      cluster_line_items.push([cluster, cluster_config, force])
     end
 
     if cluster_line_items.size == 1

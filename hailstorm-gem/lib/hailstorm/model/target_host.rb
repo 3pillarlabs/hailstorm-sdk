@@ -54,7 +54,6 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
     moniterables(project, false).each {|t| t.update_column(:active, false)}
 
     config.target_hosts.each do |host_def|
-      next if host_def[:active] == false
 
       # update type nmemonic to real type
       host_def[:type] = "Hailstorm::Model::#{host_def[:type].to_s.camelize}"
@@ -67,10 +66,10 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
       else
         monitor = target_host
       end
-      if monitor.new_record? and monitor.active?
+      if monitor.new_record?
         monitor.save!()
       else
-        monitor.update_attributes!(host_def) unless monitor.new_record?
+        monitor.update_attributes!(host_def)
       end
 
       # invoke configure in new thread
