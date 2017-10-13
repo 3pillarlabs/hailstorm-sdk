@@ -21,7 +21,6 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
   def setup()
 
     logger.debug { "#{self.class}##{__method__}" }
-    return unless self.active?
     Hailstorm::Support::SSH.start(*ssh_connection_spec) do |ssh|
 
       if ssh.file_exists?(self.executable_path)

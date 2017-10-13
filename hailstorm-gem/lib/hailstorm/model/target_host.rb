@@ -35,8 +35,8 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
   def call_setup()
     
     begin
-      setup()
-      self.save!()
+      setup if self.active?
+      self.save!
     rescue StandardError => e
       logger.error(e.message)
       self.update_column(:active, false)
