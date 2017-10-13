@@ -191,8 +191,8 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       else
         jtl_file_paths << file_path
       end
-      jmeter_plan = self.jmeter_plans.first
-      cluster_instance = self.clusters.first.clusterables(all = true).first
+      jmeter_plan = self.jmeter_plans.all.first
+      cluster_instance = self.clusters.all.first.clusterables(all = true).first
       jtl_file_paths.each do |jfp|
         exec_cycle = self.execution_cycles.create!(
             status: Hailstorm::Model::ExecutionCycle::States::STOPPED,
