@@ -295,7 +295,7 @@ Continue using old version?
                           .slice(2, match_data.length - 1)
                           .compact()
                           .collect(&:strip)
-        if method_args.length == 1 and method_args.first == 'help'
+        if method_args.first == 'help'
           help(method_name)
         else
           # defer to application for further processing
