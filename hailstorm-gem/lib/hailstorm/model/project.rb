@@ -218,7 +218,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     else # generate report
       logger.info("Creating report for stopped tests...")
       report_path = Hailstorm::Model::ExecutionCycle.create_report(self, cycle_ids)
-      logger.info { "Report generated to: #{report_path}" }
+      logger.info { "Report generated to: #{report_path}" } unless report_path.blank?
     end
   end
 

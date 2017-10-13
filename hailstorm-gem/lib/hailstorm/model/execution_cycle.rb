@@ -71,6 +71,10 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   def self.create_report(project, cycle_ids)
 
     reported_execution_cyles = self.execution_cycles_for_report(project, cycle_ids)
+    if reported_execution_cyles.empty?
+      logger.warn('No results to create a report')
+      return
+    end
 
     builder = Hailstorm::Support::ReportBuilder.new()
     builder.title = project.project_code.humanize
