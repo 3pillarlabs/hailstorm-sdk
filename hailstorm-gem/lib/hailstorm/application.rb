@@ -528,6 +528,13 @@ Continue using old version?
           opts = glob
           glob = nil
         end
+        unless opts.nil?
+          opts.keys.each do |opt_key|
+            unless [:jmeter, :exec, :cluster].include?(opt_key.to_sym)
+              raise(Hailstorm::Exception, "Unknown results import option: #{opt_key}")
+            end
+          end
+        end
         sequences = [glob, opts]
         logger.debug { "results(#{args}) -> #{sequences}" }
       end
@@ -907,8 +914,10 @@ Options
               [OPTS]  key value pairs, specified as key=value and multiple pairs
                       are separated by whitespace. Known keys and when they are
                       needed:
-                      jmeter=<plan name> # required if there are multiple plans
+                      jmeter=<plan name>   # required if there are multiple plans
                       cluster=<cluster id> # required if there are multiple clusters
+                      exec=<execution id>  # required if the data is to be imported
+                                             to an existing execution cycle
     RESULTS
   end
 

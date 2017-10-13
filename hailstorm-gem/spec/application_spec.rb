@@ -37,14 +37,32 @@ describe Hailstorm::Application do
         @app.send(:results, 'import', 'foo.jtl')
       end
       it 'should understand options' do
-        @app.current_project.should_receive(:results).with(:import, [nil, {'foo' => '1', 'bar' => '2', 'baz' => '3'}])
-        @app.send(:results, 'import', 'foo=1 bar=2 baz=3')
+        @app.current_project.should_receive(:results).with(:import, [nil, {'jmeter' => '1', 'cluster' => '2'}])
+        @app.send(:results, 'import', 'jmeter=1 cluster=2')
       end
       it 'should understand file and options' do
-        @app.current_project.should_receive(:results).with(:import, ['/tmp/foo.jtl', {'foo' => '1', 'bar' => '2', 'baz' => '3'}])
-        @app.send(:results, 'import', '/tmp/foo.jtl foo=1 bar=2 baz=3')
+        @app.current_project.should_receive(:results).with(:import, ['/tmp/foo.jtl', {'jmeter' => '1', 'cluster' => '2'}])
+        @app.send(:results, 'import', '/tmp/foo.jtl jmeter=1 cluster=2')
       end
-      it 'should understand execution cycle, file and options'
+      context '<options>' do
+        it 'should accept `jmeter` option' do
+          @app.current_project.should_receive(:results).with(:import, ['/tmp/foo.jtl', {'jmeter' => '1'}])
+          @app.send(:results, 'import', '/tmp/foo.jtl jmeter=1')
+        end
+        it 'should accept `cluster` option' do
+          @app.current_project.should_receive(:results).with(:import, ['/tmp/foo.jtl', {'cluster' => '1'}])
+          @app.send(:results, 'import', '/tmp/foo.jtl cluster=1')
+        end
+        it 'should accept `exec` option' do
+          @app.current_project.should_receive(:results).with(:import, ['/tmp/foo.jtl', {'exec' => '1'}])
+          @app.send(:results, 'import', '/tmp/foo.jtl exec=1')
+        end
+        it 'should not accept an unknown option' do
+          expect {
+            @app.send(:results, 'import', '/tmp/foo.jtl foo=1')
+          }.to raise_exception(Hailstorm::Exception)
+        end
+      end
     end
   end
 

@@ -185,19 +185,33 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       self.setup(force = false, invoked_from_start = false) if settings_modified?
       jtl_file_paths = []
       file_path, options = cycle_ids
+      options = options ? options.symbolize_keys : {}
       if file_path.nil?
         glob = File.join(Hailstorm.root, Hailstorm.results_import_dir, '*.jtl')
         Dir[glob].sort.each { |fp| jtl_file_paths << fp }
       else
         jtl_file_paths << file_path
       end
-      jmeter_plan = self.jmeter_plans.all.first
-      cluster_instance = self.clusters.all.first.clusterables(all = true).first
+      jmeter_plan = if options.key?(:jmeter)
+                      self.jmeter_plans.find(options[:jmeter])
+                    else
+                      self.jmeter_plans.all.first
+                    end
+
+      cluster_instance = if options.key?(:cluster)
+                           self.clusters.find(options[:cluster]).clusterables(all = true).first
+                         else
+                           self.clusters.all.first.clusterables(all = true).first
+                         end
       jtl_file_paths.each do |jfp|
-        exec_cycle = self.execution_cycles.create!(
-            status: Hailstorm::Model::ExecutionCycle::States::STOPPED,
-            started_at: Time.now
-        )
+        exec_cycle = if options.key?(:exec)
+                        self.execution_cycles.where(id: options[:exec]).first
+                     else
+                        self.execution_cycles.create!(
+                            status: Hailstorm::Model::ExecutionCycle::States::STOPPED,
+                            started_at: Time.now
+                        )
+                     end
         exec_cycle.import_results(jmeter_plan, cluster_instance, jfp)
       end
 
