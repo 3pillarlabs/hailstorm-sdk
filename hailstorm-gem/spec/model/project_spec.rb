@@ -58,7 +58,7 @@ describe Hailstorm::Model::Project do
                                                   title: '1d229', project_id: project.id)
                              .first_or_create!(active: false)
         data_center.update_column(:active, true)
-        import_opts = {jmeter: jmeter_plan.id.to_s, cluster: cluster.id.to_s, exec: '3'}
+        import_opts = {jmeter: jmeter_plan.test_plan_name, cluster: cluster.id.to_s, exec: '3'}
         exec_cycle.should_receive(:import_results).with(jmeter_plan, data_center, 'foo.jtl')
         project.results(:import, ['foo.jtl', import_opts.stringify_keys])
       end

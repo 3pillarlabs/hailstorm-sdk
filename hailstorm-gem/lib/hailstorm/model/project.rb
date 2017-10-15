@@ -193,7 +193,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
         jtl_file_paths << file_path
       end
       jmeter_plan = if options.key?(:jmeter)
-                      self.jmeter_plans.find(options[:jmeter])
+                      self.jmeter_plans.where(test_plan_name: options[:jmeter]).first
                     else
                       self.jmeter_plans.all.first
                     end
