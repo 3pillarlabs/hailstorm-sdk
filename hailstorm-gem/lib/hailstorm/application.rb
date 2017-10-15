@@ -290,12 +290,10 @@ Continue using old version?
 
       unless match_data.nil?
         method_name = match_data[1].to_sym
-        method_args = match_data
-                          .to_a
-                          .slice(2, match_data.length - 1)
-                          .compact()
-                          .collect(&:strip)
-        if method_args.first == 'help'
+        method_args = match_data.to_a
+                                .slice(2, match_data.length - 1)
+                                .collect { |e| e.blank? ? nil : e }.compact.collect(&:strip)
+        if method_args.length == 1 and method_args.first == 'help'
           help(method_name)
         else
           # defer to application for further processing
@@ -570,7 +568,7 @@ Continue using old version?
              }.to_json
       end
     elsif :export == operation
-      if :zip == format.to_sym
+      if format and :zip == format.to_sym
         reports_path = File.join(Hailstorm.root, Hailstorm.reports_dir)
         timestamp = Time.now.strftime('%Y%m%d%H%M%S')
         zip_file_path = File.join(reports_path, "jtl-#{timestamp}.zip")
