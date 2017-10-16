@@ -100,6 +100,9 @@ class Hailstorm::Support::Configuration
     # Set to true if this cluster should be considered for setup/load generation
     attr_accessor :active
 
+    # Optional code name for cluster
+    attr_accessor :cluster_code
+
     def aws_required?
       false
     end
@@ -160,7 +163,7 @@ class Hailstorm::Support::Configuration
   # in Hailstorm::Model namespace. Select this using the :data_center clusters
   # parameter.
   class DataCenter < ClusterBase
-    #datacenter display identifier
+    # Datacenter display identifier
     attr_accessor :title
 
     # Datacenter password

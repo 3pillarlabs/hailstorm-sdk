@@ -43,7 +43,7 @@ describe Hailstorm::Model::Cluster do
           cluster.name = 'active_cluster'
         end
         Hailstorm::Model::Cluster.configure_all(@project, config)
-        expect(Hailstorm::Model::Cluster.count).to eql(1)
+        expect(Hailstorm::Model::Cluster.where(project_id: @project.id).count).to eql(1)
       end
     end
     context '#active=false' do
@@ -54,7 +54,7 @@ describe Hailstorm::Model::Cluster do
           cluster.active = false
         end
         Hailstorm::Model::Cluster.configure_all(@project, config)
-        expect(Hailstorm::Model::Cluster.count).to eql(1)
+        expect(Hailstorm::Model::Cluster.where(project_id: @project.id).count).to eql(1)
       end
     end
   end

@@ -734,9 +734,10 @@ Continue using old version?
     clustered_load_agents = []
     current_project.clusters.each do |cluster|
       cluster.clusterables(all = !only_active).each do |clusterable|
-        view_item = OpenStruct.new()
-        view_item.clusterable_slug = clusterable.slug()
-        view_item.terminal_table = Terminal::Table.new()
+        view_item = OpenStruct.new
+        view_item.clusterable_slug = clusterable.slug
+        view_item.cluster_code = cluster.cluster_code
+        view_item.terminal_table = Terminal::Table.new
         view_item.terminal_table.headings = ['JMeter Plan', 'Type', 'IP Address', 'JMeter PID']
         q = clusterable.load_agents
         q = q.active if only_active
@@ -917,10 +918,12 @@ Options
               [OPTS]  key value pairs, specified as key=value and multiple pairs
                       are separated by whitespace. Known keys and when they are
                       needed:
-                      jmeter=<plan name>   # required if there are multiple plans
-                      cluster=<cluster id> # required if there are multiple clusters
-                      exec=<execution id>  # required if the data is to be imported
-                                             to an existing execution cycle
+                      jmeter=<plan name>     # required if there are multiple plans
+                      cluster=<cluster code> # required if there are multiple clusters
+                      exec=<test id>         # required if the data is to be imported
+                                               to an existing test cycle. `test id` is
+                                               the first column of the table displayed
+                                               by 'results'
     RESULTS
   end
 

@@ -199,7 +199,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
                     end
 
       cluster_instance = if options.key?(:cluster)
-                           self.clusters.find(options[:cluster]).clusterables(all = true).first
+                           self.clusters.where(cluster_code: options[:cluster]).first.clusterables(all = true).first
                          else
                            self.clusters.all.first.clusterables(all = true).first
                          end
