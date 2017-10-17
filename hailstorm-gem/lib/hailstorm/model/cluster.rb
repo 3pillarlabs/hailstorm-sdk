@@ -59,6 +59,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     if cluster_instance.respond_to?(:max_threads_per_agent)
       cluster_instance.max_threads_per_agent = cluster_config.max_threads_per_agent
     end
+    cluster_instance.save!
     cluster_instance.setup(force)
   end
 

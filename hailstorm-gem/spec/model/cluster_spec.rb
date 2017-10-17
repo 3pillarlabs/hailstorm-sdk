@@ -40,6 +40,7 @@ describe Hailstorm::Model::Cluster do
       it 'should get persisted' do
         config = Hailstorm::Support::Configuration.new
         config.clusters(:test_cluster) do |cluster|
+          cluster.user_name = 'jed'
           cluster.name = 'active_cluster'
         end
         Hailstorm::Model::Cluster.configure_all(@project, config)
@@ -50,6 +51,7 @@ describe Hailstorm::Model::Cluster do
       it 'should get persisted' do
         config = Hailstorm::Support::Configuration.new
         config.clusters(:test_cluster) do |cluster|
+          cluster.user_name = 'jed'
           cluster.name = 'inactive_cluster'
           cluster.active = false
         end
