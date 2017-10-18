@@ -290,11 +290,9 @@ Continue using old version?
 
       unless match_data.nil?
         method_name = match_data[1].to_sym
-        method_args = match_data
-                          .to_a
-                          .slice(2, match_data.length - 1)
-                          .compact()
-                          .collect(&:strip)
+        method_args = match_data.to_a
+                                .slice(2, match_data.length - 1)
+                                .collect { |e| e.blank? ? nil : e }.compact.collect(&:strip)
         if method_args.length == 1 and method_args.first == 'help'
           help(method_name)
         else
@@ -349,11 +347,11 @@ Continue using old version?
       @connection_spec = {}
 
       # load the properties into a java.util.Properties instance
-      database_properties_file = java.io.File.new(File.join(Hailstorm.root,
+      database_properties_file = Java::JavaIo::File.new(File.join(Hailstorm.root,
                                                             Hailstorm.config_dir,
-                                                            "database.properties"))
-      properties = java.util.Properties.new()
-      properties.load(java.io.FileInputStream.new(database_properties_file))
+                                                            'database.properties'))
+      properties = Java::JavaUtil::Properties.new()
+      properties.load(Java::JavaIo::FileInputStream.new(database_properties_file))
 
       # load all properties without an empty value into the spec
       properties.each do |key, value|
@@ -376,7 +374,7 @@ Continue using old version?
       end
     end
 
-    return @connection_spec
+    @connection_spec
   end
 
   # Creates the application directory structure and adds files at appropriate
@@ -511,8 +509,32 @@ Continue using old version?
         sequences = nil
       elsif sequences.match(/^(\d+)\-(\d+)$/) # range
         sequences = ($1..$2).to_a.collect(&:to_i)
-      else # comma or colon separated
+      elsif sequences.match(/^[\d,:]+$/)
         sequences = sequences.split(/\s*[,:]\s*/).collect(&:to_i)
+      else
+        glob, opts = sequences.split(/\s+/).reduce([]) do |a, e|
+          if e =~ /=/
+            a.push({}) if a.last == nil or a.last.is_a?(String)
+            k, v = e.split(/=/)
+            a.last.merge!({k => v})
+          else
+            a.unshift(e)
+          end
+          a
+        end
+        if glob.is_a?(Hash)
+          opts = glob
+          glob = nil
+        end
+        unless opts.nil?
+          opts.keys.each do |opt_key|
+            unless [:jmeter, :exec, :cluster].include?(opt_key.to_sym)
+              raise(Hailstorm::Exception, "Unknown results import option: #{opt_key}")
+            end
+          end
+        end
+        sequences = [glob, opts]
+        logger.debug { "results(#{args}) -> #{sequences}" }
       end
     end
     data = current_project.results(operation, sequences)
@@ -546,7 +568,7 @@ Continue using old version?
              }.to_json
       end
     elsif :export == operation
-      if :zip == format.to_sym
+      if format and :zip == format.to_sym
         reports_path = File.join(Hailstorm.root, Hailstorm.reports_dir)
         timestamp = Time.now.strftime('%Y%m%d%H%M%S')
         zip_file_path = File.join(reports_path, "jtl-#{timestamp}.zip")
@@ -585,10 +607,11 @@ Continue using old version?
   end
 
   def show(*args)
-    what = (args.first || 'all').to_sym
-    show_jmeter_plans() if [:jmeter, :all].include?(what)
-    show_load_agents()  if [:cluster, :all].include?(what)
-    show_target_hosts() if [:monitor, :all].include?(what)
+    what = (args.first || 'active').to_sym
+    all = :all == args[1].to_s.to_sym || :all == what
+    show_jmeter_plans(only_active = !all) if [:jmeter, :active, :all].include?(what)
+    show_load_agents(only_active = !all)  if [:cluster, :active, :all].include?(what)
+    show_target_hosts(only_active = !all) if [:monitor, :active, :all].include?(what)
   end
 
   def status(*args)
@@ -644,9 +667,9 @@ Continue using old version?
         Regexp.new('^(start)(\s+redeploy|\s+help)?$'),
         Regexp.new('^(stop)(\s+suspend|\s+wait|\s+suspend\s+wait|\s+wait\s+suspend|\s+help)?$'),
         Regexp.new('^(abort)(\s+suspend|\s+help)?$'),
-        Regexp.new('^(results)(\s+show|\s+exclude|\s+include|\s+report|\s+export|\s+help)?(\s+[\d,\-:]+|\s+last)?$'),
+        Regexp.new('^(results)(\s+show|\s+exclude|\s+include|\s+report|\s+export|\s+import|\s+help)?(\s+[\d,\-:]+|\s+last)?(.*)$'),
         Regexp.new('^(purge)(\s+tests|\s+clusters|\s+all|\s+help)?$'),
-        Regexp.new('^(show)(\s+jmeter|\s+cluster|\s+monitor|\s+all|\s+help)?$'),
+        Regexp.new('^(show)(\s+jmeter|\s+cluster|\s+monitor|\s+help|\s+active)?(|\s+all)?$'),
         Regexp.new('^(terminate)(\s+help)?$'),
         Regexp.new('^(status)(\s+help)?$')
     ]
@@ -693,27 +716,32 @@ Continue using old version?
     File.join(java.lang.System.getProperty('user.home'), '.hailstorm_history')
   end
 
-  def show_jmeter_plans()
+  def show_jmeter_plans(only_active = true)
     jmeter_plans = []
-    current_project.jmeter_plans.active.each do |jmeter_plan|
+    q = current_project.jmeter_plans
+    q = q.active if only_active
+    q.each do |jmeter_plan|
       plan = OpenStruct.new
       plan.name = jmeter_plan.test_plan_name
       plan.properties = jmeter_plan.properties_map()
       jmeter_plans.push(plan)
     end
-    render_view('jmeter_plan', :jmeter_plans => jmeter_plans)
+    render_view('jmeter_plan', :jmeter_plans => jmeter_plans, :only_active => only_active)
   end
 
-  def show_load_agents()
+  def show_load_agents(only_active = true)
 
     clustered_load_agents = []
     current_project.clusters.each do |cluster|
-      cluster.clusterables.each do |clusterable|
-        view_item = OpenStruct.new()
-        view_item.clusterable_slug = clusterable.slug()
-        view_item.terminal_table = Terminal::Table.new()
+      cluster.clusterables(all = !only_active).each do |clusterable|
+        view_item = OpenStruct.new
+        view_item.clusterable_slug = clusterable.slug
+        view_item.cluster_code = cluster.cluster_code
+        view_item.terminal_table = Terminal::Table.new
         view_item.terminal_table.headings = ['JMeter Plan', 'Type', 'IP Address', 'JMeter PID']
-        clusterable.load_agents.active.each do |load_agent|
+        q = clusterable.load_agents
+        q = q.active if only_active
+        q.each do |load_agent|
           view_item.terminal_table.add_row([
            load_agent.jmeter_plan.test_plan_name,
            (load_agent.master? ? 'Master' : 'Slave'),
@@ -724,17 +752,17 @@ Continue using old version?
         clustered_load_agents.push(view_item)
       end
     end
-    render_view('cluster', :clustered_load_agents => clustered_load_agents)
+    render_view('cluster', :clustered_load_agents => clustered_load_agents, :only_active => only_active)
   end
 
-  def show_target_hosts()
+  def show_target_hosts(only_active = true)
 
     terminal_table = Terminal::Table.new()
     terminal_table.headings = ['Role', 'Host', 'Monitor', 'PID']
-    active_target_hosts = current_project.target_hosts()
-                                         .active()
-                                         .natural_order()
-    active_target_hosts.each do |target_host|
+    q = current_project.target_hosts
+    q = q.active if only_active
+    target_hosts = q.natural_order
+    target_hosts.each do |target_host|
       terminal_table.add_row([
                                  target_host.role_name,
                                  target_host.host_name,
@@ -742,7 +770,7 @@ Continue using old version?
                                  target_host.executable_pid,
                              ])
     end
-    render_view('monitor', :terminal_table => terminal_table)
+    render_view('monitor', :terminal_table => terminal_table, :only_active => only_active)
   end
 
   def render_view(template_file, context_vars = {})
@@ -774,7 +802,7 @@ Continue using old version?
 
     terminate       Terminates load generation and target monitoring.
 
-    results         Operate on results to include, exclude or generate report
+    results         Include, exclude, export, import results or generate report
 
     purge           Purge specific or ALL data from database
 
@@ -881,11 +909,21 @@ Options
       include [TEST]  Include TEST in reports.
                       Without a TEST, no tests will be included.
       report  [TEST]  Generate report for TEST.
-                      Without a TEST argument, all succefully stopped tests will
+                      Without a TEST argument, all successfully stopped tests will
                       be reported.
       export  [TEST]  Export the results as one or more JTL files.
                       Without a TEST argument, all successfully stopped tests
                       will be exported.
+      import  <FILE>  Import the results from FILE(.jtl). OPTS is a set of
+              [OPTS]  key value pairs, specified as key=value and multiple pairs
+                      are separated by whitespace. Known keys and when they are
+                      needed:
+                      jmeter=<plan name>     # required if there are multiple plans
+                      cluster=<cluster code> # required if there are multiple clusters
+                      exec=<test id>         # required if the data is to be imported
+                                               to an existing test cycle. `test id` is
+                                               the first column of the table displayed
+                                               by 'results'
     RESULTS
   end
 
@@ -901,7 +939,10 @@ Options
     jmeter        Show jmeter configuration
     cluster       Show cluster configuration
     monitor       Show monitor configuration
-    all           Show load generation status (default)
+    active        Show everything active (default)
+    all           Special switch to show inactive items
+                  > show all
+                  > show jmeter all
     SHOW
   end
 

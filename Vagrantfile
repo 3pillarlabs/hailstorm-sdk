@@ -179,6 +179,7 @@ Vagrant.configure(2) do |config|
     site.vm.provider :aws do |ec2, override|
       ec2.ami = "ami-841f46ff"
       ec2.access_key_id, ec2.secret_access_key = aws_keys()
+      require 'yaml'
       aws_conf = YAML.load_file('vagrant-site.yml').reduce({}) { |a, e| a.merge(e[0].to_sym => e[1]) }
       ec2.keypair_name = aws_conf[:keypair_name]
       ec2.instance_type = aws_conf[:instance_type] || "t2.medium"

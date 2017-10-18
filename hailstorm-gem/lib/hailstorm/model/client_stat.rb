@@ -34,7 +34,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   after_initialize :set_defaults
 
   def self.create_client_stats(execution_cycle, jmeter_plan_id,
-      clusterable, stat_file_paths)
+      clusterable, stat_file_paths, rm_stat_file = true)
 
     # Collate statistics file if needed
     stat_file_path = nil
@@ -88,7 +88,8 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     # persist file to DB and remove file from FS
     logger.info { "Persisting #{stat_file_path} to DB..." }
     Hailstorm::Model::JtlFile.persist_file(client_stat, stat_file_path)
-    File.unlink(stat_file_path)
+    File.unlink(stat_file_path) if rm_stat_file
+    client_stat
   end
 
   # Combines two or more JTL files to create new JTL file with combined stats.
@@ -431,6 +432,10 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
     grapher.build(File.join(Hailstorm.root, Hailstorm.reports_dir,
                             "throughput_per_second_graph_#{execution_cycle.id}"), 640, 300)
+  end
+
+  def first_sample_at
+    Time.at((self.start_timestamp / 1000).to_i) if self.start_timestamp
   end
 
   # Receives event callbacks as XML is parsed

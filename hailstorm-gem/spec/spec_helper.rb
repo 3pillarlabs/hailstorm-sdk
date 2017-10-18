@@ -17,6 +17,7 @@ RSpec.configure do |config|
 end
 
 $CLASSPATH << File.dirname(__FILE__)
+ENV['HAILSTORM_ENV'] = 'test'
 
 require 'hailstorm/application'
 require 'hailstorm/support/configuration'

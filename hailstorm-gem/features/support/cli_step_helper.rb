@@ -27,6 +27,7 @@ module CliStepHelper
         s.cluster_type = :amazon_cloud
         s.access_key = keys.access_key if s.access_key.nil?
         s.secret_key = keys.secret_key if s.secret_key.nil?
+        s.active = true if s.active.nil?
         s
       end
       @config_changed = true
@@ -38,12 +39,13 @@ module CliStepHelper
     @config_changed
   end
 
-  def write_config
+  def write_config(monitor_active = true)
     engine = ActionView::Base.new
     site_server_property = OpenStruct.new({property: 'ServerName', value: site_server_url})
     engine.assign(:properties => jmeter_properties.push(site_server_property),
                   :clusters => clusters,
-                  :monitor_host => site_server_url)
+                  :monitor_host => site_server_url,
+                  :monitor_active => monitor_active)
     File.open(File.join(tmp_path, current_project,
                         Hailstorm.config_dir, 'environment.rb'), 'w') do |env_file|
       env_file.print(engine.render(:file => File.join(data_path, 'environment')))
