@@ -146,11 +146,9 @@ module Hailstorm::Behavior::Clusterable
   
     recipient.has_many(:slave_agents, :as => :clusterable)
 
-    recipient.has_many(:client_stats, :as => :clusterable, :dependent => :destroy,
-            #  :include => :jmeter_plan # There's no need to use includes for immediate associations
-                       )
+    recipient.has_many(:client_stats, :as => :clusterable, :dependent => :destroy)
 
-    recipient.after_commit(:disable_agents, :unless => proc {|r| r.active?})
+    recipient.after_commit(:disable_agents, :on => :update, :unless => proc {|r| r.active?})
   end  
 
   # Start JMeter slaves on load agents

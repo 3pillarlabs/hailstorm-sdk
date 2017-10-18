@@ -85,4 +85,8 @@ module Hailstorm
     File.join(self.config_dir, 'log4j')
   end
 
+  def self.results_import_dir
+    File.join(self.log_dir, 'import')
+  end
+
 end

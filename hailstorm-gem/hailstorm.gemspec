@@ -45,6 +45,7 @@ Hailstorm works in an offline mode by default, which means you can exit the appl
   gem.add_dependency(%q<terminal-table>, '= 1.4.5')
   gem.add_dependency(%q<bouncy-castle-java>, '= 1.5.0146.1')
   gem.add_dependency(%q<httparty>, '= 0.13.1')
+  gem.add_dependency(%q<haikunator>, '= 1.1.0')
 
   gem.add_development_dependency(%q<rspec>, '~> 2.13.0')
   gem.add_development_dependency(%q<cucumber>, '~> 2.4')

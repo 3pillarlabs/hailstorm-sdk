@@ -1,6 +1,8 @@
 # Models mapping from a project to configured clusters
 # @author Sayantam Dey
 
+require 'haikunator'
+
 require 'hailstorm/model'
 require 'hailstorm/model/load_agent'
 require 'hailstorm/support/thread'
@@ -8,6 +10,8 @@ require 'hailstorm/support/thread'
 class Hailstorm::Model::Cluster < ActiveRecord::Base
 
   belongs_to :project
+
+  before_create :set_cluster_code
 
   before_destroy :destroy_clusterables
 
@@ -18,8 +22,12 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   # @return [Class] the model class represented by cluster_type.
   def cluster_klass()
     if @cluster_klass.nil?
-      require self.cluster_type.underscore
-      @cluster_klass = self.cluster_type.constantize()
+      begin
+        @cluster_klass = self.cluster_type.constantize
+      rescue
+        require(self.cluster_type.underscore)
+        retry
+      end
     end
     @cluster_klass
   end
@@ -42,7 +50,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     # cluster specific attributes
     cluster_attributes = cluster_config.instance_values
                                        .symbolize_keys
-                                       .except(:active, :cluster_type, :max_threads_per_agent)
+                                       .except(:active, :cluster_type, :max_threads_per_agent, :cluster_code)
                                        .merge(:project_id => self.project.id)
     # find the cluster or create it
     cluster_instance = cluster_klass.where(cluster_attributes)
@@ -51,6 +59,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     if cluster_instance.respond_to?(:max_threads_per_agent)
       cluster_instance.max_threads_per_agent = cluster_config.max_threads_per_agent
     end
+    cluster_instance.save!
     cluster_instance.setup(force)
   end
 
@@ -76,14 +85,16 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
         AWS.eager_autoload!
       end
       cluster_type = "Hailstorm::Model::#{cluster_config.cluster_type.to_s.camelize}"
-      cluster = project.clusters()
-                       .where(:cluster_type => cluster_type)
-                       .first_or_initialize()
-
-      if cluster.new_record? and cluster_config.active
-        cluster.save!()
+      cluster = project.clusters
+                       .where({cluster_type: cluster_type}.tap { |o|
+                          o.merge!(cluster_code: cluster_config.cluster_code) if cluster_config.cluster_code
+                        })
+                       .first_or_create!
+      if cluster.cluster_code.nil?
+        cluster.set_cluster_code
+        cluster.save!
       end
-      cluster_line_items.push([cluster, cluster_config, force]) if cluster.persisted?
+      cluster_line_items.push([cluster, cluster_config, force])
     end
 
     if cluster_line_items.size == 1
@@ -240,6 +251,15 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   def purge()
     if cluster_klass.respond_to?(:purge)
       cluster_klass.purge()
+    end
+  end
+
+  def set_cluster_code
+    if self.cluster_code.nil?
+      self.cluster_code = Haikunator.haikunate(token_range = 100)
+      until self.class.where(cluster_code: self.cluster_code).count == 0
+        self.cluster_code = Haikunator.haikunate(token_range = 100)
+      end
     end
   end
 

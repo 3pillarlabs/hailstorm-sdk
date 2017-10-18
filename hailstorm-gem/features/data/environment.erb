@@ -20,6 +20,7 @@ Hailstorm.application.config do |config|
         <%- unless p.max_threads_per_agent.blank? %>
         cluster.max_threads_per_agent = <%= p.max_threads_per_agent %>
         <%- end %>
+        cluster.active = <%= p.active %>
     end
     <%- end %>
 
@@ -29,6 +30,7 @@ Hailstorm.application.config do |config|
         monitor.ssh_identity      = 'all_purpose'
         monitor.user_name         = 'ubuntu'
         monitor.sampling_interval = 5
+        monitor.active = <%= @monitor_active %>
 
         monitor.groups('Application Server') do |group|
             group.hosts('<%= @monitor_host %>')
