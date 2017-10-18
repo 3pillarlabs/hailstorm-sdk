@@ -27,6 +27,7 @@ module CliStepHelper
         s.cluster_type = :amazon_cloud
         s.access_key = keys.access_key if s.access_key.nil?
         s.secret_key = keys.secret_key if s.secret_key.nil?
+        s.active = true if s.active.nil?
         s
       end
       @config_changed = true
