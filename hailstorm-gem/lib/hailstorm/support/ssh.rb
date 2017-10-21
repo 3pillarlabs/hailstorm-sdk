@@ -9,17 +9,17 @@ require "hailstorm/behavior/loggable"
 class Hailstorm::Support::SSH
 
   include Hailstorm::Behavior::Loggable
-  
+
   # Starts a new SSH connection. When a block is provided, the connection
   # is closed when the block terminates, otherwise the connection will be
   # returned.
   # @param [String] host host_name or ip_address
   # @param [String] user SSH user_name
   # @param [Hash] options connection options, same as used by Net::SSH
-  # @return [Net::SSH::Connection::Session] with 
+  # @return [Net::SSH::Connection::Session] with
   #   Hailstorm::Support::SSH::ConnectionSessionInstanceMethods added
   def self.start(host, user, options = {}, &block)
-    
+
     logger.debug { "#{self}.#{__method__}" }
     ssh_options = { user_known_hosts_file: '/dev/null' }.merge(options)
     if block_given?
@@ -43,7 +43,7 @@ class Hailstorm::Support::SSH
       return ssh
     end
   end
-  
+
   # Waits till the SSH connection is available; this does not wait indefinitely,
   # rather makes at max 5 attempts to connect and waits for an exponential time
   # between each successive request.
@@ -57,7 +57,7 @@ class Hailstorm::Support::SSH
     connection_obtained = false
     num_tries = 0
     doze_time = 1
-    while num_tries < 3 and !connection_obtained 
+    while num_tries < 3 and !connection_obtained
       begin
         self.start(host, user, options) do |ssh|
           ssh.exec!("ls")
@@ -70,17 +70,17 @@ class Hailstorm::Support::SSH
         num_tries += 1
       end
     end
-    
+
     unless connection_obtained
       logger.error("Giving up after trying #{num_tries + 1} times")
     end
-    
+
     return connection_obtained
   end
-  
+
   # Instance methods added to Net::SSH::Connection::Session
   module ConnectionSessionInstanceMethods
-    
+
     # @param [String] full path to file on remote system
     # @return [Boolean] true if the file exists
     def file_exists?(file_path)
@@ -155,7 +155,6 @@ class Hailstorm::Support::SSH
     # @param [String] process_name name of process to find
     # @return [Fixnum]
     def find_process_id(process_name)
-
       process = remote_processes().find {|p| p.cmd.include?(process_name)}
       process ? process.pid : nil
     end
@@ -165,7 +164,6 @@ class Hailstorm::Support::SSH
     # pid (process ID), ppid (parent process ID), cmd (command string).
     # @return [Array] OpenStruct: pid, ppid, cmd
     def remote_processes()
-
       stdout = ''
       self.exec!("ps -o pid,ppid,cmd -u #{self.options[:user]}") do |channel, stream, data|
         stdout << data if stream == :stdout
@@ -193,16 +191,16 @@ class Hailstorm::Support::SSH
 
       return @remote_processes
     end
-    
+
   end
 
   module AliasedMethods
 
     #:nodoc:
-    def exec(command, &block)
+    def exec(command, options = {}, &block)
       logger.debug { command }
-      net_ssh_exec(command, &block)
+      net_ssh_exec(command, options, &block)
     end
   end
-  
+
 end

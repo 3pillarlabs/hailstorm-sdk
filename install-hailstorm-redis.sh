@@ -4,7 +4,7 @@
 
 sudo -i
 
-ruby_version='ext-jruby-1.7.19@hailstorm'
+ruby_version='jruby@hailstorm'
 install_path=/usr/local/lib
 hailstorm_redis_home=$install_path/hailstorm-redis
 vagrant_user=vagrant
@@ -29,5 +29,7 @@ echo $ruby_version > .ruby-version
 
 # install upstart conf for sidekiq
 cp /vagrant/sidekiq.conf /etc/init/sidekiq.conf
+status sidekiq | grep 'stop' || stop sidekiq
+start sidekiq
 
 exit

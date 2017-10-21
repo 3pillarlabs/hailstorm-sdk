@@ -7,7 +7,7 @@ services:
 
 language: ruby
 rvm:
-  - jruby-1.7.26
+  - jruby-9.1.9.0
 jdk:
   - oraclejdk8
 

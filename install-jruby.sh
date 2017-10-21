@@ -1,21 +1,24 @@
 #!/usr/bin/env bash
 
-# install jruby-1.7.x & create 'hailstorm' gemset
+# install jruby & create 'hailstorm' gemset
 sudo -i
 
+jruby_version='9.1.7.0'
 source /usr/local/rvm/scripts/rvm
-rvm list | grep 'jruby'
+rvm list | grep "$jruby_version"
 if [ $? -ne 0 ]; then
-	jruby_dir=jruby-1.7.19
-	jruby_home=/opt/$jruby_dir
-	if [ ! -e $jruby_home ]; then
-		mkdir -p $jruby_home
-		wget -O- -q https://s3.amazonaws.com/jruby.org/downloads/1.7.19/jruby-bin-1.7.19.tar.gz | tar -xzC $jruby_home --strip-components=1
-	fi
-	rvm mount $jruby_home/bin/jruby -n jruby-1.7.19
-	rvm install ext-jruby-1.7.19
-	rvm use ext-jruby-1.7.19
+	rvm install jruby-$jruby_version
+	rvm use jruby-$jruby_version
 	rvm gemset create hailstorm
+
+	# chamge the rvm aliases
+	for al in default jruby; do
+		rvm alias list | grep $al
+		if [ $? -eq 0 ]; then
+			rvm alias delete $al
+		fi
+		rvm alias create $al jruby-$jruby_version
+	done
 fi
 
 exit
