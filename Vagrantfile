@@ -93,7 +93,7 @@ Vagrant.configure(2) do |config|
   	dev.vm.provision "jruby", :type => :shell, :path => 'install-jruby.sh'
 
     # hailstom-apps
-  	dev.vm.provision "hailstorm_apps", :type => :shell, :path => 'install-hailstorm-apps.sh'
+  	dev.vm.provision "hailstorm_apps", :type => :shell, :path => 'install-hailstorm-apps.sh', :run => 'always'
 
   	# hailstorm-redis
   	dev.vm.provision "hailstorm_redis", :type => :shell, :path => 'install-hailstorm-redis.sh'
@@ -163,7 +163,7 @@ Vagrant.configure(2) do |config|
   	aws.vm.provision "jruby", :type => :shell, :path => 'install-jruby.sh'
 
     # hailstom-apps
-  	aws.vm.provision "hailstorm_apps", :type => :shell, :path => 'install-hailstorm-apps.sh'
+  	aws.vm.provision "hailstorm_apps", :type => :shell, :path => 'install-hailstorm-apps.sh', :run => 'always'
 
   	# hailstorm-redis
   	aws.vm.provision "hailstorm_redis", :type => :shell, :path => 'install-hailstorm-redis.sh'
