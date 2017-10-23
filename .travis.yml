@@ -7,7 +7,7 @@ services:
 
 language: ruby
 rvm:
-  - jruby-1.7.26
+  - jruby-9.1.9.0
 jdk:
   - oraclejdk8
 
@@ -18,3 +18,9 @@ script:
 
 before_script:
   - mysql -e 'grant all privileges on *.* to "hailstorm_dev"@"localhost" identified by "hailstorm_dev";'
+  - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+  - chmod +x ./cc-test-reporter
+  - ./cc-test-reporter before-build
+
+after_script:
+  - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT

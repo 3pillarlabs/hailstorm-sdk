@@ -23,6 +23,7 @@ for app in hailstorm-gem hailstorm-redis hailstorm-web; do
 		rm -rf $install_path/$app
 		cp -r /vagrant/$app $install_path/
 		echo $app_sha1 > $install_path/$app.sha1
+		echo "Installed $app"
 	fi
 done
 
