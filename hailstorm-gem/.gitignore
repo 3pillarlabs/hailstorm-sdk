@@ -6,3 +6,4 @@ tmp/*
 .bundle/*
 features/data/keys.yml
 spec/keys.yml
+coverage/

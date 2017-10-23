@@ -19,6 +19,7 @@ end
 $CLASSPATH << File.dirname(__FILE__)
 ENV['HAILSTORM_ENV'] = 'test'
 
+require 'simplecov'
 require 'hailstorm/application'
 require 'hailstorm/support/configuration'
 Hailstorm::Application.initialize!('hailstorm_spec', '.', {
