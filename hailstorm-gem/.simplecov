@@ -1,1 +1,1 @@
-SimpleCov.start
+SimpleCov.start if ENV['HAILSTORM_COVERAGE']
