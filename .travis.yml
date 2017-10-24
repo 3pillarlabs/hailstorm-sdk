@@ -23,7 +23,7 @@ before_script:
   - ./cc-test-reporter before-build
 
 after_script:
-  - cd hailstorm-gem/ && ../cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT --prefix="hailstorm-gem"
+  - cd hailstorm-gem && ../cc-test-reporter format-coverage --add-prefix "hailstorm-gem" && ../cc-test-reporter upload-coverage
 
 env:
   global:
