@@ -53,4 +53,5 @@ Hailstorm works in an offline mode by default, which means you can exit the appl
   gem.add_development_dependency(%q<activerecord-jdbcsqlite3-adapter>, ['= 1.3.11'])
   gem.add_development_dependency(%q<ruby-debug>)
   gem.add_development_dependency(%q<rubocop>)
+  gem.add_development_dependency(%q<simplecov>)
 end

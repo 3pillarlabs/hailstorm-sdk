@@ -3,4 +3,6 @@ plugins:
   rubocop:
     enabled: true
 exclude_patterns:
-  - "!hailstorm-gem/"
+  - "hailstorm-site/**/*"
+  - "hailstorm-redis/**/*"
+  - "hailstorm-web/**/*"
