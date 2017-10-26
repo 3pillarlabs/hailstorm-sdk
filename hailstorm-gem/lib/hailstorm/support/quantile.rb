@@ -1,12 +1,9 @@
-# Quartile uses a histogram approach to calculate quartiles with a fast algorithm
-# without resorting to sorting.
-
-# @author Sayantam Dey
-
 require 'hailstorm/support'
 
+# Quartile uses a histogram approach to calculate quartiles with a fast algorithm
+# without resorting to sorting.
+# @author Sayantam Dey
 class Hailstorm::Support::Quantile
-
   attr_reader :histogram
 
   def initialize
@@ -27,14 +24,11 @@ class Hailstorm::Support::Quantile
   end
 
   def quantile(at)
-
     quantile_value = 0
     if @samples_count <= 1000
       samples = []
       histogram.each_with_index do |freq, value|
-        unless freq.nil?
-          freq.times { samples.push(value) }
-        end
+        freq.times { samples.push(value) } unless freq.nil?
       end
       samples.sort!
       quantile_index = ((samples.length * at) / 100) - 1
@@ -51,7 +45,6 @@ class Hailstorm::Support::Quantile
       quantile_value = index
     end
 
-    return quantile_value
+    quantile_value
   end
-
 end
