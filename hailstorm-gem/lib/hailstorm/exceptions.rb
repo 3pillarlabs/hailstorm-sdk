@@ -21,7 +21,7 @@ module Hailstorm
       @message ||= diagnostics.gsub(/[ \t]{2,}/, ' ').freeze
     end
     def diagnostics
-      ""
+      ''
     end
   end
 
@@ -50,7 +50,7 @@ module Hailstorm
   end
 
   class JMeterVersionNotFound < DiagnosticAwareException
-    
+
     attr_reader :jmeter_version, :bucket_name, :jmeter_file_path
 
     # @param [Object] jmeter_version
@@ -95,16 +95,16 @@ module Hailstorm
     attr_reader :agent_machine, :user_name, :ssh_identity
 
     # @param [String] user_name  ssh user name
-    # @param [String] machines comma separated ip addresses of machines
+    # @param [String] agent_machines comma separated ip addresses of machines
     # @param [String] ssh_identity ssh ssh identity
-    def initialize(user_name, agent_machine, ssh_identity)
-      @agent_machine   = agent_machine
+    def initialize(user_name, agent_machines, ssh_identity)
+      @agent_machine   = agent_machines
       @user_name    = user_name
       @ssh_identity = ssh_identity
     end
 
     def diagnostics
-      %{HailStrom is not able to connect to agent##{agent_machine} using user name '#{user_name}'
+      %{HailStorm is not able to connect to agent##{agent_machine} using user name '#{user_name}'
       and ssh identity file '#{ssh_identity}'. System might not be running at the moment or
       user and/or ssh identity used are not allowed to connect to specified machine}
     end

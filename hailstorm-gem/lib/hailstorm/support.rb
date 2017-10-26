@@ -1,8 +1,6 @@
-# Support module
-# @author Sayantam Dey
-
 require 'hailstorm'
 
+# Support module
+# @author Sayantam Dey
 module Hailstorm::Support
-
 end
