@@ -1,12 +1,10 @@
-# Report builder
-
 require 'nokogiri'
 require 'zip/filesystem'
 
 require 'hailstorm/support'
 
+# Report builder
 class Hailstorm::Support::ReportBuilder
-
   attr_accessor :title
 
   attr_accessor :jmeter_plans
@@ -25,11 +23,10 @@ class Hailstorm::Support::ReportBuilder
     @report_type = options[:type] || 'standard'
   end
 
-  def test_summary_rows(&block)
-
+  def test_summary_rows
     @test_summary_rows ||= []
     if block_given?
-      row = TestSummaryRow.new()
+      row = TestSummaryRow.new
       yield row
       row.index = @test_summary_rows.size + 1
       @test_summary_rows.push(row)
@@ -39,20 +36,18 @@ class Hailstorm::Support::ReportBuilder
   end
 
   class TestSummaryRow
-
     attr_accessor :index
     attr_accessor :jmeter_plans
     attr_accessor :test_duration
     attr_accessor :total_threads_count
 
     attr_writer :target_hosts
-    def target_hosts()
+    def target_hosts
       (@target_hosts || []).collect(&:host_name).join(', ')
     end
   end
 
-  def execution_detail_items(&block)
-
+  def execution_detail_items
     @execution_detail_items ||= []
     if block_given?
       item = ExecutionDetail.new(self)
@@ -66,30 +61,26 @@ class Hailstorm::Support::ReportBuilder
 
   # Target names (Array) grouped by role across all execution_detail_items
   # @return [Hash]
-  def targets_by_role()
-
+  def targets_by_role
     self.execution_detail_items.inject({}) do |group, ex|
-      acc = ex.target_stats.inject({}) do |map, t|
+      acc = ex.target_stats.each_with_object({}) do |t, map|
         map[t.role_name] ||= []
         map[t.role_name] << t.host_name
-        map
       end
-      acc.each_pair {|k, v| group[k].nil? ? group.merge!(k => v) : group[k].concat(v).uniq! }
+      acc.each_pair { |k, v| group[k].nil? ? group.merge!(k => v) : group[k].concat(v).uniq! }
       acc
     end
   end
 
   # ClusterItem with uniq names
   # @return [Array]
-  def all_clusters()
-
+  def all_clusters
     self.execution_detail_items.inject([]) do |coll, ex|
-      coll.concat(ex.clusters).uniq {|e| e.name}
+      coll.concat(ex.clusters).uniq(&:name)
     end
   end
 
   class TocItem
-
     attr_accessor :builder
     attr_accessor :toc_id
 
@@ -100,12 +91,10 @@ class Hailstorm::Support::ReportBuilder
   end
 
   class ExecutionDetail < TocItem
-
     attr_accessor :index
     attr_accessor :total_threads_count
 
-    def clusters(&block)
-
+    def clusters
       @clusters ||= []
       if block_given?
         item = ClusterItem.new(builder)
@@ -116,8 +105,7 @@ class Hailstorm::Support::ReportBuilder
       end
     end
 
-    def target_stats(&block)
-
+    def target_stats
       @target_stats ||= []
       if block_given?
         item = TargetStatItem.new(builder)
@@ -132,8 +120,8 @@ class Hailstorm::Support::ReportBuilder
       self.clusters.size > 1
     end
 
-    def hits_per_second_graph(&block)
-      @hits_per_second_graph ||= Hailstorm::Support::ReportBuilder::Graph.new()
+    def hits_per_second_graph
+      @hits_per_second_graph ||= Hailstorm::Support::ReportBuilder::Graph.new
       if block_given?
         yield @hits_per_second_graph
         @hits_per_second_graph.enlist(builder)
@@ -142,8 +130,8 @@ class Hailstorm::Support::ReportBuilder
       end
     end
 
-    def active_threads_over_time_graph(&block)
-      @active_threads_over_time_graph ||= Hailstorm::Support::ReportBuilder::Graph.new()
+    def active_threads_over_time_graph
+      @active_threads_over_time_graph ||= Hailstorm::Support::ReportBuilder::Graph.new
       if block_given?
         yield @active_threads_over_time_graph
         @active_threads_over_time_graph.enlist(builder)
@@ -152,8 +140,8 @@ class Hailstorm::Support::ReportBuilder
       end
     end
 
-    def throughput_over_time_graph(&block)
-      @throughput_over_time_graph ||= Hailstorm::Support::ReportBuilder::Graph.new()
+    def throughput_over_time_graph
+      @throughput_over_time_graph ||= Hailstorm::Support::ReportBuilder::Graph.new
       if block_given?
         yield @throughput_over_time_graph
         @throughput_over_time_graph.enlist(builder)
@@ -161,12 +149,10 @@ class Hailstorm::Support::ReportBuilder
         @throughput_over_time_graph
       end
     end
-
   end
 
-  def client_comparison_graph(&block)
-
-    @client_comparison_graph ||= Graph.new()
+  def client_comparison_graph
+    @client_comparison_graph ||= Graph.new
     if block_given?
       yield @client_comparison_graph
       @client_comparison_graph.enlist(self)
@@ -175,9 +161,8 @@ class Hailstorm::Support::ReportBuilder
     end
   end
 
-  def target_cpu_comparison_graph(&block)
-
-    @target_cpu_comparison_graph ||= Graph.new()
+  def target_cpu_comparison_graph
+    @target_cpu_comparison_graph ||= Graph.new
     if block_given?
       yield @target_cpu_comparison_graph
       @target_cpu_comparison_graph.enlist(self)
@@ -186,9 +171,8 @@ class Hailstorm::Support::ReportBuilder
     end
   end
 
-  def target_memory_comparison_graph(&block)
-
-    @target_memory_comparison_graph ||= Graph.new()
+  def target_memory_comparison_graph
+    @target_memory_comparison_graph ||= Graph.new
     if block_given?
       yield @target_memory_comparison_graph
       @target_memory_comparison_graph.enlist(self)
@@ -198,11 +182,9 @@ class Hailstorm::Support::ReportBuilder
   end
 
   class ClusterItem < TocItem
-
     attr_accessor :name
 
-    def client_stats(&block)
-
+    def client_stats
       @client_stats ||= []
       if block_given?
         item = ClientStatItem.new(builder)
@@ -213,8 +195,8 @@ class Hailstorm::Support::ReportBuilder
       end
     end
 
-    def comparison_graph(&block)
-      @comparison_graph ||= Hailstorm::Support::ReportBuilder::Graph.new()
+    def comparison_graph
+      @comparison_graph ||= Hailstorm::Support::ReportBuilder::Graph.new
       if block_given?
         yield @comparison_graph
         @comparison_graph.enlist(builder)
@@ -224,13 +206,12 @@ class Hailstorm::Support::ReportBuilder
     end
 
     class ClientStatItem < Hailstorm::Support::ReportBuilder::TocItem
-
       attr_accessor :name
       attr_accessor :threads_count
       attr_accessor :aggregate_stats
 
-      def aggregate_graph(&block)
-        @aggregate_graph ||= Hailstorm::Support::ReportBuilder::Graph.new()
+      def aggregate_graph
+        @aggregate_graph ||= Hailstorm::Support::ReportBuilder::Graph.new
         if block_given?
           yield @aggregate_graph
           @aggregate_graph.enlist(builder)
@@ -238,17 +219,15 @@ class Hailstorm::Support::ReportBuilder
           @aggregate_graph
         end
       end
-
     end
   end
 
   class TargetStatItem < TocItem
-
     attr_accessor :role_name
     attr_accessor :host_name
 
-    def utilization_graph(&block)
-      @utilization_graph ||= Graph.new()
+    def utilization_graph
+      @utilization_graph ||= Graph.new
       if block_given?
         yield @utilization_graph
         @utilization_graph.enlist(builder)
@@ -257,8 +236,8 @@ class Hailstorm::Support::ReportBuilder
       end
     end
 
-    def comparison_graph(&block)
-      @comparison_graph ||= Graph.new()
+    def comparison_graph
+      @comparison_graph ||= Graph.new
       if block_given?
         yield @comparison_graph
         @comparison_graph.enlist(builder)
@@ -269,7 +248,6 @@ class Hailstorm::Support::ReportBuilder
   end
 
   class Graph
-
     attr_accessor :chart_model
 
     # internal attributes
@@ -282,37 +260,34 @@ class Hailstorm::Support::ReportBuilder
     attr_reader :cy
 
     def enlist(builder)
-
       @docpr_id = self.object_id
       @docpr_name = "Picture #{@docpr_id}"
       @cnvpr_id = @chart_model.object_id
-      @cnvpr_name = File.basename(@chart_model.getFilePath())
+      @cnvpr_name = File.basename(@chart_model.getFilePath)
       @embed_id = "rId#{self.object_id}"
-      @cx = (@chart_model.getWidth() * 9286.875).to_i
-      @cy = (@chart_model.getHeight() * 9286.875).to_i
+      @cx = (@chart_model.getWidth * 9286.875).to_i
+      @cy = (@chart_model.getHeight * 9286.875).to_i
       builder.images.push(self)
     end
 
     def exists?
       self.chart_model.blank? ? false : true
     end
-
   end
 
   def build(reports_path, report_file_name)
-
     @current_report_path = File.join(reports_path, report_file_name.gsub(/\/$/, ''))
 
-    extract_docx_template()
+    extract_docx_template
 
-    evaluate_template()
+    evaluate_template
 
-    report_file_path = zip_to_docx()
+    report_file_path = zip_to_docx
 
-    #cleanup
+    # cleanup
     FileUtils.rmtree(current_report_path)
 
-    return report_file_path
+    report_file_path
   end
 
   private
@@ -322,7 +297,7 @@ class Hailstorm::Support::ReportBuilder
                                    "#{report_type}.docx")
   end
 
-  def extract_docx_template()
+  def extract_docx_template
     FileUtils.mkdir_p(current_report_path)
 
     Zip::File.foreach(canned_doc_path) do |zip_entry|
@@ -332,8 +307,7 @@ class Hailstorm::Support::ReportBuilder
     end
   end
 
-  def evaluate_template()
-
+  def evaluate_template
     # process images
     rels_doc_xml = nil
     rels_xml = File.join(current_report_path, 'word', '_rels', 'document.xml.rels')
@@ -347,39 +321,37 @@ class Hailstorm::Support::ReportBuilder
     unless template_image_nodeset.blank?
       template_image_name = File.basename(template_image_nodeset.first['Target'])
       File.unlink(File.join(media_path, template_image_name))
-      template_image_nodeset.remove()
+      template_image_nodeset.remove
     end
 
     self.images.each do |graph|
       relationship = Nokogiri::XML::Element.new('Relationship', rels_doc_xml)
       relationship['Id'] = graph.embed_id
       relationship['Type'] = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image'
-      relationship['Target'] = "media/#{File.basename(graph.chart_model.getFilePath())}"
+      relationship['Target'] = "media/#{File.basename(graph.chart_model.getFilePath)}"
       rels_doc_xml.elements.first.add_child(relationship)
-      FileUtils.move(graph.chart_model.getFilePath(), media_path)
+      FileUtils.move(graph.chart_model.getFilePath, media_path)
     end
     File.open(rels_xml, 'w') do |io|
       rels_doc_xml.write_xml_to(io)
     end
 
-    context_vars = {:report => self }
+    context_vars = { report: self }
 
     template_file_path = File.join(report_templates_path, report_format,
                                    report_type, 'document') # document.xml.erb
 
-    engine = ActionView::Base.new()
+    engine = ActionView::Base.new
     engine.view_paths.push(File.dirname(template_file_path))
     engine.assign(context_vars)
     File.open(File.join(current_report_path, 'word', 'document.xml'), 'w') do |docxml|
-      docxml.print(engine.render(:file => template_file_path,
-                                 :formats => [:xml],
-                                 :handlers => [:erb]))
+      docxml.print(engine.render(file: template_file_path,
+                                 formats: [:xml],
+                                 handlers: [:erb]))
     end
-
   end
 
-  def zip_to_docx()
-
+  def zip_to_docx
     rexp = Regexp.compile("#{current_report_path}/")
     patterns = [File.join(current_report_path, '**', '*'),
                 File.join(current_report_path, '_rels', '.rels')] # explicitly add hidden file
@@ -399,11 +371,10 @@ class Hailstorm::Support::ReportBuilder
       end
     end
 
-    return report_file_path
+    report_file_path
   end
 
   def report_templates_path
     @report_templates_path ||= File.join(Hailstorm.templates_path, 'report')
   end
-
 end

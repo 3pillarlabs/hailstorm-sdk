@@ -1,0 +1,6 @@
+AllCops:
+  Exclude:
+    - 'features/**/*'
+    - 'spec/**/*'
+    - 'bin/**/*'
+    - 'templates/**/*'

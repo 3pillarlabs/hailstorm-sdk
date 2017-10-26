@@ -1,8 +1,7 @@
-# Log4j backed logger
-# @author Sayantam Dey
-
 require 'hailstorm/support'
 
+# Log4j backed logger
+# @author Sayantam Dey
 class Hailstorm::Support::Log4jBackedLogger
 
   def self.get_logger(klass_or_name)
@@ -17,9 +16,9 @@ class Hailstorm::Support::Log4jBackedLogger
     @log4j_logger.isEnabledFor(logger_level_impl::DEBUG)
   end
 
-  def debug(msg = nil, &block)
+  def debug(msg = nil)
     if block_given?
-      log_message(:debug, block.call) if debug?
+      log_message(:debug, yield) if debug?
     else
       log_message(:debug, msg)
     end
@@ -29,9 +28,9 @@ class Hailstorm::Support::Log4jBackedLogger
     @log4j_logger.isEnabledFor(logger_level_impl::INFO)
   end
 
-  def info(msg = nil, &block)
+  def info(msg = nil)
     if block_given?
-      log_message(:info, block.call) if info?
+      log_message(:info, yield) if info?
     else
       log_message(:info, msg)
     end
@@ -41,9 +40,9 @@ class Hailstorm::Support::Log4jBackedLogger
     @log4j_logger.isEnabledFor(logger_level_impl::WARN)
   end
 
-  def warn(msg = nil, &block)
+  def warn(msg = nil)
     if block_given?
-      log_message(:warn, block.call) if warn?
+      log_message(:warn, yield) if warn?
     else
       log_message(:warn, msg)
     end
@@ -53,9 +52,9 @@ class Hailstorm::Support::Log4jBackedLogger
     @log4j_logger.isEnabledFor(logger_level_impl::ERROR)
   end
 
-  def error(msg = nil, &block)
+  def error(msg = nil)
     if block_given?
-      log_message(:warn, block.call) if error?
+      log_message(:warn, yield) if error?
     else
       log_message(:error, msg)
     end
@@ -65,79 +64,80 @@ class Hailstorm::Support::Log4jBackedLogger
     @log4j_logger.isEnabledFor(logger_level_impl::FATAL)
   end
 
-  def fatal(msg = nil, &block)
+  def fatal(msg = nil)
     if block_given?
-      log_message(:fatal, block.call) if fatal?
+      log_message(:fatal, yield) if fatal?
     else
       log_message(:fatal, msg)
     end
   end
 
-  def add(severity, message = nil, progname = nil, &block)
-
+  def add(severity, message = nil, progname = nil)
     # map the severity & log_method
     log4j_severity,
     log_method_sym = case severity
-                       when Logger::DEBUG
-                         [logger_level_impl::DEBUG, :debug]
-                       when Logger::INFO
-                         [logger_level_impl::INFO, :info]
-                       when Logger::WARN
-                         [logger_level_impl::WARN, :warn]
-                       when Logger::ERROR
-                         [logger_level_impl::ERROR, :error]
-                       when Logger::FATAL
-                         [logger_level_impl::FATAL, :fatal]
-                       else
-                         [logger_level_impl::DEBUG, :debug]
+                     when Logger::DEBUG
+                       [logger_level_impl::DEBUG, :debug]
+                     when Logger::INFO
+                       [logger_level_impl::INFO, :info]
+                     when Logger::WARN
+                       [logger_level_impl::WARN, :warn]
+                     when Logger::ERROR
+                       [logger_level_impl::ERROR, :error]
+                     when Logger::FATAL
+                       [logger_level_impl::FATAL, :fatal]
+                     else
+                       [logger_level_impl::DEBUG, :debug]
                      end
-    if @log4j_logger.isEnabledFor(log4j_severity)
-      if message.nil?
-        if block_given?
-          message = block.call()
-        else
-          message = progname
-        end
-      end
-      log_message(log_method_sym, message)
+    return unless @log4j_logger.isEnabledFor(log4j_severity)
+    if message.nil?
+      message = if block_given?
+                  yield
+                else
+                  progname
+                end
     end
+    log_message(log_method_sym, message)
   end
 
   def log_message(log_method_sym, msg)
-    logger_message = nil
-    if msg.nil? or not msg.is_a?(String)
-      logger_message = msg.inspect
-    else
-      logger_message = msg
-    end
+    logger_message = if msg.nil? || !msg.is_a?(String)
+                       msg.inspect
+                     else
+                       msg
+                     end
     logger_message.chomp! unless logger_message.frozen?
     with_context { @log4j_logger.send(log_method_sym, logger_message) }
   end
 
   def with_context
-    logger_mdc_impl.put("caller", caller(3).first)
+    logger_mdc_impl.put('caller', caller(3).first)
     begin
       yield
     ensure
-      logger_mdc_impl.remove("caller")
+      logger_mdc_impl.remove('caller')
     end
   end
 
-  def self.backing_logger_impl()
+  def self.backing_logger_impl
     org.apache.log4j.Logger
   end
 
-  def logger_level_impl()
+  def logger_level_impl
     org.apache.log4j.Level
   end
 
-  def logger_mdc_impl()
+  def logger_mdc_impl
     org.apache.log4j.MDC
   end
 
-  def method_missing(method_name, *args, &block)
+  def method_missing(method_name, *_args)
     self.warn { "#{method_name}: Undefined method -- call stack:\n#{caller.join("\n")}" }
+    super
+  end
+
+  def respond_to_missing?(*)
+    super
   end
 
 end
-
