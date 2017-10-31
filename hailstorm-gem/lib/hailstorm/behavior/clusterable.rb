@@ -118,11 +118,11 @@ module Hailstorm::Behavior::Clusterable
     # override and do something appropriate.
   end
 
-  # Assumes a standard Linux OS where user home is at /home. If the clusterable
+  # Assumes a standard Linux OS where user home is at /home or /root for root. If the clusterable
   # uses a different OS or setting, override this method.
   # @return [String] user home directory
   def user_home
-    @user_home ||= "/home/#{self.user_name}"
+    @user_home ||= self.user_name.to_s.to_sym != :root ? "/home/#{self.user_name}" : '/root'
   end
 
   # Assumes Jmeter is installed to user_home at jmeter directory. If the clusterable
