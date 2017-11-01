@@ -15,7 +15,9 @@ RUN echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu xenial main" | \
     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys EEA14886 && \
     echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections && \
     apt-get update && \
-    apt-get install -y oracle-java8-installer oracle-java8-set-default
+    apt-get install -y oracle-java8-installer oracle-java8-set-default && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install JMeter
 ARG JMETER_SOURCE=http://www-us.apache.org/dist//jmeter/binaries/apache-jmeter-3.3.tgz
@@ -27,4 +29,8 @@ RUN cd /root && \
     echo '# Added by Hailstorm' >> /root/jmeter/bin/user.properties && \
     echo 'jmeter.save.saveservice.output_format=xml' >> /root/jmeter/bin/user.properties && \
     echo 'jmeter.save.saveservice.hostname=true' >> /root/jmeter/bin/user.properties && \
-    echo 'jmeter.save.saveservice.thread_counts=true' >> /root/jmeter/bin/user.properties
+    echo 'jmeter.save.saveservice.thread_counts=true' >> /root/jmeter/bin/user.properties && \
+    rm -f `basename $JMETER_SOURCE`
+
+# SSH keys
+RUN /usr/sbin/enable_insecure_key
