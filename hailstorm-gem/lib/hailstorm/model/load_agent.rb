@@ -56,7 +56,7 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
       if force || self.first_use?
         directory_hierarchy = self.jmeter_plan.remote_directory_hierarchy
       end
-      test_artifacts = self.jmeter_plan.test_artifacts()
+      test_artifacts = self.jmeter_plan.test_artifacts
 
       Hailstorm::Support::SSH.start(self.public_ip_address,
                                     self.clusterable.user_name, self.clusterable.ssh_options) do |ssh|

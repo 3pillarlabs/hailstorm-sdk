@@ -217,9 +217,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
       yield project_clusters.first
     else
       project_clusters.each do |cluster|
-        Hailstorm::Support::Thread.start(cluster) do |c|
-          yield c
-        end
+        Hailstorm::Support::Thread.start(cluster) { |c| yield c }
       end
       Hailstorm::Support::Thread.join
     end
