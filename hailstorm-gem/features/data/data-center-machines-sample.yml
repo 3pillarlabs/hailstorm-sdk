@@ -1,0 +1,5 @@
+# Enumerate your data center machine IP addresses or host names here for the integration test
+# If the SSH port is not port 22, add the port with host:port
+machines:
+  - host A:8022
+  - host B

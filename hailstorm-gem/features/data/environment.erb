@@ -11,16 +11,14 @@ Hailstorm.application.config do |config|
         end
     end
 
-    # EC2 configuration
+    # Cluster configuration
     <%- @clusters.each do |p| %>
     config.clusters(:<%= p.cluster_type %>) do |cluster|
-        cluster.access_key  = '<%= p.access_key %>'
-        cluster.secret_key  = '<%= p.secret_key %>'
-        cluster.region      = '<%= p.region %>'
-        <%- unless p.max_threads_per_agent.blank? %>
-        cluster.max_threads_per_agent = <%= p.max_threads_per_agent %>
-        <%- end %>
-        cluster.active = <%= p.active %>
+      <%- p.except(:cluster_type).to_h.keys.each do |key| %>
+      <%- if p.send(key) %>
+        cluster.<%= key %> = '<%= p.send(key) %>'
+      <%- end %>
+      <%- end %>
     end
     <%- end %>
 

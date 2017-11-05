@@ -7,3 +7,4 @@ tmp/*
 features/data/keys.yml
 spec/keys.yml
 coverage/
+features/data/data-center-machines.yml

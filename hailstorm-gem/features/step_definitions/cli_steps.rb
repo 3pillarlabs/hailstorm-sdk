@@ -69,7 +69,7 @@ When(/^(?:I |)configure JMeter with following properties$/) do |table|
 end
 
 When(/^(?:I |)configure following amazon clusters$/) do |table|
-  clusters(table.hashes)
+  clusters(table.hashes.collect { |e| e.merge(cluster_type: :amazon_cloud) })
 end
 
 When(/^(?:I |)configure target monitoring$/) do

@@ -24,9 +24,8 @@ module CliStepHelper
       keys = OpenStruct.new(YAML.load_file(File.join(data_path, 'keys.yml')))
       @clusters = hashes.collect do |e|
         s = OpenStruct.new(e)
-        s.cluster_type = :amazon_cloud
-        s.access_key = keys.access_key if s.access_key.nil?
-        s.secret_key = keys.secret_key if s.secret_key.nil?
+        s.access_key = keys.access_key if s.access_key.nil? && s.cluster_type == :amazon_cloud
+        s.secret_key = keys.secret_key if s.secret_key.nil? && s.cluster_type == :amazon_cloud
         s.active = true if s.active.nil?
         s
       end
