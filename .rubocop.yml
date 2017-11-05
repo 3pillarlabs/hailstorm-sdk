@@ -1,6 +1,22 @@
 # Top level rules
+AllCops:
+  Exclude:
+    - '*.rb'
+    - 'Vagrantfile'
+    - 'docs/**/*'
+    - 'hailstorm-gem/Gemfile'
+    - 'hailstorm-gem/hailstorm.gemspec'
+    - 'hailstorm-gem/Rakefile'
+    - 'hailstorm-gem/bin/**/*'
+    - 'hailstorm-gem/features/**/*'
+    - 'hailstorm-gem/spec/**/*'
+    - 'hailstorm-gem/templates/**/*'
+    - 'hailstorm-gem/tmp/**/*'
+    - 'hailstorm-redis/**/*'
+    - 'hailstorm-site/**/*'
+    - 'hailstorm-web/**/*'
 
-Style/EmptyLinesAroundModuleBody:
+Layout/EmptyLinesAroundModuleBody:
   Enabled: false
 
 Metrics/LineLength:
@@ -11,4 +27,3 @@ Style/ClassAndModuleChildren:
 
 Style/RedundantSelf:
   Enabled: false
-
