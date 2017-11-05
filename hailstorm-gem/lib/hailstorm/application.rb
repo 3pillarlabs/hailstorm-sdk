@@ -20,6 +20,8 @@ class Hailstorm::Application
 
   include Hailstorm::Behavior::Loggable
 
+  attr_writer :multi_threaded
+
   # Initialize the application and connects to the database
   # @param [String] app_name the application name
   # @param [String] boot_file_path full path to application config/boot.rb
@@ -58,6 +60,8 @@ class Hailstorm::Application
     end
     Hailstorm.application.connection_spec = connection_spec
     Hailstorm.application.check_database
+
+    Hailstorm.application
   end
 
   # Constructor
