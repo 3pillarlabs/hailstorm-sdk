@@ -79,7 +79,11 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
       errors.add(:ssh_identity, "not found at #{identity_file_path}")
       return
     end
-    errors.add(:ssh_identity, "at #{identity_file_path} must be a regular file") unless File.file?(identity_file_path)
+    errors.add(:ssh_identity, "at #{identity_file_path} must be a regular file") unless identity_file_ok?
+  end
+
+  def identity_file_ok?
+    File.file?(identity_file_path) && !File.symlink?(identity_file_path)
   end
 
   def identity_file_path

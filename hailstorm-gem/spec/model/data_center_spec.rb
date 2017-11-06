@@ -17,6 +17,23 @@ describe Hailstorm::Model::DataCenter do
     expect(dc.errors).to include(:ssh_identity)
   end
 
+  it 'should not be valid if ssh_identity file is not a regular file' do
+    require 'fileutils'
+    begin
+      dir = '/tmp/data_center_spec_ssh_identity'
+      FileUtils.mkdir_p(dir)
+      reg_file = File.join(dir, 'jade.pem')
+      FileUtils.touch(reg_file)
+      link_file = File.join(dir, 'jade-link.pem')
+      FileUtils.ln_s(reg_file, link_file) unless File.exist?(link_file)
+      dc = Hailstorm::Model::DataCenter.new(ssh_identity: link_file, active: true, machines: ['172.17.0.2'])
+      dc.valid?
+      expect(dc.errors).to include(:ssh_identity)
+    ensure
+      FileUtils.rm_rf(dir)
+    end
+  end
+
   it 'should not be valid without machines' do
     attrs = { user_name: 'jack', ssh_identity: 'jack' }
     dc = Hailstorm::Model::DataCenter.new(attrs)
