@@ -125,8 +125,14 @@ describe Hailstorm::Model::DataCenter do
       ssh = double('ssh')
       ssh.stub!(:exec!) do
         <<-SHOUT.strip_heredoc
-          Copyright (c) 1998-2012 The Apache Software Foundation
-          Version 3.2 r1342510
+            _    ____   _    ____ _   _ _____       _ __  __ _____ _____ _____ ____     
+           / \  |  _ \ / \  / ___| | | | ____|     | |  \/  | ____|_   _| ____|  _ \   
+          / _ \ | |_) / _ \| |   | |_| |  _|    _  | | |\/| |  _|   | | |  _| | |_) | 
+         / ___ \|  __/ ___ \ |___|  _  | |___  | |_| | |  | | |___  | | | |___|  _ <  
+        /_/   \_\_| /_/   \_\____|_| |_|_____|  \___/|_|  |_|_____| |_| |_____|_| \_\ 3.2 r1790748  
+
+        Copyright (c) 1999-2017 The Apache Software Foundation
+
         SHOUT
       end
       Hailstorm::Support::SSH.stub!(:start).and_yield(ssh)
