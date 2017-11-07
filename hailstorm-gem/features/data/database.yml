@@ -4,4 +4,4 @@ cucumber:
   port: 3306
   username: hailstorm_dev
   password: hailstorm_dev
-  database: hailstorm_gem_cucumber
+  database: hailstorm_gem_integration
