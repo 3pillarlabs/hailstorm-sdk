@@ -20,7 +20,7 @@ RUN echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu xenial main" | \
     rm -rf /var/lib/apt/lists/*
 
 # Install JMeter
-ARG JMETER_SOURCE=http://www-us.apache.org/dist//jmeter/binaries/apache-jmeter-3.3.tgz
+ARG JMETER_SOURCE=https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-3.2.tgz
 
 RUN cd /root && \
     curl -fSLO $JMETER_SOURCE && \
