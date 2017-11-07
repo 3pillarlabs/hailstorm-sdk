@@ -1,13 +1,15 @@
 require 'yaml'
 require 'socket'
-require 'cli_step_helper'
 
 include CliStepHelper
 
-And(/^data center machines are accessible$/) do
+And(/^(\d+) data center machines are accessible$/) do |machines_count|
   dc = YAML.load_file(File.join(data_path, 'data-center-machines.yml')).symbolize_keys
-  dc[:machines].each do |machine|
+  machines = dc[:machines]
+  expect(machines.length).to eql(machines_count.to_i)
+  machines.each do |machine|
     host, port = machine.split(':')
+    port ||= 22
     TCPSocket.new(host, port)
   end
 end

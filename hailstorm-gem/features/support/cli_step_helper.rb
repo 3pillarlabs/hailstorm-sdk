@@ -90,5 +90,8 @@ module CliStepHelper
     end
   end
 
+  def local_site_ip_path
+    File.join(data_path, 'site_server.txt')
+  end
 end
 

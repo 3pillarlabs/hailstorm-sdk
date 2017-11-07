@@ -14,9 +14,10 @@ Hailstorm.application.config do |config|
     # Cluster configuration
     <%- @clusters.each do |p| %>
     config.clusters(:<%= p.cluster_type %>) do |cluster|
-      <%- p.except(:cluster_type).to_h.keys.each do |key| %>
-      <%- if p.send(key) %>
-        cluster.<%= key %> = '<%= p.send(key) %>'
+      <%- (p.to_h.keys - [:cluster_type]).each do |key| %>
+      <%- value = p.send(key) %>
+      <%- if value %>
+        cluster.<%= key %> = <%= raw(value.is_a?(String) ? "'#{value}'" : value) %>
       <%- end %>
       <%- end %>
     end

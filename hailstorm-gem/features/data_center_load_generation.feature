@@ -1,19 +1,9 @@
 Feature: Load generation from physical machines/virtual machines/docker containers in a data center
 
   Background: Application for measuring performance is up and accessible
-    Given 'Hailstorm Site' is up and accessible in AWS region 'us-east-1'
-    And data center machines are accessible
-
-  Scenario: Create a new project
-    Given I have hailstorm installed
-    When I create the project "hs_data_center_integration"
-    Then the project structure for "hs_data_center_integration" should be created
-
-  @smoke
-  @end-to-end
-  Scenario: Start hailstorm
-    When I launch the hailstorm console within "hs_data_center_integration" project
-    Then the application should be ready to accept commands
+    Given 'Hailstorm Site' is up and accessible at an IP address
+    And 2 data center machines are accessible
+    And I created the project "hs_data_center_integration"
 
   @smoke
   @end-to-end
@@ -27,8 +17,10 @@ Feature: Load generation from physical machines/virtual machines/docker containe
     And configure following data center
       | title          | user_name | ssh_identity  |
       | docker-local   | root      | insecure_key  |
+    And disable target monitoring
+    And I launch the hailstorm console within "hs_data_center_integration" project
     And execute "setup" command
-    Then 1 active load agent should exist
+    Then 2 active load agents should exist
 #
 #  @smoke
 #  @end-to-end
