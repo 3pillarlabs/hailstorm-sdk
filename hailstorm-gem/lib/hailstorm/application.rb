@@ -206,17 +206,11 @@ Type help to get started...
   end
 
   def load_config(handle_load_error = false)
-    
-      @config = nil
-      load(File.join(Hailstorm.root, Hailstorm.config_dir, 'environment.rb'))
-      @config.freeze
-    rescue Object => e
-      if handle_load_error
-        logger.fatal(e.message)
-      else
-        raise(Hailstorm::Exception, e.message)
-      end
-    
+    @config = nil
+    load(File.join(Hailstorm.root, Hailstorm.config_dir, 'environment.rb'))
+    @config.freeze
+  rescue Object => e
+    handle_load_error ? logger.fatal(e.message) : raise(Hailstorm::Exception, e.message)
   end
   alias reload load_config
 

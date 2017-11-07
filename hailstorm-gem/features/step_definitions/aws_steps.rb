@@ -4,7 +4,9 @@ Given(/^Hailstorm is initialized with a project '(.+?)'$/) do |project_code|
   require 'hailstorm/application'
   require 'hailstorm/support/configuration'
   Hailstorm::Application.new.create_project('/tmp', 'aws_steps', true, '/vagrant/hailstorm-gem')
-  Hailstorm::Application.initialize!('aws_steps', '/tmp/aws_steps/config/boot.rb', db_props, Hailstorm::Support::Configuration.new)
+  Hailstorm::Application.initialize!('aws_steps', '/tmp/aws_steps/config/boot.rb',
+                                     db_props,
+                                     Hailstorm::Support::Configuration.new)
   require 'hailstorm/model/project'
   @project = Hailstorm::Model::Project.new()
   @project.project_code = project_code

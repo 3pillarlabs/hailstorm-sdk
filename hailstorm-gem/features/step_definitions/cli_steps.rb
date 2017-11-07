@@ -36,7 +36,7 @@ end
 
 When(/^I launch the hailstorm console within "([^"]*)" project$/) do |project_name|
   current_project(project_name)
-  write_config(monitor_active = @monitor_active) # reset
+  write_config(@monitor_active) # reset
   Dir[File.join(tmp_path, project_name, Hailstorm.reports_dir, '*')].each do |file|
     FileUtils.rm(file)
   end
