@@ -73,8 +73,7 @@ When(/^(?:I |)configure following amazon clusters$/) do |table|
 end
 
 When(/^(?:I |)configure target monitoring$/) do
-  identity_file = File.join(tmp_path, current_project, Hailstorm.config_dir,
-                             'all_purpose.pem')
+  identity_file = File.join(tmp_path, current_project, Hailstorm.config_dir, 'all_purpose.pem')
   unless File.exists?(identity_file)
     FileUtils.cp(File.join(data_path, 'all_purpose.pem'),
                File.join(tmp_path, current_project, Hailstorm.config_dir))
@@ -83,7 +82,7 @@ When(/^(?:I |)configure target monitoring$/) do
 end
 
 When(/^(?:I |)execute "(.*?)" command$/) do |command|
-  write_config if config_changed?
+  write_config(@monitor_active) if config_changed?
   Hailstorm.application.interpret_command(command)
 end
 
@@ -125,6 +124,6 @@ And(/^results import '(.+?)'$/) do |file_path|
 end
 
 
-And(/^disable target monitoring$/) do
+And(/^(?:disable |)target monitoring(?:| is disabled)$/) do
   @monitor_active = false
 end

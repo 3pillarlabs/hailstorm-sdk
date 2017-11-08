@@ -58,4 +58,14 @@ service nginx reload
 # nmon for server monitoring
 which nmon >/dev/null 2>&1 || apt-get install -y nmon
 
+# authorize insecure_key.pub
+vagrant_user_home="/home/$vagrant_user"
+if [ ! -e $vagrant_user_home/insecure_key.pub ]; then
+	sudo -u $vagrant_user mkdir -p $vagrant_user_home/.ssh
+	sudo -u $vagrant_user chmod 700 $vagrant_user_home/.ssh
+	sudo -u $vagrant_user cat /vagrant/insecure_key.pub >> $vagrant_user_home/.ssh/authorized_keys
+	sudo -u $vagrant_user chmod 400 $vagrant_user_home/.ssh/authorized_keys
+	sudo -u $vagrant_user cp /vagrant/insecure_key.pub $vagrant_user_home/.
+fi
+
 exit

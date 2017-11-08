@@ -14,4 +14,5 @@ Given(/^'Hailstorm Site' is up and accessible at an IP address$/) do
   expect(site_ip).to_not be_nil
   res = Net::HTTP.get_response(URI("http://#{site_ip}"))
   expect(res).to be_kind_of(Net::HTTPSuccess)
+  write_site_server_url(site_ip)
 end

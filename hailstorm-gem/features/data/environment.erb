@@ -6,7 +6,7 @@ Hailstorm.application.config do |config|
         # default properties for all app/**/*.jmx files
         jmeter.properties() do |map|
         <%- @properties.each do |p| %>
-            map['<%= raw p.property %>'] = <%= raw(p.value =~ /[a-zA-Z]/ ? "'#{p.value}'": p.value) %>
+            map['<%= raw p.property %>'] = <%= raw((Float(p.value) rescue nil) ? p.value : "'#{p.value}'") %>
         <%- end %>
         end
     end
@@ -17,7 +17,7 @@ Hailstorm.application.config do |config|
       <%- (p.to_h.keys - [:cluster_type]).each do |key| %>
       <%- value = p.send(key) %>
       <%- if value %>
-        cluster.<%= key %> = <%= raw(value.is_a?(String) ? "'#{value}'" : value) %>
+        cluster.<%= key %> = <%= raw((Float(value) rescue nil) || !value.is_a?(String) ? value : "'#{value}'") %>
       <%- end %>
       <%- end %>
     end
