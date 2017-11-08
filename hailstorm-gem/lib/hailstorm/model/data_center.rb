@@ -88,7 +88,11 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   def identity_file_path
     path = Pathname.new(self.ssh_identity)
-    path.absolute? ? self.ssh_identity : File.join(Hailstorm.root, Hailstorm.config_dir, self.ssh_identity)
+    if path.absolute?
+      self.ssh_identity
+    else
+      File.join(Hailstorm.root, Hailstorm.config_dir, self.ssh_identity.gsub(/\.pem$/, '').concat('.pem'))
+    end
   end
 
   def set_defaults
