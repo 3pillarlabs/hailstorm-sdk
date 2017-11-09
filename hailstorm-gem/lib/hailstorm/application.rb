@@ -20,6 +20,8 @@ class Hailstorm::Application
 
   include Hailstorm::Behavior::Loggable
 
+  attr_writer :multi_threaded
+
   # Initialize the application and connects to the database
   # @param [String] app_name the application name
   # @param [String] boot_file_path full path to application config/boot.rb
@@ -58,6 +60,8 @@ class Hailstorm::Application
     end
     Hailstorm.application.connection_spec = connection_spec
     Hailstorm.application.check_database
+
+    Hailstorm.application
   end
 
   # Constructor
@@ -202,17 +206,11 @@ Type help to get started...
   end
 
   def load_config(handle_load_error = false)
-    
-      @config = nil
-      load(File.join(Hailstorm.root, Hailstorm.config_dir, 'environment.rb'))
-      @config.freeze
-    rescue Object => e
-      if handle_load_error
-        logger.fatal(e.message)
-      else
-        raise(Hailstorm::Exception, e.message)
-      end
-    
+    @config = nil
+    load(File.join(Hailstorm.root, Hailstorm.config_dir, 'environment.rb'))
+    @config.freeze
+  rescue Object => e
+    handle_load_error ? logger.fatal(e.message) : raise(Hailstorm::Exception, e.message)
   end
   alias reload load_config
 
@@ -561,14 +559,14 @@ Continue using old version?
     option = args.first || :tests
     case option.to_sym
     when :tests
-        current_project.execution_cycles.each { |e| e.destroy }
-        logger.info 'Purged all data for tests'
+      current_project.execution_cycles.each(&:destroy)
+      logger.info 'Purged all data for tests'
     when :clusters
-        current_project.purge_clusters
-        logger.info 'Purged all clusters'
-      else
-        current_project.destroy
-        logger.info 'Purged all project data'
+      current_project.purge_clusters
+      logger.info 'Purged all clusters'
+    else
+      current_project.destroy
+      logger.info 'Purged all project data'
     end
   end
 

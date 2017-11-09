@@ -202,4 +202,20 @@ Vagrant.configure(2) do |config|
   	site.vm.provision "hailstorm_site", :type => :shell, :path => 'install-hailstorm-site.sh', :run => 'always'
   end
 
+	config.vm.define "site-local", :primary => true do |site_local|
+		site_local.vm.box = "ubuntu/trusty64"
+		site_local.vm.provider "virtualbox" do |vb|
+		#   Display the VirtualBox GUI when booting the machine
+		#   vb.gui = true
+		#
+			# Customize the amount of memory on the VM:
+			vb.memory = "2048"
+			vb.cpus = 2
+			vb.customize ["modifyvm", :id, "--nictype1", "virtio"]
+		end
+		site_local.vm.network "private_network", ip: "192.168.20.100"
+
+  	# hailstorm-site
+  	site_local.vm.provision "hailstorm_site", :type => :shell, :path => 'install-hailstorm-site.sh', :run => 'always'
+	end
 end
