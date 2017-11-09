@@ -559,14 +559,14 @@ Continue using old version?
     option = args.first || :tests
     case option.to_sym
     when :tests
-        current_project.execution_cycles.each { |e| e.destroy }
-        logger.info 'Purged all data for tests'
+      current_project.execution_cycles.each(&:destroy)
+      logger.info 'Purged all data for tests'
     when :clusters
-        current_project.purge_clusters
-        logger.info 'Purged all clusters'
-      else
-        current_project.destroy
-        logger.info 'Purged all project data'
+      current_project.purge_clusters
+      logger.info 'Purged all clusters'
+    else
+      current_project.destroy
+      logger.info 'Purged all project data'
     end
   end
 

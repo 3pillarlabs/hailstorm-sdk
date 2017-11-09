@@ -47,8 +47,8 @@ end
 
 Then(/^the application should be ready to accept commands$/) do
   Hailstorm.application.interpret_command('purge')
-  Hailstorm::Model::ExecutionCycle.count.should == 0
-  Dir[File.join(tmp_path, current_project, Hailstorm.tmp_dir, '*')].count.should == 0
+  expect(Hailstorm::Model::ExecutionCycle.count).to eql(0)
+  expect(Dir[File.join(tmp_path, current_project, Hailstorm.tmp_dir, '*')].count).to eql(0)
   Hailstorm::Model::Project.first.update_attribute(:serial_version, nil)
 end
 
