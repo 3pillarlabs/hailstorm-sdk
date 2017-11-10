@@ -59,7 +59,13 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   # @return [Hash] of SSH options
   # (see Hailstorm::Behavior::Clusterable#ssh_options)
   def ssh_options
-    @ssh_options ||= { keys: [identity_file_path] }
+    unless @ssh_options
+      @ssh_options = { keys: [identity_file_path] }
+      if self.ssh_port && self.ssh_port.to_i != Defaults::SSH_PORT
+        @ssh_options.merge!(port: self.ssh_port)
+      end
+    end
+    @ssh_options
   end
 
   def required_load_agent_count(jmeter_plan)
@@ -197,5 +203,6 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     SSH_IDENTITY        = 'server.pem'.freeze
     TITLE               = 'Hailstorm'.freeze
     JAVA_VERSION        = '1.8'.freeze
+    SSH_PORT            = 22
   end
 end

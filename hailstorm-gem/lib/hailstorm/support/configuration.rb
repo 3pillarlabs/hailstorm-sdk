@@ -164,6 +164,9 @@ class Hailstorm::Support::Configuration
 
     # Array of ip_addresses
     attr_accessor :machines
+
+    # Optional SSH port to specify non-standard SSH port
+    attr_accessor :ssh_port
   end
 
   # Settings for one more monitors. Multiple monitors of different types can
