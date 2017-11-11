@@ -16,7 +16,7 @@ describe Hailstorm::Model::AmazonCloud do
   context '#default_max_threads_per_agent' do
     it 'should increase with instance class and type' do
       all_results = []
-      %i[:t2 :m4 :m3 :c4 :c3 :r4 :r3 :d2 :i2 :i3 :x1].each do |instance_class|
+      %i[t2 m4 m3 c4 c3 r4 r3 d2 i2 i3 x1].each do |instance_class|
         iclass_results = []
         [:nano, :micro, :small, :medium, :large, :xlarge, '2xlarge'.to_sym, '4xlarge'.to_sym, '10xlarge'.to_sym,
          '16xlarge'.to_sym, '32xlarge'.to_sym].each do |instance_size|
