@@ -27,6 +27,7 @@ class Hailstorm::Support::Schema
     add_vpc_subnet_id_to_amazon_clouds
     add_cluster_code_to_clusters
     add_ssh_port_to_data_centers
+    add_ssh_port_to_amazon_clouds
   ].freeze
 
   class SchemaMigration < ActiveRecord::Base
@@ -238,5 +239,9 @@ class Hailstorm::Support::Schema
 
   def add_ssh_port_to_data_centers
     ActiveRecord::Migration.add_column(:data_centers, :ssh_port, :integer, default: nil)
+  end
+
+  def add_ssh_port_to_amazon_clouds
+    ActiveRecord::Migration.add_column(:amazon_clouds, :ssh_port, :integer, default: nil)
   end
 end

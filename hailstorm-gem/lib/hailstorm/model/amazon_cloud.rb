@@ -100,7 +100,13 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   # @return [Hash] of SSH options
   # (see Hailstorm::Behavior::Clusterable#ssh_options)
   def ssh_options
-    @ssh_options ||= { keys: identity_file_path }
+    unless @ssh_options
+      @ssh_options = { keys: identity_file_path }
+      if self.ssh_port && self.ssh_port.to_i != Defaults::SSH_PORT
+        @ssh_options[:port] = self.ssh_port
+      end
+    end
+    @ssh_options
   end
 
   # Start load agents if not started
@@ -238,6 +244,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     self.user_name ||= Defaults::SSH_USER
     self.instance_type ||= Defaults::INSTANCE_TYPE
     self.max_threads_per_agent ||= default_max_threads_per_agent
+    self.region ||= Defaults::EC2_REGION
 
     if self.ssh_identity.nil?
       self.ssh_identity = [Defaults::SSH_IDENTITY, Hailstorm.app_name].join('_')
@@ -380,7 +387,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     if security_group.nil?
       logger.info("Creating #{group_name} security group on #{self.region}...")
       security_group = security_groups.create(group_name, description: Defaults::SECURITY_GROUP_DESC, vpc: vpc)
-      security_group.authorize_ingress(:tcp, 22) # allow SSH from anywhere
+      security_group.authorize_ingress(:tcp, (self.ssh_port || Defaults::SSH_PORT)) # allow SSH from anywhere
       # allow incoming TCP to any port within the group
       security_group.authorize_ingress(:tcp, 0..65_535, group_id: security_group.id)
       # allow incoming UDP to any port within the group
@@ -642,7 +649,7 @@ end
   class Defaults
     AMI_ID              = '3pg-hailstorm'.freeze
     SECURITY_GROUP      = 'Hailstorm'.freeze
-    SECURITY_GROUP_DESC = 'Allows traffic to port 22 from anywhere and internal TCP, UDP and ICMP traffic'.freeze
+    SECURITY_GROUP_DESC = 'Allows SSH traffic from anywhere and all internal TCP, UDP and ICMP traffic'.freeze
     BUCKET_NAME         = 'brickred-perftest'.freeze
     SSH_USER            = 'ubuntu'.freeze
     SSH_IDENTITY        = 'hailstorm'.freeze
@@ -659,5 +666,7 @@ end
       s = 1; (n - 1).times { s = a + b; a = b; b = s }; s
     }
     MIN_THREADS_ONE_AGENT = 2
+    SSH_PORT = 22
+    EC2_REGION = 'us-east-1'
   end
 end

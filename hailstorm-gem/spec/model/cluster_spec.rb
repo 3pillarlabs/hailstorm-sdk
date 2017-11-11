@@ -1,8 +1,11 @@
 require 'spec_helper'
-require 'hailstorm/model/cluster'
-require 'hailstorm/support/configuration'
-require 'hailstorm/model/project'
+
 require 'hailstorm/behavior/clusterable'
+require 'hailstorm/model/cluster'
+require 'hailstorm/model/project'
+require 'hailstorm/model/amazon_cloud'
+require 'hailstorm/support/configuration'
+
 require 'active_record/base'
 
 module Hailstorm
@@ -57,6 +60,28 @@ describe Hailstorm::Model::Cluster do
         end
         Hailstorm::Model::Cluster.configure_all(@project, config)
         expect(Hailstorm::Model::Cluster.where(project_id: @project.id).count).to eql(1)
+      end
+    end
+  end
+
+  context '#configure' do
+    context ':amazon_cloud' do
+      it 'should persist all configuration options' do
+        config = Hailstorm::Support::Configuration.new
+        config.clusters(:amazon_cloud) do |aws|
+          aws.access_key = 'blah'
+          aws.secret_key = 'blahblah'
+          aws.ssh_identity = 'insecure'
+          aws.ssh_port = 8022
+          aws.active = false
+        end
+        cluster = Hailstorm::Model::Cluster.new(cluster_type: Hailstorm::Model::AmazonCloud.to_s)
+        cluster.project = Hailstorm::Model::Project.where(project_code: 'cluster_spec').first_or_create!
+        cluster.save!
+        cluster.configure(config.clusters.first)
+        amz_cloud = Hailstorm::Model::AmazonCloud.where(project_id: cluster.project.id)
+        expect(amz_cloud.first).to_not be_nil
+        expect(amz_cloud.first.ssh_port).to eql(8022)
       end
     end
   end

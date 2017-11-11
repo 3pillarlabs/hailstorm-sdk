@@ -112,3 +112,13 @@ end
 And(/^instance type is '(.+?)'$/) do |instance_type|
   @aws.instance_type = instance_type
 end
+
+
+And(/^SSH port is (\d+)$/) do |ssh_port|
+  @aws.ssh_port = ssh_port.to_i
+end
+
+
+And(/^security group is '(.+)'$/) do |sg_name|
+  @aws.security_group = sg_name
+end

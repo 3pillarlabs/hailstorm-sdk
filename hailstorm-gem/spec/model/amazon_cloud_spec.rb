@@ -16,7 +16,7 @@ describe Hailstorm::Model::AmazonCloud do
   context '#default_max_threads_per_agent' do
     it 'should increase with instance class and type' do
       all_results = []
-      [:t2, :m4, :m3, :c4, :c3, :r4, :r3, :d2, :i2, :i3, :x1].each do |instance_class|
+      %i[:t2 :m4 :m3 :c4 :c3 :r4 :r3 :d2 :i2 :i3 :x1].each do |instance_class|
         iclass_results = []
         [:nano, :micro, :small, :medium, :large, :xlarge, '2xlarge'.to_sym, '4xlarge'.to_sym, '10xlarge'.to_sym,
          '16xlarge'.to_sym, '32xlarge'.to_sym].each do |instance_size|
@@ -59,11 +59,11 @@ describe Hailstorm::Model::AmazonCloud do
   end
 
   context '#new' do
-    it 'should be valid with the keys and region' do
+    it 'should be valid with the keys' do
       @aws.access_key = 'foo'
       @aws.secret_key = 'bar'
-      @aws.region = 'ua-east-1'
       expect(@aws).to be_valid
+      expect(@aws.region).to eql('us-east-1')
     end
   end
 
@@ -132,7 +132,6 @@ describe Hailstorm::Model::AmazonCloud do
     end
   end
 
-
   context '#setup' do
     context '#active=true' do
       it 'should be persisted' do
@@ -188,6 +187,32 @@ describe Hailstorm::Model::AmazonCloud do
         aws.active = false
         aws.setup
         expect(aws).to be_persisted
+      end
+    end
+  end
+
+  context '#ssh_options' do
+    before(:each) do
+      @aws.ssh_identity = 'blah'
+    end
+    context 'standard SSH port' do
+      it 'should have :keys' do
+        expect(@aws.ssh_options).to include(:keys)
+      end
+      it 'should not have :port' do
+        expect(@aws.ssh_options).to_not include(:port)
+      end
+    end
+    context 'non-standard SSH port' do
+      before(:each) do
+        @aws.ssh_port = 8022
+      end
+      it 'should have :keys' do
+        expect(@aws.ssh_options).to include(:keys)
+      end
+      it 'should have :port' do
+        expect(@aws.ssh_options).to include(:port)
+        expect(@aws.ssh_options[:port]).to eql(8022)
       end
     end
   end

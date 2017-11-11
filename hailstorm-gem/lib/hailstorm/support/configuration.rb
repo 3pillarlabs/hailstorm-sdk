@@ -95,6 +95,9 @@ class Hailstorm::Support::Configuration
     # Optional code name for cluster
     attr_accessor :cluster_code
 
+    # Optional SSH port to specify non-standard SSH port
+    attr_accessor :ssh_port
+
     def aws_required?
       false
     end
@@ -164,9 +167,6 @@ class Hailstorm::Support::Configuration
 
     # Array of ip_addresses
     attr_accessor :machines
-
-    # Optional SSH port to specify non-standard SSH port
-    attr_accessor :ssh_port
   end
 
   # Settings for one more monitors. Multiple monitors of different types can
