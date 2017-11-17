@@ -155,6 +155,33 @@ describe Hailstorm::Model::DataCenter do
     end
   end
 
+  context '#ssh_options' do
+    context 'standard SSH port' do
+      before(:each) do
+        @dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack')
+      end
+      it 'should have :keys' do
+        expect(@dc.ssh_options).to include(:keys)
+      end
+      it 'should not have :port' do
+        expect(@dc.ssh_options).to_not include(:port)
+      end
+    end
+    context 'non standard SSH port' do
+      before(:each) do
+        @dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack',
+                                               ssh_port: 8022)
+      end
+      it 'should have :keys' do
+        expect(@dc.ssh_options).to include(:keys)
+      end
+      it 'should have :port' do
+        expect(@dc.ssh_options).to include(:port)
+        expect(@dc.ssh_options[:port]).to eql(8022)
+      end
+    end
+  end
+
   context '#setup' do
     before(:each) do
       @project = Hailstorm::Model::Project.first_or_create!(project_code: 'data_center_spec_setup')
@@ -218,7 +245,7 @@ describe Hailstorm::Model::DataCenter do
       end
     end
     context 'machines are changed' do
-      it 'should create one load_agent for one machine' do
+      it 'should create one load_agent for ones added' do
         @dc.setup
         @dc.machines = %w[172.17.0.2 172.17.0.4 172.17.0.5] # removed .3 and added .5
         @dc.setup
@@ -229,7 +256,7 @@ describe Hailstorm::Model::DataCenter do
           expect(agent).to be_active
         end
       end
-      it 'should disable the corresponding load agent' do
+      it 'should disable the agents for machines removed' do
         @dc.setup
         @dc.machines = %w[172.17.0.2 172.17.0.4 172.17.0.5] # removed .3 and added .5
         @dc.setup

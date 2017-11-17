@@ -21,3 +21,15 @@ Feature: VPC support
     When I start a new load agent
     Then installed JMeter version should be '3.2'
 
+  @terminate_instance
+  @focus
+  Scenario: New Load Agent with non-standard SSH port
+    Given Amazon is chosen as the cluster
+    And I choose 'us-east-1' region
+    And VPC subnet is 'subnet-f1e550a8'
+    And instance type is 't2.small'
+    And an agent AMI 'ami-f9d55783' exists
+    And SSH port is 8022
+    And security group is 'rm-hailstorm-vpc-test'
+    When I start a new load agent
+    Then installed JMeter version should be '3.2'

@@ -15,3 +15,10 @@ docker run -it --rm --name hs-dc-node-1 hailstorm-data-center-node:latest
 ```bash
 docker run -it --rm --name hs-dc-node-1 -d hailstorm-data-center-node:latest
 ```
+
+### port mapping SSH
+
+```bash
+docker run -it --rm --name hs-dc-node-1 -d -p8022:22 hailstorm-data-center-node:latest
+```
+

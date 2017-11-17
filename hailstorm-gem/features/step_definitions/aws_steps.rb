@@ -112,3 +112,23 @@ end
 And(/^instance type is '(.+?)'$/) do |instance_type|
   @aws.instance_type = instance_type
 end
+
+
+And(/^SSH port is (\d+)$/) do |ssh_port|
+  @aws.ssh_port = ssh_port.to_i
+end
+
+
+And(/^security group is '(.+)'$/) do |sg_name|
+  @aws.security_group = sg_name
+  @aws.send(:create_security_group)
+end
+
+And(/^an agent AMI '(.+?)' exists$/) do |agent_ami|
+  aws_config = @aws.send(:aws_config)
+  ec2 = AWS::EC2.new(aws_config).regions[@aws.region]
+  avail_amis = ec2.images.with_owner(:self).select { |e| e.state == :available }
+  ami_ids = avail_amis.collect(&:id)
+  expect(ami_ids).to include(agent_ami)
+  @aws.agent_ami = agent_ami
+end

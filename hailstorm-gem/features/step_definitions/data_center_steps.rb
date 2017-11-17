@@ -17,7 +17,9 @@ end
 And(/^configure following data center$/) do |table|
   # table is a table.hashes.keys # => [:title, :user_name, :ssh_identity]
   dc = YAML.load_file(File.join(data_path, 'data-center-machines.yml')).symbolize_keys
-  clusters(table.hashes.collect { |e| e.merge(machines: dc[:machines], cluster_type: :data_center) })
+  attrs = { machines: dc[:machines], cluster_type: :data_center }
+  attrs[:ssh_port] = dc[:ssh_port] if dc.key?(:ssh_port) && dc[:ssh_port]
+  clusters(table.hashes.collect { |e| e.merge(attrs) })
   table.hashes.collect { |e| e[:ssh_identity] }.each do |identity|
     identity_file = File.join(tmp_path, current_project, Hailstorm.config_dir, "#{identity.gsub(/\.pem$/, '')}.pem")
     next if File.exist?(identity_file)

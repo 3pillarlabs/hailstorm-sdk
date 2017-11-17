@@ -95,6 +95,9 @@ class Hailstorm::Support::Configuration
     # Optional code name for cluster
     attr_accessor :cluster_code
 
+    # Optional SSH port to specify non-standard SSH port
+    attr_accessor :ssh_port
+
     def aws_required?
       false
     end
