@@ -15,6 +15,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   validates_presence_of :access_key, :secret_key, :region
 
+  validates_presence_of :agent_ami, if: ->(r) { r.active? && r.ssh_port && r.ssh_port != Defaults::SSH_PORT }
+
   validate :identity_file_exists, if: proc { |r| r.active? }
 
   before_save :set_availability_zone, if: proc { |r| r.active? }

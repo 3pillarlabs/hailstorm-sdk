@@ -216,4 +216,25 @@ describe Hailstorm::Model::AmazonCloud do
       end
     end
   end
+
+  context 'non-standard SSH ports' do
+    before(:each) do
+      @aws.ssh_port = 8022
+      @aws.active = true
+      @aws.stub(:identity_file_exists, nil) { true }
+    end
+    context 'agent_ami is not present' do
+      it 'should raise an error' do
+        @aws.valid?
+        expect(@aws.errors).to include(:agent_ami)
+      end
+    end
+    context 'agent_ami is present' do
+      it 'should not raise an error' do
+        @aws.agent_ami = 'fubar'
+        @aws.valid?
+        expect(@aws.errors).to_not include(:agent_ami)
+      end
+    end
+  end
 end
