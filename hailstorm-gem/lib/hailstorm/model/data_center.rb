@@ -62,7 +62,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     unless @ssh_options
       @ssh_options = { keys: [identity_file_path] }
       if self.ssh_port && self.ssh_port.to_i != Defaults::SSH_PORT
-        @ssh_options.merge!(port: self.ssh_port)
+        @ssh_options[:port] = self.ssh_port
       end
     end
     @ssh_options

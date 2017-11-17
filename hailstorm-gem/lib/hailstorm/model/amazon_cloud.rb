@@ -264,9 +264,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     rexp = Regexp.compile(ami_id)
     # check if this region already has the AMI...
     logger.info { "Searching available AMI on #{self.region}..." }
-    ec2.images
-        .with_owner(:self)
-        .inject({}) { |acc, e| e.state == :available ? acc.merge(e.name => e.id) : acc }.each_pair do |name, id|
+    ec2.images.with_owner(:self)
+       .inject({}) { |acc, e| e.state == :available ? acc.merge(e.name => e.id) : acc }.each_pair do |name, id|
 
       next unless rexp.match(name)
       self.agent_ami = id
@@ -356,9 +355,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       # create the AMI
       logger.info { "Finalizing changes for #{self.region} AMI..." }
       new_ami = ec2.images.create(
-          name: ami_id,
-          instance_id: clean_instance.instance_id,
-          description: 'AMI for distributed performance testing with Hailstorm'
+        name: ami_id,
+        instance_id: clean_instance.instance_id,
+        description: 'AMI for distributed performance testing with Hailstorm'
       )
       sleep(DOZE_TIME * 12) while new_ami.state == :pending
 
@@ -673,6 +672,6 @@ end
     }
     MIN_THREADS_ONE_AGENT = 2
     SSH_PORT = 22
-    EC2_REGION = 'us-east-1'
+    EC2_REGION = 'us-east-1'.freeze
   end
 end
