@@ -5,6 +5,8 @@ require 'hailstorm/model'
 require 'hailstorm/behavior/clusterable'
 require 'hailstorm/support/ssh'
 require 'hailstorm/support/amazon_account_cleaner'
+require 'hailstorm/support/java_installer'
+require 'hailstorm/support/jmeter_installer'
 
 # Represents state and operations for Amazon Web Services (AWS) cluster
 # @author Sayantam Dey
@@ -50,9 +52,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       if agent_ec2_instance.status == :stopped
         logger.info("Restarting agent##{load_agent.identifier}...")
         agent_ec2_instance.start
-        timeout_message("#{agent_ec2_instance.id} to restart") do
-          wait_until { agent_ec2_instance.status.eql?(:running) }
-        end
+        wait_for("#{agent_ec2_instance.id} to restart") { agent_ec2_instance.status.eql?(:running) }
       end
     else
       logger.info("Starting new agent on #{self.region}...")
@@ -62,8 +62,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       agent_ec2_instance = create_ec2_instance(self.agent_ami, security_group_ids)
       agent_ec2_instance.tag('Name',
                              value: "#{self.project.project_code}-#{load_agent.class.name.underscore}-#{load_agent.id}")
-      timeout_message("#{agent_ec2_instance.id} to start") do
-        wait_until { agent_ec2_instance.exists? && agent_ec2_instance.status.eql?(:running) }
+      wait_for("#{agent_ec2_instance.id} to start") do
+        agent_ec2_instance.exists? && agent_ec2_instance.status.eql?(:running)
       end
     end
 
@@ -75,8 +75,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
     # reachability checks
     logger.info { "agent##{load_agent.identifier} is running, waiting for system checks..." }
-    wait_for_system_checks(load_agent, "system checks on agent##{load_agent.identifier} to complete")
-
+    wait_for("system checks on agent##{load_agent.identifier} to complete") { systems_ok(load_agent) }
     # SSH is available a while later even though status may be running
     logger.info { "agent##{load_agent.identifier} passed system checks, ensuring SSH access..." }
     Hailstorm::Support::SSH.ensure_connection(load_agent.public_ip_address,
@@ -91,9 +90,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       if agent_ec2_instance.status == :running
         logger.info("Stopping agent##{load_agent.identifier}...")
         agent_ec2_instance.stop
-        timeout_message("#{agent_ec2_instance.id} to stop") do
-          wait_until { agent_ec2_instance.status.eql?(:stopped) }
-        end
+        wait_for("#{agent_ec2_instance.id} to stop") { agent_ec2_instance.status.eql?(:stopped) }
         load_agent.ec2_instance = nil
       end
     else
@@ -148,9 +145,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     if agent_ec2_instance.exists?
       logger.info("Terminating agent##{load_agent.identifier}...")
       agent_ec2_instance.terminate
-      timeout_message("#{agent_ec2_instance.id} to terminate") do
-        wait_until { agent_ec2_instance.status.eql?(:terminated) }
-      end
+      wait_for("#{agent_ec2_instance.id} to terminate") { agent_ec2_instance.status.eql?(:terminated) }
     else
       logger.warn("Agent ##{load_agent.identifier} does not exist on EC2")
     end
@@ -261,96 +256,19 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     logger.debug { "#{self.class}##{__method__}" }
     return unless self.active? && self.agent_ami.nil?
 
-    rexp = Regexp.compile(ami_id)
-    # check if this region already has the AMI...
-    logger.info { "Searching available AMI on #{self.region}..." }
-    ec2.images.with_owner(:self)
-       .inject({}) { |acc, e| e.state == :available ? acc.merge(e.name => e.id) : acc }.each_pair do |name, id|
-
-      next unless rexp.match(name)
-      self.agent_ami = id
-      logger.info("Using AMI #{self.agent_ami} for #{self.region}...")
-      break
-    end
-
+    self.agent_ami = check_for_existing_ami
+    logger.info("Using AMI #{self.agent_ami} for #{self.region}...")
     return unless self.agent_ami.nil?
 
     # AMI does not exist
     logger.info("Creating agent AMI for #{self.region}...")
-
-    # Launch base AMI
-    clean_instance = create_ec2_instance(base_ami, [find_security_group.id])
-
-    timeout_message("#{clean_instance.id} to start") do
-      wait_until { clean_instance.exists? && clean_instance.status.eql?(:running) }
-    end
-
     begin
-      logger.info { "Clean instance at #{self.region} running, ensuring SSH access..." }
-      wait_for_system_checks(clean_instance, "system checks on instance##{clean_instance.identifier} to complete")
-      Hailstorm::Support::SSH.ensure_connection(clean_instance.public_ip_address, self.user_name, ssh_options)
-
+      # Launch base AMI
+      clean_instance = create_ec2_instance(base_ami, [find_security_group.id])
       Hailstorm::Support::SSH.start(clean_instance.public_ip_address, self.user_name, ssh_options) do |ssh|
-        # install JAVA to /opt
-        logger.info { "Installing Java for #{self.region} AMI..." }
-        ssh.exec!("wget -q '#{java_download_url}' -O #{java_download_file}")
-        if java_download_file =~ /\.bin$/
-          ssh.exec!("chmod +x #{java_download_file}")
-          ssh.exec!("cd /opt && sudo #{self.user_home}/#{java_download_file}")
-        elsif java_download_file.match(/\.tgz$/) || java_download_file.match(/\.tar\.gz$/)
-          ssh.exec!("cd /opt && sudo tar -xzf #{self.user_home}/#{java_download_file}")
-        else
-          raise(Hailstorm::JavaInstallationException.new(self.region, java_download_file))
-        end
-        ssh.exec!("sudo ln -s /opt/#{jre_directory} /opt/jre")
-        # modify /etc/environment
-        env_local_copy = File.join(Hailstorm.tmp_path, current_env_file_name)
-        ssh.download('/etc/environment', env_local_copy)
-        new_env_copy = File.join(Hailstorm.tmp_path, new_env_file_name)
-        File.open(env_local_copy, 'r') do |envin|
-          File.open(new_env_copy, 'w') do |envout|
-            envin.each_line do |linein|
-              linein.strip!
-              lineout = linein
-              if linein =~ /^PATH/
-                components = /^PATH="(.+?)"/.match(linein)[1].split(':')
-                components.unshift('/opt/jre/bin') # trying to get it in the beginning
-                lineout = "PATH=\"#{components.join(':')}\""
-              end
-
-              envout.puts(lineout) unless lineout.blank?
-            end
-            envout.puts 'export JRE_HOME=/opt/jre'
-            envout.puts 'export CLASSPATH=/opt/jre/lib:.'
-          end
-        end
-        ssh.upload(new_env_copy, "#{self.user_home}/environment")
-        File.unlink(new_env_copy)
-        File.unlink(env_local_copy)
-        ssh.exec!("sudo mv -f #{self.user_home}/environment /etc/environment")
-
-        # install JMeter to self.user_home
-        unless self.project.custom_jmeter_installer_url
-          # Check if required JMeter version is present in our bucket
-          begin
-            jmeter_s3_object.content_length # will fail if object does not exist
-          rescue AWS::S3::Errors::NoSuchKey
-            raise(Hailstorm::JMeterVersionNotFound.new(self.project.jmeter_version,
-                                                       Defaults::BUCKET_NAME,
-                                                       jmeter_download_file_path))
-          end
-        end
-        logger.info { "Installing JMeter for #{self.region} AMI..." }
-        ssh.exec!("wget -q '#{jmeter_download_url}' -O #{jmeter_download_file}")
-        ssh.exec!("tar -xzf #{jmeter_download_file}")
-        ssh.exec!("ln -s #{self.user_home}/#{jmeter_directory} #{self.user_home}/jmeter")
-
-        jmeter_props_remote_path = "#{self.user_home}/jmeter/bin/user.properties"
-        ssh.exec!("echo '# Added by Hailstorm' >> #{jmeter_props_remote_path}")
-        ssh.exec!("echo 'jmeter.save.saveservice.output_format=xml' >> #{jmeter_props_remote_path}")
-        ssh.exec!("echo 'jmeter.save.saveservice.hostname=true' >> #{jmeter_props_remote_path}")
-        ssh.exec!("echo 'jmeter.save.saveservice.thread_counts=true' >> #{jmeter_props_remote_path}")
-      end # end ssh
+        install_java(ssh)
+        install_jmeter(ssh)
+      end
 
       # create the AMI
       logger.info { "Finalizing changes for #{self.region} AMI..." }
@@ -359,7 +277,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         instance_id: clean_instance.instance_id,
         description: 'AMI for distributed performance testing with Hailstorm'
       )
-      sleep(DOZE_TIME * 12) while new_ami.state == :pending
+      wait_for("Hailstorm AMI #{ami_id} to be created") { new_ami.state == :pending }
 
       if new_ami.state == :available
         self.agent_ami = new_ami.id
@@ -373,8 +291,64 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     ensure
       # ensure to terminate running instance
       clean_instance.terminate
-      sleep(DOZE_TIME) until clean_instance.status.eql?(:terminated)
+      wait_for { clean_instance.status.eql?(:terminated) }
     end
+  end
+
+  # install JMeter to self.user_home
+  def install_jmeter(ssh)
+    logger.info { "Installing JMeter for #{self.region} AMI..." }
+    installer = Hailstorm::Support::JmeterInstaller.create
+                                                   .with(:download_url, self.project.custom_jmeter_installer_url)
+                                                   .with(:user_home, self.user_home)
+                                                   .with(:jmeter_version, self.project.jmeter_version)
+    installer.install do |instr|
+      ssh.exec!(instr)
+    end
+    unless self.project.custom_jmeter_installer_url
+      # Check if required JMeter version is present in our bucket
+      begin
+        jmeter_s3_object.content_length # will fail if object does not exist
+      rescue AWS::S3::Errors::NoSuchKey
+        raise(Hailstorm::JMeterVersionNotFound.new(self.project.jmeter_version,
+                                                   Defaults::BUCKET_NAME,
+                                                   jmeter_download_file_path))
+      end
+    end
+    ssh.exec!("wget -q '#{jmeter_download_url}' -O #{jmeter_download_file}")
+    ssh.exec!("tar -xzf #{jmeter_download_file}")
+    ssh.exec!("ln -s #{self.user_home}/#{jmeter_directory} #{self.user_home}/jmeter")
+
+    jmeter_remote_home = "#{self.user_home}/jmeter"
+    jmeter_props_remote_path = "#{jmeter_remote_home}/bin/user.properties"
+    ssh.exec!("echo '# Added by Hailstorm' >> #{jmeter_props_remote_path}")
+    ssh.exec!("echo 'jmeter.save.saveservice.output_format=xml' >> #{jmeter_props_remote_path}")
+    ssh.exec!("echo 'jmeter.save.saveservice.hostname=true' >> #{jmeter_props_remote_path}")
+    ssh.exec!("echo 'jmeter.save.saveservice.thread_counts=true' >> #{jmeter_props_remote_path}")
+  end
+
+  # install JAVA
+  def install_java(ssh)
+    logger.info { "Installing Java for #{self.region} AMI..." }
+    Hailstorm::Support::JavaInstaller.create.install do |instr|
+      stderr = ''
+      ssh.exec!(instr) do |_channel, stream, data|
+        stderr << data if stream == :stderr
+        logger.debug { data } if stream != :stderr
+      end
+      unless stderr.blank?
+        logger.error(stderr)
+        raise(Hailstorm::JavaInstallationException.new(self.region, stderr))
+      end
+    end
+  end
+
+  # check if this region already has the AMI...
+  def check_for_existing_ami
+    rexp = Regexp.compile(ami_id)
+    logger.info { "Searching available AMI on #{self.region}..." }
+    ex_ami = ec2.images.with_owner(:self).find { |e| e.state == :available && rexp.match(e.name) }
+    ex_ami.id if ex_ami
   end
 
   def create_security_group
@@ -419,10 +393,6 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       max_retries: 3,
       logger: logger
     }
-  end
-
-  def java_download_url
-    @java_download_url ||= s3_bucket.objects[java_download_file_path].public_url(secure: false)
   end
 
   def jmeter_download_url
@@ -543,60 +513,25 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     }
   end
 
-  # @return [String]
-  def java_download_file
-    @java_download_file ||= {
-      '32-bit' => 'jre-6u31-linux-i586.bin',
-      '64-bit' => 'jre-8u144-linux-x64.tar.gz'
-    }[arch(true)]
-end
-
-  def java_download_file_path
-    "open-source/#{java_download_file}"
-  end
-
-  def jre_directory
-    @jre_directory ||= {
-      '32-bit' => 'jre1.6.0_31',
-      '64-bit' => 'jre1.8.0_144'
-    }[arch(true)]
-  end
-
-  # @return [String] thead-safe name for the downloaded environment file
-  def current_env_file_name
-    "environment-#{self.id}~"
-  end
-
-  # @return [String] thread-safe name for environment file to be written locally
-  # for upload to agent.
-  def new_env_file_name
-    "environment-#{self.id}"
-  end
-
   # Waits for <tt>timeout_sec</tt> seconds for condition in <tt>block</tt>
-  # to return true, else throws a Timeout::Error
+  # to evaluate to true, else throws an error.
+  # @param [String] message
   # @param [Integer] timeout_sec
-  # @raise [Timeout::Error] if block does not return true within timeout_sec
-  def wait_until(timeout_sec = 300, &_block)
+  # @param [Integer] sleep_duration
+  # @return [Object] result of the block
+  # @raise [Hailstorm::Exception] if block does not return true within timeout_sec
+  def wait_for(message = nil, timeout_sec = 300, sleep_duration = DOZE_TIME, &_block)
     # make the timeout configurable by an environment variable
-    timeout_sec = ENV['HAILSTORM_EC2_TIMEOUT'] || timeout_sec
+    timeout_sec = ENV['HAILSTORM_EC2_TIMEOUT_OVERRIDE'] || timeout_sec
     total_elapsed = 0
     while total_elapsed <= (timeout_sec * 1000)
       before_yield_time = Time.now.to_i
       result = yield
-      if result
-        break
-      else
-        sleep(DOZE_TIME)
-        total_elapsed += (Time.now.to_i - before_yield_time)
-      end
+      return result if result
+      sleep(sleep_duration)
+      total_elapsed += (Time.now.to_i - before_yield_time)
     end
-  end
-
-  def timeout_message(message, &_block)
-    yield
-  rescue Timeout::Error
-    raise(Hailstorm::Exception, "Timeout while waiting for #{message} on #{self.region}.")
+    raise(Hailstorm::Exception, "Timeout while waiting #{message ? "for #{message}" : ''}on #{self.region}.")
   end
 
   def default_max_threads_per_agent
@@ -617,18 +552,14 @@ end
     (computed.to_f / pivot).round * pivot
   end
 
-  def wait_for_system_checks(ec2_instance, message)
-    timeout_message(message) do
-      wait_until do
-        ec2.client.describe_instance_status(instance_ids: [ec2_instance.identifier])[:instance_status_set]
-           .reduce(true) do |state, e|
-          state &&= !e[:system_status][:details].select do |f|
-            f[:name] == 'reachability' && f[:status] == 'passed'
-          end.empty? && !e[:instance_status][:details].select do |f|
-            f[:name] == 'reachability' && f[:status] == 'passed'
-          end.empty?
-        end
-      end
+  def systems_ok(ec2_instance)
+    ec2.client.describe_instance_status(instance_ids: [ec2_instance.identifier])[:instance_status_set]
+        .reduce(true) do |state, e|
+      state &&= !e[:system_status][:details].select do |f|
+        f[:name] == 'reachability' && f[:status] == 'passed'
+      end.empty? && !e[:instance_status][:details].select do |f|
+        f[:name] == 'reachability' && f[:status] == 'passed'
+      end.empty?
     end
   end
 
@@ -636,14 +567,17 @@ end
   # @param [Array] security_group_ids
   # @return [AWS::EC2::Instance]
   def create_ec2_instance(ami_id, security_group_ids)
-    ec2.instances.create({
-      image_id: ami_id,
-      key_name: self.ssh_identity,
-      security_group_ids: security_group_ids,
-      instance_type: self.instance_type,
-      subnet: self.vpc_subnet_id
-    }.tap { |x| x.merge!(availability_zone: self.zone) if self.zone }
-     .tap { |x| x.merge!(associate_public_ip_address: true) if self.vpc_subnet_id })
+    attrs = { image_id: ami_id, key_name: self.ssh_identity, security_group_ids: security_group_ids,
+              instance_type: self.instance_type, subnet: self.vpc_subnet_id }
+    attrs[:availability_zone] = self.zone if self.zone
+    attrs[:associate_public_ip_address] = true if self.vpc_subnet_id
+    clean_instance = ec2.instances.create(attrs)
+    wait_for("#{clean_instance.id} to start and system checks to complete", 600, 10) do
+      clean_instance.exists? && clean_instance.status.eql?(:running) && systems_ok(clean_instance)
+    end
+    logger.info { "Clean instance at #{self.region} running, ensuring SSH access..." }
+    Hailstorm::Support::SSH.ensure_connection(clean_instance.public_ip_address, self.user_name, ssh_options)
+    clean_instance
   end
 
   def secure_identity_file
