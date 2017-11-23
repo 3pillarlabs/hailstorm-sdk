@@ -27,3 +27,6 @@ Style/ClassAndModuleChildren:
 
 Style/RedundantSelf:
   Enabled: false
+
+Layout/EmptyLinesAroundClassBody:
+  Enabled: false
