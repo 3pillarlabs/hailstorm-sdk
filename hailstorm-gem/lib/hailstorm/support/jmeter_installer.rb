@@ -1,10 +1,18 @@
 # JMeter Installer, assumes Java is present in the system.
 class Hailstorm::Support::JmeterInstaller
 
+  # Custom JMeter installer URL patterns
+  CUSTOM_JMETER_URL_REXPS = [
+    Regexp.compile(/[\-_]([\d.\w]+)\.ta?r?\.?gz$/),
+    Regexp.compile(/(\w+)\.ta?r?\.?gz$/)
+  ].freeze
+
   # Create the installer with appropriate installer class.
   # @param [Symbol] id installer to use
   def self.create(id = :tarball)
-    "#{self}::#{id.to_s.camelize}".constantize.new
+    installer = self.new
+    installer.extend("#{self}::#{id.to_s.camelize}".constantize)
+    installer
   end
 
   # Installer abstraction that creates an uniform interface
@@ -53,7 +61,7 @@ class Hailstorm::Support::JmeterInstaller
   end
 
   # Installation with a tarball
-  class Tarball
+  module Tarball
     include AbstractInstaller
 
     attr_accessor :download_url
@@ -83,7 +91,6 @@ class Hailstorm::Support::JmeterInstaller
       end
       if jmeter_version
         self.extend(JmeterVersionStrategy)
-        validate_version
         return
       end
       raise(ArgumentError, 'need either @jmeter_version or @download_url')
@@ -95,20 +102,6 @@ class Hailstorm::Support::JmeterInstaller
 
     # Installing by specifying a JMeter version
     module JmeterVersionStrategy
-
-      MIN_MAJOR = 2
-      MIN_MINOR = 5
-      JMETER_VERSION_REXP = Regexp.compile(/^(\d+)\.(\d+)/)
-
-      # Check if the JMeter version is not lower than minimum compatible (2.6)
-      def validate_version
-        match_data = JMETER_VERSION_REXP.match(jmeter_version)
-        if match_data
-          major, minor = match_data[1..-1].collect(&:to_i)
-          return if major > MIN_MAJOR || (major == MIN_MAJOR && minor > MIN_MINOR)
-        end
-        raise(ArgumentError, "Incorrect JMeter version: #{jmeter_version}")
-      end
 
       def jmeter_download_url
         "https://archive.apache.org/dist/jmeter/binaries/#{jmeter_download_file}"
@@ -139,6 +132,36 @@ class Hailstorm::Support::JmeterInstaller
       def jmeter_directory
         JMETER_DIR_REXP =~ jmeter_download_file && Regexp.last_match(1)
       end
+
+      def self.extract_jmeter_version(url)
+        CUSTOM_JMETER_URL_REXPS.each do |rexp|
+          match_data = rexp.match(url)
+          return match_data[1] if match_data
+        end
+      end
+    end
+  end
+
+  # Validations module
+  module Validator
+    JMETER_VERSION_REXP = Regexp.compile(/^(\d+)\.(\d+)/)
+
+    # Check if the JMeter version is not lower than minimum compatible
+    def self.validate_version(jmeter_version, min_major, min_minor)
+      match_data = JMETER_VERSION_REXP.match(jmeter_version)
+      if match_data
+        major, minor = match_data[1..-1].collect(&:to_i)
+        return major > min_major || (major == min_major && minor >= min_minor)
+      end
+      false
+    end
+
+    # Check if the URL matches allowed patterns
+    def self.validate_download_url_format(url)
+      CUSTOM_JMETER_URL_REXPS.each do |rexp|
+        return true if rexp.match(url)
+      end
+      false
     end
   end
 end

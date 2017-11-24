@@ -305,26 +305,6 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     installer.install do |instr|
       ssh.exec!(instr)
     end
-    unless self.project.custom_jmeter_installer_url
-      # Check if required JMeter version is present in our bucket
-      begin
-        jmeter_s3_object.content_length # will fail if object does not exist
-      rescue AWS::S3::Errors::NoSuchKey
-        raise(Hailstorm::JMeterVersionNotFound.new(self.project.jmeter_version,
-                                                   Defaults::BUCKET_NAME,
-                                                   jmeter_download_file_path))
-      end
-    end
-    ssh.exec!("wget -q '#{jmeter_download_url}' -O #{jmeter_download_file}")
-    ssh.exec!("tar -xzf #{jmeter_download_file}")
-    ssh.exec!("ln -s #{self.user_home}/#{jmeter_directory} #{self.user_home}/jmeter")
-
-    jmeter_remote_home = "#{self.user_home}/jmeter"
-    jmeter_props_remote_path = "#{jmeter_remote_home}/bin/user.properties"
-    ssh.exec!("echo '# Added by Hailstorm' >> #{jmeter_props_remote_path}")
-    ssh.exec!("echo 'jmeter.save.saveservice.output_format=xml' >> #{jmeter_props_remote_path}")
-    ssh.exec!("echo 'jmeter.save.saveservice.hostname=true' >> #{jmeter_props_remote_path}")
-    ssh.exec!("echo 'jmeter.save.saveservice.thread_counts=true' >> #{jmeter_props_remote_path}")
   end
 
   # install JAVA
@@ -378,10 +358,6 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     @ec2 ||= AWS::EC2.new(aws_config).regions[self.region]
   end
 
-  def s3
-    @s3 ||= AWS::S3.new(aws_config)
-  end
-
   def vpc
     @vpc ||= ec2.subnets[self.vpc_subnet_id].vpc if self.vpc_subnet_id
   end
@@ -395,18 +371,6 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     }
   end
 
-  def jmeter_download_url
-    @jmeter_download_url ||= (self.project.custom_jmeter_installer_url || jmeter_s3_object.public_url(secure: false))
-  end
-
-  def jmeter_s3_object
-    s3_bucket.objects[jmeter_download_file_path]
-  end
-
-  def s3_bucket
-    @s3_bucket ||= s3.buckets[Defaults::BUCKET_NAME]
-  end
-
   # Sets the first available zone based on configured region
   # only if the project is configured in master slave mode
   def set_availability_zone
@@ -418,29 +382,6 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
           break
         end
       end
-    end
-  end
-
-  def jmeter_download_file
-    if self.project.custom_jmeter_installer_url.blank?
-      "#{jmeter_directory}.tgz"
-    else
-      self.project.custom_jmeter_installer_file
-    end
-  end
-
-  # Path relative to S3 bucket
-  def jmeter_download_file_path
-    "open-source/#{jmeter_download_file}"
-  end
-
-  # Expanded JMeter directory
-  def jmeter_directory
-    if self.project.custom_jmeter_installer_url.blank?
-      version = self.project.jmeter_version
-      "#{version == '2.4' ? 'jakarta' : 'apache'}-jmeter-#{version}"
-    else
-      self.project.custom_jmeter_dir_name
     end
   end
 

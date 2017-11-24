@@ -1,3 +1,5 @@
+require 'hailstorm/support/jmeter_installer'
+
 include DbHelper
 
 Given(/^Hailstorm is initialized with a project '(.+?)'$/) do |project_code|
@@ -95,7 +97,7 @@ end
 
 When(/^(?:the |)[jJ][mM]eter installer URL for the project is '(.+?)'$/) do |jmeter_installer_url|
   @project.custom_jmeter_installer_url = jmeter_installer_url
-  @project.jmeter_version = @project.send(:jmeter_version_from_installer_url)
+  @project.send(:set_defaults)
 end
 
 Then(/^the AMI to be created would be named '(.+?)'$/) do |expected_ami_name|
