@@ -30,3 +30,7 @@ Style/RedundantSelf:
 
 Layout/EmptyLinesAroundClassBody:
   Enabled: false
+
+Lint/RescueException:
+  Enabled: false
+
