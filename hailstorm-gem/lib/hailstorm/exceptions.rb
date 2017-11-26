@@ -92,9 +92,8 @@ module Hailstorm
 
     def diagnostics
       %(AMI could not be created in AWS region '#{region}'. The failure reason
-        from Amazon is: "[#{reason.code}] #{reason.message}". The Amazon services for the affected
-        region may be down. You can try the 'setup force' command. If the
-        problem persists, report the issue.)
+        from Amazon is #{reason ? "[#{reason.code}] #{reason.message}" : 'unknown'}. The Amazon services for the
+        affected region may be down. You can try the 'setup force' command. If the problem persists, report the issue.)
     end
   end
 

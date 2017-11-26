@@ -13,8 +13,13 @@ class Hailstorm::Support::JavaInstaller
     # Yields one instruction at a time. Override to completely handle the installation.
     def install(&_block)
       instructions.each do |instr|
-        yield sudo? ? "sudo #{instr}" : instr
+        yield sudo? ? sudoize(instr) : instr
       end
+    end
+
+    # Prepends sudo to every instruction including piped commands
+    def sudoize(instr)
+      instr.split(/\|/).collect(&:strip).collect { |x| "sudo #{x}" }.join(' | ')
     end
 
     # List of instructions to be executed to install Java

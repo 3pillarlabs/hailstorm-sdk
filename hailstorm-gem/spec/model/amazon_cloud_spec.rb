@@ -224,4 +224,56 @@ describe Hailstorm::Model::AmazonCloud do
       end
     end
   end
+
+  context '#create_ec2_instance' do
+    before(:each) do
+      @aws.stub!(:ensure_ssh_connectivity).and_return(true)
+      @aws.stub!(:ssh_options).and_return({})
+      @mock_instance = mock('MockInstance', id: 'A', public_ip_address: '8.8.8.4')
+      mock_instance_collection = mock('MockInstanceCollection', create: @mock_instance)
+      mock_ec2 = mock('MockEC2', instances: mock_instance_collection)
+      @aws.stub!(:ec2).and_return(mock_ec2)
+    end
+    context 'when ec2_instance_ready? is true' do
+      it 'should return clean_instance' do
+        @aws.stub!(:ec2_instance_ready?).and_return(true)
+        instance = @aws.send(:create_ec2_instance, {})
+        expect(instance).to eql(@mock_instance)
+      end
+    end
+  end
+
+  context '#ami_creation_needed?' do
+    context '#active == false' do
+      it 'should return false' do
+        @aws.active = false
+        expect(@aws.send(:ami_creation_needed?)).to be_false
+      end
+    end
+    context 'self.agent_ami is nil' do
+      it 'should check_for_existing_ami' do
+        @aws.active = true
+        @aws.agent_ami = nil
+        @aws.stub!(check_for_existing_ami: nil)
+        @aws.should_receive(:check_for_existing_ami)
+        @aws.send(:ami_creation_needed?)
+      end
+    end
+    context 'check_for_existing_ami is not nil' do
+      it 'should return false' do
+        @aws.active = true
+        @aws.agent_ami = nil
+        @aws.stub!(:check_for_existing_ami).and_return('ami-1234')
+        expect(@aws.send(:ami_creation_needed?)).to be_false
+      end
+    end
+    context 'check_for_existing_ami is nil' do
+      it 'should return true' do
+        @aws.active = true
+        @aws.agent_ami = nil
+        @aws.stub!(:check_for_existing_ami).and_return(nil)
+        expect(@aws.send(:ami_creation_needed?)).to be_true
+      end
+    end
+  end
 end

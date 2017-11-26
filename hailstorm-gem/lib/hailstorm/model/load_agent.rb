@@ -10,10 +10,6 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
 
   belongs_to :jmeter_plan
 
-  attr_writer :first_use
-
-  attr_accessor :ec2_instance
-
   after_initialize do |agent|
     self.first_use = agent.new_record?
   end
@@ -21,6 +17,8 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
   after_commit :upload_scripts, if: proc { |r| r.active? && !r.public_ip_address.nil? }, on: :create
 
   scope :active, -> { where(active: true) }
+
+  attr_writer :first_use
 
   def first_use?
     @first_use
@@ -50,25 +48,12 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
   # to upload anyway.
   # @param [Boolean] force defaults to false
   def upload_scripts(force = false)
-    if force || self.first_use? || self.jmeter_plan.content_modified?
-      logger.info("Uploading script #{self.jmeter_plan.test_plan_name}...")
-      directory_hierarchy = nil
-      if force || self.first_use?
-        directory_hierarchy = self.jmeter_plan.remote_directory_hierarchy
-      end
-      test_artifacts = self.jmeter_plan.test_artifacts
-
-      Hailstorm::Support::SSH.start(self.public_ip_address,
-                                    self.clusterable.user_name, self.clusterable.ssh_options) do |ssh|
-        unless directory_hierarchy.nil?
-          logger.debug { "Creating directory structure...#{directory_hierarchy.inspect}" }
-          create_directory_hierarchy(ssh, self.clusterable.user_home, directory_hierarchy)
-        end
-        upload_files(ssh, test_artifacts)
-      end
-
-      self.first_use = false
+    return unless script_upload_needed?(force)
+    logger.info("Uploading script #{self.jmeter_plan.test_plan_name}...")
+    Hailstorm::Support::SSH.start(*ssh_start_args) do |ssh|
+      remote_sync(ssh, force)
     end
+    self.first_use = false
   end
 
   # A load agent is neither a "slave" nor a "master"
@@ -96,20 +81,15 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
   end
 
   def execute_jmeter_command(command)
-    logger.debug { "#{self.class}##{__method__}" }
-    Hailstorm::Support::SSH.start(self.public_ip_address, self.clusterable.user_name,
-                                  self.clusterable.ssh_options) do |ssh|
-
-      logger.debug { command }
+    logger.debug { command }
+    Hailstorm::Support::SSH.start(*ssh_start_args) do |ssh|
       ssh.exec!(command)
-      remote_pid = ssh.find_process_id(self.jmeter_plan
-                                           .class
-                                           .binary_name)
-      if remote_pid.nil?
-        raise(Hailstorm::Exception, "Could not start jmeter on #{self.identifier}##{self.public_ip_address}. Please report this issue.")
-      else
+      remote_pid = ssh.find_process_id(self.jmeter_plan.class.binary_name)
+      if remote_pid
         self.update_column(:jmeter_pid, remote_pid)
+        break
       end
+      raise(Hailstorm::Exception, "Failed to start jmeter on #{self.identifier}##{self.public_ip_address}.")
     end
   end
 
@@ -134,5 +114,26 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
 
       ssh.upload(local, remote)
     end
+  end
+
+  def script_upload_needed?(force = false)
+    first_use_or_refresh?(force) || self.jmeter_plan.content_modified?
+  end
+
+  def first_use_or_refresh?(force = false)
+    force || self.first_use?
+  end
+
+  def ssh_start_args
+    [self.public_ip_address, self.clusterable.user_name, self.clusterable.ssh_options]
+  end
+
+  def remote_sync(ssh, force = false)
+    directory_hierarchy = self.jmeter_plan.remote_directory_hierarchy if first_use_or_refresh?(force)
+    if directory_hierarchy
+      logger.debug { "Creating directory structure...#{directory_hierarchy.inspect}" }
+      create_directory_hierarchy(ssh, self.clusterable.user_home, directory_hierarchy)
+    end
+    upload_files(ssh, self.jmeter_plan.test_artifacts)
   end
 end

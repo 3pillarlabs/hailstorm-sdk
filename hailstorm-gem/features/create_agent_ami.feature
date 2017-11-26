@@ -35,6 +35,7 @@ Feature: Create Amazon Machine Image
     Then an AMI with name '3pg-hailstorm-j3.2-x86_64' should exist
 
   @terminate_instance
+  @smoke
   Scenario: New Load Agent is created from existing base AMI
     Given Amazon is chosen as the cluster
     And I choose 'us-east-1' region
