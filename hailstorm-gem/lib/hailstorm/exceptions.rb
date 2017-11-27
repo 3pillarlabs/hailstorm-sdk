@@ -106,7 +106,7 @@ module Hailstorm
     # @param [String] agent_machines comma separated ip addresses of machines
     # @param [String] ssh_identity ssh ssh identity
     def initialize(user_name, agent_machines, ssh_identity)
-      @agent_machine   = agent_machines
+      @agent_machine = agent_machines
       @user_name    = user_name
       @ssh_identity = ssh_identity
     end

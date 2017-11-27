@@ -276,7 +276,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
         e = doc.xpath('//boolProp[@name="LoopController.continue_forever"]')
         @loop_forever = begin
                           eval(e.content.strip)
-                        rescue
+                        rescue Exception
                           false
                         end
       end
@@ -582,10 +582,10 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
                                             .first
 
           if parent_thread_group.nil? || (begin
-                                              eval(parent_thread_group['enabled'])
-                                            rescue
-                                              false
-                                            end)
+                                            eval(parent_thread_group['enabled'])
+                                          rescue Exception
+                                            false
+                                          end)
             @extracted_property_names.push(property_name)
             properties_map[property_name] = default_value unless properties_map.key?(property_name)
           end

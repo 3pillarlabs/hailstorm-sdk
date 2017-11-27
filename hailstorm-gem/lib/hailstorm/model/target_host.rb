@@ -23,7 +23,7 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
   # @return [Class] class from monitor_type
   def self.moniterable_klass(monitor_type)
     monitor_type.constantize
-  rescue
+  rescue Exception
     require(monitor_type.underscore)
     retry
   end

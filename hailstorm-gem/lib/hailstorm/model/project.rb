@@ -70,7 +70,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       begin
         Hailstorm::Model::TargetHost.monitor_all(self)
         Hailstorm::Model::Cluster.generate_all_load(self, redeploy)
-      rescue
+      rescue Exception
         self.current_execution_cycle.aborted!
         raise
       end
@@ -104,7 +104,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
         else
           current_execution_cycle.stopped!
         end
-      rescue
+      rescue Exception
         Hailstorm::Model::TargetHost.stop_all_monitoring(self, true) unless load_gen_stopped
         current_execution_cycle.aborted!
         raise
@@ -236,7 +236,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     options = options ? options.symbolize_keys : {}
     if file_path.nil?
       glob = File.join(Hailstorm.root, Hailstorm.results_import_dir, '*.jtl')
-      Dir[glob].sort.each {|fp| jtl_file_paths << fp}
+      Dir[glob].sort.each { |fp| jtl_file_paths << fp }
     else
       jtl_file_paths << file_path
     end

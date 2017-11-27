@@ -23,7 +23,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     if @cluster_klass.nil?
       begin
         @cluster_klass = self.cluster_type.constantize
-      rescue
+      rescue Exception
         require(self.cluster_type.underscore)
         retry
       end
