@@ -266,7 +266,6 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   # Create and register the AMI
   # @param [AWS::EC2::Instance] instance instance that will be registered as an AMI
-  # @param [String] ID of the new AMI
   def register_hailstorm_ami(instance)
     new_ami = ec2.images.create(
       name: ami_id,
@@ -493,14 +492,16 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   end
 
   def systems_ok(ec2_instance)
-    ec2.client.describe_instance_status(instance_ids: [ec2_instance.id])[:instance_status_set]
-       .reduce(true) do |state, e|
-      state && !e[:system_status][:details].select do |f|
-        f[:name] == 'reachability' && f[:status] == 'passed'
-      end.empty? && !e[:instance_status][:details].select do |f|
-        f[:name] == 'reachability' && f[:status] == 'passed'
-      end.empty?
+    reachability_pass = ->(f) { f[:name] == 'reachability' && f[:status] == 'passed' }
+    describe_instance_status(ec2_instance).reduce(true) do |state, e|
+      system_reachable = e[:system_status][:details].select { |f| reachability_pass.call(f) }.empty?
+      instance_reachable = e[:instance_status][:details].select { |f| reachability_pass.call(f) }.empty?
+      state && !system_reachable && !instance_reachable
     end
+  end
+
+  def describe_instance_status(ec2_instance)
+    ec2.client.describe_instance_status(instance_ids: [ec2_instance.id])[:instance_status_set]
   end
 
   # Creates a new EC2 instance and returns the instance once it passes all checks.

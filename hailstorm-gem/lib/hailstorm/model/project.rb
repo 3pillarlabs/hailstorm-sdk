@@ -224,8 +224,8 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     self.jmeter_version ||= if self.custom_jmeter_installer_url.blank?
                               Defaults::JMETER_VERSION
                             else
-                              Hailstorm::Support::JmeterInstaller::Tarball::DownloadUrlStrategy.extract_jmeter_version(
-                                  self.custom_jmeter_installer_url)
+                              strategy_klass = Hailstorm::Support::JmeterInstaller::Tarball::DownloadUrlStrategy
+                              strategy_klass.extract_jmeter_version(self.custom_jmeter_installer_url)
                             end
   end
 
