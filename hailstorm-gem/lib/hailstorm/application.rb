@@ -95,7 +95,7 @@ Type help to get started...
     trap('INT', proc { logger.warn('Type [quit|exit|ctrl+D] to exit shell') })
 
     # for IRB like shell, save state for later execution
-    shell_binding = FreeShell.new.get_binding
+    shell_binding = FreeShell.new.binding_context
     prompt = 'hs > '
     while @exit_command_counter >= 0
 
@@ -623,18 +623,18 @@ Continue using old version?
 
   # Defines the grammar for the rules
   def grammar
-    @grammar ||= [
-      Regexp.new('^(help)(\s+setup|\s+start|\s+stop|\s+abort|\s+terminate|\s+results|\s+purge|\s+show|\s+status)?$'),
-      Regexp.new('^(setup)(\s+force|\s+help)?$'),
-      Regexp.new('^(start)(\s+redeploy|\s+help)?$'),
-      Regexp.new('^(stop)(\s+suspend|\s+wait|\s+suspend\s+wait|\s+wait\s+suspend|\s+help)?$'),
-      Regexp.new('^(abort)(\s+suspend|\s+help)?$'),
-      Regexp.new('^(results)(\s+show|\s+exclude|\s+include|\s+report|\s+export|\s+import|\s+help)?(\s+[\d,\-:]+|\s+last)?(.*)$'),
-      Regexp.new('^(purge)(\s+tests|\s+clusters|\s+all|\s+help)?$'),
-      Regexp.new('^(show)(\s+jmeter|\s+cluster|\s+monitor|\s+help|\s+active)?(|\s+all)?$'),
-      Regexp.new('^(terminate)(\s+help)?$'),
-      Regexp.new('^(status)(\s+help)?$')
-    ]
+    @grammar ||= %w[
+      ^(help)(\s+setup|\s+start|\s+stop|\s+abort|\s+terminate|\s+results|\s+purge|\s+show|\s+status)?$
+      ^(setup)(\s+force|\s+help)?$
+      ^(start)(\s+redeploy|\s+help)?$
+      ^(stop)(\s+suspend|\s+wait|\s+suspend\s+wait|\s+wait\s+suspend|\s+help)?$
+      ^(abort)(\s+suspend|\s+help)?$
+      ^(results)(\s+show|\s+exclude|\s+include|\s+report|\s+export|\s+import|\s+help)?(\s+[\d\-:]+|\s+last)?(.*)$
+      ^(purge)(\s+tests|\s+clusters|\s+all|\s+help)?$
+      ^(show)(\s+jmeter|\s+cluster|\s+monitor|\s+help|\s+active)?(|\s+all)?$
+      ^(terminate)(\s+help)?$
+      ^(status)(\s+help)?$
+    ].collect { |p| Regexp.compile(p) }
   end
 
   def save_history(command)
@@ -815,7 +815,7 @@ Continue using old version?
 
   def abort_options
     @abort_options ||= <<-ABORT.strip_heredoc
-  
+
       Aborts load generation and target monitoring.
       This does not fetch logs from the servers and does not terminate the
       load agents. This task is handy when you want to stop the current test
@@ -930,8 +930,9 @@ Continue using old version?
   class IncorrectCommandException < Hailstorm::Exception
   end
 
+  # Simple shell for executing code within the Hailstorm shell
   class FreeShell
-    def get_binding
+    def binding_context
       binding
     end
   end
