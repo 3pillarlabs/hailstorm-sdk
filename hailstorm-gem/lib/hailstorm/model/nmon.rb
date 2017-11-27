@@ -27,7 +27,7 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
       else
         raise(Hailstorm::Exception, "nmon not found at #{target.executable_path} on #{target.host_name}.")
       end
-    end # ssh
+    end
   end
 
   # start nmon on target_host
@@ -45,7 +45,7 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
         nmon_pid = ssh.exec!(command)
         nmon_pid.chomp!
         self.executable_pid = nmon_pid
-      end # ssh
+      end
     end
   end
 
@@ -63,7 +63,7 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
             self.executable_pid = nil
           end
         end
-      end # ssh
+      end
     end
   end
 
@@ -77,7 +77,7 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
       end
 
       ssh.exec!("rm -rf #{nmon_output_path}")
-    end # ssh
+    end
   end
 
   # (see Hailstorm::Behavior::Moniterable#download_remote_log)

@@ -4,11 +4,10 @@
 # loaded once.
 #
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
+require 'simplecov'
 require 'hailstorm/application'
 require 'hailstorm/support/configuration'
 require 'active_record/base'
-require 'simplecov'
-
 
 $CLASSPATH << File.dirname(__FILE__)
 ENV['HAILSTORM_ENV'] = 'test'

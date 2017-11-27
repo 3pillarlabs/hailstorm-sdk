@@ -29,7 +29,6 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     return unless self.active? || force
     logger.info("Provisioning #{self.machines.count} #{self.class} machines...")
     provision_agents.each do |activated_agent|
-
       logger.debug { "#{self.class} agent##{activated_agent.private_ip_address} validating java installation..." }
       unless java_ok?(activated_agent)
         activated_agent.update_attribute(:active, false)

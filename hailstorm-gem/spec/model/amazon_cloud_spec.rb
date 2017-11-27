@@ -86,28 +86,12 @@ describe Hailstorm::Model::AmazonCloud do
       @request_name = 'rhapsody-jmeter-3.2_zzz'
       @request_path = "#{@request_name}.tgz"
       project.custom_jmeter_installer_url = "http://whodunit.org/a/b/c/#{@request_path}"
-      project.jmeter_version = project.send(:jmeter_version_from_installer_url)
       project.send(:set_defaults)
       @aws.project = project
     end
     context '#ami_id' do
       it 'should have project_code appended to custom version' do
         expect(@aws.send(:ami_id)).to match(Regexp.new(@aws.project.project_code))
-      end
-    end
-    context '#jmeter_download_url' do
-      it 'should be same as custom jmeter installer URL' do
-        expect(@aws.send(:jmeter_download_url)).to eql(@aws.project.custom_jmeter_installer_url)
-      end
-    end
-    context '#jmeter_download_file' do
-      it 'should be request path of custom jmeter installer URL' do
-        expect(@aws.send(:jmeter_download_file)).to eql(@request_path)
-      end
-    end
-    context '#jmeter_directory' do
-      it 'should be file name without .tgz|.tar.gz' do
-        expect(@aws.send(:jmeter_directory)).to eql(@request_name)
       end
     end
   end
@@ -124,21 +108,6 @@ describe Hailstorm::Model::AmazonCloud do
       it 'should only have default jmeter version' do
         expect(@aws.send(:ami_id)).to_not match(Regexp.new(@aws.project.project_code))
         expect(@aws.send(:ami_id)).to match(Regexp.new(@aws.project.jmeter_version.to_s))
-      end
-    end
-    context '#jmeter_download_url' do
-      it 'should be an S3 URL' do
-        expect(@aws.send(:jmeter_download_url).to_s).to match(/s3\.amazonaws\.com/)
-      end
-    end
-    context '#jmeter_download_file' do
-      it 'should be jmeter_directory.tgz' do
-        expect(@aws.send(:jmeter_download_file)).to match(Regexp.new(@aws.send(:jmeter_directory)))
-      end
-    end
-    context '#jmeter_directory' do
-      it 'should be the file name without .tgz' do
-        expect(@aws.send(:jmeter_directory)).to match(/apache\-jmeter/)
       end
     end
   end
@@ -252,6 +221,58 @@ describe Hailstorm::Model::AmazonCloud do
         @aws.agent_ami = 'ami-42'
         @aws.should_receive(:create_security_group)
         @aws.save!
+      end
+    end
+  end
+
+  context '#create_ec2_instance' do
+    before(:each) do
+      @aws.stub!(:ensure_ssh_connectivity).and_return(true)
+      @aws.stub!(:ssh_options).and_return({})
+      @mock_instance = mock('MockInstance', id: 'A', public_ip_address: '8.8.8.4')
+      mock_instance_collection = mock('MockInstanceCollection', create: @mock_instance)
+      mock_ec2 = mock('MockEC2', instances: mock_instance_collection)
+      @aws.stub!(:ec2).and_return(mock_ec2)
+    end
+    context 'when ec2_instance_ready? is true' do
+      it 'should return clean_instance' do
+        @aws.stub!(:ec2_instance_ready?).and_return(true)
+        instance = @aws.send(:create_ec2_instance, {})
+        expect(instance).to eql(@mock_instance)
+      end
+    end
+  end
+
+  context '#ami_creation_needed?' do
+    context '#active == false' do
+      it 'should return false' do
+        @aws.active = false
+        expect(@aws.send(:ami_creation_needed?)).to be_false
+      end
+    end
+    context 'self.agent_ami is nil' do
+      it 'should check_for_existing_ami' do
+        @aws.active = true
+        @aws.agent_ami = nil
+        @aws.stub!(check_for_existing_ami: nil)
+        @aws.should_receive(:check_for_existing_ami)
+        @aws.send(:ami_creation_needed?)
+      end
+    end
+    context 'check_for_existing_ami is not nil' do
+      it 'should return false' do
+        @aws.active = true
+        @aws.agent_ami = nil
+        @aws.stub!(:check_for_existing_ami).and_return('ami-1234')
+        expect(@aws.send(:ami_creation_needed?)).to be_false
+      end
+    end
+    context 'check_for_existing_ami is nil' do
+      it 'should return true' do
+        @aws.active = true
+        @aws.agent_ami = nil
+        @aws.stub!(:check_for_existing_ami).and_return(nil)
+        expect(@aws.send(:ami_creation_needed?)).to be_true
       end
     end
   end

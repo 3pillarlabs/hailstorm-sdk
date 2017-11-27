@@ -54,11 +54,12 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
 
     self.samples_breakup(sample_response_time)
 
+    # 's' is either "true" or "false"
     sample_success = begin
                        eval(sample['s'])
-                     rescue
+                     rescue Exception
                        false
-                     end # 's' is either "true" or "false"
+                     end
     self.errors_count += 1 unless sample_success
   end
 

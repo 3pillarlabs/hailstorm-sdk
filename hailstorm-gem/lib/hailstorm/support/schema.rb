@@ -28,6 +28,7 @@ class Hailstorm::Support::Schema
     add_cluster_code_to_clusters
     add_ssh_port_to_data_centers
     add_ssh_port_to_amazon_clouds
+    add_custom_jmeter_installer_url_to_projects
   ].freeze
 
   class SchemaMigration < ActiveRecord::Base
@@ -243,5 +244,9 @@ class Hailstorm::Support::Schema
 
   def add_ssh_port_to_amazon_clouds
     ActiveRecord::Migration.add_column(:amazon_clouds, :ssh_port, :integer, default: nil)
+  end
+
+  def add_custom_jmeter_installer_url_to_projects
+    ActiveRecord::Migration.add_column(:projects, :custom_jmeter_installer_url, :string, default: nil)
   end
 end

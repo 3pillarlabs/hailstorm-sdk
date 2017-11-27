@@ -7,7 +7,7 @@ require 'hailstorm/model/target_host'
 class Hailstorm::Model::TargetStat < ActiveRecord::Base
 
   DEFAULT_SELECT_COLUMNS = %i[id execution_cycle_id target_host_id
-                            average_cpu_usage average_memory_usage average_swap_usage].freeze
+                              average_cpu_usage average_memory_usage average_swap_usage].freeze
 
   belongs_to :execution_cycle
 

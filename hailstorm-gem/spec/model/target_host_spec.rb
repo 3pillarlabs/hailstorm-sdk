@@ -15,7 +15,6 @@ describe Hailstorm::Model::TargetHost do
   context '.configure_all' do
     before(:each) do
       @project = Hailstorm::Model::Project.where(project_code: 'target_host_spec').first_or_create!
-      Hailstorm::Model::TargetHost.where(project_id: @project.id).delete_all
     end
     context '#active=true' do
       it 'should be persisted' do

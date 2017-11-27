@@ -27,3 +27,17 @@ Style/ClassAndModuleChildren:
 
 Style/RedundantSelf:
   Enabled: false
+
+Layout/EmptyLinesAroundClassBody:
+  Enabled: false
+
+Lint/RescueException:
+  Enabled: false
+
+Metrics/AbcSize:
+  Max: 20
+
+Metrics/MethodLength:
+  Max: 15
+
+
