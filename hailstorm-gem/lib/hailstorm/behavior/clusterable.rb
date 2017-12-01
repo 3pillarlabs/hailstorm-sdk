@@ -295,7 +295,7 @@ module Hailstorm::Behavior::Clusterable
     query = self.send(relation).where(attributes)
     activate_count = agents_to_add(query, required_count) do |q, count|
       # is there an inactive agent? if yes, activate it, or, create new
-      agent = q.unscope(where: :active).where(active: false).first_or_initialize(active: true)
+      agent = q.unscope(where: :active).where(active: false).first_or_initialize { |r| r.active = true }
       if agent.new_record?
         if count > 1
           Hailstorm::Support::Thread.start(agent) do |agent_instance|

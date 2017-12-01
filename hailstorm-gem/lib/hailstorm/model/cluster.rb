@@ -49,8 +49,12 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
                                        .symbolize_keys
                                        .except(:active, :cluster_type, :max_threads_per_agent, :cluster_code)
                                        .merge(project_id: self.project.id)
+    logger.debug { cluster_attributes }
+    logger.debug { cluster_attributes[:machines] }
+    logger.debug { cluster_attributes[:machines].class }
     # find the cluster or create it
-    cluster_instance = cluster_klass.where(cluster_attributes).first_or_initialize
+    cluster_instance = cluster_klass.where(cluster_attributes).first
+    cluster_instance = cluster_klass.new(cluster_attributes) if cluster_instance.nil?
     cluster_instance.active = cluster_config.active
     if cluster_instance.respond_to?(:max_threads_per_agent)
       cluster_instance.max_threads_per_agent = cluster_config.max_threads_per_agent
