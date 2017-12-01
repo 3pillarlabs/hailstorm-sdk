@@ -72,7 +72,7 @@ describe Hailstorm::Model::Project do
         project.clusters.create!(cluster_type: 'Hailstorm::Model::AmazonCloud')
         cluster = project.clusters
                          .create!(cluster_type: 'Hailstorm::Model::DataCenter')
-        data_center = cluster.cluster_klass.where(user_name: 'zed', ssh_identity: 'zed', machines: '172.16.80.25',
+        data_center = cluster.cluster_klass.where(user_name: 'zed', ssh_identity: 'zed', machines: ['172.16.80.25'],
                                                   title: '1d229', project_id: project.id)
                              .first_or_create!(active: false)
         data_center.update_column(:active, true)

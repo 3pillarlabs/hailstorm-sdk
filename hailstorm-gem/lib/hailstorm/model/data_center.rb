@@ -9,7 +9,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   include Hailstorm::Behavior::Clusterable
 
-  serialize :machines, Array
+  serialize :machines
 
   before_validation :set_defaults
 
