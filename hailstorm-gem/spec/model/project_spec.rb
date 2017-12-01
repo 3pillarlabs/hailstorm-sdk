@@ -8,7 +8,7 @@ describe Hailstorm::Model::Project do
       it 'should have JMeter version as 3.2' do
         project = Hailstorm::Model::Project.new(project_code: 'project_spec')
         project.save!
-        expect(project.jmeter_version).to eq 3.2
+        expect(project.jmeter_version).to eq '3.2'
       end
     end
   end
@@ -20,8 +20,8 @@ describe Hailstorm::Model::Project do
       @project.stub!(:configure_clusters)
       @project.stub!(:configure_target_hosts)
       @project.stub!(settings_modified?: true)
-      @mock_config = mock('config', serial_version: 'A', jmeter: OpenStruct.new,
-                                    samples_breakup_interval: nil).as_null_object
+      @mock_config = mock('config', serial_version: 'A', jmeter: OpenStruct.new, master_slave_mode: nil,
+                                    samples_breakup_interval: nil)
       @project.stub!(:config).and_return(@mock_config)
     end
 

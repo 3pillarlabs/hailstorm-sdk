@@ -21,8 +21,8 @@ class Hailstorm::Model::Project < ActiveRecord::Base
 
   has_many :execution_cycles, dependent: :destroy
 
-  has_one  :current_execution_cycle, -> { where(status: 'started') },
-           class_name: 'Hailstorm::Model::ExecutionCycle', order: 'started_at DESC'
+  has_one  :current_execution_cycle, -> { where(status: 'started').order('started_at DESC') },
+           class_name: 'Hailstorm::Model::ExecutionCycle'
 
   validates :custom_jmeter_installer_url, 'Hailstorm::Model::JmeterInstallerUrl' => true,
                                           if: ->(r) { r.custom_jmeter_installer_url }
