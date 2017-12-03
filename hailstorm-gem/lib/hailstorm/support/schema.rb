@@ -20,6 +20,7 @@ class Hailstorm::Support::Schema
     page_stats
     target_stats
     jtl_files
+    test_clusters
   ].freeze
 
   # List of updates to schema
@@ -227,6 +228,15 @@ class Hailstorm::Support::Schema
       t.references  :client_stat, null: false
       t.integer     :chunk_sequence, null: false
       t.binary      :data_chunk, null: false
+    end
+  end
+
+  def create_test_clusters
+    ActiveRecord::Migration.create_table(:test_clusters) do |t|
+      t.references  :project, null: false
+      t.string      :name
+      t.boolean     :active, null: false, default: false
+      t.string      :user_name, null: false
     end
   end
 
