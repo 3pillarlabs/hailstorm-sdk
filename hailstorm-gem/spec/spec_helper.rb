@@ -8,6 +8,7 @@ require 'simplecov'
 require 'hailstorm/application'
 require 'hailstorm/support/configuration'
 require 'active_record/base'
+require 'test_schema'
 
 $CLASSPATH << File.dirname(__FILE__)
 ENV['HAILSTORM_ENV'] = 'test'

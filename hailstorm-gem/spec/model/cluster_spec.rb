@@ -28,16 +28,7 @@ end
 describe Hailstorm::Model::Cluster do
   context '.configure_all' do
     before(:each) do
-      unless ActiveRecord::Base.connection.table_exists?(:test_clusters)
-        ActiveRecord::Migration.create_table(:test_clusters) do |t|
-          t.references  :project, :null => false
-          t.string      :name
-          t.boolean     :active, :null => false, :default => false
-          t.string      :user_name, :null => false
-        end
-      end
       @project = Hailstorm::Model::Project.where(project_code: 'cluster_spec').first_or_create!
-      Hailstorm::Model::Cluster.where(project_id: @project.id).delete_all
     end
     context '#active=true' do
       it 'should get persisted' do

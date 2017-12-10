@@ -7,7 +7,7 @@ Feature: VPC support
     Given Amazon is chosen as the cluster
     When I choose 'us-east-1' region
     And the JMeter version for the project is '3.2'
-    And VPC subnet is 'subnet-f1e550a8'
+    And a public VPC subnet is available
     And create the AMI
     Then an AMI with name '3pg-hailstorm-j3.2-x86_64' should exist
 
@@ -16,21 +16,8 @@ Feature: VPC support
   Scenario: New Load Agent is created from existing base AMI
     Given Amazon is chosen as the cluster
     And I choose 'us-east-1' region
-    And VPC subnet is 'subnet-f1e550a8'
+    And a public VPC subnet is available
     And instance type is 't2.small'
     And an AMI with name '3pg-hailstorm-j3.2-x86_64' exists
-    When I start a new load agent
-    Then installed JMeter version should be '3.2'
-
-  @terminate_instance
-  @ignore
-  Scenario: New Load Agent with non-standard SSH port
-    Given Amazon is chosen as the cluster
-    And I choose 'us-east-1' region
-    And VPC subnet is 'subnet-f1e550a8'
-    And instance type is 't2.small'
-    And an agent AMI 'ami-f9d55783' exists
-    And SSH port is 8022
-    And security group is 'rm-hailstorm-vpc-test'
     When I start a new load agent
     Then installed JMeter version should be '3.2'

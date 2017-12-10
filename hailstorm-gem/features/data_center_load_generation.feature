@@ -7,6 +7,7 @@ Feature: Load generation from physical machines/virtual machines/docker containe
 
   @smoke
   @end-to-end
+  @focus
   Scenario: Start hailstorm
     When I launch the hailstorm console within "hs_data_center_integration" project
     Then the application should be ready to accept commands

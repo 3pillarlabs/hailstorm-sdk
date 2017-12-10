@@ -202,7 +202,7 @@ Vagrant.configure(2) do |config|
   	site.vm.provision "hailstorm_site", :type => :shell, :path => 'install-hailstorm-site.sh', :run => 'always'
   end
 
-	config.vm.define "site-local", :primary => true do |site_local|
+	config.vm.define "site-local" do |site_local|
 		site_local.vm.box = "ubuntu/trusty64"
 		site_local.vm.provider "virtualbox" do |vb|
 		#   Display the VirtualBox GUI when booting the machine
@@ -217,5 +217,5 @@ Vagrant.configure(2) do |config|
 
   	# hailstorm-site
   	site_local.vm.provision "hailstorm_site", :type => :shell, :path => 'install-hailstorm-site.sh', :run => 'always'
-	end
+  end
 end

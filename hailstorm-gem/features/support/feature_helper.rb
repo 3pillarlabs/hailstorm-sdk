@@ -1,5 +1,6 @@
 require 'rubygems'
 require 'bundler/setup'
+require 'simplecov'
 require 'hailstorm/application'
 
 $LOAD_PATH.push(File.expand_path('../../lib', __FILE__))

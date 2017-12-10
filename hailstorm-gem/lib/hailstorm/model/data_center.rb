@@ -27,7 +27,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
     self.save! if save_on_setup?
     return unless self.active? || force
-    logger.info("Provisioning #{self.machines.count} #{self.class} machines...")
+    logger.info("Provisioning #{self.machines.size} #{self.class} machines...")
     provision_agents.each do |activated_agent|
       logger.debug { "#{self.class} agent##{activated_agent.private_ip_address} validating java installation..." }
       unless java_ok?(activated_agent)
@@ -68,7 +68,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   end
 
   def required_load_agent_count(jmeter_plan)
-    jmeter_plan.num_threads > 1 ? self.machines.count : 1
+    jmeter_plan.num_threads > 1 ? self.machines.size : 1
   end
 
   # (see Hailstorm::Behavior::Clusterable#slug)

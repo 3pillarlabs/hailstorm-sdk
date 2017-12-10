@@ -7,8 +7,9 @@ require 'action_dispatch/http/mime_type'
 require 'action_view'
 
 require 'hailstorm/version'
-
 require 'hailstorm/behavior/loggable'
+
+ActiveRecord::Base.raise_in_transactional_callbacks = true
 
 # Defines the namespace and module static accessors.
 # @author Sayantam Dey
