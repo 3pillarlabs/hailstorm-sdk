@@ -105,8 +105,13 @@ Then(/^the AMI to be created would be named '(.+?)'$/) do |expected_ami_name|
 end
 
 
-And(/^VPC subnet is '(.+?)'$/) do |subnet_id|
-  @aws.vpc_subnet_id = subnet_id
+And(/^a public VPC subnet is available$/) do
+  ec2 = @aws.send(:ec2)
+  public_subnet = ec2.vpcs.collect(&:subnets).flatten.collect(&:to_a).flatten.find do |sn|
+    sn.route_table.routes.find { |r| r.internet_gateway && r.internet_gateway.id != 'local' }
+  end
+  expect(public_subnet).to_not be_nil
+  @aws.vpc_subnet_id = public_subnet.id
 end
 
 

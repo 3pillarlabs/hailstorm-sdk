@@ -23,7 +23,7 @@ rspec
 ```
 
 ## Integration tests
-This requires an AWS account and a little more setup.
+This requires an AWS account and a little more setup. Ensure your AWS account has a VPC with a public subnet.
 
 ### AWS tests
 
