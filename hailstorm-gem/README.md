@@ -36,9 +36,9 @@ Edit ``features/data/keys-sample.yml`` to add your AWS access and secret keys.
 ### Data Center tests
 To execute the data-center integration tests, two nodes need to be setup.
 
-**Note** - The ``resources/data-center/Dockerfile`` can also be used to build Docker images to run on data-center machines. 
-This is a considerably easier process to ensure that the nodes in the data center are setup correctly to work with 
-Hailstorm. However, note that the Docker container enables SSH using an insecure key, it is essential that the SSH port 
+**Note** - The ``resources/data-center/Dockerfile`` can also be used to build Docker images to run on data-center machines.
+This is a considerably easier process to ensure that the nodes in the data center are setup correctly to work with
+Hailstorm. However, note that the Docker container enables SSH using an insecure key, it is essential that the SSH port
 be protected from access outside the data-center.
 
 ### Linux
@@ -56,7 +56,12 @@ docker run -it --rm --name hs-dc-node-1 -d hailstorm-data-center-node:latest
 docker run -it --rm --name hs-dc-node-2 -d hailstorm-data-center-node:latest
 ```
 
-Use ``docker inspect <container-id>`` to find the IP addresses.
+To find the IP addresses -
+```bash
+for ctr in $(docker ps | cut -f1 -d' ' | grep -v CONTAINER); do \
+  docker inspect -f '{{ .NetworkSettings.IPAddress }}' $ctr; \
+done
+```
 
 ### MacOS
 
@@ -69,7 +74,7 @@ The IP addresses are ``192.168.27.10`` and ``192.168.27.20``.
 
 
 ### Configuration
-Once the setup is done, copy ``features/data/data-center-machines-sample.yml`` to 
+Once the setup is done, copy ``features/data/data-center-machines-sample.yml`` to
 ``features/data/data-center-machines.yml`` and add the IP addresses of the Docker containers or Vagrant VMs based on the
 setup.
 
