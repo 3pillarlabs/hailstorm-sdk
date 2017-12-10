@@ -46,7 +46,7 @@ For Linux, use the Docker containers.
 
 #### Build an image
 ```bash
-cd hailstorm-gem/resources/data-center
+cd resources/data-center
 docker build -t hailstorm-data-center-node:latest .
 ```
 

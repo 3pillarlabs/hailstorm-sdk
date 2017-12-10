@@ -25,7 +25,7 @@ This will take a long time for creating and provisioning the VM with everything 
 ### Release
 Follow these steps for performance testing an application -
 
-##### Hailstorm CLI
+#### Hailstorm CLI
 
 If you want to use the CLI interface, SSH into the VM, once the VM has been provisioned successfully -
 ```bash
@@ -51,16 +51,3 @@ bundle check
 ./script/hailstorm
 ```
 This should display the Hailstorm prompt.
-
-### Development
-
-#### hailstorm-gem Development
-
-Creating the environment for hacking on the gem development is simple. Make sure you are in a JRuby VM and -
-```
-rvm gemset create hailstorm-gem-dev
-rvm use @hailstorm-gem-dev
-gem install --no-rdoc --no-ri bundler
-bundle install
-```
-The next time you log into the VM, just ``rvm use @hailstorm-gem-dev``.
