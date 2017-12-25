@@ -6,6 +6,7 @@ plugins:
 
 exclude_patterns:
   - '*.rb'
+  - 'setup/**/*'
   - 'Vagrantfile'
   - 'docs/**/*'
   - 'hailstorm-gem/Gemfile'
@@ -19,4 +20,3 @@ exclude_patterns:
   - 'hailstorm-redis/**/*'
   - 'hailstorm-site/**/*'
   - 'hailstorm-web/**/*'
-

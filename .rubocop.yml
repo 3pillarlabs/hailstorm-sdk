@@ -2,6 +2,7 @@
 AllCops:
   Exclude:
     - '*.rb'
+    - 'setup/**/*'
     - 'Vagrantfile'
     - 'docs/**/*'
     - 'hailstorm-gem/Gemfile'
@@ -39,5 +40,3 @@ Metrics/AbcSize:
 
 Metrics/MethodLength:
   Max: 15
-
-
