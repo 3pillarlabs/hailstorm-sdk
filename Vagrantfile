@@ -1,4 +1,4 @@
-config# -*- mode: ruby -*-
+# -*- mode: ruby -*-
 # vi: set ft=ruby :
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
@@ -42,7 +42,7 @@ Vagrant.configure(2) do |config|
 
   config.vm.provision "vagrant_user", :type => :shell, :path => 'setup/create_vagrant_user.sh'
 
-  config.vm.provision "apt", :type => :shell, :inline => <<-SHELL
+  config.vm.provision "apt", :type => :shell, :run => 'always', :inline => <<-SHELL
     last_apt_update_path=/var/cache/last_apt_update
     if [ ! -e $last_apt_update_path ] || [ `expr $(date "+%s") - $(stat -c "%Y" $last_apt_update_path)` -gt 86400 ]; then
       apt-get update && touch $last_apt_update_path
@@ -139,7 +139,7 @@ Vagrant.configure(2) do |config|
     aws.vm.provider :aws do |ec2, override|
       ec2.ami = "ami-841f46ff"
       ec2.access_key_id, ec2.secret_access_key = aws_keys()
-      aws_conf = YAML.load_file('vagrant-aws.yml').reduce({}) { |a, e| a.merge(e[0].to_sym => e[1]) }
+      aws_conf = YAML.load_file('setup/vagrant-aws.yml').reduce({}) { |a, e| a.merge(e[0].to_sym => e[1]) }
       ec2.keypair_name = aws_conf[:keypair_name]
       ec2.instance_type = aws_conf[:instance_type] || "t2.medium"
       ec2.elastic_ip = true
@@ -167,7 +167,7 @@ Vagrant.configure(2) do |config|
       ec2.ami = "ami-841f46ff"
       ec2.access_key_id, ec2.secret_access_key = aws_keys()
       require 'yaml'
-      aws_conf = YAML.load_file('vagrant-site.yml').reduce({}) { |a, e| a.merge(e[0].to_sym => e[1]) }
+      aws_conf = YAML.load_file('setup/hailstorm-site/vagrant-site.yml').reduce({}) { |a, e| a.merge(e[0].to_sym => e[1]) }
       ec2.keypair_name = aws_conf[:keypair_name]
       ec2.instance_type = aws_conf[:instance_type] || "t2.medium"
       ec2.elastic_ip = true
@@ -203,6 +203,6 @@ Vagrant.configure(2) do |config|
 		site_local.vm.network "private_network", ip: "192.168.20.100"
 
   	# hailstorm-site
-  	site_local.vm.provision "hailstorm_site", :type => :shell, :path => 'install-hailstorm-site.sh', :run => 'always'
+  	site_local.vm.provision "hailstorm_site", :type => :shell, :path => 'setup/hailstorm-site/install-hailstorm-site.sh', :run => 'always'
   end
 end
