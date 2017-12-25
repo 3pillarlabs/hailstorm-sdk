@@ -25,8 +25,11 @@ Hailstorm works in an offline mode by default, which means you can exit the appl
 
   gem.license = 'MIT'
 
-  excluded_files = ['Gemfile.lock', '.gitignore']
-  gem.files         = `git ls-files`.split("\n") - excluded_files
+  included_globs = %w[bin features lib resources spec templates].collect { |e| ["#{e}/**/*", "#{e}/**/.*"] }.flatten
+  included_files = %w[.rspec .rubocop.yml .simplecov Gemfile hailstorm.gemspec Rakefile README.md Vagrantfile]
+  excluded_files = %w[Gemfile.lock .gitignore features/data/all_purpose.pem features/data/data-center-machines.yml
+                      features/data/keys.yml features/data/site_server.txt lib/hailstorm/java/.project]
+  gem.files         = Dir.glob(included_globs).select { |f| File.file?(f) } + included_files - excluded_files
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/\b})
   gem.executables   = gem.files.grep(%r{^bin/\b}).map { |f| File.basename(f) }
   gem.require_paths = %w[lib]

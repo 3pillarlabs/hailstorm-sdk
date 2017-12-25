@@ -24,6 +24,34 @@ for app in hailstorm-gem hailstorm-redis hailstorm-web; do
 		cp -r /vagrant/$app $install_path/
 		echo $app_sha1 > $install_path/$app.sha1
 		echo "Installed $app"
+		if [ $app = 'hailstorm-gem' ]; then
+			ruby_version='jruby@hailstorm'
+			app_home=$install_path/$app
+			vagrant_user=vagrant
+			rvm_script_path=/usr/local/rvm/scripts/rvm
+
+			source $rvm_script_path
+			cd $install_path
+			rvm use $ruby_version
+
+			# install bundler
+			which bundle
+			if [ $? -ne 0 ]; then
+				gem install bundler --no-rdoc --no-ri
+			fi
+
+			# install hailstorm-gem & dependencies
+			chown -R $vagrant_user:$vagrant_user $app_home
+			cd $app_home
+			bundle install
+			echo $ruby_version > .ruby-version
+
+			# add an alias
+			grep 'alias hailstorm-cli' /home/vagrant/.bashrc
+			if [ $? -ne 0 ]; then
+				sudo -u vagrant sh -c "echo 'alias hailstorm-cli=/usr/local/lib/hailstorm-gem/bin/hailstorm' >> /home/vagrant/.bashrc"
+			fi
+		fi
 	fi
 done
 

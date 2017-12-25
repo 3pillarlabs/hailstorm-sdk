@@ -27,27 +27,24 @@ Follow these steps for performance testing an application -
 
 #### Hailstorm CLI
 
-If you want to use the CLI interface, SSH into the VM, once the VM has been provisioned successfully -
+If you want to use the CLI interface, SSH into the VM, once the VM has been provisioned successfully, SSH to the VM.
 ```bash
 vagrant ssh dev
 ```
-This will open a SSH session.
 
-Next, set the hailstorm environment -
+To create a new Hailstorm project named ``getting_started`` -
 ```bash
-rvm use @hailstorm
-```
-You need to do this every time you SSH into the VM, you might want to add it to ``~/.bashrc`` or ``~/.bash_profile``.
-
-Suppose you wanted to create a new Hailstorm project named ``getting_started`` -
-```bash
-/vagrant/hailstorm-gem/bin/hailstorm -g /vagrant/hailstorm-gem getting_started
+hailstorm-cli getting_started
 ```
 
 This will create the skeleton structure. To get started with your project -
 ```bash
 cd getting_started
-bundle check
 ./script/hailstorm
 ```
 This should display the Hailstorm prompt.
+```
+Welcome to the Hailstorm (version 4.0.0) shell.
+Type help to get started...
+hs >
+```

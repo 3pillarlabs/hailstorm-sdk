@@ -87,6 +87,14 @@ Vagrant.configure(2) do |config|
 
   	# hailstorm-web
   	config.vm.provision "hailstorm_web", :type => :shell, :path => 'setup/hailstorm-web/install-hailstorm-web.sh'
+
+    # hailstorm_gemdir
+    config.vm.provision "hailstorm_gemdir", :type => :shell, :inline => <<-SHELL
+      grep 'rvm use jruby@hailstorm' /home/vagrant/.bashrc
+      if [ $? -ne 0 ]; then
+        sudo -u vagrant sh -c "echo 'rvm use jruby@hailstorm' >> /home/vagrant/.bashrc"
+      fi
+    SHELL
   end
 
   config.vm.define "dev", :primary => true do |dev|
