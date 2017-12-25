@@ -1,5 +1,5 @@
 # Configuration for Vagrant site VM
-# Copy this file to vagrant-site.yml and add values
+# Copy this file to setup/hailstorm-site/vagrant-site.yml and add values
 ---
   # AWS keypair_name, this should already exist
   keypair_name: ""

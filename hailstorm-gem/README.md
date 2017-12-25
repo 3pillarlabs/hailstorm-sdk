@@ -80,6 +80,9 @@ setup.
 
 ### Bring up the target sites
 
+Copy ``setup/hailstorm-site/vagrant-site-sample.yml`` to ``setup/hailstorm-site/vagrant-site.yml`` and edit the
+properties.
+
 ```bash
 vagrant up site
 vagrant up site-local
