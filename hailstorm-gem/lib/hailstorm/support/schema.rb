@@ -7,26 +7,33 @@ class Hailstorm::Support::Schema
   include Hailstorm::Behavior::Loggable
 
   # List of tables in schema
-  SchemaTables = %i[
-    projects
-    amazon_clouds
-    data_centers
-    jmeter_plans
-    load_agents
-    target_hosts
-    clusters
-    execution_cycles
-    client_stats
-    page_stats
-    target_stats
-    jtl_files
-  ].freeze
+  def schema_tables
+    @schema_tables ||= %i[
+      projects
+      amazon_clouds
+      data_centers
+      jmeter_plans
+      load_agents
+      target_hosts
+      clusters
+      execution_cycles
+      client_stats
+      page_stats
+      target_stats
+      jtl_files
+    ]
+  end
 
   # List of updates to schema
-  SchemaUpdates = %i[
-    add_vpc_subnet_id_to_amazon_clouds
-    add_cluster_code_to_clusters
-  ].freeze
+  def schema_updates
+    @schema_updates ||= %i[
+      add_vpc_subnet_id_to_amazon_clouds
+      add_cluster_code_to_clusters
+      add_ssh_port_to_data_centers
+      add_ssh_port_to_amazon_clouds
+      add_custom_jmeter_installer_url_to_projects
+    ]
+  end
 
   class SchemaMigration < ActiveRecord::Base
     # SchemaMigration
@@ -45,7 +52,7 @@ class Hailstorm::Support::Schema
     create_schema_migrations
     table_migrations = SchemaMigration.all.collect(&:migration_name).select { |e| e =~ /^create_/ }
                                       .collect { |e| e.gsub(/^create_/, '').to_sym }
-    SchemaTables.each do |t|
+    schema_tables.each do |t|
       create_table(t) unless table_migrations.include?(t)
     end
   end
@@ -53,7 +60,7 @@ class Hailstorm::Support::Schema
   # Updates the schema to add columns or data
   def update
     migrations = SchemaMigration.all.collect { |r| r.migration_name.to_sym }
-    SchemaUpdates.each do |name|
+    schema_updates.each do |name|
       next if migrations.include?(name)
       logger.debug { name }
       self.send(name)
@@ -72,10 +79,10 @@ class Hailstorm::Support::Schema
       ActiveRecord::Migration.create_table(:schema_migrations) do |t|
         t.string :migration_name, null: false
       end
-      SchemaTables.each do |tn|
-        if ActiveRecord::Base.connection.table_exists?(tn)
-          SchemaMigration.create!(migration_name: "create_#{tn}")
-        end
+    end
+    schema_tables.each do |tn|
+      if ActiveRecord::Base.connection.table_exists?(tn)
+        SchemaMigration.create!(migration_name: "create_#{tn}")
       end
     end
   end
@@ -233,5 +240,17 @@ class Hailstorm::Support::Schema
 
   def add_cluster_code_to_clusters
     ActiveRecord::Migration.add_column(:clusters, :cluster_code, :string, default: nil, unique: true)
+  end
+
+  def add_ssh_port_to_data_centers
+    ActiveRecord::Migration.add_column(:data_centers, :ssh_port, :integer, default: nil)
+  end
+
+  def add_ssh_port_to_amazon_clouds
+    ActiveRecord::Migration.add_column(:amazon_clouds, :ssh_port, :integer, default: nil)
+  end
+
+  def add_custom_jmeter_installer_url_to_projects
+    ActiveRecord::Migration.add_column(:projects, :custom_jmeter_installer_url, :string, default: nil)
   end
 end

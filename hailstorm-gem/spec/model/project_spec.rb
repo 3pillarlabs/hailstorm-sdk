@@ -6,32 +6,50 @@ describe Hailstorm::Model::Project do
   context '.create' do
     context 'with defaults' do
       it 'should have JMeter version as 3.2' do
-        project = Hailstorm::Model::Project.new(project_code: 'project_spec_with_defaults')
+        project = Hailstorm::Model::Project.new(project_code: 'project_spec')
         project.save!
-        expect(project.jmeter_version).to eq 3.2
+        expect(project.jmeter_version).to eq '3.2'
       end
     end
   end
 
   context '#setup' do
+    before(:each) do
+      @project = Hailstorm::Model::Project.new(project_code: 'project_spec')
+      @project.stub!(:setup_jmeter_plans)
+      @project.stub!(:configure_clusters)
+      @project.stub!(:configure_target_hosts)
+      @project.stub!(settings_modified?: true)
+      @mock_config = mock('config', serial_version: 'A', jmeter: OpenStruct.new, master_slave_mode: nil,
+                                    samples_breakup_interval: nil)
+      @project.stub!(:config).and_return(@mock_config)
+    end
+
     context 'with custom JMeter URL' do
-      before(:each) do
-        @project = Hailstorm::Model::Project.new(project_code: 'product_spec_with_custom_jmeter_url')
-      end
       it 'should be invalid if ends with something other than .tgz or .tar.gz' do
-        @project.custom_jmeter_installer_url = 'http://whodunit.org/my-jmeter-3.2_rhode.tar'
-        expect {
-          @project.save!
-        }.to raise_exception
+        @mock_config.jmeter.custom_installer_url = 'http://whodunit.org/my-jmeter-3.2_rhode.tar'
+        expect { @project.setup }.to raise_exception
         expect(@project.errors).to have_key(:custom_jmeter_installer_url)
       end
       it 'should have custom JMeter version' do
-        @project.custom_jmeter_installer_url = 'http://whodunit.org/my-jmeter-3.2_rhode.tgz'
-        expect(@project.send(:jmeter_version_from_installer_url)).to eq('3.2_rhode')
+        @mock_config.jmeter.custom_installer_url = 'http://whodunit.org/my-jmeter-3.2_rhode.tgz'
+        @project.setup
+        expect(@project.jmeter_version).to eq('3.2_rhode')
       end
       it 'should have file name without extension as version as a fallback' do
-        @project.custom_jmeter_installer_url = 'http://whodunit.org/rhode.tgz'
-        expect(@project.send(:jmeter_version_from_installer_url)).to eq('rhode')
+        @mock_config.jmeter.custom_installer_url = 'http://whodunit.org/rhode.tgz'
+        @project.setup
+        expect(@project.jmeter_version).to eq('rhode')
+      end
+    end
+
+    context 'with specified jmeter_version' do
+      context '< 2.6' do
+        it 'should raise error' do
+          @mock_config.jmeter.version = '2.5.1'
+          expect { @project.setup }.to raise_exception
+          expect(@project.errors).to have_key(:jmeter_version)
+        end
       end
     end
   end
@@ -54,7 +72,7 @@ describe Hailstorm::Model::Project do
         project.clusters.create!(cluster_type: 'Hailstorm::Model::AmazonCloud')
         cluster = project.clusters
                          .create!(cluster_type: 'Hailstorm::Model::DataCenter')
-        data_center = cluster.cluster_klass.where(user_name: 'zed', ssh_identity: 'zed', machines: '172.16.80.25',
+        data_center = cluster.cluster_klass.where(user_name: 'zed', ssh_identity: 'zed', machines: ['172.16.80.25'],
                                                   title: '1d229', project_id: project.id)
                              .first_or_create!(active: false)
         data_center.update_column(:active, true)

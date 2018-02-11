@@ -20,6 +20,8 @@ class Hailstorm::Application
 
   include Hailstorm::Behavior::Loggable
 
+  attr_writer :multi_threaded
+
   # Initialize the application and connects to the database
   # @param [String] app_name the application name
   # @param [String] boot_file_path full path to application config/boot.rb
@@ -58,6 +60,8 @@ class Hailstorm::Application
     end
     Hailstorm.application.connection_spec = connection_spec
     Hailstorm.application.check_database
+
+    Hailstorm.application
   end
 
   # Constructor
@@ -91,7 +95,7 @@ Type help to get started...
     trap('INT', proc { logger.warn('Type [quit|exit|ctrl+D] to exit shell') })
 
     # for IRB like shell, save state for later execution
-    shell_binding = FreeShell.new.get_binding
+    shell_binding = FreeShell.new.binding_context
     prompt = 'hs > '
     while @exit_command_counter >= 0
 
@@ -121,9 +125,9 @@ Type help to get started...
         unless command.nil?
           case command
           when :start
-              prompt.gsub!(/\s$/, '*  ')
+            prompt.gsub!(/\s$/, '*  ')
           when :stop, :abort
-              prompt.gsub!(/\*\s{2}$/, ' ')
+            prompt.gsub!(/\*\s{2}$/, ' ')
           end
         end
       rescue IncorrectCommandException => incorrect_command
@@ -202,17 +206,11 @@ Type help to get started...
   end
 
   def load_config(handle_load_error = false)
-    
-      @config = nil
-      load(File.join(Hailstorm.root, Hailstorm.config_dir, 'environment.rb'))
-      @config.freeze
-    rescue Object => e
-      if handle_load_error
-        logger.fatal(e.message)
-      else
-        raise(Hailstorm::Exception, e.message)
-      end
-    
+    @config = nil
+    load(File.join(Hailstorm.root, Hailstorm.config_dir, 'environment.rb'))
+    @config.freeze
+  rescue Object => e
+    handle_load_error ? logger.fatal(e.message) : raise(Hailstorm::Exception, e.message)
   end
   alias reload load_config
 
@@ -344,7 +342,7 @@ Continue using old version?
         # set defaults which can be overridden
         @connection_spec = {
           pool: 50,
-            wait_timeout: 30.minutes
+          wait_timeout: 30.minutes
         }.merge(@connection_spec).merge(database: database_name)
       end
     end
@@ -379,8 +377,8 @@ Continue using old version?
 
     # Process Gemfile - add additional platform specific gems
     engine = ActionView::Base.new
-    engine.assign({ jruby_pageant: !File::ALT_SEPARATOR.nil?, # File::ALT_SEPARATOR is nil on non-windows
-                   gem_path: gem_path })
+    engine.assign(jruby_pageant: !File::ALT_SEPARATOR.nil?, # File::ALT_SEPARATOR is nil on non-windows
+                  gem_path: gem_path)
     File.open(File.join(root_path, 'Gemfile'), 'w') do |f|
       f.print(engine.render(file: File.join(skeleton_path, 'Gemfile')))
     end
@@ -465,11 +463,11 @@ Continue using old version?
   def results(*args)
     case args.length
     when 3
-        operation, sequences, format = args
+      operation, sequences, format = args
     when 2
-        operation, sequences = args
-      else
-        operation, = args
+      operation, sequences = args
+    else
+      operation, = args
     end
     operation = (operation || 'show').to_sym
     extract_last = false
@@ -490,7 +488,6 @@ Continue using old version?
           else
             a.unshift(e)
           end
-          
         end
         if glob.is_a?(Hash)
           opts = glob
@@ -516,24 +513,28 @@ Continue using old version?
         text_table.rows = display_data.collect do |execution_cycle|
           [
             execution_cycle.id,
-              execution_cycle.total_threads_count,
-              execution_cycle.avg_90_percentile,
-              execution_cycle.avg_tps.round(2),
-              execution_cycle.formatted_started_at,
-              execution_cycle.formatted_stopped_at
+            execution_cycle.total_threads_count,
+            execution_cycle.avg_90_percentile,
+            execution_cycle.avg_tps.round(2),
+            execution_cycle.formatted_started_at,
+            execution_cycle.formatted_stopped_at
           ]
         end
 
         puts text_table.to_s
       else
-        puts display_data.reduce([]) { |acc, execution_cycle|
-               acc.push(                          execution_cycle_id: execution_cycle.id,
-                            total_threads_count: execution_cycle.total_threads_count,
-                            avg_90_percentile: execution_cycle.avg_90_percentile,
-                            avg_tps: execution_cycle.avg_tps.round(2),
-                            started_at: execution_cycle.formatted_started_at,
-                            stopped_at: execution_cycle.formatted_stopped_at)
-             }.to_json
+        list = display_data.reduce([]) do |acc, execution_cycle|
+          attrs = {
+            execution_cycle_id: execution_cycle.id,
+            total_threads_count: execution_cycle.total_threads_count,
+            avg_90_percentile: execution_cycle.avg_90_percentile,
+            avg_tps: execution_cycle.avg_tps.round(2),
+            started_at: execution_cycle.formatted_started_at,
+            stopped_at: execution_cycle.formatted_stopped_at
+          }
+          acc.push(attrs)
+        end
+        puts list.to_json
       end
     elsif operation == :export
       if format && (format.to_sym == :zip)
@@ -543,7 +544,6 @@ Continue using old version?
         FileUtils.safe_unlink zip_file_path
         Zip::File.open(zip_file_path, Zip::File::CREATE) do |zf|
           data.each do |ex|
-
             seq_dir = "SEQUENCE-#{ex.id}"
             zf.mkdir(seq_dir)
             Dir["#{reports_path}/#{seq_dir}/*.jtl"].each do |jtl_file|
@@ -561,23 +561,23 @@ Continue using old version?
     option = args.first || :tests
     case option.to_sym
     when :tests
-        current_project.execution_cycles.each { |e| e.destroy }
-        logger.info 'Purged all data for tests'
+      current_project.execution_cycles.each(&:destroy)
+      logger.info 'Purged all data for tests'
     when :clusters
-        current_project.purge_clusters
-        logger.info 'Purged all clusters'
-      else
-        current_project.destroy
-        logger.info 'Purged all project data'
+      current_project.purge_clusters
+      logger.info 'Purged all clusters'
+    else
+      current_project.destroy
+      logger.info 'Purged all project data'
     end
   end
 
   def show(*args)
     what = (args.first || 'active').to_sym
     all = args[1].to_s.to_sym == :all || what == :all
-    show_jmeter_plans(only_active = !all) if %i[jmeter active all].include?(what)
-    show_load_agents(only_active = !all)  if %i[cluster active all].include?(what)
-    show_target_hosts(only_active = !all) if %i[monitor active all].include?(what)
+    show_jmeter_plans(!all) if %i[jmeter active all].include?(what)
+    show_load_agents(!all)  if %i[cluster active all].include?(what)
+    show_target_hosts(!all) if %i[monitor active all].include?(what)
   end
 
   def status(*args)
@@ -623,18 +623,18 @@ Continue using old version?
 
   # Defines the grammar for the rules
   def grammar
-    @grammar ||= [
-      Regexp.new('^(help)(\s+setup|\s+start|\s+stop|\s+abort|\s+terminate|\s+results|\s+purge|\s+show|\s+status)?$'),
-        Regexp.new('^(setup)(\s+force|\s+help)?$'),
-        Regexp.new('^(start)(\s+redeploy|\s+help)?$'),
-        Regexp.new('^(stop)(\s+suspend|\s+wait|\s+suspend\s+wait|\s+wait\s+suspend|\s+help)?$'),
-        Regexp.new('^(abort)(\s+suspend|\s+help)?$'),
-        Regexp.new('^(results)(\s+show|\s+exclude|\s+include|\s+report|\s+export|\s+import|\s+help)?(\s+[\d,\-:]+|\s+last)?(.*)$'),
-        Regexp.new('^(purge)(\s+tests|\s+clusters|\s+all|\s+help)?$'),
-        Regexp.new('^(show)(\s+jmeter|\s+cluster|\s+monitor|\s+help|\s+active)?(|\s+all)?$'),
-        Regexp.new('^(terminate)(\s+help)?$'),
-        Regexp.new('^(status)(\s+help)?$')
-    ]
+    @grammar ||= %w[
+      ^(help)(\s+setup|\s+start|\s+stop|\s+abort|\s+terminate|\s+results|\s+purge|\s+show|\s+status)?$
+      ^(setup)(\s+force|\s+help)?$
+      ^(start)(\s+redeploy|\s+help)?$
+      ^(stop)(\s+suspend|\s+wait|\s+suspend\s+wait|\s+wait\s+suspend|\s+help)?$
+      ^(abort)(\s+suspend|\s+help)?$
+      ^(results)(\s+show|\s+exclude|\s+include|\s+report|\s+export|\s+import|\s+help)?(\s+[\d\-:]+|\s+last)?(.*)$
+      ^(purge)(\s+tests|\s+clusters|\s+all|\s+help)?$
+      ^(show)(\s+jmeter|\s+cluster|\s+monitor|\s+help|\s+active)?(|\s+all)?$
+      ^(terminate)(\s+help)?$
+      ^(status)(\s+help)?$
+    ].collect { |p| Regexp.compile(p) }
   end
 
   def save_history(command)
@@ -701,9 +701,9 @@ Continue using old version?
         q.each do |load_agent|
           view_item.terminal_table.add_row([
                                              load_agent.jmeter_plan.test_plan_name,
-           (load_agent.master? ? 'Master' : 'Slave'),
-           load_agent.public_ip_address,
-           load_agent.jmeter_pid
+                                             (load_agent.master? ? 'Master' : 'Slave'),
+                                             load_agent.public_ip_address,
+                                             load_agent.jmeter_pid
                                            ])
         end
         clustered_load_agents.push(view_item)
@@ -721,9 +721,9 @@ Continue using old version?
     target_hosts.each do |target_host|
       terminal_table.add_row([
                                target_host.role_name,
-                                 target_host.host_name,
-                                 target_host.class.name.demodulize.tableize.singularize,
-                                 target_host.executable_pid
+                               target_host.host_name,
+                               target_host.class.name.demodulize.tableize.singularize,
+                               target_host.executable_pid
                              ])
     end
     render_view('monitor', terminal_table: terminal_table, only_active: only_active)
@@ -740,7 +740,7 @@ Continue using old version?
   end
 
   def help_options
-    @help_options ||= <<-HELP
+    @help_options ||= <<-HELP.strip_heredoc
 
     Hailstorm shell accepts commands and associated options for a command.
 
@@ -770,85 +770,85 @@ Continue using old version?
   end
 
   def setup_options
-    @setup_options ||= <<-SETUP
+    @setup_options ||= <<-SETUP.strip_heredoc
 
-    Boot load agents and target monitors.
-    Creates the load generation agents, sets up the monitors on the configured
-    targets and deploys the JMeter scripts in the project "jmeter" directory
-    to the load agents.
+      Boot load agents and target monitors.
+      Creates the load generation agents, sets up the monitors on the configured
+      targets and deploys the JMeter scripts in the project "jmeter" directory
+      to the load agents.
 
-Options
+      Options
 
-    force         Force application setup, even when no environment changes
-                  are detected.
+      force         Force application setup, even when no environment changes
+                    are detected.
     SETUP
   end
 
   def start_options
-    @start_options ||= <<-START
+    @start_options ||= <<-START.strip_heredoc
 
-    Starts load generation and target monitoring. This will automatically
-    trigger setup actions if you have modified the configuration. Additionally,
-    if any JMeter plan is altered, the altered plans will be re-processed.
-    However, modified datafiles and other support files (such as custom plugins)
-    will not be re-deployed unless the redeploy option is specified.
+      Starts load generation and target monitoring. This will automatically
+      trigger setup actions if you have modified the configuration. Additionally,
+      if any JMeter plan is altered, the altered plans will be re-processed.
+      However, modified datafiles and other support files (such as custom plugins)
+      will not be re-deployed unless the redeploy option is specified.
 
-Options
+      Options
 
-    redeploy      Re-deploy ALL JMeter scripts and support files to agents.
+      redeploy      Re-deploy ALL JMeter scripts and support files to agents.
     START
   end
 
   def stop_options
-    @stop_options ||= <<-STOP
+    @stop_options ||= <<-STOP.strip_heredoc
 
-    Stops load generation and target monitoring.
-    Fetch logs from the load agents and server. This does NOT terminate the load
-    agents.
+      Stops load generation and target monitoring.
+      Fetch logs from the load agents and server. This does NOT terminate the load
+      agents.
 
-Options
+      Options
 
-    wait          Wait till JMeter completes.
-    suspend       Suspend load agents (depends on cluster support).
+      wait          Wait till JMeter completes.
+      suspend       Suspend load agents (depends on cluster support).
     STOP
   end
 
   def abort_options
-    @abort_options ||= <<-ABORT
+    @abort_options ||= <<-ABORT.strip_heredoc
 
-    Aborts load generation and target monitoring.
-    This does not fetch logs from the servers and does not terminate the
-    load agents. This task is handy when you want to stop the current test
-    because you probably realized there was a misconfiguration after starting
-    the tests.
+      Aborts load generation and target monitoring.
+      This does not fetch logs from the servers and does not terminate the
+      load agents. This task is handy when you want to stop the current test
+      because you probably realized there was a misconfiguration after starting
+      the tests.
 
-Options
+      Options
 
-    suspend       Suspend load agents (depends on cluster support).
+      suspend       Suspend load agents (depends on cluster support).
     ABORT
   end
 
   def terminate_options
-    @terminate_options ||= <<-TERMINATE
+    @terminate_options ||= <<-TERMINATE.strip_heredoc
 
-    Terminates load generation and target monitoring.
-    Additionally, cleans up temporary state information on local filesystem.
-    You should usually invoke this task at the end of your test run - although
-    the system will allow you to execute this task at any point in your testing
-    cycle. This also terminates the load agents.
+      Terminates load generation and target monitoring.
+      Additionally, cleans up temporary state information on local filesystem.
+      You should usually invoke this task at the end of your test run - although
+      the system will allow you to execute this task at any point in your testing
+      cycle. This also terminates the load agents.
     TERMINATE
   end
 
   def results_options
-    @results_options ||= <<-RESULTS
+    @results_options ||= <<-RESULTS.strip_heredoc
 
-    Show, include, exclude or generate report for one or more tests. Without any
-    argument, all successfully stopped tests are operated on. The optional TEST
-    argument can be a single test ID or a comma separated list of test IDs(4,7)
-    or a hyphen separated list(1-3). The hyphen separated list is equivalent to
-    explicitly mentioning all IDs in comma separated form.
+      Show, include, exclude or generate report for one or more tests. Without any
+      argument, all successfully stopped tests are operated on. The optional TEST
+      argument can be a single test ID or a comma separated list of test IDs(4,7)
+      or a hyphen separated list(1-3). The hyphen separated list is equivalent to
+      explicitly mentioning all IDs in comma separated form.
 
-Options
+      Options
 
       show    [TEST]  Displays successfully stopped tests (default).
               last    Displays the last successfully stopped tests
@@ -876,54 +876,53 @@ Options
   end
 
   def show_options
-    @show_options ||= <<-SHOW
+    @show_options ||= <<-SHOW.strip_heredoc
 
-    Show how the environment is currently configured. Without any option,
-    it will show the current configuration for all the environment components.
+      Show how the environment is currently configured. Without any option,
+      it will show the current configuration for all the environment components.
 
-Options
+      Options
 
-    jmeter        Show jmeter configuration
-    cluster       Show cluster configuration
-    monitor       Show monitor configuration
-    active        Show everything active (default)
-    all           Special switch to show inactive items
-                  > show all
-                  > show jmeter all
+      jmeter        Show jmeter configuration
+      cluster       Show cluster configuration
+      monitor       Show monitor configuration
+      active        Show everything active (default)
+      all           Special switch to show inactive items
+                    > show all
+                    > show jmeter all
     SHOW
   end
 
   def purge_options
-    @purge_options ||= <<-PURGE
+    @purge_options ||= <<-PURGE.strip_heredoc
 
-    Purge  (remove) all or specific data from the database. You can invoke this
-    commmand anytime you want to start over from scratch or remove data for old
-    tests. If executed without any options, will only remove data for tests.
+      Purge  (remove) all or specific data from the database. You can invoke this
+      commmand anytime you want to start over from scratch or remove data for old
+      tests. If executed without any options, will only remove data for tests.
 
-    WARNING: The data removed will be unrecoverable!
+      WARNING: The data removed will be unrecoverable!
 
-Options
+      Options
 
-    tests         Purge the data for all tests (default)
-    clusters      Purge the cluster information and artifacts.
-                  Outcome depends on the type of the cluster, for Amazon,
-                  this means ALL Hailstorm related infrastructure for the
-                  account will be deleted. This is a bad idea if you are using
-                  a shared account, harmless otherwise, since all required
-                  infrastructure is created on-demand. It is recommended to
-                  use this command _only_ when suggested by diagnostic messages.
-    all           Purge ALL data
+      tests         Purge the data for all tests (default)
+      clusters      Purge the cluster information and artifacts.
+                    Outcome depends on the type of the cluster, for Amazon,
+                    this means ALL Hailstorm related infrastructure for the
+                    account will be deleted. This is a bad idea if you are using
+                    a shared account, harmless otherwise, since all required
+                    infrastructure is created on-demand. It is recommended to
+                    use this command _only_ when suggested by diagnostic messages.
+      all           Purge ALL data
     PURGE
   end
 
   def status_options
-    @status_options ||= <<-STATUS
+    @status_options ||= <<-STATUS.strip_heredoc
 
-    Show the current state of load generation across all agents. If load
-    generation is currently executing on any agent, such agents are displayed.
+      Show the current state of load generation across all agents. If load
+      generation is currently executing on any agent, such agents are displayed.
     STATUS
   end
-
 
   class UnknownCommandException < Hailstorm::Exception
   end
@@ -931,8 +930,9 @@ Options
   class IncorrectCommandException < Hailstorm::Exception
   end
 
+  # Simple shell for executing code within the Hailstorm shell
   class FreeShell
-    def get_binding
+    def binding_context
       binding
     end
   end

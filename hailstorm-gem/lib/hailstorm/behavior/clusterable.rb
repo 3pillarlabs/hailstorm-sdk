@@ -118,11 +118,11 @@ module Hailstorm::Behavior::Clusterable
     # override and do something appropriate.
   end
 
-  # Assumes a standard Linux OS where user home is at /home. If the clusterable
+  # Assumes a standard Linux OS where user home is at /home or /root for root. If the clusterable
   # uses a different OS or setting, override this method.
   # @return [String] user home directory
   def user_home
-    @user_home ||= "/home/#{self.user_name}"
+    @user_home ||= self.user_name.to_s.to_sym != :root ? "/home/#{self.user_name}" : '/root'
   end
 
   # Assumes Jmeter is installed to user_home at jmeter directory. If the clusterable
@@ -204,74 +204,109 @@ module Hailstorm::Behavior::Clusterable
   protected
 
   # Launch new instances or bring down instances based on number of instances needed
+  # @return [Array<Hailstorm::Model::LoadAgent>]  activated agents
   def provision_agents
     return if self.destroyed?
     logger.debug { "#{self.class}##{__method__}" }
+    self.project.jmeter_plans.where(active: true).all.collect { |jmeter_plan| process_jmeter_plan(jmeter_plan) }.flatten
+  end
 
-    self.project.jmeter_plans.where(active: true).each do |jmeter_plan|
-      common_attributes = {
-        jmeter_plan_id: jmeter_plan.id,
-        active: true
-      }
-
-      required_count = required_load_agent_count(jmeter_plan)
-
-      if self.project.master_slave_mode?
-        query = self.master_agents
-                    .where(jmeter_plan_id: jmeter_plan.id)
-
-        # abort if more than 1 master agent is present
-        raise(Hailstorm::MasterSlaveSwitchOnConflict) if query.all.count > 1
-
-        # one master is necessary
-        query.first_or_create!
-             .tap { |agent| agent.update_column(:active, true) }
-
-        if required_count > 1
-          create_or_enable(common_attributes, required_count, :slave_agents)
-        end
-
-      else # not operating in master-slave mode
-        # abort if slave agents are present
-        slave_agents_count = self.slave_agents
-                                 .where(jmeter_plan_id: jmeter_plan.id)
-                                 .all.count
-        raise(Hailstorm::MasterSlaveSwitchOffConflict) if slave_agents_count > 0
-
-        begin
-          create_or_enable(common_attributes, required_count, :master_agents)
-        rescue Exception => e
-          logger.debug(e.message)
-          logger.debug { "\n".concat(e.backtrace.join("\n")) }
-          raise(Hailstorm::AgentCreationFailure)
-        end
+  # Calculates the number of agents to be added based on required and current count. Override this method
+  # if a clusterable uses a different strategy. See Hailstorm::Model::DataCenter.
+  # @param [ActiveRecord::Relation] query basic relation query that adds common attributes.
+  # @param [Fixnum] required_count
+  # @yield [ActiveRecord::Relation], [Fixnum] Enumerable for agents that need to be removed, Size of Enumerable
+  def agents_to_add(query, required_count, &_block)
+    logger.debug { "#{self.class}##{__method__}" }
+    active_count = query.count
+    activate_count = required_count - active_count
+    if block_given?
+      activate_count.times do
+        yield query, activate_count
       end
     end
+    activate_count
+  end
+
+  # Calculates the number of agents to be removed based on required and current count. Override this method
+  # if a clusterable uses a different strategy. See Hailstorm::Model::DataCenter.
+  # @param [ActiveRecord::Relation] query basic relation query that adds common attributes.
+  # @param [Fixnum] required_count
+  # @yield [ActiveRecord::Relation] Enumerable for agents that need to be removed.
+  def agents_to_remove(query, required_count, &_block)
+    logger.debug { "#{self.class}##{__method__}" }
+    activate_count = agents_to_add(query, required_count)
+    return if activate_count >= 0
+    query.limit(activate_count.abs).each { |agent| yield agent }
   end
 
   private
 
+  # Processes each plan to launch new agents, enable them or disable them based on required count
+  # @param [Hailstorm::Model::JMeterPlan] jmeter_plan
+  #
+  # @return [Array<Hailstorm::Model::LoadAgent>] activated agents
+  def process_jmeter_plan(jmeter_plan)
+    logger.debug { "#{self.class}##{__method__}(#{jmeter_plan})" }
+    common_attributes = {
+      jmeter_plan_id: jmeter_plan.id,
+      active: true
+    }
+
+    required_count = required_load_agent_count(jmeter_plan)
+
+    if self.project.master_slave_mode?
+      query = self.master_agents
+                  .where(jmeter_plan_id: jmeter_plan.id)
+
+      # abort if more than 1 master agent is present
+      raise(Hailstorm::MasterSlaveSwitchOnConflict) if query.all.count > 1
+
+      # one master is necessary
+      query.first_or_create!.tap { |agent| agent.update_column(:active, true) }
+
+      if required_count > 1
+        create_or_enable(common_attributes, required_count, :slave_agents)
+      end
+
+    else # not operating in master-slave mode
+      # abort if slave agents are present
+      slave_agents_count = self.slave_agents
+                               .where(jmeter_plan_id: jmeter_plan.id)
+                               .all.count
+      raise(Hailstorm::MasterSlaveSwitchOffConflict) if slave_agents_count > 0
+
+      begin
+        create_or_enable(common_attributes, required_count, :master_agents)
+      rescue Exception => e
+        logger.debug(e.message)
+        logger.debug { "\n".concat(e.backtrace.join("\n")) }
+        raise(Hailstorm::AgentCreationFailure)
+      end
+    end
+  end
+
   # Creates master/slave agents based on the relation
   def create_or_enable(attributes, required_count, relation)
-    # count of active agents
-    active_count = self.send(relation).where(attributes).all.count
+    logger.debug { "#{self.class}##{__method__}(#{[attributes, required_count, relation]})" }
+    activated_agents = []
+    mutex = Mutex.new
 
-    activate_count = required_count - active_count
-
-    activate_count.times do # block wont execute if activate_count <= 0
+    query = self.send(relation).where(attributes)
+    activate_count = agents_to_add(query, required_count) do |q, count|
       # is there an inactive agent? if yes, activate it, or, create new
-      agent = self.send(relation)
-                  .where(attributes.merge(active: false))
-                  .first_or_initialize(active: true)
+      agent = q.unscope(where: :active).where(active: false).first_or_initialize { |r| r.active = true }
       if agent.new_record?
-        if activate_count > 1
+        if count > 1
           Hailstorm::Support::Thread.start(agent) do |agent_instance|
             start_agent(agent_instance)
             agent_instance.save!
+            mutex.synchronize { activated_agents.push(agent_instance) }
           end
         else
           start_agent(agent)
           agent.save!
+          activated_agents.push(agent)
         end
       else
         agent.update_column(:active, true)
@@ -279,14 +314,9 @@ module Hailstorm::Behavior::Clusterable
     end
     Hailstorm::Support::Thread.join if activate_count > 1 # wait for agents to be created
 
-    if activate_count < 0
-      self.send(relation)
-          .where(attributes)
-          .limit(activate_count.abs).each do |agent|
+    agents_to_remove(query, required_count) { |agent| agent.update_column(:active, false) }
 
-        agent.update_column(:active, false)
-      end
-    end
+    activated_agents
   end
 
   # disable all associated load_agents

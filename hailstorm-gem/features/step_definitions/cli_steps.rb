@@ -36,7 +36,7 @@ end
 
 When(/^I launch the hailstorm console within "([^"]*)" project$/) do |project_name|
   current_project(project_name)
-  write_config(monitor_active = @monitor_active) # reset
+  write_config(@monitor_active) # reset
   Dir[File.join(tmp_path, project_name, Hailstorm.reports_dir, '*')].each do |file|
     FileUtils.rm(file)
   end
@@ -47,8 +47,8 @@ end
 
 Then(/^the application should be ready to accept commands$/) do
   Hailstorm.application.interpret_command('purge')
-  Hailstorm::Model::ExecutionCycle.count.should == 0
-  Dir[File.join(tmp_path, current_project, Hailstorm.tmp_dir, '*')].count.should == 0
+  expect(Hailstorm::Model::ExecutionCycle.count).to eql(0)
+  expect(Dir[File.join(tmp_path, current_project, Hailstorm.tmp_dir, '*')].count).to eql(0)
   Hailstorm::Model::Project.first.update_attribute(:serial_version, nil)
 end
 
@@ -69,12 +69,11 @@ When(/^(?:I |)configure JMeter with following properties$/) do |table|
 end
 
 When(/^(?:I |)configure following amazon clusters$/) do |table|
-  clusters(table.hashes)
+  clusters(table.hashes.collect { |e| e.merge(cluster_type: :amazon_cloud) })
 end
 
 When(/^(?:I |)configure target monitoring$/) do
-  identity_file = File.join(tmp_path, current_project, Hailstorm.config_dir,
-                             'all_purpose.pem')
+  identity_file = File.join(tmp_path, current_project, Hailstorm.config_dir, 'all_purpose.pem')
   unless File.exists?(identity_file)
     FileUtils.cp(File.join(data_path, 'all_purpose.pem'),
                File.join(tmp_path, current_project, Hailstorm.config_dir))
@@ -83,7 +82,7 @@ When(/^(?:I |)configure target monitoring$/) do
 end
 
 When(/^(?:I |)execute "(.*?)" command$/) do |command|
-  write_config if config_changed?
+  write_config(@monitor_active) if config_changed?
   Hailstorm.application.interpret_command(command)
 end
 
@@ -125,6 +124,6 @@ And(/^results import '(.+?)'$/) do |file_path|
 end
 
 
-And(/^disable target monitoring$/) do
+And(/^(?:disable |)target monitoring(?:| is disabled)$/) do
   @monitor_active = false
 end

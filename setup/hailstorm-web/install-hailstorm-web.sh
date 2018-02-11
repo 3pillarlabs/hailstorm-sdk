@@ -27,8 +27,8 @@ if [ $? -ne 0 ]; then
 fi
 
 # install hailstorm-web & dependencies
-cp /vagrant/hailstorm-unicorn.conf.rb $hailstorm_web_home/unicorn.conf.rb
-cp /vagrant/hailstorm_prod_secret_kb $hailstorm_web_home/hailstorm_prod_secret_kb
+cp /vagrant/setup/hailstorm-web/hailstorm-unicorn.conf.rb $hailstorm_web_home/unicorn.conf.rb
+cp /vagrant/setup/hailstorm-web/hailstorm_prod_secret_kb $hailstorm_web_home/hailstorm_prod_secret_kb
 cd $hailstorm_web_home
 bundle install
 echo $ruby_version > .ruby-version
@@ -39,12 +39,12 @@ mkdir -p tmp/cache tmp/pids tmp/sessions tmp/sockets
 chown -R $vagrant_user:$vagrant_user $hailstorm_web_home
 
 # install upstart conf for unicorn
-cp /vagrant/hailstorm-web.conf /etc/init/hailstorm-web.conf
+cp /vagrant/setup/hailstorm-web/hailstorm-web.conf /etc/init/hailstorm-web.conf
 start hailstorm-web
 
 # set nginx-unicorn as default (root) site
 rm -f /etc/nginx/sites-enabled/default # just a symlink
-cp /vagrant/hailstorm-web-nginx.conf /etc/nginx/sites-available/hailstorm-web
+cp /vagrant/setup/hailstorm-web/hailstorm-web-nginx.conf /etc/nginx/sites-available/hailstorm-web
 if [ ! -e /etc/nginx/sites-enabled/hailstorm-web ]; then
 	ln -s /etc/nginx/sites-available/hailstorm-web /etc/nginx/sites-enabled/hailstorm-web
 	service nginx reload

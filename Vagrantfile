@@ -40,9 +40,9 @@ Vagrant.configure(2) do |config|
 
   config.vm.provision "sync_clock", :type => :shell, :inline => 'ntpdate ntp.ubuntu.com', :run => 'always'
 
-  config.vm.provision "vagrant_user", :type => :shell, :path => 'create_vagrant_user.sh'
+  config.vm.provision "vagrant_user", :type => :shell, :path => 'setup/create_vagrant_user.sh'
 
-  config.vm.provision "apt", :type => :shell, :inline => <<-SHELL
+  config.vm.provision "apt", :type => :shell, :run => 'always', :inline => <<-SHELL
     last_apt_update_path=/var/cache/last_apt_update
     if [ ! -e $last_apt_update_path ] || [ `expr $(date "+%s") - $(stat -c "%Y" $last_apt_update_path)` -gt 86400 ]; then
       apt-get update && touch $last_apt_update_path
@@ -50,7 +50,7 @@ Vagrant.configure(2) do |config|
   SHELL
 
 	# mysql-server
-	config.vm.provision "mysql", :type => :shell, :path => 'install-mysql-server.sh'
+	config.vm.provision "mysql", :type => :shell, :path => 'setup/install-mysql-server.sh'
 
 	# nginx
 	config.vm.provision "nginx", :type => :shell, :inline => <<-SHELL
@@ -61,13 +61,41 @@ Vagrant.configure(2) do |config|
   SHELL
 
 	# rvm
-	config.vm.provision "rvm", :type => :shell, :path => 'install-rvm.sh', :args => 'stable'
+	config.vm.provision "rvm", :type => :shell, :path => 'setup/ruby/install-rvm.sh', :args => 'stable'
 
 	# git
 	config.vm.provision "git", :type => :shell, :inline => 'sudo apt-get install -y git'
 
 	# ruby-mri
-	config.vm.provision "mri", :type => :shell, :path => 'install-ruby-mri.sh'
+	config.vm.provision "mri", :type => :shell, :path => 'setup/ruby/install-ruby-mri.sh'
+
+  def common_provision(config)
+  	# redis-server
+  	config.vm.provision "redis", :type => :shell, :path => 'setup/redis/install-redis-server.sh'
+
+  	# oracle java
+  	config.vm.provision "java", :type => :shell, :path => 'setup/install-oracle-java.sh'
+
+  	# jruby
+  	config.vm.provision "jruby", :type => :shell, :path => 'setup/ruby/install-jruby.sh'
+
+    # hailstom-apps
+  	config.vm.provision "hailstorm_apps", :type => :shell, :path => 'setup/install-hailstorm-apps.sh', :run => 'always'
+
+  	# hailstorm-redis
+  	config.vm.provision "hailstorm_redis", :type => :shell, :path => 'setup/redis/install-hailstorm-redis.sh'
+
+  	# hailstorm-web
+  	config.vm.provision "hailstorm_web", :type => :shell, :path => 'setup/hailstorm-web/install-hailstorm-web.sh'
+
+    # hailstorm_gemdir
+    config.vm.provision "hailstorm_gemdir", :type => :shell, :inline => <<-SHELL
+      grep 'rvm use jruby@hailstorm' /home/vagrant/.bashrc
+      if [ $? -ne 0 ]; then
+        sudo -u vagrant sh -c "echo 'rvm use jruby@hailstorm' >> /home/vagrant/.bashrc"
+      fi
+    SHELL
+  end
 
   config.vm.define "dev", :primary => true do |dev|
     dev.vm.box = "ubuntu/trusty64"
@@ -82,24 +110,7 @@ Vagrant.configure(2) do |config|
   	end
     dev.vm.network "private_network", ip: "192.168.17.10"
     dev.vm.network 'forwarded_port', :guest => 80, :host => 8080, :autocorrect => true
-
-  	# redis-server
-  	dev.vm.provision "redis", :type => :shell, :path => 'install-redis-server.sh'
-
-  	# oracle java 7
-  	dev.vm.provision "java", :type => :shell, :path => 'install-oracle-java.sh'
-
-  	# jruby
-  	dev.vm.provision "jruby", :type => :shell, :path => 'install-jruby.sh'
-
-    # hailstom-apps
-  	dev.vm.provision "hailstorm_apps", :type => :shell, :path => 'install-hailstorm-apps.sh', :run => 'always'
-
-  	# hailstorm-redis
-  	dev.vm.provision "hailstorm_redis", :type => :shell, :path => 'install-hailstorm-redis.sh'
-
-  	# hailstorm-web
-  	dev.vm.provision "hailstorm_web", :type => :shell, :path => 'install-hailstorm-web.sh'
+    common_provision(dev)
   end
 
   def aws_keys
@@ -136,7 +147,7 @@ Vagrant.configure(2) do |config|
     aws.vm.provider :aws do |ec2, override|
       ec2.ami = "ami-841f46ff"
       ec2.access_key_id, ec2.secret_access_key = aws_keys()
-      aws_conf = YAML.load_file('vagrant-aws.yml').reduce({}) { |a, e| a.merge(e[0].to_sym => e[1]) }
+      aws_conf = YAML.load_file('setup/vagrant-aws.yml').reduce({}) { |a, e| a.merge(e[0].to_sym => e[1]) }
       ec2.keypair_name = aws_conf[:keypair_name]
       ec2.instance_type = aws_conf[:instance_type] || "t2.medium"
       ec2.elastic_ip = true
@@ -153,23 +164,7 @@ Vagrant.configure(2) do |config|
       override.ssh.private_key_path = aws_conf[:private_key_path]
     end
 
-  	# redis-server
-  	aws.vm.provision "redis", :type => :shell, :path => 'install-redis-server.sh'
-
-  	# oracle java 7
-  	aws.vm.provision "java", :type => :shell, :path => 'install-oracle-java.sh'
-
-  	# jruby
-  	aws.vm.provision "jruby", :type => :shell, :path => 'install-jruby.sh'
-
-    # hailstom-apps
-  	aws.vm.provision "hailstorm_apps", :type => :shell, :path => 'install-hailstorm-apps.sh', :run => 'always'
-
-  	# hailstorm-redis
-  	aws.vm.provision "hailstorm_redis", :type => :shell, :path => 'install-hailstorm-redis.sh'
-
-  	# hailstorm-web
-  	aws.vm.provision "hailstorm_web", :type => :shell, :path => 'install-hailstorm-web.sh'
+    common_provision(aws)
   end
 
   config.vm.define "site", autostart: false do |site|
@@ -180,7 +175,7 @@ Vagrant.configure(2) do |config|
       ec2.ami = "ami-841f46ff"
       ec2.access_key_id, ec2.secret_access_key = aws_keys()
       require 'yaml'
-      aws_conf = YAML.load_file('vagrant-site.yml').reduce({}) { |a, e| a.merge(e[0].to_sym => e[1]) }
+      aws_conf = YAML.load_file('setup/hailstorm-site/vagrant-site.yml').reduce({}) { |a, e| a.merge(e[0].to_sym => e[1]) }
       ec2.keypair_name = aws_conf[:keypair_name]
       ec2.instance_type = aws_conf[:instance_type] || "t2.medium"
       ec2.elastic_ip = true
@@ -199,7 +194,23 @@ Vagrant.configure(2) do |config|
     end
 
   	# hailstorm-site
-  	site.vm.provision "hailstorm_site", :type => :shell, :path => 'install-hailstorm-site.sh', :run => 'always'
+  	site.vm.provision "hailstorm_site", :type => :shell, :path => 'setup/hailstorm-site/install-hailstorm-site.sh', :run => 'always'
   end
 
+	config.vm.define "site-local" do |site_local|
+		site_local.vm.box = "ubuntu/trusty64"
+		site_local.vm.provider "virtualbox" do |vb|
+		#   Display the VirtualBox GUI when booting the machine
+		#   vb.gui = true
+		#
+			# Customize the amount of memory on the VM:
+			vb.memory = "2048"
+			vb.cpus = 2
+			vb.customize ["modifyvm", :id, "--nictype1", "virtio"]
+		end
+		site_local.vm.network "private_network", ip: "192.168.20.100"
+
+  	# hailstorm-site
+  	site_local.vm.provision "hailstorm_site", :type => :shell, :path => 'setup/hailstorm-site/install-hailstorm-site.sh', :run => 'always'
+  end
 end

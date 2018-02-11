@@ -21,14 +21,14 @@ if [ $? -ne 0 ]; then
 fi
 
 # install hailstorm-redis & dependencies
-cp /vagrant/Gemfile.hailstorm-redis $hailstorm_redis_home/Gemfile
+cp /vagrant/setup/redis/Gemfile.hailstorm-redis $hailstorm_redis_home/Gemfile
 chown -R $vagrant_user:$vagrant_user $hailstorm_redis_home
 cd $hailstorm_redis_home
 bundle install
 echo $ruby_version > .ruby-version
 
 # install upstart conf for sidekiq
-cp /vagrant/sidekiq.conf /etc/init/sidekiq.conf
+cp /vagrant/setup/redis/sidekiq.conf /etc/init/sidekiq.conf
 status sidekiq | grep 'stop' || stop sidekiq
 start sidekiq
 

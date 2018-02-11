@@ -8,7 +8,6 @@ require 'hailstorm/model/load_agent'
 require 'hailstorm/support/thread'
 
 class Hailstorm::Model::Cluster < ActiveRecord::Base
-
   belongs_to :project
 
   before_create :set_cluster_code
@@ -24,7 +23,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     if @cluster_klass.nil?
       begin
         @cluster_klass = self.cluster_type.constantize
-      rescue
+      rescue Exception
         require(self.cluster_type.underscore)
         retry
       end
@@ -37,7 +36,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   # @param [Boolean] all
   # @return [Array]
   def clusterables(all = false)
-    cluster_klass.where({project_id: self.project.id}.merge(all ? {} : {:active => true}))
+    cluster_klass.where({ project_id: self.project.id }.merge(all ? {} : { active: true }))
   end
 
   # Configures the cluster implementation for use
@@ -46,18 +45,23 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   def configure(cluster_config, force = false)
     logger.debug { "#{self.class}##{__method__}" }
     # cluster specific attributes
-    cluster_attributes = cluster_config.instance_values
-                                       .symbolize_keys
-                                       .except(:active, :cluster_type, :max_threads_per_agent, :cluster_code)
-                                       .merge(project_id: self.project.id)
+    cluster_attributes = cluster_config.instance_values.symbolize_keys.except(:active, :cluster_type,
+                                                                              :max_threads_per_agent, :cluster_code)
+    cluster_attributes[:project_id] = self.project.id
     # find the cluster or create it
-    cluster_instance = cluster_klass.where(cluster_attributes).first_or_initialize
+    cluster_instance = find_or_initialize(cluster_attributes, cluster_config)
+    cluster_instance.save!
+    cluster_instance.setup(force)
+  end
+
+  def find_or_initialize(cluster_attributes, cluster_config)
+    cluster_instance = cluster_klass.where(cluster_attributes).first
+    cluster_instance = cluster_klass.new(cluster_attributes) if cluster_instance.nil?
     cluster_instance.active = cluster_config.active
     if cluster_instance.respond_to?(:max_threads_per_agent)
       cluster_instance.max_threads_per_agent = cluster_config.max_threads_per_agent
     end
-    cluster_instance.save!
-    cluster_instance.setup(force)
+    cluster_instance
   end
 
   # Configures all clusters as per config.
@@ -68,7 +72,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     logger.debug { "#{self}.#{__method__}" }
     # disable all clusters and then create/update as per configuration
     project.clusters.each do |cluster|
-      cluster.cluster_klass.where({:project_id => project.id}).update_all({:active => false})
+      cluster.cluster_klass.where(project_id: project.id).update_all(active: false)
     end
 
     cluster_line_items = []
@@ -76,15 +80,11 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
       cluster_config.active = true if cluster_config.active.nil?
       # eager-load 'AWS', since some parts of it are auto-loaded. autoloading
       # is apparently not thread safe.
-      if cluster_config.aws_required? and require('aws')
-        AWS.eager_autoload!
-      end
+      AWS.eager_autoload! if cluster_config.aws_required? && require('aws')
       cluster_type = "Hailstorm::Model::#{cluster_config.cluster_type.to_s.camelize}"
-      cluster = project.clusters
-                       .where({cluster_type: cluster_type}.tap { |o|
-                          o.merge!(cluster_code: cluster_config.cluster_code) if cluster_config.cluster_code
-                        })
-                       .first_or_create!
+      conditions = { cluster_type: cluster_type }
+      conditions[:cluster_code] = cluster_config.cluster_code if cluster_config.cluster_code
+      cluster = project.clusters.where(conditions).first_or_create!
       if cluster.cluster_code.nil?
         cluster.set_cluster_code
         cluster.save!
@@ -103,7 +103,6 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
       end
       Hailstorm::Support::Thread.join
     end
-
   end
 
   # start load generation on clusters of a specific cluster_type
@@ -217,9 +216,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
       yield project_clusters.first
     else
       project_clusters.each do |cluster|
-        Hailstorm::Support::Thread.start(cluster) do |c|
-          yield c
-        end
+        Hailstorm::Support::Thread.start(cluster) { |c| yield c }
       end
       Hailstorm::Support::Thread.join
     end
@@ -236,5 +233,4 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
       self.cluster_code = Haikunator.haikunate(token_range = 100)
     end
   end
-
 end

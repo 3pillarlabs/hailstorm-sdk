@@ -4,6 +4,15 @@
 # loaded once.
 #
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
+require 'simplecov'
+require 'hailstorm/application'
+require 'hailstorm/support/configuration'
+require 'active_record/base'
+require 'test_schema'
+
+$CLASSPATH << File.dirname(__FILE__)
+ENV['HAILSTORM_ENV'] = 'test'
+
 RSpec.configure do |config|
   config.treat_symbols_as_metadata_keys_with_true_values = true
   config.run_all_when_everything_filtered = true
@@ -14,17 +23,25 @@ RSpec.configure do |config|
   # the seed, which is printed after each run.
   #     --seed 1234
   config.order = 'random'
+
+  config.prepend_before(:suite) do
+    app = Hailstorm::Application.initialize!('hailstorm_spec', '.', {
+      adapter: 'jdbcmysql',
+      database: 'hailstorm_gem_test',
+      username: 'hailstorm_dev',
+      password: 'hailstorm_dev'
+    }, Hailstorm::Support::Configuration.new)
+    app.multi_threaded = false # disable threading in unit tests
+  end
+
+  config.append_after(:suite) do
+    ActiveRecord::Base.clear_all_connections!
+  end
+
+  # Runs each example in a DB transaction and rolls back the changes.
+  config.around(:each) do |ex|
+    txn = ActiveRecord::Base.connection.begin_transaction
+    ex.run
+    txn.rollback
+  end
 end
-
-$CLASSPATH << File.dirname(__FILE__)
-ENV['HAILSTORM_ENV'] = 'test'
-
-require 'simplecov'
-require 'hailstorm/application'
-require 'hailstorm/support/configuration'
-Hailstorm::Application.initialize!('hailstorm_spec', '.', {
-    adapter: 'jdbcmysql',
-    database: 'hailstorm_gem_test',
-    username: 'hailstorm_dev',
-    password: 'hailstorm_dev'
-}, Hailstorm::Support::Configuration.new)

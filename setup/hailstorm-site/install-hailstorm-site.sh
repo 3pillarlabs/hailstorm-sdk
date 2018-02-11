@@ -45,17 +45,27 @@ chmod 777 /usr/local/lib/hailstorm-site/tmp/sockets
 
 # install upstart conf for unicorn
 [[ `status hailstorm-site` =~ 'stop' ]] || stop hailstorm-site && sleep 2
-cp /vagrant/hailstorm-site.conf /etc/init/hailstorm-site.conf
+cp /vagrant/setup/hailstorm-site/hailstorm-site.conf /etc/init/hailstorm-site.conf
 start hailstorm-site
 
 # set nginx-unicorn as default (root) site
 rm -f /etc/nginx/sites-enabled/default # just a symlink
-cp /vagrant/hailstorm-site-nginx.conf /etc/nginx/sites-available/hailstorm-site
+cp /vagrant/setup/hailstorm-site/hailstorm-site-nginx.conf /etc/nginx/sites-available/hailstorm-site
 rm -f /etc/nginx/sites-enabled/hailstorm-site
 ln -s /etc/nginx/sites-available/hailstorm-site /etc/nginx/sites-enabled/hailstorm-site
 service nginx reload
 
 # nmon for server monitoring
 which nmon >/dev/null 2>&1 || apt-get install -y nmon
+
+# authorize insecure_key.pub
+vagrant_user_home="/home/$vagrant_user"
+if [ ! -e $vagrant_user_home/insecure_key.pub ]; then
+	sudo -u $vagrant_user mkdir -p $vagrant_user_home/.ssh
+	sudo -u $vagrant_user chmod 700 $vagrant_user_home/.ssh
+	sudo -u $vagrant_user cat /vagrant/setup/hailstorm-site/insecure_key.pub >> $vagrant_user_home/.ssh/authorized_keys
+	sudo -u $vagrant_user chmod 400 $vagrant_user_home/.ssh/authorized_keys
+	sudo -u $vagrant_user cp /vagrant/setup/hailstorm-site/insecure_key.pub $vagrant_user_home/.
+fi
 
 exit
