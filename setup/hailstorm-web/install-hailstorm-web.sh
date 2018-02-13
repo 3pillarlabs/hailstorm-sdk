@@ -10,7 +10,7 @@ apt-get install -y libmysqlclient-dev
 # nodejs
 apt-get install -y nodejs
 
-ruby_version='ruby-2.1.4@hailstorm'
+ruby_version='ruby-2.4.1@hailstorm'
 install_path=/usr/local/lib
 hailstorm_web_home=$install_path/hailstorm-web
 vagrant_user=vagrant
