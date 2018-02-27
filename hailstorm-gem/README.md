@@ -15,6 +15,12 @@ gem install --no-rdoc --no-ri bundler
 bundle install
 ```
 
+## Database User
+Create a MySQL user ``hailstorm_dev``:
+```bash
+mysql -uroot <<< 'grant all privileges on *.* to "hailstorm_dev"@"localhost" identified by "hailstorm_dev"'
+```
+
 You are all set.
 
 ## Unit tests (specs)
