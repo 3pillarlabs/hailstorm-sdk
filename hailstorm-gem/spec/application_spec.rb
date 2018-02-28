@@ -1,19 +1,242 @@
 require 'spec_helper'
 require 'hailstorm/application'
 require 'hailstorm/model/project'
+require 'hailstorm/model/load_agent'
 
 describe Hailstorm::Application do
 
   context '#interpret_command' do
-    it 'should find valid "results import"' do
-      app = Hailstorm::Application.new
-      app.stub(:current_project) { mock(Hailstorm::Model::Project).as_null_object }
-      expect(app.interpret_command('results import')).to eql(:results)
+    context 'results' do
+      before(:each) do
+        @app = Hailstorm::Application.new
+      end
+      it 'should interpret \'results\'' do
+        @app.should_receive(:results)
+        @app.interpret_command('results')
+      end
+      %w[show exclude include report export import].each do |sc|
+        it "should interpret 'results #{sc}'" do
+          @app.should_receive(:results).with(sc)
+          @app.interpret_command("results #{sc}")
+        end
+      end
+      it 'should interpret \'results import <path-spec>\'' do
+        @app.should_receive(:results).with('import', '/tmp/b23d8/foo.jtl')
+        @app.interpret_command('results import /tmp/b23d8/foo.jtl')
+      end
+      it 'should interpret \'results help\'' do
+        @app.should_receive(:help).with(:results)
+        @app.interpret_command('results help')
+      end
+      it 'should interpret \'results show last\'' do
+        @app.should_receive(:results).with('show', 'last')
+        @app.interpret_command('results show last')
+      end
+      it 'should interpret \'results last\'' do
+        @app.should_receive(:results).with('last')
+        @app.interpret_command('results last')
+      end
+      %w[1,2,3 4-8 7:8:9].each do |seq|
+        %w[show exclude include report export].each do |sc|
+          it "should interpret 'results #{sc} #{seq}'" do
+            @app.should_receive(:results).with(sc, seq)
+            @app.interpret_command("results #{sc} #{seq}")
+          end
+        end
+      end
     end
-    it 'should find valid "results import <pathspec>"' do
-      app = Hailstorm::Application.new
-      app.stub(:current_project) { mock(Hailstorm::Model::Project).as_null_object }
-      expect(app.interpret_command('results import /tmp/b23d8/foo.jtl')).to eql(:results)
+    context 'quit or exit' do
+      before(:each) do
+        @app = Hailstorm::Application.new
+        project = mock(Hailstorm::Model::Project)
+        project.stub(:load_agents) {  [Hailstorm::Model::LoadAgent.new] }
+        @app.stub!(:current_project) { project }
+      end
+      context 'exit_ok? == true' do
+        it 'should set @exit_command_counter < 0' do
+          @app.current_project.stub(:load_agents) { [] }
+          @app.interpret_command('quit')
+          expect(@app.instance_variable_get('@exit_command_counter')).to be < 0
+        end
+      end
+      context 'exit_ok? == false' do
+        it 'should increment @exit_command_counter once' do
+          @app.interpret_command('exit')
+          expect(@app.instance_variable_get('@exit_command_counter')).to be > 0
+        end
+        it 'should set @exit_command_counter < 0 twice' do
+          @app.interpret_command('exit')
+          @app.interpret_command('exit')
+          expect(@app.instance_variable_get('@exit_command_counter')).to be < 0
+        end
+      end
+    end
+    context 'args as a Hash' do
+      it 'should interpret command, arguments and format' do
+        app = Hailstorm::Application.new
+        app.stub(:results)
+        app.should_receive(:results).with('export', '1-3', 'json')
+        app.interpret_command(args: %w[export 1-3], command: 'results', format: 'json')
+      end
+    end
+    context 'help' do
+      before(:each) do
+        @app = Hailstorm::Application.new
+      end
+      it 'should interpret \'help\'' do
+        @app.should_receive(:help)
+        @app.interpret_command('help')
+      end
+      %w[setup start stop abort terminate results purge show status].each do |sc|
+        it "should interpret 'help #{sc}'" do
+          @app.should_receive(:help).with(sc)
+          @app.interpret_command("help #{sc}")
+        end
+      end
+    end
+    context 'setup' do
+      before(:each) do
+        @app = Hailstorm::Application.new
+      end
+      it 'should interpret \'setup\'' do
+        @app.should_receive(:setup)
+        @app.interpret_command('setup')
+      end
+      it 'should interpret \'setup force\'' do
+        @app.should_receive(:setup).with('force')
+        @app.interpret_command('setup force')
+      end
+      it 'should interpret \'setup help\'' do
+        @app.should_receive(:help).with(:setup)
+        @app.interpret_command('setup help')
+      end
+    end
+    context 'start' do
+      before(:each) do
+        @app = Hailstorm::Application.new
+      end
+      it 'should interpret \'start\'' do
+        @app.should_receive(:start)
+        @app.interpret_command('start')
+      end
+      it 'should interpret \'start redeploy\'' do
+        @app.should_receive(:start).with('redeploy')
+        @app.interpret_command('start redeploy')
+      end
+      it 'should interpret \'start help\'' do
+        @app.should_receive(:help).with(:start)
+        @app.interpret_command('start help')
+      end
+    end
+    context 'stop' do
+      before(:each) do
+        @app = Hailstorm::Application.new
+      end
+      it 'should interpret \'stop\'' do
+        @app.should_receive(:stop)
+        @app.interpret_command('stop')
+      end
+      ['suspend', 'wait', 'suspend wait', 'wait suspend'].each do |sc|
+        it "should interpret 'stop #{sc}'" do
+          @app.should_receive(:stop).with(sc)
+          @app.interpret_command("stop #{sc}")
+        end
+      end
+      it 'should interpret \'stop help\'' do
+        @app.should_receive(:help).with(:stop)
+        @app.interpret_command('stop help')
+      end
+    end
+    context 'abort' do
+      before(:each) do
+        @app = Hailstorm::Application.new
+      end
+      it 'should interpret \'abort\'' do
+        @app.should_receive(:abort)
+        @app.interpret_command('abort')
+      end
+      it 'should interpret \'abort suspend\'' do
+        @app.should_receive(:abort).with('suspend')
+        @app.interpret_command('abort suspend')
+      end
+      it 'should interpret \'abort help\'' do
+        @app.should_receive(:help).with(:abort)
+        @app.interpret_command('abort help')
+      end
+    end
+    context 'purge' do
+      before(:each) do
+        @app = Hailstorm::Application.new
+      end
+      it 'should interpret \'purge\'' do
+        @app.should_receive(:purge)
+        @app.interpret_command('purge')
+      end
+      %w[tests clusters all].each do |sc|
+        it "should interpret 'purge #{sc}'" do
+          @app.should_receive(:purge).with(sc)
+          @app.interpret_command("purge #{sc}")
+        end
+      end
+      it 'should interpret \'purge help\'' do
+        @app.should_receive(:help).with(:purge)
+        @app.interpret_command('purge help')
+      end
+    end
+    context 'show' do
+      before(:each) do
+        @app = Hailstorm::Application.new
+      end
+      it 'should interpret \'show\'' do
+        @app.should_receive(:show)
+        @app.interpret_command('show')
+      end
+      %w[jmeter cluster monitor active].each do |sc|
+        it "should interpret 'show #{sc}'" do
+          @app.should_receive(:show).with(sc)
+          @app.interpret_command("show #{sc}")
+        end
+        it "should interpret 'show #{sc} all'" do
+          @app.should_receive(:show).with(sc, 'all')
+          @app.interpret_command("show #{sc} all")
+        end
+      end
+      it 'should interpret \'show help\'' do
+        @app.should_receive(:help).with(:show)
+        @app.interpret_command('show help')
+      end
+    end
+    context 'terminate' do
+      before(:each) do
+        @app = Hailstorm::Application.new
+      end
+      it 'should interpret \'terminate\'' do
+        @app.should_receive(:terminate)
+        @app.interpret_command('terminate')
+      end
+      it 'should interpret \'terminate help\'' do
+        @app.should_receive(:help).with(:terminate)
+        @app.interpret_command('terminate help')
+      end
+    end
+    context 'status' do
+      before(:each) do
+        @app = Hailstorm::Application.new
+      end
+      it 'should interpret \'status\'' do
+        @app.should_receive(:status)
+        @app.interpret_command('status')
+      end
+      it 'should interpret \'status help\'' do
+        @app.should_receive(:help).with(:status)
+        @app.interpret_command('status help')
+      end
+    end
+    context 'unknown command' do
+      it 'should raise exception' do
+        app = Hailstorm::Application.new
+        expect { app.interpret_command('make coffee') }.to raise_error(Hailstorm::Application::UnknownCommandException)
+      end
     end
   end
 

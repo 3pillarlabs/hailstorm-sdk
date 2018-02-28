@@ -629,7 +629,7 @@ Continue using old version?
       ^(start)(\s+redeploy|\s+help)?$
       ^(stop)(\s+suspend|\s+wait|\s+suspend\s+wait|\s+wait\s+suspend|\s+help)?$
       ^(abort)(\s+suspend|\s+help)?$
-      ^(results)(\s+show|\s+exclude|\s+include|\s+report|\s+export|\s+import|\s+help)?(\s+[\d\-:]+|\s+last)?(.*)$
+      ^(results)(\s+show|\s+exclude|\s+include|\s+report|\s+export|\s+import|\s+help)?(\s+[\d\-:,]+|\s+last)?(.*)$
       ^(purge)(\s+tests|\s+clusters|\s+all|\s+help)?$
       ^(show)(\s+jmeter|\s+cluster|\s+monitor|\s+help|\s+active)?(|\s+all)?$
       ^(terminate)(\s+help)?$
