@@ -70,7 +70,12 @@ class Hailstorm::Application
     @exit_command_counter = 0
   end
 
-  # Initializes the application - creates directory structure and support files
+  # Creates the application directory structure and adds files at appropriate
+  # directories
+  # @param [String] invocation_path the path this application will be installed
+  # @param [String] arg_app_name the argument provided for creating project
+  # @param [Boolean] quiet false, by default; set true to not emit to stdout
+  # @param [String] gem_path local path to gem installation
   def create_project(invocation_path, arg_app_name, quiet = false, gem_path = nil)
     root_path = File.join(invocation_path, arg_app_name)
     FileUtils.mkpath(root_path)
@@ -350,11 +355,6 @@ Continue using old version?
     @connection_spec
   end
 
-  # Creates the application directory structure and adds files at appropriate
-  # directories
-  # @param [String] root_path the path this application will be rooted at
-  # @param [String] arg_app_name the argument provided for creating project
-  # @param [Boolean] quiet
   def create_app_structure(root_path, arg_app_name, quiet = false, gem_path = nil)
     # create directory structure
     dirs = [
