@@ -2,6 +2,7 @@ require 'spec_helper'
 require 'hailstorm/application'
 require 'hailstorm/model/project'
 require 'hailstorm/model/load_agent'
+require 'hailstorm/exceptions'
 
 describe Hailstorm::Application do
 
@@ -313,6 +314,102 @@ describe Hailstorm::Application do
       expect(File.exist?(File.join(root_path, app_name, Hailstorm.config_dir, 'boot.rb'))).to be_true
 
       FileUtils.rm_rf(root_path)
+    end
+  end
+
+  context '#process_commands' do
+    before(:each) do
+      @app = Hailstorm::Application.new
+      @app.stub!(:saved_history_path).and_return(File.join(java.lang.System.getProperty('user.home'),
+                                                 '.spec_hailstorm_history'))
+      ActiveRecord::Base.stub!(:clear_all_connections!)
+    end
+    context 'nil command' do
+      it 'should exit if exit_ok? == true' do
+        Readline.stub!(:readline).and_return(nil)
+        @app.process_commands
+        expect(@app.instance_variable_get('@exit_command_counter')).to be < 0
+      end
+    end
+    it 'should skip empty lines' do
+      @app.should_not_receive(:save_history)
+      cmds_ite = ['', nil].each
+      Readline.stub!(:readline) { |_p, _h| cmds_ite.next }
+      @app.process_commands
+    end
+    it 'should try interpret a command' do
+      @app.should_receive(:save_history).with('help')
+      cmds_ite = ['help', nil].each
+      Readline.stub!(:readline) { |_p, _h| cmds_ite.next }
+      @app.process_commands
+    end
+    context '\'start\' command' do
+      it 'should modify the readline prompt' do
+        @app.stub!(:start)
+        cmds_ite = ['start', nil].each_with_index
+        Readline.stub!(:readline) do |_p, _h|
+          cmd, idx = cmds_ite.next
+          expect(_p).to match(/\*\s+$/) if idx > 0
+          cmd
+        end
+        @app.process_commands
+      end
+    end
+    context '\'stop\', \'abort\' command' do
+      it 'should modify the readline prompt' do
+        @app.stub!(:stop)
+        @app.stub!(:abort)
+        cmds_ite = ['stop', 'abort', nil].each_with_index
+        Readline.stub!(:readline) do |_p, _h|
+          cmd, idx = cmds_ite.next
+          expect(_p).to_not match(/\*\s+$/) if idx > 0
+          cmd
+        end
+        @app.process_commands
+      end
+    end
+    it 'should rescue IncorrectCommandException' do
+      @app.should_receive(:save_history).with('help coffee')
+      cmds_ite = ['help coffee', nil].each
+      Readline.stub!(:readline) { |_p, _h| cmds_ite.next }
+      @app.process_commands
+    end
+    context 'rescue UnknownCommandException' do
+      context 'Hailstorm.env != production' do
+        it 'should evaluate command as Ruby' do
+          @app.should_receive(:save_history).twice
+          cmds_ite = ['puts "Hello, World"', '1 + 2', nil].each
+          Readline.stub!(:readline) { |_p, _h| cmds_ite.next }
+          @app.process_commands
+        end
+        it 'should rescue evaluation exception/error' do
+          @app.should_receive(:save_history).with('puts "Hello, World')
+          cmds_ite = ['puts "Hello, World', nil].each
+          Readline.stub!(:readline) { |_p, _h| cmds_ite.next }
+          @app.process_commands
+        end
+      end
+    end
+    it 'should rescue Hailstorm::ThreadJoinException' do
+      @app.should_receive(:save_history).with('start redeploy')
+      @app.stub!(:interpret_command).and_raise(Hailstorm::ThreadJoinException.new(nil))
+      cmds_ite = ['start redeploy', nil].each
+      Readline.stub!(:readline) { |_p, _h| cmds_ite.next }
+      @app.process_commands
+    end
+    it 'should rescue Hailstorm::Exception' do
+      @app.should_receive(:save_history).with('results')
+      @app.stub!(:interpret_command).and_raise(Hailstorm::Exception)
+      cmds_ite = ['results', nil].each
+      Readline.stub!(:readline) { |_p, _h| cmds_ite.next }
+      @app.process_commands
+    end
+    it 'should rescue StandardError' do
+      @app.should_receive(:save_history).with('setup')
+      @app.stub!(:interpret_command).and_raise(StandardError)
+      cmds_ite = ['setup', nil].each
+      Readline.stub!(:readline) { |_p, _h| cmds_ite.next }
+      @app.process_commands
     end
   end
 end
