@@ -3,6 +3,6 @@
 require 'rubygems'
 require 'bundler/setup'
 
-require 'hailstorm/application'
+require 'hailstorm/initializer'
 
-Hailstorm::Application.initialize!("<%= @app_name %>", __FILE__)
+Hailstorm::Initializer.create_middleware("<%= @app_name %>", __FILE__)

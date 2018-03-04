@@ -2,19 +2,24 @@ require 'ostruct'
 require 'action_view/base'
 
 include CliStepHelper
+include ConsoleAppHelper
 
 Given(/^I have [hH]ailstorm installed$/) do
-  require 'hailstorm/application'
+  require 'hailstorm/initializer'
 end
 
-When(/^I created? the project "([^"]*)"$/) do |project_name|
+When(/^I created? (a new|the) project "([^"]*)"(| from the cli)$/) do |new_str, project_name, cli|
   project_path = File.join(tmp_path, project_name)
-  unless File.exists?(project_path)
-    Hailstorm::Application.new.create_project(tmp_path, project_name)
+  FileUtils.rmtree(project_path) if new_str =~ /new/
+  return if File.exists?(project_path)
+  if cli.blank?
+    Hailstorm::Initializer.create_project!(tmp_path, project_name)
+  else
+    system("cd #{tmp_path} && ../bin/hailstorm #{project_name}")
   end
 end
 
-Then(/^the project structure for "([^"]*)" should be created$/) do |top_folder|
+Then(/^the project structure for "([^"]*)" (?:should be|is) created$/) do |top_folder|
   project_path = File.join(tmp_path, top_folder)
   expect(File).to exist(project_path)
   expect(File).to be_a_directory(File.join(project_path, Hailstorm.db_dir))
@@ -34,25 +39,36 @@ Then(/^the project structure for "([^"]*)" should be created$/) do |top_folder|
   expect(File).to exist(File.join(project_path, Hailstorm.config_dir, 'boot.rb'))
 end
 
-When(/^I launch the hailstorm console within "([^"]*)" project$/) do |project_name|
+When(/^I launch the hailstorm console within "([^"]*)" project(| from the cli)$/) do |project_name, cli|
   current_project(project_name)
   write_config(@monitor_active) # reset
   Dir[File.join(tmp_path, project_name, Hailstorm.reports_dir, '*')].each do |file|
     FileUtils.rm(file)
   end
-  Hailstorm::Application.initialize!(project_name,
-                                     File.join(tmp_path, project_name,
-                                               Hailstorm.config_dir, 'boot.rb'))
+  if cli.blank?
+    boot_file_path = File.join(tmp_path, project_name, Hailstorm.config_dir, 'boot.rb')
+    Hailstorm::Initializer.create_middleware(project_name, boot_file_path)
+  else
+    spawn_hailstorm(File.join(tmp_path, project_name, Hailstorm.script_dir, 'hailstorm'))
+  end
 end
 
-Then(/^the application should be ready to accept commands$/) do
-  Hailstorm.application.interpret_command('purge')
-  expect(Hailstorm::Model::ExecutionCycle.count).to eql(0)
-  expect(Dir[File.join(tmp_path, current_project, Hailstorm.tmp_dir, '*')].count).to eql(0)
-  Hailstorm::Model::Project.first.update_attribute(:serial_version, nil)
+Then(/^the application should (be ready to accept|execute) commands?(?:|\s+"([^"]*)")$/) do |exec, command|
+  if exec =~ /execute/
+    exec_hailstorm(File.join(tmp_path, current_project, Hailstorm.script_dir, "hailstorm --cmd #{command}"))
+  elsif hailstorm_spawned?
+    write_hailstorm_pty(command || 'purge')
+    sleep(5)
+    expect { read_hailstorm_pty }.to_not raise_error
+  else
+    Hailstorm.application.interpret_command('purge')
+    expect(Hailstorm::Model::ExecutionCycle.count).to eql(0)
+    Hailstorm::Model::Project.first.update_attribute(:serial_version, nil)
+    expect(Dir[File.join(tmp_path, current_project, Hailstorm.tmp_dir, '*')].count).to eql(0)
+  end
 end
 
-Given(/^the "([^"]*)" project$/) do |project_name|
+Given(/^the "([^"]*)" project(?:| is active)$/) do |project_name|
   current_project(project_name)
 end
 
@@ -126,4 +142,20 @@ end
 
 And(/^(?:disable |)target monitoring(?:| is disabled)$/) do
   @monitor_active = false
+end
+
+When(/^I give command '(.+?)'$/) do |command|
+  if hailstorm_spawned?
+    write_hailstorm_pty(command, true)
+  else
+    Hailstorm.application.interpret_command(command)
+  end
+end
+
+Then(/^the application should exit$/) do
+  if hailstorm_spawned?
+    expect(hailstorm_exit_ok?).to be_true
+  else
+    expect(Hailstorm.application.instance_variable_get('@exit_command_counter')).to be < 0
+  end
 end

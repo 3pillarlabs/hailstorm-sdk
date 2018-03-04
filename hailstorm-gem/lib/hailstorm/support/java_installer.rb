@@ -1,3 +1,5 @@
+require 'hailstorm/support'
+
 # Strategy for installation of Java, assuming a Debian based OS
 class Hailstorm::Support::JavaInstaller
 

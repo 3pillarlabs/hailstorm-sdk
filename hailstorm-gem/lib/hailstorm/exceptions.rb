@@ -17,6 +17,11 @@ module Hailstorm
     end
   end
 
+  # Exception for unknown command
+  class UnknownCommandException < Exception
+  end
+
+
   # Exceptions that provide diagnostic messages to help troubleshoot issues.
   class DiagnosticAwareException < Exception
     def message

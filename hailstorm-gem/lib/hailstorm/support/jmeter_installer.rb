@@ -1,3 +1,5 @@
+require 'hailstorm/support'
+
 # JMeter Installer, assumes Java is present in the system.
 class Hailstorm::Support::JmeterInstaller
 

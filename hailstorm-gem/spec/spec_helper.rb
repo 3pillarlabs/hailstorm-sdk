@@ -5,7 +5,8 @@
 #
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
 require 'simplecov'
-require 'hailstorm/application'
+require 'hailstorm/initializer/eager_load'
+require 'hailstorm/initializer'
 require 'hailstorm/support/configuration'
 require 'active_record/base'
 require 'test_schema'
@@ -25,13 +26,14 @@ RSpec.configure do |config|
   config.order = 'random'
 
   config.prepend_before(:suite) do
-    app = Hailstorm::Application.initialize!('hailstorm_spec', '.', {
+    middleware = Hailstorm::Initializer.create_middleware('hailstorm_spec', '.', {
       adapter: 'jdbcmysql',
       database: 'hailstorm_gem_test',
       username: 'hailstorm_dev',
       password: 'hailstorm_dev'
     }, Hailstorm::Support::Configuration.new)
-    app.multi_threaded = false # disable threading in unit tests
+
+    middleware.multi_threaded = false # disable threading in unit tests
   end
 
   config.append_after(:suite) do
@@ -42,6 +44,6 @@ RSpec.configure do |config|
   config.around(:each) do |ex|
     txn = ActiveRecord::Base.connection.begin_transaction
     ex.run
-    txn.rollback
+    txn.rollback if ActiveRecord::Base.connected?
   end
 end

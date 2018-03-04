@@ -188,10 +188,4 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
       self.project.current_execution_cycle.id
     )
   end
-
-  private
-
-  def command
-    Hailstorm.application.command_processor
-  end
 end

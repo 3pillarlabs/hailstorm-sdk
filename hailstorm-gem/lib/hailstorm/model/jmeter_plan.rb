@@ -1,7 +1,6 @@
 require 'digest/sha1'
 
 require 'hailstorm'
-require 'hailstorm/application'
 require 'hailstorm/model'
 require 'hailstorm/model/load_agent'
 require 'hailstorm/model/slave_agent'

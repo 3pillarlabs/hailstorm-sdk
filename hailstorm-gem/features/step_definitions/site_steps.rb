@@ -16,3 +16,7 @@ Given(/^'Hailstorm Site' is up and accessible at an IP address$/) do
   expect(res).to be_kind_of(Net::HTTPSuccess)
   write_site_server_url(site_ip)
 end
+
+Given(/^'Hailstorm Site' is configured correctly$/) do
+  write_site_server_url('localhost:34451')
+end
