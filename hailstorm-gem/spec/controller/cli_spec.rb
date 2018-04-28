@@ -6,6 +6,7 @@ require 'hailstorm/controller/cli'
 require 'hailstorm/model/project'
 require 'hailstorm/model/nmon'
 require 'hailstorm/cli/help_doc'
+require 'hailstorm/cli/view_template'
 
 describe Hailstorm::Controller::Cli do
   before(:each) do
@@ -42,20 +43,23 @@ describe Hailstorm::Controller::Cli do
     end
     context '\'start\' command' do
       it 'should modify the readline prompt' do
-        @app.stub!(:start)
+        @app.stub!(:command_execution_template).and_return(mock(Hailstorm::Middleware::CommandExecutionTemplate))
         cmds_ite = ['start', nil].each_with_index
         Readline.stub!(:readline) do |_p, _h|
           cmd, idx = cmds_ite.next
           expect(_p).to match(/\*\s+$/) if idx > 0
           cmd
         end
+        @app.command_execution_template.should_receive(:start)
         @app.process_commands
       end
     end
     context '\'stop\', \'abort\' command' do
       it 'should modify the readline prompt' do
-        @app.stub!(:stop)
-        @app.stub!(:abort)
+        mock_cmd_ex_tmpl = mock(Hailstorm::Middleware::CommandExecutionTemplate)
+        mock_cmd_ex_tmpl.stub!(:stop)
+        mock_cmd_ex_tmpl.stub!(:abort)
+        @app.stub!(:command_execution_template).and_return(mock_cmd_ex_tmpl)
         cmds_ite = ['stop', 'abort', nil].each_with_index
         Readline.stub!(:readline) do |_p, _h|
           cmd, idx = cmds_ite.next
@@ -90,7 +94,7 @@ describe Hailstorm::Controller::Cli do
           @app.process_commands
         end
       end
-      context 'Hailstorm.env == production' do
+      context 'Hailstorm.is_production? == true' do
         it 'should save the commands in history' do
           Hailstorm.stub!(:is_production?).and_return(true)
           cmds = ['puts "Hello, World"', nil]
@@ -103,21 +107,25 @@ describe Hailstorm::Controller::Cli do
     end
     it 'should rescue Hailstorm::ThreadJoinException' do
       @app.should_receive(:save_history).with('start redeploy')
-      @app.stub!(:start).and_raise(Hailstorm::ThreadJoinException.new(nil))
+      @app.stub!(:command_execution_template).and_return(mock(Hailstorm::Middleware::CommandExecutionTemplate))
+      @app.command_execution_template.stub!(:start).and_raise(Hailstorm::ThreadJoinException,
+                                                              'mock Hailstorm::ThreadJoinException')
       cmds_ite = ['start redeploy', nil].each
       Readline.stub!(:readline) { |_p, _h| cmds_ite.next }
       @app.process_commands
     end
     it 'should rescue Hailstorm::Exception' do
       @app.should_receive(:save_history).with('results')
-      @app.stub!(:interpret_command).and_raise(Hailstorm::Exception)
+      @app.stub!(:command_execution_template).and_return(mock(Hailstorm::Middleware::CommandExecutionTemplate))
+      @app.command_execution_template.stub!(:results).and_raise(Hailstorm::Exception)
       cmds_ite = ['results', nil].each
       Readline.stub!(:readline) { |_p, _h| cmds_ite.next }
       @app.process_commands
     end
     it 'should rescue StandardError' do
       @app.should_receive(:save_history).with('setup')
-      @app.stub!(:interpret_command).and_raise(StandardError)
+      @app.stub!(:command_execution_template).and_return(mock(Hailstorm::Middleware::CommandExecutionTemplate))
+      @app.command_execution_template.stub!(:setup).and_raise(StandardError)
       cmds_ite = ['setup', nil].each
       Readline.stub!(:readline) { |_p, _h| cmds_ite.next }
       @app.process_commands
@@ -156,12 +164,38 @@ describe Hailstorm::Controller::Cli do
       end
     end
 
-    it 'should call command method on self' do
-      @app.stub!(:show)
-      @app.should_receive(:show)
-      @app.process_cmd_line('show')
+    context 'show' do
+      it 'should call command method on self' do
+        @app.stub!(:show)
+        @app.should_receive(:show)
+        @app.process_cmd_line('show')
+      end
     end
 
+    it 'should call interpreted command method on template' do
+      @app.stub!(:command_execution_template)
+      @app.should_receive(:command_execution_template)
+      @app.process_cmd_line('start')
+    end
+
+    context 'responds_to render_ method_name' do
+      it 'should call render_results on self' do
+        @app.command_execution_template.stub!(:results).and_return([[], :show])
+        @app.view_template.should_receive(:render_results_show).and_return(nil)
+        @app.process_cmd_line('results')
+      end
+      it 'should call render_setup' do
+        @app.stub!(:current_project).and_return(mock(Hailstorm::Model::Project).as_null_object)
+        @app.command_execution_template.stub!(:setup)
+        @app.view_template.should_receive(:render_jmeter_plans).and_return(nil)
+        @app.stub!(:render_default)
+        @app.process_cmd_line('setup')
+      end
+      it 'should call render_status' do
+        @app.command_execution_template.stub!(:status).and_return(nil)
+        @app.process_cmd_line('status')
+      end
+    end
   end
 
   context '#handle_exit' do
@@ -178,103 +212,6 @@ describe Hailstorm::Controller::Cli do
           expect(@app.exit_command_counter).to be == 3
         end
       end
-    end
-  end
-
-  %i[setup start stop abort terminate results].each do |cmd|
-    context "##{cmd}" do
-      it 'should pass through to :current_project' do
-        @app.stub!(:current_project).and_return(mock(Hailstorm::Model::Project).as_null_object)
-        @app.current_project.should_receive(cmd)
-        @app.send(cmd)
-      end
-    end
-  end
-
-  context '#results' do
-    before(:each) do
-      @app.stub!(:current_project).and_return(mock(Hailstorm::Model::Project))
-    end
-    context 'import' do
-      it 'should understand file' do
-        @app.current_project.should_receive(:results).with(:import, ['foo.jtl', nil])
-        @app.send(:results, 'import', 'foo.jtl')
-      end
-      it 'should understand options' do
-        @app.current_project.should_receive(:results).with(:import, [nil, {'jmeter' => '1', 'cluster' => '2'}])
-        @app.send(:results, 'import', 'jmeter=1 cluster=2')
-      end
-      it 'should understand file and options' do
-        @app.current_project.should_receive(:results).with(:import, ['/tmp/foo.jtl', {'jmeter' => '1', 'cluster' => '2'}])
-        @app.send(:results, 'import', '/tmp/foo.jtl jmeter=1 cluster=2')
-      end
-      context '<options>' do
-        it 'should accept `jmeter` option' do
-          @app.current_project.should_receive(:results).with(:import, ['/tmp/foo.jtl', {'jmeter' => '1'}])
-          @app.send(:results, 'import', '/tmp/foo.jtl jmeter=1')
-        end
-        it 'should accept `cluster` option' do
-          @app.current_project.should_receive(:results).with(:import, ['/tmp/foo.jtl', {'cluster' => '1'}])
-          @app.send(:results, 'import', '/tmp/foo.jtl cluster=1')
-        end
-        it 'should accept `exec` option' do
-          @app.current_project.should_receive(:results).with(:import, ['/tmp/foo.jtl', {'exec' => '1'}])
-          @app.send(:results, 'import', '/tmp/foo.jtl exec=1')
-        end
-        it 'should not accept an unknown option' do
-          expect {
-            @app.send(:results, 'import', '/tmp/foo.jtl foo=1')
-          }.to raise_exception(Hailstorm::Exception)
-        end
-      end
-    end
-    context 'with operations that return data' do
-      before(:each) do
-        @data = [
-            OpenStruct.new(id: 3,
-                           total_threads_count: 100,
-                           avg_90_percentile: 1300.43,
-                           avg_tps: 2000.345,
-                           formatted_started_at: '2018-01-01 14:10:00',
-                           formatted_stopped_at: '2018-01-01 14:25:00')
-        ]
-      end
-      context 'show' do
-        it 'should print data' do
-          @app.current_project.should_receive(:results).with(:show, nil).and_return(@data)
-          @app.send(:results, 'show')
-        end
-        context 'json format' do
-          it 'should print data' do
-            @app.current_project.should_receive(:results).with(:show, [1,2,3]).and_return(@data)
-            @app.send(:results, 'show', '1:2:3', 'json')
-          end
-        end
-      end
-      context 'export' do
-        context 'zip format' do
-          it 'should create zip file' do
-            Zip::File.stub!(:open) do |_zip_file_path, _file_mode, &block|
-              zip_file = double('fake_zip_file').as_null_object
-              block.call(zip_file)
-            end
-            @app.current_project.should_receive(:results).with(:export, [1,2,3]).and_return(@data)
-            @app.send(:results, 'export', '1:2:3', 'zip')
-          end
-        end
-      end
-    end
-    it 'should accept "last" as a valid sequence' do
-      @app.current_project.should_receive(:results).with(:show, nil).and_return([])
-      @app.send(:results, 'show', 'last')
-    end
-    it 'should accept a Range as a valid sequence' do
-      @app.current_project.should_receive(:results).with(:show, [3, 4, 5, 6, 7]).and_return([])
-      @app.send(:results, 'show', '3-7')
-    end
-    it 'should accept a comma or colon separated list of numbers as a valid sequence' do
-      @app.current_project.should_receive(:results).with(:show, [3, 4, 5]).and_return([])
-      @app.send(:results, 'show', '3,4:5')
     end
   end
 
@@ -297,206 +234,106 @@ describe Hailstorm::Controller::Cli do
     end
   end
 
-  context '#purge' do
-    before(:each) do
-      @app.stub!(:current_project).and_return(mock(Hailstorm::Model::Project))
-      @mock_ex_cycle = double('Mock Execution Cycle')
-      @app.current_project.stub!(:execution_cycles).and_return([@mock_ex_cycle])
-    end
-    it 'should destroy all execution_cycles' do
-      @mock_ex_cycle.should_receive(:destroy)
-      @app.send(:purge)
-    end
-    context 'tests' do
-      it 'should destroy all execution_cycles' do
-        @mock_ex_cycle.should_receive(:destroy)
-        @app.send(:purge, 'tests')
-      end
-    end
-    context 'clusters' do
-      it 'should purge_clusters' do
-        @app.current_project.should_receive(:purge_clusters)
-        @app.send(:purge, 'clusters')
-      end
-    end
-    context 'all' do
-      it 'should destroy current_project' do
-        @app.current_project.should_receive(:destroy)
-        @app.send(:purge, 'all')
-      end
-    end
-  end
-
   context '#show' do
     before(:each) do
-      @app.stub!(:show_jmeter_plans)
-      @app.stub!(:show_load_agents)
-      @app.stub!(:show_target_hosts)
+      mock_project = mock(Hailstorm::Model::Project)
+      @active_queryable = double('Queryable Active', natural_order: [])
+      @queryable = double('Queryable', active: @active_queryable, natural_order: [])
+      %i[jmeter_plans clusters target_hosts].each do |sym|
+        mock_project.stub!(sym).and_return(@queryable)
+      end
+      @app.stub!(:current_project).and_return(mock_project)
+      @app.stub!(:view_template).and_return(mock(Hailstorm::Cli::ViewTemplate))
+      %i[render_jmeter_plans render_load_agents render_target_hosts].each do |sym|
+        @app.view_template.stub!(sym).and_return(sym)
+      end
     end
     it 'should show everything active' do
-      @app.should_receive(:show_jmeter_plans).with(true)
-      @app.should_receive(:show_load_agents).with(true)
-      @app.should_receive(:show_target_hosts).with(true)
+      @app.view_template.should_receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be_true }
+      @app.view_template.should_receive(:render_load_agents) { |_q, flag| expect(flag).to be_true }
+      @app.view_template.should_receive(:render_target_hosts) { |_q, flag| expect(flag).to be_true }
       @app.send(:show)
     end
     context 'jmeter' do
       it 'should show active jmeter' do
-        @app.should_receive(:show_jmeter_plans).with(true)
-        @app.should_not_receive(:show_load_agents)
-        @app.should_not_receive(:show_target_hosts)
+        @app.view_template.should_receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be_true }
+        @app.view_template.should_not_receive(:render_load_agents)
+        @app.view_template.should_not_receive(:render_target_hosts)
         @app.send(:show, 'jmeter')
       end
       context 'all' do
         it 'should show all jmeter' do
-          @app.should_receive(:show_jmeter_plans).with(false)
-          @app.should_not_receive(:show_load_agents)
-          @app.should_not_receive(:show_target_hosts)
+          @app.view_template.should_receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be_false }
+          @app.view_template.should_not_receive(:render_load_agents)
+          @app.view_template.should_not_receive(:render_target_hosts)
           @app.send(:show, 'jmeter', 'all')
         end
       end
     end
     context 'cluster' do
       it 'should show active cluster' do
-        @app.should_receive(:show_load_agents).with(true)
-        @app.should_not_receive(:show_jmeter_plans)
-        @app.should_not_receive(:show_target_hosts)
+        @app.view_template.should_receive(:render_load_agents) { |_q, flag| expect(flag).to be_true }
+        @app.view_template.should_not_receive(:render_jmeter_plans)
+        @app.view_template.should_not_receive(:render_target_hosts)
         @app.send(:show, 'cluster')
       end
       context 'all' do
         it 'should show all cluster' do
-          @app.should_receive(:show_load_agents).with(false)
-          @app.should_not_receive(:show_jmeter_plans)
-          @app.should_not_receive(:show_target_hosts)
+          @app.view_template.should_receive(:render_load_agents) { |_q, flag| expect(flag).to be_false }
+          @app.view_template.should_not_receive(:render_jmeter_plans)
+          @app.view_template.should_not_receive(:render_target_hosts)
           @app.send(:show, 'cluster', 'all')
         end
       end
     end
     context 'monitor' do
       it 'should show active monitor' do
-        @app.should_receive(:show_target_hosts).with(true)
-        @app.should_not_receive(:show_jmeter_plans)
-        @app.should_not_receive(:show_load_agents)
+        @app.view_template.should_receive(:render_target_hosts) { |_q, flag| expect(flag).to be_true }
+        @app.view_template.should_not_receive(:render_jmeter_plans)
+        @app.view_template.should_not_receive(:render_load_agents)
         @app.send(:show, 'monitor')
       end
       context 'all' do
         it 'should show all monitor' do
-          @app.should_receive(:show_target_hosts).with(false)
-          @app.should_not_receive(:show_jmeter_plans)
-          @app.should_not_receive(:show_load_agents)
+          @app.view_template.should_receive(:render_target_hosts) { |_q, flag| expect(flag).to be_false }
+          @app.view_template.should_not_receive(:render_jmeter_plans)
+          @app.view_template.should_not_receive(:render_load_agents)
           @app.send(:show, 'monitor', 'all')
         end
       end
     end
     context 'active' do
       it 'should show everything active' do
-        @app.should_receive(:show_jmeter_plans).with(true)
-        @app.should_receive(:show_load_agents).with(true)
-        @app.should_receive(:show_target_hosts).with(true)
+        @app.view_template.should_receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be_true }
+        @app.view_template.should_receive(:render_load_agents) { |_q, flag| expect(flag).to be_true }
+        @app.view_template.should_receive(:render_target_hosts) { |_q, flag| expect(flag).to be_true }
         @app.send(:show, 'active')
       end
     end
     context 'all' do
       it 'should show everything including inactive' do
-        @app.should_receive(:show_jmeter_plans).with(false)
-        @app.should_receive(:show_load_agents).with(false)
-        @app.should_receive(:show_target_hosts).with(false)
+        @app.view_template.should_receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be_false }
+        @app.view_template.should_receive(:render_load_agents) { |_q, flag| expect(flag).to be_false }
+        @app.view_template.should_receive(:render_target_hosts) { |_q, flag| expect(flag).to be_false }
         @app.send(:show, 'all')
       end
     end
   end
 
-  context '#status' do
+  context '#render_status' do
     before(:each) do
-      @app.stub!(:current_project).and_return(mock(Hailstorm::Model::Project))
+      @app.stub!(:view_template).and_return(mock(Hailstorm::Cli::ViewTemplate))
     end
-    context 'current_execution_cycle is nil' do
-      it 'should not raise_error' do
-        @app.current_project.stub!(:current_execution_cycle).and_return(nil)
-        expect { @app.send(:status) }.to_not raise_error
-      end
-    end
-    context 'current_execution_cycle is truthy' do
-      before(:each) do
-        @app.current_project.stub!(:current_execution_cycle).and_return(true)
-      end
-      context 'no running agents' do
-        before(:each) do
-          @app.current_project.stub!(:check_status).and_return([])
-        end
-        it 'should not raise_error' do
-          expect { @app.send(:status) }.to_not raise_error
-        end
-        context 'json format' do
-          it 'should not raise_error' do
-            expect { @app.send(:status, 'json') }.to_not raise_error
-          end
-        end
-      end
-      context 'with running agents' do
-        before(:each) do
-          check_status_datum = OpenStruct.new(clusterable: OpenStruct.new(slug: 'amazon-east-1'),
-                                              public_ip_address: '8.8.8.8',
-                                              jmeter_pid: 9364)
-          @app.current_project.stub!(:check_status).and_return([check_status_datum])
-        end
-        it 'should not raise_error' do
-          expect { @app.send(:status) }.to_not raise_error
-        end
-        context 'json format' do
-          it 'should not raise_error' do
-            expect { @app.send(:status, 'json') }.to_not raise_error
-          end
-        end
+    context 'load generation in progress' do
+      it 'should show running agents' do
+        @app.view_template.should_receive(:render_running_agents)
+        @app.render_status([{}])
       end
     end
-  end
-
-  context '#show_jmeter_plans' do
-    context 'only_active is true' do
-      it 'should not raise_error' do
-        @app.stub!(:current_project).and_return(mock(Hailstorm::Model::Project))
-        queryable = double('JMeter Plan Queryable')
-        queryable.stub!(:active).and_return([double('Test Plan',
-                                                    test_plan_name: 'spec',
-                                                    properties_map: { num_threads: 100 })])
-        @app.current_project.stub!(:jmeter_plans).and_return(queryable)
-        expect { @app.send(:show_jmeter_plans, true) }.to_not raise_error
-      end
-    end
-  end
-
-  context '#show_load_agents' do
-    context 'only_active is true' do
-      it 'should not raise_error' do
-        @app.stub!(:current_project).and_return(mock(Hailstorm::Model::Project))
-        load_agent_double = double('Load Agent',
-                                   jmeter_plan: double('Test Plan', test_plan_name: 'spec'),
-                                   master?: true,
-                                   public_ip_address: '8.8.8.8',
-                                   jmeter_pid: 9123)
-        clusterable = double('Clusterable',
-                             slug: 'amazon-us-east-1',
-                             load_agents: double('Load Agent Queryable', active: [load_agent_double]))
-        cluster = double('Cluster', cluster_code: 'amazon', clusterables: [clusterable])
-        @app.current_project.stub!(:clusters).and_return([cluster])
-        expect { @app.send(:show_load_agents, true) }.to_not raise_error
-      end
-    end
-  end
-
-  context '#show_target_hosts' do
-    context 'only_active is true' do
-      it 'should not raise_error' do
-        target_host = double('TargetHost',
-                             role_name: 'server',
-                             host_name: 'app.de.mon',
-                             class: Hailstorm::Model::Nmon,
-                             executable_pid: 2345)
-        @app.stub!(:current_project).and_return(mock(Hailstorm::Model::Project))
-        @app.current_project.stub!(:target_hosts).and_return(double('Queryable',
-                                                                    active: double('Natural Orderable',
-                                                                                   natural_order: [target_host])))
-        expect { @app.send(:show_target_hosts, true) }.to_not raise_error
+    context 'load generation finished' do
+      it 'should show no running agents' do
+        @app.view_template.should_not_receive(:render_running_agents)
+        @app.render_status([], :json)
       end
     end
   end

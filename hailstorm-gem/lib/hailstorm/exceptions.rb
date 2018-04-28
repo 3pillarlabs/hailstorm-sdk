@@ -8,7 +8,7 @@ module Hailstorm
   class ThreadJoinException < Exception
 
     # @param [Array] exceptions
-    def initialize(exceptions)
+    def initialize(exceptions = nil)
       @exceptions = exceptions
     end
 
@@ -21,6 +21,9 @@ module Hailstorm
   class UnknownCommandException < Exception
   end
 
+  # Exception for unknown options to a command
+  class UnknownCommandOptionException < Exception
+  end
 
   # Exceptions that provide diagnostic messages to help troubleshoot issues.
   class DiagnosticAwareException < Exception

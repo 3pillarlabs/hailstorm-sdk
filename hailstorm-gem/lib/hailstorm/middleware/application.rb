@@ -22,7 +22,7 @@ class Hailstorm::Middleware::Application
     if env_config
       Hailstorm.application.config = env_config
     else
-      Hailstorm.application.load_config(true)
+      Hailstorm.application.load_config
     end
     Hailstorm.application.connection_spec = connection_spec
     Hailstorm.application.check_database
@@ -47,24 +47,21 @@ class Hailstorm::Middleware::Application
 
   def config=(new_config)
     @config = new_config
-    self
   end
 
   def config(&_block)
     @config ||= Hailstorm::Support::Configuration.new
-    if block_given?
-      yield @config
-    else
-      @config
-    end
+    yield @config if block_given?
+    @config
   end
 
-  def load_config(handle_load_error = false)
+  def load_config(environment_file = File.join(Hailstorm.root, Hailstorm.config_dir, 'environment.rb'))
     @config = nil
-    load(File.join(Hailstorm.root, Hailstorm.config_dir, 'environment.rb'))
+    load(environment_file)
     @config.freeze
   rescue Object => e
-    handle_load_error ? logger.fatal(e.message) : raise(Hailstorm::Exception, e.message)
+    logger.fatal(e.message)
+    raise(Hailstorm::Exception, e.message)
   end
   alias reload load_config
 
@@ -109,36 +106,34 @@ class Hailstorm::Middleware::Application
   end
 
   def connection_spec
-    if @connection_spec.nil?
-      @connection_spec = {}
+    return @connection_spec if @connection_spec
 
-      # load the properties into a java.util.Properties instance
-      database_properties_file = Java::JavaIo::File.new(File.join(Hailstorm.root,
-                                                                  Hailstorm.config_dir,
-                                                                  'database.properties'))
-      properties = Java::JavaUtil::Properties.new
-      properties.load(Java::JavaIo::FileInputStream.new(database_properties_file))
+    #  load and filter keys without an empty value
+    @connection_spec = load_db_properties.select { |_k, v| !v.blank? }
 
-      # load all properties without an empty value into the spec
-      properties.each do |key, value|
-        @connection_spec[key.to_sym] = value unless value.blank?
-      end
-
-      # switch off multithread mode for sqlite & derby
-      if @connection_spec[:adapter] =~ /(?:sqlite|derby)/i
-        @multi_threaded = false
-        @connection_spec[:database] = File.join(Hailstorm.root, Hailstorm.db_dir,
-                                                "#{database_name}.db")
-      else
-        # set defaults which can be overridden
-        @connection_spec = {
-            pool: 50,
-            wait_timeout: 30.minutes
-        }.merge(@connection_spec).merge(database: database_name)
-      end
+    # switch off multithread mode for sqlite & derby
+    if @connection_spec[:adapter] =~ /(?:sqlite|derby)/i
+      @multi_threaded = false
+      @connection_spec[:database] = File.join(Hailstorm.root, Hailstorm.db_dir, "#{database_name}.db")
+    else
+      # set defaults which can be overridden
+      @connection_spec = {
+          pool: 50,
+          wait_timeout: 30.minutes
+      }.merge(@connection_spec).merge(database: database_name)
     end
 
     @connection_spec
+  end
+
+  # load the properties into a java.util.Properties instance
+  def load_db_properties(db_props_file_path = File.join(Hailstorm.root, Hailstorm.config_dir, 'database.properties'))
+    database_properties_file = Java::JavaIo::File.new(db_props_file_path)
+    properties = Java::JavaUtil::Properties.new
+    properties.load(Java::JavaIo::FileInputStream.new(database_properties_file))
+
+    # return all properties
+    properties.to_hash.symbolize_keys
   end
 
 end

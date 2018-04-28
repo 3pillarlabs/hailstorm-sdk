@@ -6,37 +6,42 @@ require 'hailstorm/model/load_agent'
 
 describe Hailstorm::Middleware::CommandInterpreter do
 
+  before(:each) do
+    @app = Hailstorm::Middleware::CommandInterpreter.new
+  end
+
   context '#interpret_command' do
-    before(:each) do
-      @app = Hailstorm::Middleware::CommandInterpreter.new
-    end
     context 'results' do
       it 'should interpret \'results\'' do
-        expect(@app.interpret_command('results')).to eq [:results]
+        expect(@app.interpret_command('results')).to eq [:results, false, nil, :show, nil]
       end
       %w[show exclude include report export import].each do |sc|
         it "should interpret 'results #{sc}'" do
-          expect(@app.interpret_command("results #{sc}")).to eq [:results, sc]
+          expect(@app.interpret_command("results #{sc}")).to eq [:results, false, nil, sc.to_sym, nil]
         end
       end
       it 'should interpret \'results import <path-spec>\'' do
-        expect(@app.interpret_command('results import /tmp/b23d8/foo.jtl')).to eq [:results, 'import',
-                                                                                   '/tmp/b23d8/foo.jtl']
+        expect(@app.interpret_command('results import /tmp/b23d8/foo.jtl')).to eq [:results, false, nil, :import,
+                                                                                   ['/tmp/b23d8/foo.jtl', nil]]
       end
       it 'should interpret \'results help\'' do
         expect(@app.interpret_command('results help')).to eq [:help, 'results']
       end
       it 'should interpret \'results show last\'' do
-        expect(@app.interpret_command('results show last')).to eq [:results, 'show', 'last']
+        expect(@app.interpret_command('results show last')).to eq [:results, true, nil, :show, nil]
       end
       it 'should interpret \'results last\'' do
-        expect(@app.interpret_command('results last')).to eq [:results, 'last']
+        expect(@app.interpret_command('results last')).to eq [:results, true, nil, :show, nil]
       end
-      %w[1,2,3 4-8 7:8:9].each do |seq|
-        %w[show exclude include report export].each do |sc|
-          it "should interpret 'results #{sc} #{seq}'" do
-            expect(@app.interpret_command("results #{sc} #{seq}")).to eq [:results, sc, seq]
-          end
+      %w[show exclude include report export].each do |sc|
+        it "should interpret 'results #{sc} 1,2,3'" do
+          expect(@app.interpret_command("results #{sc} 1,2,3")).to eq [:results, false, nil, sc.to_sym, [1, 2, 3]]
+        end
+        it "should interpret 'results #{sc} 4-8'" do
+          expect(@app.interpret_command("results #{sc} 4-8")).to eq [:results, false, nil, sc.to_sym, [4, 5, 6, 7, 8]]
+        end
+        it "should interpret 'results #{sc} 7:8:9'" do
+          expect(@app.interpret_command("results #{sc} 7:8:9")).to eq [:results, false, nil, sc.to_sym, [7, 8, 9]]
         end
       end
     end
@@ -47,8 +52,8 @@ describe Hailstorm::Middleware::CommandInterpreter do
     end
     context 'args as a Hash' do
       it 'should interpret command, arguments and format' do
-        args = {args: %w[export 1-3], command: 'results', format: 'json'}
-        expect(@app.interpret_command(args)).to eq [:results, 'export', '1-3', 'json']
+        args = { args: %w[export 1-3], command: 'results', format: 'json' }
+        expect(@app.interpret_command(args)).to eq [:results, false, :json, :export, [1, 2, 3]]
       end
     end
     context 'help' do
@@ -161,6 +166,70 @@ describe Hailstorm::Middleware::CommandInterpreter do
       it 'should raise exception' do
         expect {@app.interpret_command('start everything')}.to raise_error(Hailstorm::UnknownCommandException)
       end
+    end
+  end
+
+  context '#translate_results_args' do
+    context 'import' do
+      it 'should understand file' do
+        expect(@app.send(:translate_results_args, %w[import foo.jtl])).to be == [false, nil, :import, ['foo.jtl', nil]]
+      end
+      it 'should understand options' do
+        translated_args = [false, nil, :import, [nil, {'jmeter' => '1', 'cluster' => '2'}]]
+        expect(@app.send(:translate_results_args, ['import', 'jmeter=1 cluster=2'])).to be == translated_args
+      end
+      it 'should understand file and options' do
+        translated_args = [false, nil, :import, ['/tmp/foo.jtl', {'jmeter' => '1', 'cluster' => '2'}]]
+        expect(@app.send(:translate_results_args, ['import', '/tmp/foo.jtl jmeter=1 cluster=2'])).to be == translated_args
+      end
+      context '<options>' do
+        it 'should accept `jmeter` option' do
+          translated_args = [false, nil, :import, ['/tmp/foo.jtl', {'jmeter' => '1'}]]
+          expect(@app.send(:translate_results_args, ['import', '/tmp/foo.jtl jmeter=1'])).to be == translated_args
+        end
+        it 'should accept `cluster` option' do
+          translated_args = [false, nil, :import, ['/tmp/foo.jtl', {'cluster' => '1'}]]
+          expect(@app.send(:translate_results_args, ['import', '/tmp/foo.jtl cluster=1'])).to be == translated_args
+        end
+        it 'should accept `exec` option' do
+          translated_args = [false, nil, :import, ['/tmp/foo.jtl', {'exec' => '1'}]]
+          expect(@app.send(:translate_results_args, ['import', '/tmp/foo.jtl exec=1'])).to be == translated_args
+        end
+        it 'should not accept an unknown option' do
+          expect {
+            @app.send(:translate_results_args, ['import', '/tmp/foo.jtl foo=1'])
+          }.to raise_error(Hailstorm::Exception)
+        end
+      end
+    end
+    it 'should accept "last" as a valid sequence' do
+      expect(@app.send(:translate_results_args, %w[show last])).to be == [true, nil, :show, nil]
+    end
+    it 'should accept a Range as a valid sequence' do
+      expect(@app.send(:translate_results_args, %w[show 3-7])).to be == [false, nil, :show, [3, 4, 5, 6, 7]]
+    end
+    it 'should accept a comma or colon separated list of numbers as a valid sequence' do
+      expect(@app.send(:translate_results_args, %w[show 3,4:5])).to be == [false, nil, :show, [3, 4, 5]]
+    end
+  end
+
+  context '#parse_args' do
+    context 'args is a Hash' do
+      it 'should transform to :command_args and :format' do
+        args = { args: %w[export 1-3], command: 'results', format: 'json' }
+        expect(@app.send(:parse_args, args)).to eq ['results export 1-3'.to_sym, :json]
+      end
+    end
+  end
+
+  context '#parse_match_data' do
+    it 'should partition the command and its arguments' do
+      parsed_command_args = @app.send(:parse_match_data, ['results last', 'results', nil, ' last', ''])
+      expect(parsed_command_args).to eq [:results, [nil, 'last']]
+    end
+    it 'should truncate empty or nil trailing arguments' do
+      parsed_command_args = @app.send(:parse_match_data, ['results last', 'results', nil, '', ''])
+      expect(parsed_command_args).to eq [:results, []]
     end
   end
 end

@@ -1,22 +1,78 @@
 require 'hailstorm/middleware'
 require 'hailstorm/exceptions'
+require 'hailstorm/behavior/loggable'
 
 # Implements an 'interpreter' pattern to translate text commands to a command object.
 class Hailstorm::Middleware::CommandInterpreter
+
+  include Hailstorm::Behavior::Loggable
 
   # Interpret the command (parse & execute)
   # @param [Array] args command arguments
   # @return [Array] command & args
   def interpret_command(*args)
-    command, format = parse_args(args)
+    command, format = parse_args(*args)
     match_data = find_matching_rule(command)
     method_name, method_args = parse_match_data(match_data)
     if method_args.length == 1 && method_args.first == 'help'
       [:help, method_name.to_s]
     else
       method_args.push(format) unless format.nil?
-      [method_name].push(*method_args)
+      translation = "translate_#{method_name}_args".to_sym
+      if respond_to?(translation)
+        [method_name].push(*send(translation, method_args))
+      else
+        [method_name].push(*method_args)
+      end
     end
+  end
+
+  def translate_results_args(args)
+    case args.length
+      when 3
+        operation, sequences, format = args
+      when 2
+        operation, sequences = args
+      else
+        operation, = args
+    end
+    operation = (operation || 'show').to_sym
+    extract_last = false
+    unless sequences.nil?
+      if sequences == 'last'
+        extract_last = true
+        sequences = nil
+      elsif sequences =~ /^(\d+)-(\d+)$/ # range
+        sequences = (Regexp.last_match(1)..Regexp.last_match(2)).to_a.collect(&:to_i)
+      elsif sequences =~ /^[\d,:]+$/
+        sequences = sequences.split(/\s*[,:]\s*/).collect(&:to_i)
+      else
+        glob, opts = sequences.split(/\s+/).each_with_object([]) do |e, a|
+          if e =~ /=/
+            a.push({}) if a.last.nil? || a.last.is_a?(String)
+            k, v = e.split(/=/)
+            a.last.merge!({k => v})
+          else
+            a.unshift(e)
+          end
+        end
+        if glob.is_a?(Hash)
+          opts = glob
+          glob = nil
+        end
+        unless opts.nil?
+          opts.keys.each do |opt_key|
+            unless %i[jmeter exec cluster].include?(opt_key.to_sym)
+              raise(Hailstorm::UnknownCommandOptionException, "Unknown results import option: #{opt_key}")
+            end
+          end
+        end
+        sequences = [glob, opts]
+        logger.debug {"results(#{args}) -> #{sequences}"}
+      end
+    end
+
+    [extract_last, format, operation, sequences]
   end
 
   private
@@ -29,7 +85,7 @@ class Hailstorm::Middleware::CommandInterpreter
       ^(start)(\s+redeploy|\s+help)?$
       ^(stop)(\s+suspend|\s+wait|\s+suspend\s+wait|\s+wait\s+suspend|\s+help)?$
       ^(abort)(\s+suspend|\s+help)?$
-      ^(results)(\s+show|\s+exclude|\s+include|\s+report|\s+export|\s+import|\s+help)?(\s+[\d\-:,]+|\s+last)?(.*)$
+      ^(results)(\s+show|\s+exclude|\s+include|\s+report|\s+export|\s+import|\s+help)?(\s+[\d\-:,]+|\s+last|\s+.*)?$
       ^(purge)(\s+tests|\s+clusters|\s+all|\s+help)?$
       ^(show)(\s+jmeter|\s+cluster|\s+monitor|\s+help|\s+active)?(|\s+all)?$
       ^(terminate)(\s+help)?$
@@ -38,13 +94,13 @@ class Hailstorm::Middleware::CommandInterpreter
     ].collect { |p| Regexp.compile(p) }
   end
 
-  def parse_args(args)
+  def parse_args(*args)
     format = nil
     if args.last.is_a? Hash
       options = args.last
       ca = (options[:args] || []).join(' ')
       command = "#{options[:command]} #{ca}".strip.to_sym
-      format = options[:format]
+      format = options[:format].to_s.to_sym
     else
       command = args.last.to_sym
     end
@@ -65,8 +121,10 @@ class Hailstorm::Middleware::CommandInterpreter
     method_name = match_data[1].to_sym
     method_args = match_data.to_a
                             .slice(2, match_data.length - 1)
-                            .select { |e| !e.blank? }
-                            .collect(&:strip)
+                            .reverse
+                            .reduce([]) { |s, e| s.length > 0 || !e.blank? ? s << e : s }
+                            .reverse
+                            .collect { |e| e ? e.strip : e }
     [method_name, method_args]
   end
 end

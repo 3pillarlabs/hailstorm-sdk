@@ -2,10 +2,11 @@ require 'readline'
 
 require 'hailstorm/controller'
 require 'hailstorm/controller/application'
-require 'hailstorm/behavior/loggable'
 require 'hailstorm/version'
 require 'hailstorm/exceptions'
 require 'hailstorm/cli/help_doc'
+require 'hailstorm/cli/view_template'
+require 'hailstorm/middleware/command_execution_template'
 
 # CLI controller
 class Hailstorm::Controller::Cli
@@ -59,8 +60,17 @@ Type help to get started...
       method_args = command_args[1]
       if %i[quit exit].include?(method_name)
         handle_exit(method_name)
+      elsif method_name == :show
+        show(*method_args)
       else
-        send(method_name, *method_args)
+        values = command_execution_template.send(method_name, *method_args)
+        render_method = "render_#{method_name}".to_sym
+        render_args = values.is_a?(Array) ? values : [values]
+        if respond_to?(render_method)
+          self.send(render_method, *render_args)
+        else
+          render_default(*render_args)
+        end
       end
       case method_name
         when :start
@@ -94,6 +104,44 @@ Type help to get started...
       logger.debug {"\n".concat(uncaught.backtrace.join("\n"))}
     ensure
       ActiveRecord::Base.clear_all_connections!
+    end
+  end
+
+  def command_execution_template
+    @command_execution_template ||= Hailstorm::Middleware::CommandExecutionTemplate.new(current_project)
+  end
+
+  def view_template
+    @view_template ||= Hailstorm::Cli::ViewTemplate.new
+  end
+
+  def render_default(*_args)
+    puts view_template.render_load_agents(current_project.clusters)
+    puts view_template.render_target_hosts(current_project.target_hosts.active.natural_order)
+  end
+
+  def render_setup(*_args)
+    puts view_template.render_jmeter_plans(current_project.jmeter.active)
+    render_default
+  end
+
+  def render_results(*args)
+    data, operation, format = args
+    puts(view_template.render_results_show(data, format)) if operation == :show
+  end
+
+  def render_status(*args)
+    running_agents, format = args
+    if running_agents
+      if !running_agents.empty?
+        logger.info 'Load generation running on following load agents:'
+        puts view_template.render_running_agents(running_agents, format)
+      else
+        logger.info 'Load generation finished on all load agents'
+        puts [].to_json if format.to_s.to_sym == :json
+      end
+    else
+      logger.info 'No tests have been started'
     end
   end
 
@@ -186,6 +234,20 @@ Type help to get started...
   # Process the help command
   def help(help_on = :help)
     print help_doc.send("#{help_on}_options".to_sym)
+  end
+
+  def show(*args)
+    what = (args.first || 'active').to_sym
+    all = args[1].to_s.to_sym == :all || what == :all
+    q = %i[jmeter_plans clusters target_hosts].reduce({}) do |s, e|
+      _q = all ? current_project.send(e) : current_project.send(e).active
+      s.merge(e => _q)
+    end
+    q[:target_hosts] = q[:target_hosts].natural_order
+    should_show = -> (kind) { what == kind ||  %i[active all].include?(what) }
+    puts view_template.render_jmeter_plans(q[:jmeter_plans], !all) if should_show.call(:jmeter)
+    puts view_template.render_load_agents(q[:clusters], !all)  if should_show.call(:cluster)
+    puts view_template.render_target_hosts(q[:target_hosts], !all) if should_show.call(:monitor)
   end
 
   # Simple shell for executing code within the Hailstorm shell

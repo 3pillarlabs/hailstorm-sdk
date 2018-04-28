@@ -46,4 +46,8 @@ RSpec.configure do |config|
     ex.run
     txn.rollback if ActiveRecord::Base.connected?
   end
+
+  config.append_after(:each) do
+    Hailstorm.test_application = nil if Hailstorm.respond_to?(:test_application)
+  end
 end
