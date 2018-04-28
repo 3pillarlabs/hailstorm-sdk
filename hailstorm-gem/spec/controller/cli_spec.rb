@@ -41,7 +41,7 @@ describe Hailstorm::Controller::Cli do
       Readline.stub!(:readline) { |_p, _h| cmds_ite.next }
       @app.process_commands
     end
-    context '\'start\' command' do
+    context "'start' command" do
       it 'should modify the readline prompt' do
         @app.stub!(:command_execution_template).and_return(mock(Hailstorm::Middleware::CommandExecutionTemplate))
         cmds_ite = ['start', nil].each_with_index
@@ -54,7 +54,7 @@ describe Hailstorm::Controller::Cli do
         @app.process_commands
       end
     end
-    context '\'stop\', \'abort\' command' do
+    context "'stop', 'abort' command" do
       it 'should modify the readline prompt' do
         mock_cmd_ex_tmpl = mock(Hailstorm::Middleware::CommandExecutionTemplate)
         mock_cmd_ex_tmpl.stub!(:stop)
@@ -196,6 +196,17 @@ describe Hailstorm::Controller::Cli do
         @app.process_cmd_line('status')
       end
     end
+
+    context "'help' command" do
+      it 'should call help on self' do
+        @app.should_receive(:help)
+        @app.process_cmd_line('help')
+      end
+      it 'should call help with additional arguments' do
+        @app.should_receive(:help).with('start')
+        @app.process_cmd_line('help start')
+      end
+    end
   end
 
   context '#handle_exit' do
@@ -217,18 +228,17 @@ describe Hailstorm::Controller::Cli do
 
   context '#help' do
     before(:each) do
-      @help_doc = Hailstorm::Cli::HelpDoc.new
-      @mock_help_doc = mock(Hailstorm::Cli::HelpDoc)
-      @app.help_doc = @mock_help_doc
+      @orig_help_doc = @app.help_doc
+      @app.stub!(:help_doc).and_return(mock(Hailstorm::Cli::HelpDoc))
     end
     it 'should delegate to @mock_help_doc.help_options' do
       # Workaround for .and_call_original that causes a StackOverflow in underlying JVM
-      @mock_help_doc.should_receive(:help_options) { @help_doc.help_options }
+      @app.help_doc.should_receive(:help_options) { @orig_help_doc.help_options }
       @app.send(:help)
     end
     %w[setup start stop abort terminate results show purge status].each do |cmd|
       it "should delegate to @mock_help_doc.#{cmd}_options" do
-        @mock_help_doc.should_receive("#{cmd}_options".to_sym) { @help_doc.send("#{cmd}_options".to_sym) }
+        @app.help_doc.should_receive("#{cmd}_options".to_sym) { @orig_help_doc.send("#{cmd}_options".to_sym) }
         @app.send(:help, cmd)
       end
     end

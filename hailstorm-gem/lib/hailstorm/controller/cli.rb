@@ -15,8 +15,6 @@ class Hailstorm::Controller::Cli
 
   attr_reader :shell_binding_ctx
 
-  attr_writer :help_doc
-
   attr_accessor :exit_command_counter
   attr_accessor :prompt
 
@@ -30,7 +28,7 @@ class Hailstorm::Controller::Cli
   end
 
   def help_doc
-    @help_doc ||= Hailstorm::Cli.HelpDoc.new
+    @help_doc ||= Hailstorm::Cli::HelpDoc.new
   end
 
   # Processes the user commands and options
@@ -62,6 +60,8 @@ Type help to get started...
         handle_exit(method_name)
       elsif method_name == :show
         show(*method_args)
+      elsif method_name == :help
+        help(*method_args)
       else
         values = command_execution_template.send(method_name, *method_args)
         render_method = "render_#{method_name}".to_sym

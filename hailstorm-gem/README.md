@@ -102,14 +102,12 @@ cucumber
 
 # Version 5
 ```ruby
-middle_ware = Hailstorm::Support::Initializer.create_middleware('hailstorm_spec', '/home/sayantamd/projects/foo/config/boot.rb')
-expect(middle_ware).to_not be_nil
-expect(middle_ware).to respond_to(:interpretor)
-expect(middle_ware).to respond_to('=executor'.to_sym)
+middleware = Hailstorm::Support::Initializer.create_middleware('hailstorm_spec', '/path/to/project/config/boot.rb')
+expect(middleware).to respond_to(:interpretor)
 
-cli = Hailstorm::Controller::Cli.new(middle_ware)
+cli = Hailstorm::Controller::Cli.new(middleware)
 cli.process_commands
 
-webs = Hailstorm::Controller::WebServer.new(middle_ware)
+webs = Hailstorm::Controller::WebServer.new(middleware)
 webs.start_server
 ```

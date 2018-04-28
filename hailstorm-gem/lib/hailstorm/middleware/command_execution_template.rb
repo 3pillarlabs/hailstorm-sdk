@@ -1,6 +1,7 @@
 require 'hailstorm/middleware'
 require 'hailstorm/behavior/loggable'
 
+# Common command execution template
 class Hailstorm::Middleware::CommandExecutionTemplate
 
   include Hailstorm::Behavior::Loggable

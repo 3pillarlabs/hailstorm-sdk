@@ -59,7 +59,8 @@ Then(/^the application should (be ready to accept|execute) commands?(?:|\s+"([^"
   elsif hailstorm_spawned?
     write_hailstorm_pty(command || 'purge')
     sleep(5)
-    expect { read_hailstorm_pty }.to_not raise_error
+    cmd_response = read_hailstorm_pty
+    expect(cmd_response).to_not match('ERROR')
   else
     Hailstorm.application.interpret_command('purge')
     expect(Hailstorm::Model::ExecutionCycle.count).to eql(0)

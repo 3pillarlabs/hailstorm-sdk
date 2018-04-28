@@ -40,18 +40,16 @@ class Hailstorm::Cli::CmdParser
   # @param [Array] args argument array usually ARGV
   # @raise [OptionParser::ParseError] if @raise_on_parse_error is true (default false)
   def parse!(args, &_block)
-    begin
-      opt_parser.parse!(args)
-      if options.empty?
-        @help_handler.call(opt_parser) if @help_handler
-      else
-        yield options if block_given?
-      end
-      options
-    rescue OptionParser::ParseError => error
-      @options = {}
-      @parse_error_handler ? @parse_error_handler.call(error, opt_parser) : raise
+    opt_parser.parse!(args)
+    if options.empty?
+      @help_handler.call(opt_parser) if @help_handler
+    else
+      yield options if block_given?
     end
+    options
+  rescue OptionParser::ParseError => error
+    @options = {}
+    @parse_error_handler ? @parse_error_handler.call(error, opt_parser) : raise
   end
 
   def opt_parser

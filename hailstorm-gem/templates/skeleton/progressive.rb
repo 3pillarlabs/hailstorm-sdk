@@ -1,6 +1,7 @@
 # Progress indicator for terminals
 module Hailstorm
   module Initializer
+    # Progress indicator for CLI
     class Progressive
 
       def self.show_while(&_block)
