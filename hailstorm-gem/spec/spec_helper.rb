@@ -44,7 +44,11 @@ RSpec.configure do |config|
   config.around(:each) do |ex|
     txn = ActiveRecord::Base.connection.begin_transaction
     ex.run
-    txn.rollback if ActiveRecord::Base.connected?
+    begin
+      txn.rollback if ActiveRecord::Base.connected?
+    rescue ActiveRecord::ConnectionNotEstablished
+      # no op
+    end
   end
 
   config.append_after(:each) do

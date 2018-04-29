@@ -9,7 +9,8 @@ module Hailstorm
 
     # @param [Array] exceptions
     def initialize(exceptions = nil)
-      @exceptions = exceptions
+      return unless exceptions
+      @exceptions = exceptions.is_a?(Array) ? exceptions : [exceptions]
     end
 
     def message

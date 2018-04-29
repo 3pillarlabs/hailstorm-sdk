@@ -43,8 +43,8 @@ class Hailstorm::Cli::CmdParser
     opt_parser.parse!(args)
     if options.empty?
       @help_handler.call(opt_parser) if @help_handler
-    else
-      yield options if block_given?
+    elsif block_given?
+      yield options
     end
     options
   rescue OptionParser::ParseError => error

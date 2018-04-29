@@ -1,189 +1,31 @@
 require 'hailstorm/cli'
+require 'yaml'
 
-# Help docstring for CLI
+# Help doc string for CLI
 class Hailstorm::Cli::HelpDoc
-  def help_options
-    @help_options ||= <<-HELP.strip_heredoc
 
-    Hailstorm shell accepts commands and associated options for a command.
+  attr_reader :help_docs_path
 
-    Commands:
-
-    setup           Boot up load agents and setup target monitors.
-
-    start           Starts load generation and target monitoring.
-
-    stop            Stops load generation and target monitoring.
-
-    abort           Aborts load generation and target monitoring.
-
-    terminate       Terminates load generation and target monitoring.
-
-    results         Include, exclude, export, import results or generate report
-
-    purge           Purge specific or ALL data from database
-
-    show            Show the environment configuration
-
-    status          Show status of load generation across all agents
-
-    help COMMAND    Show help on COMMAND
-                    COMMAND help will also show help on COMMAND
-    HELP
+  def initialize(new_help_docs_path)
+    @help_docs_path = new_help_docs_path
   end
 
-  def setup_options
-    @setup_options ||= <<-SETUP.strip_heredoc
+  %i[help setup start stop abort terminate results show purge status]
+    .map { |cmd| "#{cmd}_options" }.each do |method_name|
 
-      Boot load agents and target monitors.
-      Creates the load generation agents, sets up the monitors on the configured
-      targets and deploys the JMeter scripts in the project "jmeter" directory
-      to the load agents.
-
-      Options
-
-      force         Force application setup, even when no environment changes
-                    are detected.
-    SETUP
+    define_method(method_name) do
+      value = instance_variable_get("@#{method_name}")
+      unless value
+        value = help_docs[method_name.to_s].strip_heredoc
+        instance_variable_set("@#{method_name}", value)
+      end
+      value
+    end
   end
 
-  def start_options
-    @start_options ||= <<-START.strip_heredoc
+  private
 
-      Starts load generation and target monitoring. This will automatically
-      trigger setup actions if you have modified the configuration. Additionally,
-      if any JMeter plan is altered, the altered plans will be re-processed.
-      However, modified datafiles and other support files (such as custom plugins)
-      will not be re-deployed unless the redeploy option is specified.
-
-      Options
-
-      redeploy      Re-deploy ALL JMeter scripts and support files to agents.
-    START
-  end
-
-  def stop_options
-    @stop_options ||= <<-STOP.strip_heredoc
-
-      Stops load generation and target monitoring.
-      Fetch logs from the load agents and server. This does NOT terminate the load
-      agents.
-
-      Options
-
-      wait          Wait till JMeter completes.
-      suspend       Suspend load agents (depends on cluster support).
-    STOP
-  end
-
-  def abort_options
-    @abort_options ||= <<-ABORT.strip_heredoc
-
-      Aborts load generation and target monitoring.
-      This does not fetch logs from the servers and does not terminate the
-      load agents. This task is handy when you want to stop the current test
-      because you probably realized there was a misconfiguration after starting
-      the tests.
-
-      Options
-
-      suspend       Suspend load agents (depends on cluster support).
-    ABORT
-  end
-
-  def terminate_options
-    @terminate_options ||= <<-TERMINATE.strip_heredoc
-
-      Terminates load generation and target monitoring.
-      Additionally, cleans up temporary state information on local filesystem.
-      You should usually invoke this task at the end of your test run - although
-      the system will allow you to execute this task at any point in your testing
-      cycle. This also terminates the load agents.
-    TERMINATE
-  end
-
-  def results_options
-    @results_options ||= <<-RESULTS.strip_heredoc
-
-      Show, include, exclude or generate report for one or more tests. Without any
-      argument, all successfully stopped tests are operated on. The optional TEST
-      argument can be a single test ID or a comma separated list of test IDs(4,7)
-      or a hyphen separated list(1-3). The hyphen separated list is equivalent to
-      explicitly mentioning all IDs in comma separated form.
-
-      Options
-
-      show    [TEST]  Displays successfully stopped tests (default).
-              last    Displays the last successfully stopped tests
-      exclude [TEST]  Exclude TEST from reports.
-                      Without a TEST argument, no tests will be excluded.
-      include [TEST]  Include TEST in reports.
-                      Without a TEST, no tests will be included.
-      report  [TEST]  Generate report for TEST.
-                      Without a TEST argument, all successfully stopped tests will
-                      be reported.
-      export  [TEST]  Export the results as one or more JTL files.
-                      Without a TEST argument, all successfully stopped tests
-                      will be exported.
-      import  <FILE>  Import the results from FILE(.jtl). OPTS is a set of
-              [OPTS]  key value pairs, specified as key=value and multiple pairs
-                      are separated by whitespace. Known keys and when they are
-                      needed:
-                      jmeter=<plan name>     # required if there are multiple plans
-                      cluster=<cluster code> # required if there are multiple clusters
-                      exec=<test id>         # required if the data is to be imported
-                                               to an existing test cycle. `test id` is
-                                               the first column of the table displayed
-                                               by 'results'
-    RESULTS
-  end
-
-  def show_options
-    @show_options ||= <<-SHOW.strip_heredoc
-
-      Show how the environment is currently configured. Without any option,
-      it will show the current configuration for all the environment components.
-
-      Options
-
-      jmeter        Show jmeter configuration
-      cluster       Show cluster configuration
-      monitor       Show monitor configuration
-      active        Show everything active (default)
-      all           Special switch to show inactive items
-                    > show all
-                    > show jmeter all
-    SHOW
-  end
-
-  def purge_options
-    @purge_options ||= <<-PURGE.strip_heredoc
-
-      Purge  (remove) all or specific data from the database. You can invoke this
-      command anytime you want to start over from scratch or remove data for old
-      tests. If executed without any options, will only remove data for tests.
-
-      WARNING: The data removed will be unrecoverable!
-
-      Options
-
-      tests         Purge the data for all tests (default)
-      clusters      Purge the cluster information and artifacts.
-                    Outcome depends on the type of the cluster, for Amazon,
-                    this means ALL Hailstorm related infrastructure for the
-                    account will be deleted. This is a bad idea if you are using
-                    a shared account, harmless otherwise, since all required
-                    infrastructure is created on-demand. It is recommended to
-                    use this command _only_ when suggested by diagnostic messages.
-      all           Purge ALL data
-    PURGE
-  end
-
-  def status_options
-    @status_options ||= <<-STATUS.strip_heredoc
-
-      Show the current state of load generation across all agents. If load
-      generation is currently executing on any agent, such agents are displayed.
-    STATUS
+  def help_docs
+    @help_docs ||= YAML.load_file(self.help_docs_path)
   end
 end

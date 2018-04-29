@@ -27,54 +27,6 @@ class Hailstorm::Middleware::CommandInterpreter
     end
   end
 
-  def translate_results_args(args)
-    case args.length
-      when 3
-        operation, sequences, format = args
-      when 2
-        operation, sequences = args
-      else
-        operation, = args
-    end
-    operation = (operation || 'show').to_sym
-    extract_last = false
-    unless sequences.nil?
-      if sequences == 'last'
-        extract_last = true
-        sequences = nil
-      elsif sequences =~ /^(\d+)-(\d+)$/ # range
-        sequences = (Regexp.last_match(1)..Regexp.last_match(2)).to_a.collect(&:to_i)
-      elsif sequences =~ /^[\d,:]+$/
-        sequences = sequences.split(/\s*[,:]\s*/).collect(&:to_i)
-      else
-        glob, opts = sequences.split(/\s+/).each_with_object([]) do |e, a|
-          if e =~ /=/
-            a.push({}) if a.last.nil? || a.last.is_a?(String)
-            k, v = e.split(/=/)
-            a.last.merge!({k => v})
-          else
-            a.unshift(e)
-          end
-        end
-        if glob.is_a?(Hash)
-          opts = glob
-          glob = nil
-        end
-        unless opts.nil?
-          opts.keys.each do |opt_key|
-            unless %i[jmeter exec cluster].include?(opt_key.to_sym)
-              raise(Hailstorm::UnknownCommandOptionException, "Unknown results import option: #{opt_key}")
-            end
-          end
-        end
-        sequences = [glob, opts]
-        logger.debug {"results(#{args}) -> #{sequences}"}
-      end
-    end
-
-    [extract_last, format, operation, sequences]
-  end
-
   private
 
   # Defines the grammar for the rules
@@ -119,12 +71,89 @@ class Hailstorm::Middleware::CommandInterpreter
 
   def parse_match_data(match_data)
     method_name = match_data[1].to_sym
-    method_args = match_data.to_a
-                            .slice(2, match_data.length - 1)
-                            .reverse
-                            .reduce([]) { |s, e| s.length > 0 || !e.blank? ? s << e : s }
-                            .reverse
-                            .collect { |e| e ? e.strip : e }
+    method_args = truncate_trailing_empty_values(match_data)
     [method_name, method_args]
   end
+
+  def truncate_trailing_empty_values(match_data)
+    match_data.to_a
+              .slice(2, match_data.length - 1)
+              .reverse
+              .reduce([]) { |s, e| !s.empty? || !e.blank? ? s << e : s }
+              .reverse
+              .collect { |e| e ? e.strip : e }
+  end
+
+  # Mixin methods for results translation
+  module ResultsTranslationMixin
+
+    def translate_results_args(args)
+      format, operation, sequences = expand_args(args)
+      extract_last, sequences = interpret_sequences(args, sequences)
+      [extract_last, format, operation, sequences]
+    end
+
+    def expand_args(args)
+      case args.length
+      when 3
+        operation, sequences, format = args
+      when 2
+        operation, sequences = args
+      else
+        operation, = args
+      end
+      operation = (operation || 'show').to_sym
+      [format, operation, sequences]
+    end
+
+    def interpret_sequences(args, sequences)
+      extract_last = false
+      if sequences
+        if sequences == 'last'
+          extract_last = true
+          sequences = nil
+        elsif sequences =~ /^(\d+)-(\d+)$/ # range
+          sequences = (Regexp.last_match(1)..Regexp.last_match(2)).to_a.collect(&:to_i)
+        elsif sequences =~ /^[\d,:]+$/
+          sequences = sequences.split(/\s*[,:]\s*/).collect(&:to_i)
+        else
+          sequences = parse_results_import_arguments(sequences)
+          logger.debug { "results(#{args}) -> #{sequences}" }
+        end
+      end
+      [extract_last, sequences]
+    end
+
+    def parse_results_import_arguments(sequences)
+      glob, opts = seq_to_glob_opts(sequences)
+      if glob.is_a?(Hash)
+        opts = glob
+        glob = nil
+      end
+      unless opts.nil?
+        opts.each_key do |opt_key|
+          unless %i[jmeter exec cluster].include?(opt_key.to_sym)
+            raise(Hailstorm::UnknownCommandOptionException, "Unknown results import option: #{opt_key}")
+          end
+        end
+      end
+      [glob, opts]
+    end
+
+    # Converts 'foo.jtl jmeter=1 cluster=2' to ['foo.jtl', {'jmeter' => '1'}, {'cluster' => '2'}]
+    def seq_to_glob_opts(sequences)
+      glob, opts = sequences.split(/\s+/).each_with_object([]) do |e, a|
+        if e =~ /=/
+          a.push({}) if a.last.nil? || a.last.is_a?(String)
+          k, v = e.split(/=/)
+          a.last.merge!(k => v)
+        else
+          a.unshift(e)
+        end
+      end
+      [glob, opts]
+    end
+  end
+
+  include ResultsTranslationMixin
 end

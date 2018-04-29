@@ -1,7 +1,7 @@
 require 'terminal-table'
 require 'hailstorm/cli'
 
-
+# CLI View template
 class Hailstorm::Cli::ViewTemplate
 
   # @param [Enumerable<Hailstorm::Model::JMeter>] enumerable
@@ -20,24 +20,8 @@ class Hailstorm::Cli::ViewTemplate
   def render_load_agents(enumerable, only_active = true)
     clustered_load_agents = []
     enumerable.each do |cluster|
-      cluster.clusterables(all = !only_active).each do |clusterable|
-        view_item = OpenStruct.new
-        view_item.clusterable_slug = clusterable.slug
-        view_item.cluster_code = cluster.cluster_code
-        view_item.terminal_table = Terminal::Table.new
-        view_item.terminal_table.headings = ['JMeter Plan', 'Type', 'IP Address', 'JMeter PID']
-        q = clusterable.load_agents
-        q = q.active if only_active
-        q.each do |load_agent|
-          row = [
-            load_agent.jmeter_plan.test_plan_name,
-            (load_agent.master? ? 'Master' : 'Slave'),
-            load_agent.public_ip_address,
-            load_agent.jmeter_pid
-          ]
-          view_item.terminal_table.add_row(row)
-        end
-        clustered_load_agents.push(view_item)
+      cluster.clusterables(!only_active).each do |clusterable|
+        clustered_load_agents.push(clusterable_to_view_model(cluster, clusterable, only_active))
       end
     end
     render_view('cluster', clustered_load_agents: clustered_load_agents, only_active: only_active)
@@ -70,24 +54,14 @@ class Hailstorm::Cli::ViewTemplate
   end
 
   def render_results_show(data, format = nil)
-    exec_cycle_to_attrs = ->(execution_cycle) {
-      {
-          execution_cycle_id: execution_cycle.id,
-          total_threads_count: execution_cycle.total_threads_count,
-          avg_90_percentile: execution_cycle.avg_90_percentile,
-          avg_tps: execution_cycle.avg_tps.round(2),
-          started_at: execution_cycle.formatted_started_at,
-          stopped_at: execution_cycle.formatted_stopped_at
-      }
-    }
     if format.nil?
       text_table = Terminal::Table.new
       text_table.headings = ['TEST', 'Threads', '90 %tile', 'TPS', 'Started', 'Stopped']
-      text_table.rows = data.collect { |execution_cycle| exec_cycle_to_attrs.call(execution_cycle).values }
+      text_table.rows = data.collect { |execution_cycle| exec_cycle_to_attrs(execution_cycle).values }
 
       text_table.to_s
     else
-      list = data.reduce([]) { |acc, execution_cycle| acc.push(exec_cycle_to_attrs.call(execution_cycle)) }
+      list = data.reduce([]) { |acc, execution_cycle| acc.push(exec_cycle_to_attrs(execution_cycle)) }
       list.to_json
     end
   end
@@ -101,6 +75,43 @@ class Hailstorm::Cli::ViewTemplate
       text_table.rows = agents.collect { |agent| [agent.clusterable.slug, agent.public_ip_address, agent.jmeter_pid] }
       text_table.to_s
     end
+  end
+
+  private
+
+  def exec_cycle_to_attrs(execution_cycle)
+    {
+      execution_cycle_id: execution_cycle.id,
+      total_threads_count: execution_cycle.total_threads_count,
+      avg_90_percentile: execution_cycle.avg_90_percentile,
+      avg_tps: execution_cycle.avg_tps.round(2),
+      started_at: execution_cycle.formatted_started_at,
+      stopped_at: execution_cycle.formatted_stopped_at
+    }
+  end
+
+  def clusterable_to_view_model(cluster, clusterable, only_active)
+    view_item = OpenStruct.new
+    view_item.clusterable_slug = clusterable.slug
+    view_item.cluster_code = cluster.cluster_code
+    view_item.terminal_table = Terminal::Table.new
+    view_item.terminal_table.headings = ['JMeter Plan', 'Type', 'IP Address', 'JMeter PID']
+    q = clusterable.load_agents
+    q = q.active if only_active
+    q.each do |load_agent|
+      row = load_agent_values(load_agent)
+      view_item.terminal_table.add_row(row)
+    end
+    view_item
+  end
+
+  def load_agent_values(load_agent)
+    [
+      load_agent.jmeter_plan.test_plan_name,
+      (load_agent.master? ? 'Master' : 'Slave'),
+      load_agent.public_ip_address,
+      load_agent.jmeter_pid
+    ]
   end
 
 end

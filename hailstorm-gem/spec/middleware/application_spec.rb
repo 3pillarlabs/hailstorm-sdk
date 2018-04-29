@@ -19,45 +19,29 @@ describe Hailstorm::Middleware::Application do
   context '#check_database' do
     before(:each) do
       ActiveRecord::Base.stub!(:clear_all_connections!)
-      @app.stub!(:connection_spec).and_return({
-                                                  adapter: 'jdbcmysql',
-                                                  database: 'hailstorm_gem_test',
-                                                  host: 'localhost',
-                                                  port: 3306,
-                                                  username: 'hailstorm_dev',
-                                                  password: 'hailstorm_dev' })
+      @app.stub!(:connection_spec).and_return(
+        adapter: 'jdbcmysql',
+        database: 'hailstorm_gem_test',
+        host: 'localhost',
+        port: 3306,
+        username: 'hailstorm_dev',
+        password: 'hailstorm_dev'
+      )
+      @mock_connection = double('Mock Database Connection').as_null_object
+      ActiveRecord::Base.stub!(:connection).and_return(@mock_connection)
     end
     context 'when database does not exist' do
       it 'should create a database' do
-        ops_ite = [ActiveRecord::ActiveRecordError, nil].each
-        Hailstorm::Support::Schema.stub!(:create_schema) do
-          op = ops_ite.next
-          op ? raise(op) : op
-        end
+        @mock_connection.stub!(:exec_query).and_raise(ActiveRecord::ActiveRecordError)
         @app.should_receive(:create_database)
         @app.check_database
       end
     end
     context 'when database already exists' do
       it 'should not create a database' do
-        ops_ite = [nil].each
-        Hailstorm::Support::Schema.stub!(:create_schema) do
-          op = ops_ite.next
-          op ? raise(op) : op
-        end
+        @mock_connection.stub!(:exec_query).and_return(1)
         @app.should_not_receive(:create_database)
         @app.check_database
-      end
-    end
-    context 'when there is configuration or system issue' do
-      it 'should raise error' do
-        ops_ite = [ActiveRecord::ActiveRecordError, ActiveRecord::ActiveRecordError, nil].each
-        Hailstorm::Support::Schema.stub!(:create_schema) do
-          op = ops_ite.next
-          op ? raise(op) : op
-        end
-        @app.stub!(:create_database)
-        expect { @app.check_database }.to raise_error
       end
     end
   end

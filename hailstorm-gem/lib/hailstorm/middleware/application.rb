@@ -36,6 +36,8 @@ class Hailstorm::Middleware::Application
 
   attr_accessor :command_interpreter
 
+  attr_writer :config
+
   # Constructor
   def initialize
     @multi_threaded = true
@@ -43,10 +45,6 @@ class Hailstorm::Middleware::Application
 
   def multi_threaded?
     @multi_threaded
-  end
-
-  def config=(new_config)
-    @config = new_config
   end
 
   def config(&_block)
@@ -66,25 +64,12 @@ class Hailstorm::Middleware::Application
   alias reload load_config
 
   def check_database
-    fail_once = false
-    begin
-      ActiveRecord::Base.establish_connection(connection_spec) # this is lazy, does not fail!
-      # create/update the schema
-      Hailstorm::Support::Schema.create_schema
-    rescue ActiveRecord::ActiveRecordError => e
-      if !fail_once
-        fail_once = true
-        logger.info 'Database does not exist, creating...'
-        # database does not exist yet
-        create_database
-        retry
-      else
-        logger.error e.message
-        raise
-      end
-    ensure
-      ActiveRecord::Base.clear_all_connections!
-    end
+    ActiveRecord::Base.establish_connection(connection_spec) # this is lazy, does not fail!
+    create_database_if_not_exists
+    # create/update the schema
+    Hailstorm::Support::Schema.create_schema
+  ensure
+    ActiveRecord::Base.clear_all_connections!
   end
 
   # Writer for @connection_spec
@@ -99,6 +84,13 @@ class Hailstorm::Middleware::Application
     Hailstorm.app_name
   end
 
+  def create_database_if_not_exists
+    ActiveRecord::Base.connection.exec_query('select 1')
+  rescue ActiveRecord::ActiveRecordError
+    logger.info 'Database does not exist, creating...'
+    create_database
+  end
+
   def create_database
     ActiveRecord::Base.establish_connection(connection_spec.merge(database: nil))
     ActiveRecord::Base.connection.create_database(connection_spec[:database])
@@ -109,7 +101,7 @@ class Hailstorm::Middleware::Application
     return @connection_spec if @connection_spec
 
     #  load and filter keys without an empty value
-    @connection_spec = load_db_properties.select { |_k, v| !v.blank? }
+    @connection_spec = load_db_properties.reject { |_k, v| v.blank? }
 
     # switch off multithread mode for sqlite & derby
     if @connection_spec[:adapter] =~ /(?:sqlite|derby)/i
@@ -118,8 +110,8 @@ class Hailstorm::Middleware::Application
     else
       # set defaults which can be overridden
       @connection_spec = {
-          pool: 50,
-          wait_timeout: 30.minutes
+        pool: 50,
+        wait_timeout: 30.minutes
       }.merge(@connection_spec).merge(database: database_name)
     end
 
