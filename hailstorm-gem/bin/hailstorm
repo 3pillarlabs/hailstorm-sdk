@@ -3,16 +3,16 @@
 MAX_TRIES = 3
 num_tries = 0
 begin
-  require "optparse"
-  require "hailstorm/application"
+  require 'optparse'
+  require 'hailstorm/initializer'
 
   gem_path = File.expand_path('../..', __FILE__)
-  options = OptionParser.new() do |opts|
-    opts.banner =<<-BANNER
+  options = OptionParser.new do |opts|
+    opts.banner = <<-BANNER
 Initialization script for a Hailstorm application.
 
 Usage
-    #{$0} [options] <app-name>
+    #{$PROGRAM_NAME} [options] <app-name>
 
 Example
 
@@ -21,7 +21,7 @@ Example
 
     opts.separator ''
     opts.separator 'Options'
-    opts.on("-gPATH", "--gem-path=PATH", "Specify path to Hailstorm gem") do |g|
+    opts.on('-gPATH', '--gem-path=PATH', 'Specify path to Hailstorm gem') do |g|
       gem_path = g
     end
     opts.on_tail('-h', '--help', 'Show this help') do
@@ -31,14 +31,14 @@ Example
   end
 
   options.parse!
-  unless ARGV.empty?
+  if ARGV.length > 0
     args = [Dir.pwd, ARGV.first, false]
     args << gem_path unless gem_path.nil?
-    Hailstorm::Application.new.create_project(*args)
+    Hailstorm::Initializer.create_project!(*args)
   else
     puts options.to_s
-    puts ""
-    abort("unspecified argument!")
+    puts ''
+    abort('unspecified argument!')
   end
 rescue Exception => e
   if num_tries < MAX_TRIES

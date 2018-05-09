@@ -126,7 +126,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     self.update_column(:serial_version, nil)
   end
 
-  def results(operation, cycle_ids = nil)
+  def results(operation, cycle_ids = nil, format = nil)
     logger.debug { "#{self.class}##{__method__}" }
 
     selected_execution_cycles =
@@ -134,7 +134,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
                                                                    cycle_ids)
     case operation
     when :show
-      return selected_execution_cycles
+      selected_execution_cycles
     when :exclude
       raise(Hailstorm::Exception, 'missing argument') if cycle_ids.blank?
       selected_execution_cycles.each(&:excluded!)
@@ -145,6 +145,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       selected_execution_cycles.each do |ex|
         export_paths = ex.export_results
         logger.info { "Results exported to:\n#{export_paths.join("\n")}" }
+        zip_exports(selected_execution_cycles) if format.to_s.to_sym == :zip
       end
     when :import
       do_import(cycle_ids)
@@ -262,6 +263,24 @@ class Hailstorm::Model::Project < ActiveRecord::Base
                    end
       exec_cycle.import_results(jmeter_plan, cluster_instance, jfp)
     end
+  end
+
+  def zip_exports(data)
+    reports_path = File.join(Hailstorm.root, Hailstorm.reports_dir)
+    timestamp = Time.now.strftime('%Y%m%d%H%M%S')
+    zip_file_path = File.join(reports_path, "jtl-#{timestamp}.zip")
+    FileUtils.safe_unlink zip_file_path
+    Zip::File.open(zip_file_path, Zip::File::CREATE) do |zf|
+      data.each do |ex|
+        seq_dir = "SEQUENCE-#{ex.id}"
+        zf.mkdir(seq_dir)
+        Dir["#{reports_path}/#{seq_dir}/*.jtl"].each do |jtl_file|
+          ze = "#{seq_dir}/#{File.basename(jtl_file)}"
+          zf.add(ze, jtl_file) {true}
+        end
+      end
+    end
+    logger.info { "Results zipped to #{zip_file_path}" }
   end
 
   # Default settings

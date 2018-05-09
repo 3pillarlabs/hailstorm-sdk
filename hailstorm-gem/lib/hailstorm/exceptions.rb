@@ -8,13 +8,22 @@ module Hailstorm
   class ThreadJoinException < Exception
 
     # @param [Array] exceptions
-    def initialize(exceptions)
-      @exceptions = exceptions
+    def initialize(exceptions = nil)
+      return unless exceptions
+      @exceptions = exceptions.is_a?(Array) ? exceptions : [exceptions]
     end
 
     def message
       @message ||= @exceptions.nil? ? super.message : @exceptions.collect(&:message)
     end
+  end
+
+  # Exception for unknown command
+  class UnknownCommandException < Exception
+  end
+
+  # Exception for unknown options to a command
+  class UnknownCommandOptionException < Exception
   end
 
   # Exceptions that provide diagnostic messages to help troubleshoot issues.

@@ -13,7 +13,7 @@ class Hailstorm::Support::Thread
   # @param [Object] *args
   # @return [Thread] the thread object
   def self.start(*args)
-    Hailstorm.logger.debug { "#{self}.#{__method__}" }
+    logger.debug { "#{self}.#{__method__}" }
     if Hailstorm.application.multi_threaded?
       thread = Thread.start(args) do |args|
         begin
@@ -38,7 +38,7 @@ class Hailstorm::Support::Thread
   # Joins all threads spawned by current thread and clears active connections.
   # @raise [Hailstorm::Exception] if not all threads finished gracefully.
   def self.join
-    Hailstorm.logger.debug { "#{self}.#{__method__}" }
+    logger.debug { "#{self}.#{__method__}" }
     # Give up the current threads connection, so that a child thread waiting
     # on it will get the connection
     ActiveRecord::Base.connection_pool.release_connection

@@ -1,25 +1,19 @@
 require 'java'
 
-require 'ostruct'
-require 'active_support/all'
-require 'active_record'
-require 'action_dispatch/http/mime_type'
-require 'action_view'
-
-require 'hailstorm/version'
-require 'hailstorm/behavior/loggable'
-
-ActiveRecord::Base.raise_in_transactional_callbacks = true
-
 # Defines the namespace and module static accessors.
 # @author Sayantam Dey
 module Hailstorm
 
-  include Hailstorm::Behavior::Loggable
+  PRODUCTION_ENV = :production
+
+  @@root = nil
+  @@app_name = nil
+  @@application = nil
 
   # The application root path. Access this by calling <tt>Hailstorm.root</tt>
-  @@root = nil
-  mattr_reader :root #:nodoc:
+  def self.root
+    @@root
+  end
 
   # Sets the root path of the application
   # @param [String] root path of application
@@ -28,9 +22,23 @@ module Hailstorm
     @@root = new_root
   end
 
-  mattr_accessor :app_name
+  # Application name
+  def self.app_name
+    @@app_name
+  end
 
-  mattr_accessor :application
+  def self.app_name=(new_app_name)
+    @@app_name = new_app_name
+  end
+
+  # Application instance
+  def self.application
+    @@application
+  end
+
+  def self.application=(new_application)
+    @@application = new_application
+  end
 
   # Directory name used to store database and other files.
   def self.db_dir
@@ -79,7 +87,7 @@ module Hailstorm
   end
 
   def self.env
-    (ENV['HAILSTORM_ENV'] || 'production').to_sym
+    (ENV['HAILSTORM_ENV'] || PRODUCTION_ENV).to_sym
   end
 
   def self.log4j_dir
@@ -90,4 +98,20 @@ module Hailstorm
     File.join(self.log_dir, 'import')
   end
 
+  def self.project_directories
+    [
+      Hailstorm.db_dir,
+      Hailstorm.app_dir,
+      Hailstorm.log_dir,
+      Hailstorm.tmp_dir,
+      Hailstorm.reports_dir,
+      Hailstorm.config_dir,
+      Hailstorm.vendor_dir,
+      Hailstorm.script_dir
+    ]
+  end
+
+  def self.is_production?
+    self.env == PRODUCTION_ENV
+  end
 end

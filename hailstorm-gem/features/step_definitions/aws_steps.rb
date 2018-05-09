@@ -4,14 +4,14 @@ include DbHelper
 include CliStepHelper
 
 Given(/^Hailstorm is initialized with a project '(.+?)'$/) do |project_code|
-  require 'hailstorm/application'
+  require 'hailstorm/initializer'
   require 'hailstorm/support/configuration'
-  Hailstorm::Application.new.create_project(tmp_path, project_code, true, '/vagrant/hailstorm-gem')
-  Hailstorm::Application.initialize!(project_code, "#{tmp_path}/#{project_code}/config/boot.rb",
-                                     db_props,
-                                     Hailstorm::Support::Configuration.new)
+  Hailstorm::Initializer.create_project!(tmp_path, project_code, true, '/vagrant/hailstorm-gem')
+  Hailstorm::Initializer.create_middleware(project_code, "#{tmp_path}/#{project_code}/config/boot.rb",
+                                           db_props,
+                                           Hailstorm::Support::Configuration.new)
   require 'hailstorm/model/project'
-  @project = Hailstorm::Model::Project.new()
+  @project = Hailstorm::Model::Project.new
   @project.project_code = project_code
 end
 

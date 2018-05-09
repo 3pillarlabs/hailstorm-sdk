@@ -188,25 +188,25 @@ describe Hailstorm::Model::DataCenter do
       @jmeter_plan = Hailstorm::Model::JmeterPlan.first_or_initialize(project: @project,
                                                                       test_plan_name: 'shopping_cart',
                                                                       active: true)
-      @jmeter_plan.stub(:validate_plan, true)
-      @jmeter_plan.stub(:calculate_content_hash) { 'ABCDE' }
-      @jmeter_plan.stub(:num_threads) { 10 }
+      @jmeter_plan.stub!(:validate_plan).and_return(true)
+      @jmeter_plan.stub!(:calculate_content_hash).and_return('ABCDE')
+      @jmeter_plan.stub!(:num_threads).and_return(10)
       @jmeter_plan.save!
 
       @machines = %w[172.17.0.2 172.17.0.3 172.17.0.4]
       @dc = Hailstorm::Model::DataCenter.new(user_name: 'root', ssh_identity: 'insecure',
                                              machines: @machines, title: 'omega-1', active: true)
       @dc.project = @project
-      @dc.stub(:identity_file_exists, true)
-      @dc.stub(:provision_agents, true) do
+      @dc.stub!(:identity_file_exists).and_return(true)
+      @dc.stub!(:provision_agents) do
         [@jmeter_plan].collect { |jmeter_plan| @dc.send(:process_jmeter_plan, jmeter_plan) }.flatten
       end
-      @dc.stub(:java_installed?, Object) { true }
-      @dc.stub(:java_version_ok?, Object) { true }
-      @dc.stub(:jmeter_installed?, Object) { true }
-      @dc.stub(:jmeter_version_ok?, Object) { true }
+      @dc.stub!(:java_installed?).and_return(true)
+      @dc.stub!(:java_version_ok?).and_return(true)
+      @dc.stub!(:jmeter_installed?).and_return(true)
+      @dc.stub!(:jmeter_version_ok?).and_return(true)
 
-      Hailstorm::Support::SSH.stub(:ensure_connection, true) { true }
+      Hailstorm::Support::SSH.stub!(:ensure_connection).and_return(true)
     end
     context 'new machines are added' do
       it 'should create one load_agent for one machine' do

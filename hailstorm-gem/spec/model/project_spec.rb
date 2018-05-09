@@ -81,5 +81,17 @@ describe Hailstorm::Model::Project do
         project.results(:import, ['foo.jtl', import_opts.stringify_keys])
       end
     end
+    # context 'export' do
+    #   context 'zip format' do
+    #     it 'should create zip file' do
+    #       Zip::File.stub!(:open) do |_zip_file_path, _file_mode, &block|
+    #         zip_file = double('fake_zip_file').as_null_object
+    #         block.call(zip_file)
+    #       end
+    #       @app.current_project.should_receive(:results).with(:export, [1,2,3]).and_return(@data)
+    #       @app.command_execution_template.send(:results, 'export', '1:2:3', 'zip')
+    #     end
+    #   end
+    # end
   end
 end

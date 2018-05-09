@@ -1,0 +1,145 @@
+help_options: |
+  Hailstorm shell accepts commands and associated options for a command.
+
+  Commands:
+
+  setup           Boot up load agents and setup target monitors.
+
+  start           Starts load generation and target monitoring.
+
+  stop            Stops load generation and target monitoring.
+
+  abort           Aborts load generation and target monitoring.
+
+  terminate       Terminates load generation and target monitoring.
+
+  results         Include, exclude, export, import results or generate report
+
+  purge           Purge specific or ALL data from database
+
+  show            Show the environment configuration
+
+  status          Show status of load generation across all agents
+
+  help COMMAND    Show help on COMMAND
+                  COMMAND help will also show help on COMMAND
+
+setup_options: |
+  Boot load agents and target monitors.
+  Creates the load generation agents, sets up the monitors on the configured
+  targets and deploys the JMeter scripts in the project "jmeter" directory
+  to the load agents.
+
+  Options
+
+  force       Force application setup, even when no environment changes
+              are detected.
+
+start_options: |
+
+  Starts load generation and target monitoring. This will automatically
+  trigger setup actions if you have modified the configuration. Additionally,
+  if any JMeter plan is altered, the altered plans will be re-processed.
+  However, modified datafiles and other support files (such as custom plugins)
+  will not be re-deployed unless the redeploy option is specified.
+
+  Options
+
+  redeploy      Re-deploy ALL JMeter scripts and support files to agents.
+
+stop_options: |
+  Stops load generation and target monitoring.
+  Fetch logs from the load agents and server. This does NOT terminate the load
+  agents.
+
+  Options
+
+  wait          Wait till JMeter completes.
+  suspend       Suspend load agents (depends on cluster support).
+
+abort_options: |
+  Aborts load generation and target monitoring.
+  This does not fetch logs from the servers and does not terminate the
+  load agents. This task is handy when you want to stop the current test
+  because you probably realized there was a misconfiguration after starting
+  the tests.
+
+  Options
+
+  suspend       Suspend load agents (depends on cluster support).
+
+terminate_options: |
+  Terminates load generation and target monitoring.
+  Additionally, cleans up temporary state information on local filesystem.
+  You should usually invoke this task at the end of your test run - although
+  the system will allow you to execute this task at any point in your testing
+  cycle. This also terminates the load agents.
+
+results_options: |
+  Show, include, exclude or generate report for one or more tests. Without any
+  argument, all successfully stopped tests are operated on. The optional TEST
+  argument can be a single test ID or a comma separated list of test IDs(4,7)
+  or a hyphen separated list(1-3). The hyphen separated list is equivalent to
+  explicitly mentioning all IDs in comma separated form.
+
+  Options
+
+  show    [TEST]  Displays successfully stopped tests (default).
+          last    Displays the last successfully stopped tests
+  exclude [TEST]  Exclude TEST from reports.
+                  Without a TEST argument, no tests will be excluded.
+  include [TEST]  Include TEST in reports.
+                  Without a TEST, no tests will be included.
+  report  [TEST]  Generate report for TEST.
+                  Without a TEST argument, all successfully stopped tests will
+                  be reported.
+  export  [TEST]  Export the results as one or more JTL files.
+                  Without a TEST argument, all successfully stopped tests
+                  will be exported.
+  import  <FILE>  Import the results from FILE(.jtl). OPTS is a set of
+          [OPTS]  key value pairs, specified as key=value and multiple pairs
+                  are separated by whitespace. Known keys and when they are
+                  needed:
+                  jmeter=<plan name>     # required if there are multiple plans
+                  cluster=<cluster code> # required if there are multiple clusters
+                  exec=<test id>         # required if the data is to be imported
+                                           to an existing test cycle. `test id` is
+                                           the first column of the table displayed
+                                           by 'results'
+
+show_options: |
+  Show how the environment is currently configured. Without any option,
+  it will show the current configuration for all the environment components.
+
+  Options
+
+  jmeter        Show jmeter configuration
+  cluster       Show cluster configuration
+  monitor       Show monitor configuration
+  active        Show everything active (default)
+  all           Special switch to show inactive items
+                > show all
+                > show jmeter all
+
+purge_options: |
+  Purge  (remove) all or specific data from the database. You can invoke this
+  command anytime you want to start over from scratch or remove data for old
+  tests. If executed without any options, will only remove data for tests.
+
+  WARNING: The data removed will be unrecoverable!
+
+  Options
+
+  tests         Purge the data for all tests (default)
+  clusters      Purge the cluster information and artifacts.
+                Outcome depends on the type of the cluster, for Amazon,
+                this means ALL Hailstorm related infrastructure for the
+                account will be deleted. This is a bad idea if you are using
+                a shared account, harmless otherwise, since all required
+                infrastructure is created on-demand. It is recommended to
+                use this command _only_ when suggested by diagnostic messages.
+  all           Purge ALL data
+
+status_options: |
+  Show the current state of load generation across all agents. If load
+  generation is currently executing on any agent, such agents are displayed.

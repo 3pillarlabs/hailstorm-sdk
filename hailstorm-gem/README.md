@@ -105,3 +105,15 @@ cucumber --tag @end-to-end
 # All scenarios
 cucumber
 ```
+
+# Version 5
+```ruby
+middleware = Hailstorm::Support::Initializer.create_middleware('hailstorm_spec', '/path/to/project/config/boot.rb')
+expect(middleware).to respond_to(:interpretor)
+
+cli = Hailstorm::Controller::Cli.new(middleware)
+cli.process_commands
+
+webs = Hailstorm::Controller::WebServer.new(middleware)
+webs.start_server
+```
