@@ -149,6 +149,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   # Purges the Amazon accounts used of Hailstorm related artifacts
   def self.purge
+    logger.debug { "#{self}.#{__method__}" }
     self.group(:access_key, :secret_key)
         .select('access_key, secret_key, active')
         .each do |item|
@@ -273,12 +274,15 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       description: 'AMI for distributed performance testing with Hailstorm'
     )
     wait_for("Hailstorm AMI #{ami_id} to be created") { new_ami.state == :available }
+    logger.debug { "new_ami.state: #{new_ami.state}" }
     raise(Hailstorm::AmiCreationFailure.new(self.region, new_ami.state_reason)) unless new_ami.state == :available
     new_ami.id
   end
 
   def terminate_instance(instance)
+    logger.debug { instance.inspect }
     instance.terminate
+    logger.debug { "status: #{instance.status}" }
     wait_for { instance.status.eql?(:terminated) }
   end
 
@@ -472,7 +476,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     # make the timeout configurable by an environment variable
     timeout_sec = ENV['HAILSTORM_EC2_TIMEOUT_OVERRIDE'] || timeout_sec
     total_elapsed = 0
-    while total_elapsed <= (timeout_sec * 1000)
+    while total_elapsed <= timeout_sec
       before_yield_time = Time.now.to_i
       result = yield
       return result if result
@@ -514,8 +518,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   end
 
   def perform_instance_checks(instance)
+    logger.info { "Instance at #{self.region} running, waiting for system checks and ensuring SSH access..." }
     wait_for("#{instance.id} to start and system checks", 600, 10) { ec2_instance_ready?(instance) }
-    logger.info { "Instance at #{self.region} running, ensuring SSH access..." }
     ensure_ssh_connectivity(instance)
   rescue Exception => ex
     logger.warn("Failed to create new instance: #{ex.message}")
@@ -529,7 +533,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   # Predicate that returns true once the EC2 instance is ready.
   # @param [AWS::EC2::Instance] instance
   def ec2_instance_ready?(instance)
-    instance.exists? && instance.status.eql?(:running) && systems_ok(instance)
+    instance.exists?.tap { |x| logger.debug { "instance.exists?: #{x}" } } &&
+        instance.status.eql?(:running).tap { |x| logger.debug { "instance.status: #{x}" } } &&
+        systems_ok(instance).tap { |x| logger.debug { "systems_ok: #{x}" } }
   end
 
   # Builds the Hash attributes for creating a new EC2 instance.

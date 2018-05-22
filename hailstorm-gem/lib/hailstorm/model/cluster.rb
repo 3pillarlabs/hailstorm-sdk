@@ -50,7 +50,9 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     cluster_attributes[:project_id] = self.project.id
     # find the cluster or create it
     cluster_instance = find_or_initialize(cluster_attributes, cluster_config)
+    logger.debug { "Initialized #{cluster_instance.class} instance, proceeding to save!" }
     cluster_instance.save!
+    logger.debug { "Saved #{cluster_instance.class} instance, proceeding to setup" }
     cluster_instance.setup(force)
   end
 
