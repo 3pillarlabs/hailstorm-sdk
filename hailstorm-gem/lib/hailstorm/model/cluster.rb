@@ -7,15 +7,14 @@ require 'hailstorm/model'
 require 'hailstorm/model/load_agent'
 require 'hailstorm/support/thread'
 
+# Base class for any platform (/Clusterable) that hosts the load generating set of nodes.
 class Hailstorm::Model::Cluster < ActiveRecord::Base
+
   belongs_to :project
-
   before_create :set_cluster_code
-
-  before_destroy :destroy_clusterables
+  before_destroy :destroy_clusterable
 
   attr_accessor :slave_commands
-
   attr_accessor :master_commands
 
   # @return [Class] the model class represented by cluster_type.
@@ -31,91 +30,113 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     @cluster_klass
   end
 
-  # Pass all = true to get all clusterables, where active or inactive.
-  # Default value is false, which means only active clusterables are returned.
-  # @param [Boolean] all
-  # @return [Array]
-  def clusterables(all = false)
-    cluster_klass.where({ project_id: self.project.id }.merge(all ? {} : { active: true }))
+  # @return [Hailstorm::Behavior::Clusterable] instance
+  def cluster_instance(attrs = {})
+    @cluster_instance ||= if self.clusterable_id.to_i > 0
+                            cluster_klass.find(self.clusterable_id)
+                          else
+                            cluster_klass.new(attrs)
+                          end
   end
 
-  # Configures the cluster implementation for use
-  # @param [Hailstorm::Support::Configuration::ClusterBase] cluster_config cluster
-  #   specific configuration instance
-  def configure(cluster_config, force = false)
-    logger.debug { "#{self.class}##{__method__}" }
-    # cluster specific attributes
-    cluster_attributes = cluster_config.instance_values.symbolize_keys.except(:active, :cluster_type,
-                                                                              :max_threads_per_agent, :cluster_code)
-    cluster_attributes[:project_id] = self.project.id
-    # find the cluster or create it
-    cluster_instance = find_or_initialize(cluster_attributes, cluster_config)
-    logger.debug { "Initialized #{cluster_instance.class} instance, proceeding to save!" }
-    cluster_instance.save!
-    logger.debug { "Saved #{cluster_instance.class} instance, proceeding to setup" }
-    cluster_instance.setup(force)
-  end
-
-  def find_or_initialize(cluster_attributes, cluster_config)
-    cluster_instance = cluster_klass.where(cluster_attributes).first
-    cluster_instance = cluster_klass.new(cluster_attributes) if cluster_instance.nil?
-    cluster_instance.active = cluster_config.active
-    if cluster_instance.respond_to?(:max_threads_per_agent)
-      cluster_instance.max_threads_per_agent = cluster_config.max_threads_per_agent
-    end
-    cluster_instance
-  end
-
-  # Configures all clusters as per config.
-  # @param [Hailstorm::Model::Project] project current project instance
-  # @param [Hailstorm::Support::Configuration] config the configuration instance
-  # @raise [Hailstorm::Exception] if one or more clusters could not be started
-  def self.configure_all(project, config, force = false)
-    logger.debug { "#{self}.#{__method__}" }
-    # disable all clusters and then create/update as per configuration
-    project.clusters.each do |cluster|
-      cluster.cluster_klass.where(project_id: project.id).update_all(active: false)
-    end
-
-    cluster_line_items = []
-    config.clusters.each do |cluster_config|
-      cluster_config.active = true if cluster_config.active.nil?
-      # eager-load 'AWS', since some parts of it are auto-loaded. autoloading
-      # is apparently not thread safe.
-      AWS.eager_autoload! if cluster_config.aws_required? && require('aws')
-      cluster_type = "Hailstorm::Model::#{cluster_config.cluster_type.to_s.camelize}"
-      conditions = { cluster_type: cluster_type }
-      conditions[:cluster_code] = cluster_config.cluster_code if cluster_config.cluster_code
-      cluster = project.clusters.where(conditions).first_or_create!
-      if cluster.cluster_code.nil?
-        cluster.set_cluster_code
-        cluster.save!
-      end
-      cluster_line_items.push([cluster, cluster_config, force])
-    end
-
-    if cluster_line_items.size == 1
-      cluster, cluster_config, force = cluster_line_items.first
-      cluster.configure(cluster_config, force)
-    elsif cluster_line_items.size > 1 # nothing to do if 0
-      cluster_line_items.each do |line_item|
-        Hailstorm::Support::Thread.start(line_item) do |cluster, cluster_config, force|
-          cluster.configure(cluster_config, force)
+  # Cluster life-cycle methods
+  module LifeCycle
+    def self.included(klass)
+      # Configures all clusters as per config.
+      # @param [Hailstorm::Model::Project] project current project instance
+      # @param [Hailstorm::Support::Configuration] config the configuration instance
+      # @raise [Hailstorm::Exception] if one or more clusters could not be started
+      def klass.configure_all(project, config, force = false)
+        logger.debug { "#{self}.#{__method__}" }
+        # disable all clusters and then create/update as per configuration
+        project.clusters.each do |cluster|
+          cluster.cluster_instance.update_column(:active, false)
         end
+
+        cluster_line_items = LifeCycle.create_base_clusters(config, force, project)
+        LifeCycle.create_clusterables(cluster_line_items)
       end
-      Hailstorm::Support::Thread.join
+
+      def klass.terminate(project)
+        logger.debug { "#{self}.#{__method__}" }
+        self.visit_clusters(project, &:terminate)
+      end
+    end
+
+    def self.create_base_clusters(config, force, project)
+      cluster_line_items = []
+      config.clusters.each do |cluster_config|
+        cluster_config.active = true if cluster_config.active.nil?
+        # eager-load 'AWS', since some parts of it are auto-loaded. autoloading
+        # is apparently not thread safe.
+        AWS.eager_autoload! if cluster_config.aws_required? && require('aws')
+        cluster = save_cluster!(cluster_config, project)
+        cluster_line_items.push([cluster, cluster_config, force])
+      end
+      cluster_line_items
+    end
+
+    def self.create_clusterables(cluster_line_items)
+      if cluster_line_items.size == 1
+        cluster, cluster_config, force = cluster_line_items.first
+        cluster.configure(cluster_config, force)
+      elsif cluster_line_items.size > 1 # nothing to do if 0
+        cluster_line_items.each do |line_item|
+          Hailstorm::Support::Thread.start(line_item) do |li|
+            cluster, cluster_config, force = li
+            cluster.configure(cluster_config, force)
+          end
+        end
+        Hailstorm::Support::Thread.join
+      end
+    end
+
+    def self.save_cluster!(cluster_config, project)
+      conditions = { cluster_type: "Hailstorm::Model::#{cluster_config.cluster_type.to_s.camelize}",
+                     clusterable_id: nil }
+      conditions[:cluster_code] = cluster_config.cluster_code if cluster_config.cluster_code
+      cluster = project.clusters.where(conditions).first_or_initialize
+      cluster.clusterable_id = -1 if cluster.new_record?
+      cluster.set_cluster_code if cluster.cluster_code.nil?
+      cluster.save!
+      cluster
+    end
+
+    # Configures the cluster implementation for use
+    # @param [Hailstorm::Support::Configuration::ClusterBase] cluster_config cluster
+    #   specific configuration instance
+    def configure(cluster_config, force = false)
+      logger.debug { "#{self.class}##{__method__}" }
+      # cluster specific attributes
+      cluster_attributes = extract_attrs(cluster_config)
+      cluster_instance(cluster_attributes).save!
+      self.update_column(:clusterable_id, cluster_instance.id)
+      logger.debug { "Saved #{self.cluster_type}##{self.clusterable_id} instance, proceeding to setup..." }
+      cluster_instance.setup(force)
+    end
+
+    def extract_attrs(cluster_config)
+      cluster_attributes = cluster_config.instance_values.symbolize_keys.except(:cluster_type, :cluster_code)
+      cluster_attributes[:project_id] = self.project.id
+      cluster_attributes
+    end
+
+    def terminate
+      logger.debug { "#{self.class}##{__method__}" }
+      cluster_instance.destroy_all_agents
+      cluster_instance.cleanup
     end
   end
+
+  include LifeCycle
 
   # start load generation on clusters of a specific cluster_type
   def generate_load(redeploy = false)
     logger.debug { "#{self.class}##{__method__}" }
-    visit_clusterables do |ci|
-      ci.before_generate_load
-      ci.start_slave_process(redeploy) if self.project.master_slave_mode?
-      ci.start_master_process(redeploy)
-      ci.after_generate_load
-    end
+    cluster_instance.before_generate_load
+    cluster_instance.start_slave_process(redeploy) if self.project.master_slave_mode?
+    cluster_instance.start_master_process(redeploy)
+    cluster_instance.after_generate_load
   end
 
   # start load generation on all clusters in project
@@ -128,17 +149,14 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   end
 
   def stop_load_generation(wait = false, options = nil, aborted = false)
-    logger.debug { "#{self.class}##{__method__}" }
-    visit_clusterables do |ci|
-      ci.before_stop_load_generation
-      ci.stop_master_process(wait, aborted)
-      logger.info "Load generation stopped at #{ci.slug}"
-      unless aborted
-        logger.info "Fetching logs from  #{ci.slug}..."
-        self.project.current_execution_cycle.collect_client_stats(ci)
-      end
-      ci.after_stop_load_generation(options)
+    cluster_instance.before_stop_load_generation
+    cluster_instance.stop_master_process(wait, aborted)
+    logger.info "Load generation stopped at #{cluster_instance.slug}"
+    unless aborted
+      logger.info "Fetching logs from  #{cluster_instance.slug}..."
+      self.project.current_execution_cycle.collect_client_stats(cluster_instance)
     end
+    cluster_instance.after_stop_load_generation(options)
   end
 
   def self.stop_load_generation(project, wait = false, options = nil, aborted = false)
@@ -149,22 +167,8 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
 
     # check if load generation is not stopped on any load agent and raise
     # exception accordingly
-    unless Hailstorm::Model::LoadAgent.where('jmeter_pid IS NOT NULL').all.empty?
-      raise(Hailstorm::Exception, 'Load generation could not be stopped on all agents')
-    end
-  end
-
-  def terminate
-    logger.debug { "#{self.class}##{__method__}" }
-    visit_clusterables(true) do |ci|
-      ci.destroy_all_agents
-      ci.cleanup
-    end
-  end
-
-  def self.terminate(project)
-    logger.debug { "#{self}.#{__method__}" }
-    self.visit_clusters(project, &:terminate)
+    return if Hailstorm::Model::LoadAgent.where('jmeter_pid IS NOT NULL').all.empty?
+    raise(Hailstorm::Exception, 'Load generation could not be stopped on all agents')
   end
 
   # Checks if JMeter is running on different clusters and returns array of
@@ -175,10 +179,8 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     logger.debug { "#{self.class}##{__method__}" }
     mutex = Mutex.new
     running_agents = []
-    self.visit_clusterables do |cluster_instance|
-      agents = cluster_instance.check_status
-      mutex.synchronize { running_agents.push(*agents) } unless agents.empty?
-    end
+    agents = cluster_instance.check_status
+    mutex.synchronize { running_agents.push(*agents) } unless agents.empty?
     running_agents
   end
 
@@ -194,22 +196,8 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     running_agents
   end
 
-  def destroy_clusterables
-    clusterables(true).each(&:destroy)
-  end
-
-  def visit_clusterables(all = false, &_block)
-    self_clusterables = self.clusterables(all)
-    if self_clusterables.count == 1
-      yield self_clusterables.first
-    else
-      self_clusterables.each do |cluster_instance|
-        Hailstorm::Support::Thread.start(cluster_instance) do |ci|
-          yield ci
-        end
-      end
-      Hailstorm::Support::Thread.join
-    end
+  def destroy_clusterable
+    cluster_instance.destroy! unless cluster_instance.new_record?
   end
 
   def self.visit_clusters(project, &_block)
@@ -230,9 +218,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
 
   def set_cluster_code
     return unless self.cluster_code.nil?
-    self.cluster_code = Haikunator.haikunate(token_range = 100)
-    until self.class.where(cluster_code: self.cluster_code).count.zero?
-      self.cluster_code = Haikunator.haikunate(token_range = 100)
-    end
+    self.cluster_code = Haikunator.haikunate(100) until self.class.where(cluster_code: self.cluster_code)
+                                                            .count.zero?
   end
 end

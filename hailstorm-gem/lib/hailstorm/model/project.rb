@@ -164,7 +164,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   # Returns an array of load_agents as recorded in the database
   def load_agents
     self.clusters
-        .reduce([]) { |acc, e| acc.push(*e.clusterables(true)) }
+        .map { |e| e.cluster_instance }
         .reduce([]) { |acc, e| acc.push(*e.load_agents) }
   end
 
@@ -248,9 +248,9 @@ class Hailstorm::Model::Project < ActiveRecord::Base
                   end
 
     cluster_instance = if options.key?(:cluster)
-                         self.clusters.where(cluster_code: options[:cluster]).first.clusterables(all = true).first
+                         self.clusters.where(cluster_code: options[:cluster]).first.cluster_instance
                        else
-                         self.clusters.all.first.clusterables(all = true).first
+                         self.clusters.all.first.cluster_instance
                        end
     jtl_file_paths.each do |jfp|
       exec_cycle = if options.key?(:exec)

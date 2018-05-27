@@ -179,7 +179,7 @@ describe Hailstorm::Model::Cluster do
 
         backends_stub!
         Hailstorm::Model::Cluster.configure_all(@project, config)
-        expect(Hailstorm::Model::Cluster.where(project_id: @project.id).count).to eql(2)
+        expect(Hailstorm::Model::Cluster.where(project_id: @project.id).count).to eql(4)
       end
     end
   end
