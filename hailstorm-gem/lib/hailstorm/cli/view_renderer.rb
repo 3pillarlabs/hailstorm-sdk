@@ -19,7 +19,7 @@ class Hailstorm::Cli::ViewRenderer
   end
 
   def render_setup(*_args)
-    puts view_template.render_jmeter_plans(project.jmeter.active)
+    puts view_template.render_jmeter_plans(project.jmeter_plans.active)
     render_default
   end
 

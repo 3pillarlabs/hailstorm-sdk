@@ -108,10 +108,9 @@ describe Hailstorm::Cli::ViewRenderer do
 
   context '#render_setup' do
     before(:each) do
-      @app.project.stub!(:jmeter).and_return(double(':jmeter', active: []))
+      @app.project.stub_chain(:jmeter_plans, :active).and_return([])
       @app.project.stub!(:clusters).and_return([])
-      @app.project.stub!(:target_hosts).and_return(double(':target_hosts',
-                                                          active: double(':target_hosts.active', natural_order: [])))
+      @app.project.stub_chain(:target_hosts, :active, :natural_order).and_return([])
     end
     it 'should render jmeter plans' do
       @app.view_template.should_receive(:render_jmeter_plans)
