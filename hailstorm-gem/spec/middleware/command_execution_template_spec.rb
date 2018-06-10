@@ -1,10 +1,16 @@
 require 'spec_helper'
 require 'hailstorm/middleware/command_execution_template'
+require 'hailstorm/model/project'
+require 'hailstorm/model/jmeter_plan'
+require 'hailstorm/model/amazon_cloud'
+require 'hailstorm/model/cluster'
+require 'hailstorm/model/execution_cycle'
+require 'hailstorm/model/master_agent'
 
 describe Hailstorm::Middleware::CommandExecutionTemplate do
 
   before(:each) do
-    mock_delegate = double('Mock Delegate')
+    mock_delegate = mock(Hailstorm::Model::Project)
     @app = Hailstorm::Middleware::CommandExecutionTemplate.new(mock_delegate)
   end
 
@@ -41,7 +47,7 @@ describe Hailstorm::Middleware::CommandExecutionTemplate do
 
   context '#purge' do
     before(:each) do
-      @mock_ex_cycle = double('Mock Execution Cycle')
+      @mock_ex_cycle = mock(Hailstorm::Model::ExecutionCycle)
       @app.model_delegate.stub!(:execution_cycles).and_return([@mock_ex_cycle])
     end
     it 'should destroy all execution_cycles' do
@@ -94,21 +100,37 @@ describe Hailstorm::Middleware::CommandExecutionTemplate do
       end
       context 'with running agents' do
         before(:each) do
-          check_status_datum = OpenStruct.new(clusterable: OpenStruct.new(slug: 'amazon-east-1'),
-                                              public_ip_address: '8.8.8.8',
-                                              jmeter_pid: 9364)
-          @app.model_delegate.stub!(:check_status).and_return([check_status_datum])
+          project = Hailstorm::Model::Project.create!(project_code: 'command_execution_template_spec')
+          test_plan = Hailstorm::Model::JmeterPlan.create!(active: false, project: project,
+                                                           test_plan_name: 'view_template_spec', content_hash: 'A')
+          test_plan.update_attribute(:properties, {NumUsers: 100}.to_json)
+          test_plan.update_column(:active, true)
+          amz = Hailstorm::Model::AmazonCloud.create!(project: project, access_key: 'A', secret_key: 'A')
+          Hailstorm::Model::Cluster.create!(project: project, cluster_type: amz.class.name)
+          amz.update_column(:active, true)
+          Hailstorm::Model::ExecutionCycle.create!(project: project,
+                                                   status: Hailstorm::Model::ExecutionCycle::States::STARTED,
+                                                   started_at: Time.now)
+          @master_agent = Hailstorm::Model::MasterAgent.create!(clusterable_id: amz.id, clusterable_type: amz.class.name,
+                                                                jmeter_plan: test_plan, public_ip_address: '8.8.8.8',
+                                                                active: false, jmeter_pid: 9364)
+          @master_agent.update_column(:active, true)
+
+          @app.stub!(:model_delegate).and_return(project)
+          Hailstorm::Model::MasterAgent.any_instance.stub(:check_status)
+                                       .and_return(@master_agent)
         end
         it 'should not raise_error' do
           expect { @app.status }.to_not raise_error
         end
         context 'json format' do
           it 'should not raise_error' do
-            expect { @app.status('json') }.to_not raise_error
+            agents, format = @app.status('json')
+            expect(agents).to be_eql([@master_agent])
+            expect(format).to be == 'json'
           end
         end
       end
     end
   end
-
 end
