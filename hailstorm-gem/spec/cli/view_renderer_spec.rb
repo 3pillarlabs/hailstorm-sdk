@@ -1,6 +1,9 @@
 require 'spec_helper'
 require 'hailstorm/cli/view_renderer'
 require 'hailstorm/model/project'
+require 'hailstorm/model/jmeter_plan'
+require 'hailstorm/model/amazon_cloud'
+require 'hailstorm/model/nmon'
 
 describe Hailstorm::Cli::ViewRenderer do
   before(:each) do
@@ -27,11 +30,6 @@ describe Hailstorm::Cli::ViewRenderer do
 
   context '#render_show' do
     before(:each) do
-      active_queryable = double('Queryable Active', natural_order: [])
-      queryable = double('Queryable', active: active_queryable, natural_order: [])
-      %i[jmeter_plans clusters target_hosts].each do |sym|
-        @app.project.stub!(sym).and_return(queryable)
-      end
       @query_map = { jmeter_plans: [], clusters: [], target_hosts: [] }
     end
     it 'should show everything active' do
@@ -108,9 +106,18 @@ describe Hailstorm::Cli::ViewRenderer do
 
   context '#render_setup' do
     before(:each) do
-      @app.project.stub_chain(:jmeter_plans, :active).and_return([])
-      @app.project.stub!(:clusters).and_return([])
-      @app.project.stub_chain(:target_hosts, :active, :natural_order).and_return([])
+      project = Hailstorm::Model::Project.create!(project_code: 'view_template_spec')
+      test_plan = Hailstorm::Model::JmeterPlan.create!(active: false, project: project,
+                                                       test_plan_name: 'view_template_spec', content_hash: 'A')
+      test_plan.update_attribute(:properties, {NumUsers: 100}.to_json)
+      test_plan.update_column(:active, true)
+      amz = Hailstorm::Model::AmazonCloud.create!(project: project, access_key: 'A', secret_key: 'A')
+      Hailstorm::Model::Cluster.create!(project: project, cluster_type: amz.class.name)
+      amz.update_column(:active, true)
+      monitor = Hailstorm::Model::Nmon.create!(project: project, host_name: 'app.de.mon', role_name: 'server',
+                                               executable_pid: 2345)
+      monitor.update_column(:active, true)
+      @app.stub!(:project).and_return(project)
     end
     it 'should render jmeter plans' do
       @app.view_template.should_receive(:render_jmeter_plans)

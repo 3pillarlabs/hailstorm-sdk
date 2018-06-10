@@ -49,7 +49,7 @@ class Hailstorm::Cli::CmdExecutor
   # r = show_all ? current_project.jmeter_plans : current_project.jmeter_plans.active
   def query_relations_map(show_all)
     q = %i[jmeter_plans clusters target_hosts].reduce({}) do |s, e|
-      r = show_all ? project.send(e) : project.send(e).active
+      r = show_all || project.send(e).respond_to?(:active) == false ? project.send(e) : project.send(e).active
       s.merge(e => r)
     end
     q[:target_hosts] = q[:target_hosts].natural_order

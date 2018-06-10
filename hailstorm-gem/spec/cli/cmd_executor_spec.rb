@@ -74,13 +74,7 @@ describe Hailstorm::Cli::CmdExecutor do
 
   context '#show' do
     before(:each) do
-      mock_project = mock(Hailstorm::Model::Project)
-      @active_queryable = double('Queryable Active', natural_order: [])
-      @queryable = double('Queryable', active: @active_queryable, natural_order: [])
-      %i[jmeter_plans clusters target_hosts].each do |sym|
-        mock_project.stub!(sym).and_return(@queryable)
-      end
-      @app.stub!(:project).and_return(mock_project)
+      @app.stub!(:project).and_return(Hailstorm::Model::Project.create!(project_code: 'cmd_executor_spec'))
     end
     it 'should show active by default' do
       @app.view_renderer.should_receive(:render_show).with do |_q, show_active, what|
@@ -89,14 +83,14 @@ describe Hailstorm::Cli::CmdExecutor do
       end
       @app.show
     end
-    it 'show jmeter all' do
+    it 'should should active jmeter|cluster|target_host' do
       @app.view_renderer.should_receive(:render_show).with do |_q, show_active, what|
         expect(show_active).to be_true
         expect(what).to be == :jmeter
       end
       @app.show('jmeter')
     end
-    it 'show all' do
+    it '"all" should set show_active = false' do
       @app.view_renderer.should_receive(:render_show).with do |_q, show_active, what|
         expect(show_active).to be_false
         expect(what).to be == :all
