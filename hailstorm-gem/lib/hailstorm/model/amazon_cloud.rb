@@ -301,8 +301,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   # install JAVA
   def install_java(ssh)
     logger.info { "Installing Java for #{self.region} AMI..." }
+    output = ''
     Hailstorm::Support::JavaInstaller.create.install do |instr|
-      output = ''
       on_data = lambda do |data|
         output << data
         logger.debug { data }
@@ -310,6 +310,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       instr_success = ssh_channel_exec_instr(ssh, instr, on_data)
       raise(Hailstorm::JavaInstallationException.new(self.region, output)) unless instr_success
     end
+    output
   end
 
   # Executes the instruction on an SSH channel

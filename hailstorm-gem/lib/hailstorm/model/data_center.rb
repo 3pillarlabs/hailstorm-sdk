@@ -181,7 +181,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   def agents_to_add(query, _required_count, &_block)
     logger.debug { "#{self.class}##{__method__}" }
     current_machines = query.all.collect(&:private_ip_address)
-    machines_added = self.machines - current_machines
+    machines_added = [ self.machines ].flatten - current_machines
     machines_added.each do |machine|
       q = query.where(public_ip_address: machine, private_ip_address: machine, identifier: machine)
       yield q, machines_added.size
@@ -192,7 +192,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   def agents_to_remove(query, _required_count, &_block)
     logger.debug { "#{self.class}##{__method__}" }
     current_machines = query.all.collect(&:private_ip_address)
-    machines_removed = current_machines - self.machines
+    machines_removed = current_machines - [ self.machines ].flatten
     query.where(private_ip_address: machines_removed).each { |agent| yield agent }
   end
 

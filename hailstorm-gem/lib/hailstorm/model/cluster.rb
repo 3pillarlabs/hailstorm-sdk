@@ -49,7 +49,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
       def klass.configure_all(project, config, force = false)
         logger.debug { "#{self}.#{__method__}" }
         # disable all clusters and then create/update as per configuration
-        project.clusters.each do |cluster|
+        project.clusters(true).each do |cluster|
           cluster.cluster_instance.update_column(:active, false)
         end
 
@@ -92,13 +92,12 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     end
 
     def self.save_cluster!(cluster_config, project)
-      conditions = { cluster_type: "Hailstorm::Model::#{cluster_config.cluster_type.to_s.camelize}",
-                     clusterable_id: nil }
-      conditions[:cluster_code] = cluster_config.cluster_code if cluster_config.cluster_code
-      cluster = project.clusters.where(conditions).first_or_initialize
-      cluster.clusterable_id = -1 if cluster.new_record?
-      cluster.set_cluster_code if cluster.cluster_code.nil?
-      cluster.save!
+      klass_name = "Hailstorm::Model::#{cluster_config.cluster_type.to_s.camelize}"
+      cluster = Hailstorm::Model::Cluster.new(cluster_type: klass_name,
+                                              cluster_code: cluster_config.cluster_code,
+                                              project: project,
+                                              clusterable_id: -1)
+      cluster.set_cluster_code if cluster_config.cluster_code.nil?
       cluster
     end
 
@@ -109,14 +108,26 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
       logger.debug { "#{self.class}##{__method__}" }
       # cluster specific attributes
       cluster_attributes = extract_attrs(cluster_config)
-      cluster_instance(cluster_attributes).save!
-      self.update_column(:clusterable_id, cluster_instance.id)
-      logger.debug { "Saved #{self.cluster_type}##{self.clusterable_id} instance, proceeding to setup..." }
-      cluster_instance.setup(force)
+      clusterable = cluster_klass.where(cluster_attributes).first_or_initialize
+      clusterable.active = cluster_config.active
+      is_new_record = clusterable.new_record?
+      clusterable.save!
+      self.clusterable_id = clusterable.id
+      if is_new_record
+        self.save!
+      else
+        self.id = Hailstorm::Model::Cluster.where(clusterable_id: clusterable.id,
+                                                  cluster_type: clusterable.class.name,
+                                                  project_id: self.project.id).first.id
+        logger.debug { self.id }
+        self.reload
+      end
+      logger.debug { "#{self.cluster_type}##{self.clusterable_id} instance, proceeding to setup..." }
+      clusterable.setup(force)
     end
 
     def extract_attrs(cluster_config)
-      cluster_attributes = cluster_config.instance_values.symbolize_keys.except(:cluster_type, :cluster_code)
+      cluster_attributes = cluster_config.instance_values.symbolize_keys.except(:cluster_type, :cluster_code, :active)
       cluster_attributes[:project_id] = self.project.id
       cluster_attributes
     end

@@ -113,6 +113,7 @@ def backends_stub!
                               .and_return(@jmeter_plan.test_plan_file_path)
 end
 
+
 describe Hailstorm::Model::Cluster do
   before(:each) do
     @project = Hailstorm::Model::Project.where(project_code: 'cluster_spec').first_or_create!
@@ -182,6 +183,55 @@ describe Hailstorm::Model::Cluster do
         expect(Hailstorm::Model::Cluster.where(project_id: @project.id).count).to eql(4)
       end
     end
+    context 'reconfiguration' do
+      it 'should configure all clusters' do
+        backends_stub!
+        config = Hailstorm::Support::Configuration.new
+        config.clusters(:amazon_cloud) do |aws|
+          aws.access_key = 'key-1'
+          aws.secret_key = 'secret-1'
+          aws.region = 'us-east-1'
+        end
+        Hailstorm::Model::Cluster.configure_all(@project, config)
+
+        config = Hailstorm::Support::Configuration.new
+        config.clusters(:amazon_cloud) do |aws|
+          aws.access_key = 'key-1'
+          aws.secret_key = 'secret-1'
+          aws.region = 'us-east-1'
+        end
+        Hailstorm::Model::Cluster.configure_all(@project, config)
+
+        expect(Hailstorm::Model::Cluster.where(project_id: @project.id).count).to eql(1)
+      end
+    end
+    context 'additional configuration of a cluster' do
+      it 'should configure all clusters' do
+        backends_stub!
+        config = Hailstorm::Support::Configuration.new
+        config.clusters(:amazon_cloud) do |aws|
+          aws.access_key = 'key-1'
+          aws.secret_key = 'secret-1'
+          aws.region = 'us-east-1'
+        end
+        Hailstorm::Model::Cluster.configure_all(@project, config)
+
+        config = Hailstorm::Support::Configuration.new
+        config.clusters(:amazon_cloud) do |aws|
+          aws.access_key = 'key-1'
+          aws.secret_key = 'secret-1'
+          aws.region = 'us-east-1'
+        end
+        config.clusters(:amazon_cloud) do |aws|
+          aws.access_key = 'key-2'
+          aws.secret_key = 'secret-2'
+          aws.region = 'us-east-2'
+        end
+        Hailstorm::Model::Cluster.configure_all(@project, config)
+
+        expect(Hailstorm::Model::Cluster.where(project_id: @project.id).count).to eql(2)
+      end
+    end
   end
 
   context '#configure' do
@@ -207,15 +257,15 @@ describe Hailstorm::Model::Cluster do
   end
 
   context '.generate_all_load' do
-    it 'should generate load on all clusters' do
-      config = Hailstorm::Support::Configuration.new
-      config.clusters(:amazon_cloud) do |aws|
+    before(:each) do
+      @config = Hailstorm::Support::Configuration.new
+      @config.clusters(:amazon_cloud) do |aws|
         aws.access_key = 'key-1'
         aws.secret_key = 'secret-1'
         aws.region = 'us-east-1'
         aws.active = true
       end
-      config.clusters(:data_center) do |dc|
+      @config.clusters(:data_center) do |dc|
         dc.machines = %w[A]
         dc.user_name = 'alice'
         dc.ssh_identity = 'identity-1'
@@ -224,11 +274,25 @@ describe Hailstorm::Model::Cluster do
       end
 
       backends_stub!
-      Hailstorm::Model::Cluster.configure_all(@project, config)
-      @project.build_current_execution_cycle.save!
-      @project.current_execution_cycle.set_started_at(Time.now)
-      Hailstorm::Model::Cluster.generate_all_load(@project)
-      expect(Hailstorm::Model::LoadAgent.where('jmeter_pid IS NOT NULL').count).to be == 2
+    end
+    context 'without master_slave setup' do
+      it 'should generate load on all clusters' do
+        Hailstorm::Model::Cluster.configure_all(@project, @config)
+        @project.build_current_execution_cycle.save!
+        @project.current_execution_cycle.set_started_at(Time.now)
+        Hailstorm::Model::Cluster.generate_all_load(@project)
+        expect(Hailstorm::Model::LoadAgent.where('jmeter_pid IS NOT NULL').count).to be == 2
+      end
+    end
+    context 'with master_slave setup' do
+      it 'should generate load on all clusters' do
+        @project.update_column(:master_slave_mode, true)
+        Hailstorm::Model::Cluster.configure_all(@project, @config)
+        @project.build_current_execution_cycle.save!
+        @project.current_execution_cycle.set_started_at(Time.now)
+        Hailstorm::Model::Cluster.generate_all_load(@project)
+        expect(Hailstorm::Model::LoadAgent.where('jmeter_pid IS NOT NULL').count).to be == 4
+      end
     end
   end
 
@@ -288,6 +352,28 @@ describe Hailstorm::Model::Cluster do
       Hailstorm::Model::Cluster.stop_load_generation(@project)
       expect(Hailstorm::Model::LoadAgent.where(jmeter_pid: nil).count).to be == 2
     end
+
+    context 'fail on a cluster' do
+      it 'should raise exception' do
+        config = Hailstorm::Support::Configuration.new
+        config.clusters(:amazon_cloud) do |aws|
+          aws.access_key = 'key-1'
+          aws.secret_key = 'secret-1'
+          aws.region = 'us-east-1'
+          aws.active = true
+        end
+
+        backends_stub!
+        Hailstorm::Model::Cluster.configure_all(@project, config)
+        @project.build_current_execution_cycle.save!
+        @project.current_execution_cycle.set_started_at(Time.now)
+        Hailstorm::Model::Cluster.generate_all_load(@project)
+
+        @project.current_execution_cycle.stub!(:collect_client_stats)
+        Hailstorm::Model::LoadAgent.stub_chain(:where, :all) { [ mock(Hailstorm::Model::LoadAgent) ] }
+        expect { Hailstorm::Model::Cluster.stop_load_generation(@project) }.to raise_error(Hailstorm::Exception)
+      end
+    end
   end
 
   context '.terminate' do
@@ -334,6 +420,33 @@ describe Hailstorm::Model::Cluster do
       Hailstorm::Model::Cluster.first.purge
       rs2 = ActiveRecord::Base.connection.exec_query('select * from amazon_clouds limit 1')
       expect(rs2[0]['agent_ami']).to be_nil
+    end
+  end
+
+  context '#cluster_klass' do
+    context 'unknown class' do
+      it 'should raise LoadError' do
+        cluster = Hailstorm::Model::Cluster.new(cluster_type: 'foo')
+        expect { cluster.cluster_klass }.to raise_error(LoadError)
+      end
+    end
+  end
+
+  context '#destroy_clusterable' do
+    it 'should destroy the associated cluster' do
+      config = Hailstorm::Support::Configuration.new
+      config.clusters(:amazon_cloud) do |aws|
+        aws.access_key = 'key-1'
+        aws.secret_key = 'secret-1'
+        aws.region = 'us-east-1'
+        aws.active = true
+      end
+
+      backends_stub!
+      Hailstorm::Model::Cluster.configure_all(@project, config)
+      expect(Hailstorm::Model::AmazonCloud.count).to be == 1
+      Hailstorm::Model::Cluster.first.destroy!
+      expect(Hailstorm::Model::AmazonCloud.count).to be_zero
     end
   end
 end

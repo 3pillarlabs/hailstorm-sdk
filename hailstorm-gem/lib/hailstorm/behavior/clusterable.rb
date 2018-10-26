@@ -19,6 +19,8 @@ module Hailstorm::Behavior::Clusterable
 
   include Hailstorm::Behavior::Loggable
 
+  # :nocov:
+
   # Implement this method to start the agent and update load_agent
   # attributes for persistence.
   # @param [Hailstorm::Model::LoadAgent] _load_agent
@@ -118,6 +120,8 @@ module Hailstorm::Behavior::Clusterable
     # override and do something appropriate.
   end
 
+  # :nocov:
+
   # Assumes a standard Linux OS where user home is at /home or /root for root. If the clusterable
   # uses a different OS or setting, override this method.
   # @return [String] user home directory
@@ -146,7 +150,7 @@ module Hailstorm::Behavior::Clusterable
 
     recipient.has_many(:client_stats, as: :clusterable, dependent: :destroy)
 
-    recipient.after_commit(:disable_agents, on: :update, unless: proc { |r| r.active? })
+    recipient.after_update(:disable_agents, unless: ->(r) { r.active? })
   end
 
   # Start JMeter slaves on load agents
@@ -265,9 +269,7 @@ module Hailstorm::Behavior::Clusterable
       # one master is necessary
       query.first_or_create!.tap { |agent| agent.update_column(:active, true) }
 
-      if required_count > 1
-        create_or_enable(common_attributes, required_count, :slave_agents)
-      end
+      create_or_enable(common_attributes, required_count, :slave_agents)
 
     else # not operating in master-slave mode
       # abort if slave agents are present
