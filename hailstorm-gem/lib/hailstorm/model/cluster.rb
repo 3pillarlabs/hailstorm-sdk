@@ -6,6 +6,8 @@ require 'haikunator'
 require 'hailstorm/model'
 require 'hailstorm/model/load_agent'
 require 'hailstorm/support/thread'
+require 'hailstorm/behavior/provisionable'
+require 'hailstorm/behavior/clusterable'
 
 # Base class for any platform (/Clusterable) that hosts the load generating set of nodes.
 class Hailstorm::Model::Cluster < ActiveRecord::Base
@@ -134,7 +136,13 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
 
     def terminate
       logger.debug { "#{self.class}##{__method__}" }
-      cluster_instance.destroy_all_agents
+      cluster_instance.destroy_all_agents do |agent|
+        cluster_instance.before_destroy_load_agent(agent) if cluster_instance.is_a?(Hailstorm::Behavior::Provisionable)
+        agent.transaction do
+          agent.destroy
+          cluster_instance.after_destroy_load_agent(agent) if cluster_instance.is_a?(Hailstorm::Behavior::Provisionable)
+        end
+      end
       cluster_instance.cleanup
     end
   end

@@ -2,7 +2,9 @@ require 'aws'
 
 require 'hailstorm'
 require 'hailstorm/model'
-require 'hailstorm/behavior/clusterable'
+require 'hailstorm/behavior/loggable'
+require 'hailstorm/behavior/provisionable'
+require 'hailstorm/behavior/ssh_able'
 require 'hailstorm/support/ssh'
 require 'hailstorm/support/amazon_account_cleaner'
 require 'hailstorm/support/java_installer'
@@ -11,7 +13,9 @@ require 'hailstorm/support/jmeter_installer'
 # Represents state and operations for Amazon Web Services (AWS) cluster
 # @author Sayantam Dey
 class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
+  include Hailstorm::Behavior::Loggable
   include Hailstorm::Behavior::Clusterable
+  include Hailstorm::Behavior::Provisionable
 
   before_validation :set_defaults
 
@@ -78,9 +82,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   def ssh_options
     unless @ssh_options
       @ssh_options = { keys: identity_file_path }
-      if self.ssh_port && self.ssh_port.to_i != Defaults::SSH_PORT
-        @ssh_options[:port] = self.ssh_port
-      end
+      @ssh_options[:port] = self.ssh_port if self.ssh_port && self.ssh_port.to_i != Defaults::SSH_PORT
     end
     @ssh_options
   end

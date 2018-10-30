@@ -1,12 +1,13 @@
 require 'hailstorm'
 require 'hailstorm/model'
 require 'hailstorm/behavior/clusterable'
+require 'hailstorm/behavior/loggable'
 require 'hailstorm/support/ssh'
 
 # DataCenter model - models the configuration for creating load agent
 # on the Data Center.
 class Hailstorm::Model::DataCenter < ActiveRecord::Base
-
+  include Hailstorm::Behavior::Loggable
   include Hailstorm::Behavior::Clusterable
 
   serialize :machines
@@ -60,9 +61,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   def ssh_options
     unless @ssh_options
       @ssh_options = { keys: [identity_file_path] }
-      if self.ssh_port && self.ssh_port.to_i != Defaults::SSH_PORT
-        @ssh_options[:port] = self.ssh_port
-      end
+      @ssh_options[:port] = self.ssh_port if self.ssh_port && self.ssh_port.to_i != Defaults::SSH_PORT
     end
     @ssh_options
   end
@@ -127,9 +126,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     logger.debug { "#{self.class}##{__method__}" }
     java_version_ok = false
     Hailstorm::Support::SSH.start(load_agent.private_ip_address, self.user_name, ssh_options) do |ssh|
-      if /java\sversion\s\"#{Defaults::JAVA_VERSION}\.[0-9].*\"/ =~ ssh.exec!('java -version')
-        java_version_ok = true
-      end
+      java_version_ok = true if /java\sversion\s\"#{Defaults::JAVA_VERSION}\.[0-9].*\"/ =~ ssh.exec!('java -version')
     end
     java_version_ok
   end
