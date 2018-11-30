@@ -20,9 +20,7 @@ class Hailstorm::Cli::ViewTemplate
   def render_load_agents(enumerable, only_active = true)
     clustered_load_agents = []
     enumerable.each do |cluster|
-      cluster.clusterables(!only_active).each do |clusterable|
-        clustered_load_agents.push(clusterable_to_view_model(cluster, clusterable, only_active))
-      end
+      clustered_load_agents.push(clusterable_to_view_model(cluster, only_active))
     end
     render_view('cluster', clustered_load_agents: clustered_load_agents, only_active: only_active)
   end
@@ -90,7 +88,8 @@ class Hailstorm::Cli::ViewTemplate
     }
   end
 
-  def clusterable_to_view_model(cluster, clusterable, only_active)
+  def clusterable_to_view_model(cluster, only_active)
+    clusterable = cluster.cluster_instance
     view_item = OpenStruct.new
     view_item.clusterable_slug = clusterable.slug
     view_item.cluster_code = cluster.cluster_code

@@ -17,11 +17,14 @@ AllCops:
     - 'hailstorm-site/**/*'
     - 'hailstorm-web/**/*'
 
+Lint/RescueException:
+  Enabled: false
+
 Layout/EmptyLinesAroundModuleBody:
   Enabled: false
 
-Metrics/LineLength:
-  Max: 120
+Layout/EmptyLinesAroundClassBody:
+  Enabled: false
 
 Style/ClassAndModuleChildren:
   Enabled: false
@@ -29,14 +32,18 @@ Style/ClassAndModuleChildren:
 Style/RedundantSelf:
   Enabled: false
 
-Layout/EmptyLinesAroundClassBody:
+Style/Not:
   Enabled: false
 
-Lint/RescueException:
-  Enabled: false
+Metrics/LineLength:
+  Max: 120
 
 Metrics/AbcSize:
-  Max: 20
+  Max: 25
 
 Metrics/MethodLength:
-  Max: 15
+  Max: 25
+
+Metrics/ClassLength:
+  Max: 150
+

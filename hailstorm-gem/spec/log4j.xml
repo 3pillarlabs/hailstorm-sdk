@@ -5,7 +5,7 @@
 
   <appender name="STDOUT" class="org.apache.log4j.ConsoleAppender">
     <layout class="org.apache.log4j.PatternLayout">
-      <param name="ConversionPattern" value="[%p] %m%n"/>
+      <param name="ConversionPattern" value="[%p] %X{caller} - %m%n"/>
     </layout>
     <filter class="com.brickred.tsg.hailstorm.MDCMatchFilter">
       <param name="KeyToMatch" value="caller" />

@@ -1,21 +1,13 @@
 require 'spec_helper'
 require 'hailstorm/model/jmeter_plan'
-
-module JMeterPlanSpecOverrides
-  def test_plan_file_path
-    File.expand_path("../../../features/data/#{self.test_plan_name}.jmx", __FILE__)
-  end
-
-  attr_writer :properties_map
-end
-
+require 'jmeter_plan_spec_overrides'
 
 describe Hailstorm::Model::JmeterPlan do
 
   before(:each) do
     @jmeter_plan = Hailstorm::Model::JmeterPlan.new
     @jmeter_plan.test_plan_name = 'hailstorm-site-basic'
-    @jmeter_plan.extend(JMeterPlanSpecOverrides)
+    @jmeter_plan.extend(JmeterPlanSpecOverrides)
     @jmeter_plan.validate_plan = true
     @jmeter_plan.active = true
   end

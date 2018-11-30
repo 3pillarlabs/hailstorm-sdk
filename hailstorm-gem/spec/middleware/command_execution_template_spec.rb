@@ -106,7 +106,7 @@ describe Hailstorm::Middleware::CommandExecutionTemplate do
           test_plan.update_attribute(:properties, {NumUsers: 100}.to_json)
           test_plan.update_column(:active, true)
           amz = Hailstorm::Model::AmazonCloud.create!(project: project, access_key: 'A', secret_key: 'A')
-          Hailstorm::Model::Cluster.create!(project: project, cluster_type: amz.class.name)
+          Hailstorm::Model::Cluster.create!(project: project, cluster_type: amz.class.name, clusterable_id: amz.id)
           amz.update_column(:active, true)
           Hailstorm::Model::ExecutionCycle.create!(project: project,
                                                    status: Hailstorm::Model::ExecutionCycle::States::STARTED,
