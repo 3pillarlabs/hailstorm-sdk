@@ -2,6 +2,7 @@ require 'hailstorm'
 require 'hailstorm/model'
 require 'hailstorm/behavior/clusterable'
 require 'hailstorm/behavior/loggable'
+require 'hailstorm/behavior/sshable'
 require 'hailstorm/support/ssh'
 
 # DataCenter model - models the configuration for creating load agent
@@ -9,6 +10,7 @@ require 'hailstorm/support/ssh'
 class Hailstorm::Model::DataCenter < ActiveRecord::Base
   include Hailstorm::Behavior::Loggable
   include Hailstorm::Behavior::Clusterable
+  include Hailstorm::Behavior::SSHable
 
   serialize :machines
 
@@ -29,41 +31,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     self.save! if save_on_setup?
     return unless self.active? || force
     logger.info("Provisioning #{self.machines.size} #{self.class} machines...")
-    provision_agents.each do |activated_agent|
-      logger.debug { "#{self.class} agent##{activated_agent.private_ip_address} validating java installation..." }
-      unless java_ok?(activated_agent)
-        activated_agent.update_attribute(:active, false)
-        raise Hailstorm::DataCenterJavaFailure, Defaults::JAVA_VERSION
-      end
-
-      logger.debug { "#{self.class} agent##{activated_agent.private_ip_address} validating jmeter installation..." }
-      unless jmeter_ok?(activated_agent)
-        activated_agent.update_attribute(:active, false)
-        raise Hailstorm::DataCenterJMeterFailure, self.project.jmeter_version
-      end
-    end
-  end
-
-  # check ssh access to agent and update agent ip_address and identifier
-  def start_agent(load_agent)
-    logger.info("#{self.class} agent##{load_agent.private_ip_address} checking SSH connection...")
-    return if connection_ok?(load_agent)
-    raise(Hailstorm::DataCenterAccessFailure.new(self.user_name,
-                                                 load_agent.private_ip_address,
-                                                 self.ssh_identity))
-  end
-
-  # stop the load agent
-  def stop_agent(_load_agent) end
-
-  # @return [Hash] of SSH options
-  # (see Hailstorm::Behavior::Clusterable#ssh_options)
-  def ssh_options
-    unless @ssh_options
-      @ssh_options = { keys: [identity_file_path] }
-      @ssh_options[:port] = self.ssh_port if self.ssh_port && self.ssh_port.to_i != Defaults::SSH_PORT
-    end
-    @ssh_options
+    provision_agents
   end
 
   def required_load_agent_count(jmeter_plan)
@@ -86,17 +54,8 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     errors.add(:ssh_identity, "at #{identity_file_path} must be a regular file") unless identity_file_ok?
   end
 
-  def identity_file_ok?
-    File.file?(identity_file_path) && !File.symlink?(identity_file_path)
-  end
-
-  def identity_file_path
-    path = Pathname.new(self.ssh_identity)
-    if path.absolute?
-      self.ssh_identity
-    else
-      File.join(Hailstorm.root, Hailstorm.config_dir, self.ssh_identity.gsub(/\.pem$/, '').concat('.pem'))
-    end
+  def identity_file_name
+    self.ssh_identity.gsub(/\.pem$/, '').concat('.pem')
   end
 
   def set_defaults
@@ -106,6 +65,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   end
 
   def connection_ok?(load_agent)
+    logger.debug { "#{self.class} agent##{load_agent.private_ip_address} checking access..." }
     Hailstorm::Support::SSH.ensure_connection(load_agent.private_ip_address, self.user_name, ssh_options)
   end
 
@@ -132,6 +92,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   end
 
   def java_ok?(load_agent)
+    logger.debug { "#{self.class} agent##{load_agent.private_ip_address} validating java installation..." }
     java_installed?(load_agent) && java_version_ok?(load_agent)
   end
 
@@ -168,6 +129,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   end
 
   def jmeter_ok?(load_agent)
+    logger.debug { "#{self.class} agent##{load_agent.private_ip_address} validating jmeter installation..." }
     jmeter_installed?(load_agent) && jmeter_version_ok?(load_agent)
   end
 
@@ -178,7 +140,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   def agents_to_add(query, _required_count, &_block)
     logger.debug { "#{self.class}##{__method__}" }
     current_machines = query.all.collect(&:private_ip_address)
-    machines_added = [ self.machines ].flatten - current_machines
+    machines_added = [self.machines].flatten - current_machines
     machines_added.each do |machine|
       q = query.where(public_ip_address: machine, private_ip_address: machine, identifier: machine)
       yield q, machines_added.size
@@ -189,8 +151,27 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   def agents_to_remove(query, _required_count, &_block)
     logger.debug { "#{self.class}##{__method__}" }
     current_machines = query.all.collect(&:private_ip_address)
-    machines_removed = current_machines - [ self.machines ].flatten
+    machines_removed = current_machines - [self.machines].flatten
     query.where(private_ip_address: machines_removed).each { |agent| yield agent }
+  end
+
+  def agent_before_save_on_create(load_agent)
+    unless connection_ok?(load_agent)
+      raise(Hailstorm::DataCenterAccessFailure.new(self.user_name,
+                                                   load_agent.private_ip_address,
+                                                   self.ssh_identity))
+    end
+
+    raise Hailstorm::DataCenterJavaFailure, Defaults::JAVA_VERSION unless java_ok?(load_agent)
+
+    raise Hailstorm::DataCenterJMeterFailure, self.project.jmeter_version unless jmeter_ok?(load_agent)
+  rescue Object => e
+    if load_agent.persisted?
+      load_agent.update_attribute(:active, false)
+    else
+      load_agent.active = false
+    end
+    raise e
   end
 
   # Data center default settings

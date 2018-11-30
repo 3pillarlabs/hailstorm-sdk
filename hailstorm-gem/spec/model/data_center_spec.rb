@@ -306,11 +306,13 @@ describe Hailstorm::Model::DataCenter do
           end
           @dc.stub!(:java_ok?) { true }
           @dc.stub!(:jmeter_ok?) { true }
-          expect { @dc.setup }.to raise_error
+          @dc.setup
         end
-        it 'should have persisted first load agent' do
-          expect(@dc.load_agents.count).to eql(1)
-          expect(@dc.load_agents.where(public_ip_address: '172.17.0.2').first).to_not be_nil
+        it 'should have persisted other load agents' do
+          expect(@dc.load_agents.count).to eql(@machines.size - 1)
+        end
+        it 'should not persist the instance with failed checks' do
+          expect(@dc.load_agents.where(public_ip_address: '172.17.0.3').first).to be_nil
         end
       end
       context 'java is not installed or version is incorrect' do
@@ -320,13 +322,13 @@ describe Hailstorm::Model::DataCenter do
             agent.public_ip_address !~ /0\.3$/
           end
           @dc.stub!(:jmeter_ok?) { true }
-          expect { @dc.setup }.to raise_error
+          @dc.setup
         end
-        it 'should have persisted all load agents' do
-          expect(@dc.load_agents.count).to eql(@machines.size)
+        it 'should have persisted other load agents' do
+          expect(@dc.load_agents.count).to eql(@machines.size - 1)
         end
-        it 'should disable the second machine' do
-          expect(@dc.load_agents.where(public_ip_address: '172.17.0.3').first).to_not be_active
+        it 'should not persist the instance with failed checks' do
+          expect(@dc.load_agents.where(public_ip_address: '172.17.0.3').first).to be_nil
         end
       end
       context 'jmeter is not installed or version is not correct' do
@@ -336,13 +338,13 @@ describe Hailstorm::Model::DataCenter do
           @dc.stub!(:jmeter_ok?) do |agent|
             agent.public_ip_address !~ /0\.3$/
           end
-          expect { @dc.setup }.to raise_error
+          @dc.setup
         end
-        it 'should have persisted all load agents' do
-          expect(@dc.load_agents.count).to eql(@machines.size)
+        it 'should have persisted other load agents' do
+          expect(@dc.load_agents.count).to eql(@machines.size - 1)
         end
-        it 'should disable the second machine' do
-          expect(@dc.load_agents.where(public_ip_address: '172.17.0.3').first).to_not be_active
+        it 'should not persist the instance with failed checks' do
+          expect(@dc.load_agents.where(public_ip_address: '172.17.0.3').first).to be_nil
         end
       end
     end

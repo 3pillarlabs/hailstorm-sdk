@@ -20,16 +20,16 @@ describe Hailstorm::Model::AmazonCloud do
     aws.stub(:create_security_group, nil)
   end
 
-  def mock_ec2_instance(ec2, load_agent, states, public_ip_address = nil, private_ip_address = nil)
-    states_ite = states.each
+  def mock_ec2_instance(ec2, load_agent, states = nil, public_ip_address = nil, private_ip_address = nil)
+    states_ite = states.each unless states.nil?
     mock_instance = mock(AWS::EC2::Instance,
                          id: load_agent.identifier,
                          instance_id: load_agent.identifier,
                          public_ip_address: public_ip_address || '120.34.35.58',
                          private_ip_address: private_ip_address || '10.34.10.20')
-    mock_instance.stub!(:status) { states_ite.next }
+    mock_instance.stub!(:status) { states_ite.next } unless states_ite.nil?
     ec2.stub!(:instances) { { load_agent.identifier => mock_instance } }
-    return mock_instance
+    mock_instance
   end
 
   before(:each) do
@@ -45,6 +45,7 @@ describe Hailstorm::Model::AmazonCloud do
     @aws.secret_key = 'bar'
     expect(@aws).to be_valid
     expect(@aws.region).to eql('us-east-1')
+    expect(@aws.slug).to eql('Amazon Cloud, region: us-east-1')
   end
 
   context '#default_max_threads_per_agent' do
@@ -207,24 +208,36 @@ describe Hailstorm::Model::AmazonCloud do
   end
 
   context '#create_security_group' do
-    before(:each) do
-      @aws.project = Hailstorm::Model::Project.where(project_code: 'amazon_cloud_spec').first_or_create!
-      @aws.access_key = 'dummy'
-      @aws.secret_key = 'dummy'
-      stub_aws!(@aws)
-      @aws.active = true
-    end
-    context 'agent_ami is not specfied' do
-      it 'should be invoked' do
-        @aws.should_receive(:create_security_group)
-        @aws.save!
+    context 'on save' do
+      before(:each) do
+        @aws.project = Hailstorm::Model::Project.where(project_code: 'amazon_cloud_spec').first_or_create!
+        @aws.access_key = 'dummy'
+        @aws.secret_key = 'dummy'
+        stub_aws!(@aws)
+        @aws.active = true
+      end
+      context 'agent_ami is not specfied' do
+        it 'should be invoked' do
+          @aws.should_receive(:create_security_group)
+          @aws.save!
+        end
+      end
+      context 'agent_ami is specified' do
+        it 'should be invoked' do
+          @aws.agent_ami = 'ami-42'
+          @aws.should_receive(:create_security_group)
+          @aws.save!
+        end
       end
     end
-    context 'agent_ami is specified' do
-      it 'should be invoked' do
-        @aws.agent_ami = 'ami-42'
-        @aws.should_receive(:create_security_group)
-        @aws.save!
+    context 'security group does not exist' do
+      it 'should create EC2 security group' do
+        @aws.stub!(:find_security_group).and_return(nil)
+        mock_sec_group = mock(AWS::EC2::SecurityGroup, id: 'sg-a1')
+        @aws.stub_chain(:security_group_collection, :create).and_return(mock_sec_group)
+        mock_sec_group.should_receive(:authorize_ingress).exactly(3).times
+        mock_sec_group.should_receive(:allow_ping)
+        @aws.send(:create_security_group)
       end
     end
   end
@@ -331,8 +344,7 @@ describe Hailstorm::Model::AmazonCloud do
           Hailstorm::Model::SlaveAgent.create!(clusterable_id: @aws.id, clusterable_type: @aws.class.name,
                                                jmeter_plan: @jmeter_plan)
         end
-        @aws.should_receive(:create_or_enable) do |_arg1, arg2, arg3|
-          expect(arg2).to be == @required_load_agent_count
+        @aws.should_receive(:create_or_enable) do |_arg1, _arg2, arg3|
           expect(arg3).to be == :slave_agents
         end
         @aws.send(:process_jmeter_plan, @jmeter_plan)
@@ -373,6 +385,22 @@ describe Hailstorm::Model::AmazonCloud do
           @aws.stub!(:ec2) { mock_ec2 }
           mock_instance.should_receive(:start)
           @aws.start_agent(load_agent)
+        end
+      end
+      context 'agent does not exist' do
+        it 'should create the agent' do
+          @aws.project = Hailstorm::Model::Project.where(project_code: 'amazon_cloud_spec').first_or_create!
+          load_agent = Hailstorm::Model::MasterAgent.new
+          load_agent.id = 1
+          mock_ec2 = mock(AWS::EC2)
+          @aws.stub!(:ec2) { mock_ec2 }
+          mock_ec_instance = mock_ec2_instance(mock_ec2, load_agent)
+          mock_ec_instance.should_receive(:tag)
+          @aws.stub!(:create_agent).and_return(mock_ec_instance)
+          @aws.start_agent(load_agent)
+          expect(load_agent.identifier).to be == mock_ec_instance.instance_id
+          expect(load_agent.public_ip_address).to be == mock_ec_instance.public_ip_address
+          expect(load_agent.private_ip_address).to be == mock_ec_instance.private_ip_address
         end
       end
     end
@@ -422,6 +450,7 @@ describe Hailstorm::Model::AmazonCloud do
     context 'ec2 instance exists' do
       it 'should terminate the ec2 instance' do
         @mock_instance.stub!(:exists?).and_return(true)
+        @aws.stub!(:wait_for)
         @mock_instance.should_receive(:terminate)
         @aws.before_destroy_load_agent(@load_agent)
       end
@@ -476,10 +505,19 @@ describe Hailstorm::Model::AmazonCloud do
   end
 
   context '#required_load_agent_count' do
-    it 'should be more than 1' do
-      jmeter_plan = mock(Hailstorm::Model::JmeterPlan, num_threads: 1000)
-      @aws.max_threads_per_agent = 50
-      expect(@aws.required_load_agent_count(jmeter_plan)).to be > 1
+    context 'JMeter threads more than maximum threads per agent' do
+      it 'should be more than 1' do
+        jmeter_plan = mock(Hailstorm::Model::JmeterPlan, num_threads: 1000)
+        @aws.max_threads_per_agent = 50
+        expect(@aws.required_load_agent_count(jmeter_plan)).to be > 1
+      end
+    end
+    context 'JMeter threads less than maximum threads per agent' do
+      it 'should be equal to 1' do
+        jmeter_plan = mock(Hailstorm::Model::JmeterPlan, num_threads: 10)
+        @aws.max_threads_per_agent = 50
+        expect(@aws.required_load_agent_count(jmeter_plan)).to be == 1
+      end
     end
   end
 
@@ -533,14 +571,14 @@ describe Hailstorm::Model::AmazonCloud do
         @aws.region = 'us-east-1'
         @aws.security_group = 'sg-12345'
         mock_ec2 = mock(AWS::EC2)
-        mock_ec2.stub_chain(:images, :with_owner).and_return([mock(AWS::EC2::Image,
-                                                                   state: :available,
-                                                                   name: 'hailstorm/whodunit')])
+        @mock_ec2_image = mock(AWS::EC2::Image, id: 'ami-12334', state: :available, name: 'hailstorm/whodunit')
+        mock_ec2.stub_chain(:images, :with_owner).and_return([@mock_ec2_image])
         mock_security_group_collection = mock(AWS::EC2::SecurityGroupCollection)
         mock_security_group = mock(AWS::EC2::SecurityGroup, id: @aws.security_group)
         mock_security_group_collection.stub!(:filter).and_return([mock_security_group])
         mock_ec2.stub!(:security_groups).and_return(mock_security_group_collection)
-        @mock_instance = mock(AWS::EC2::Instance)
+        # TODO use helper method
+        @mock_instance = mock(AWS::EC2::Instance, id: 'i-23456', public_ip_address: '10.34.56.45')
         mock_ec2.stub_chain(:instances, :create).and_return(@mock_instance)
         mock_ec2.stub_chain(:client, :describe_instance_status).and_return(:instance_status_set => [
             system_status: {
@@ -561,8 +599,21 @@ describe Hailstorm::Model::AmazonCloud do
           @aws.stub!(:provision)
           @aws.stub!(:register_hailstorm_ami).and_raise(StandardError, 'mocked exception')
           @mock_instance.should_receive(:terminate)
-          states.push(:terminated)
+          states.push(:shutting_down, :terminated)
           expect { @aws.send(:create_agent_ami) }.to raise_error
+        end
+      end
+      context 'ami build succeeds' do
+        it 'should assign the AMI id' do
+          @mock_instance.stub!(:exists?).and_return(true)
+          states = [:running]
+          @mock_instance.stub!(:status) { states.shift }
+          @aws.stub!(:provision)
+          @aws.stub!(:register_hailstorm_ami).and_return(@mock_ec2_image.id)
+          @mock_instance.should_receive(:terminate)
+          states.push(:shutting_down, :terminated)
+          @aws.send(:create_agent_ami)
+          expect(@aws.agent_ami).to eql(@mock_ec2_image.id)
         end
       end
     end
@@ -575,6 +626,15 @@ describe Hailstorm::Model::AmazonCloud do
         true
       end
       expect(@aws.send(:install_java, double('ssh'))).to_not be_empty
+    end
+  end
+
+  context '#install_jmeter' do
+    it 'should execute installer commands' do
+      @aws.project = Hailstorm::Model::Project.create!(project_code: __FILE__)
+      mock_ssh = double('Mock SSH')
+      mock_ssh.should_receive(:exec!).at_least(:once)
+      @aws.send(:install_jmeter, mock_ssh)
     end
   end
 
@@ -612,31 +672,160 @@ describe Hailstorm::Model::AmazonCloud do
     end
   end
 
-  context '#wait_for' do
-    context 'Operation times out' do
-      it 'should raise error' do
-        expect {
-          @aws.send(:wait_for, 'Mock drill', 0.3, 0.1) { false }
-        }.to raise_error(Hailstorm::Exception)
-      end
-    end
-  end
-
   context '#systems_ok' do
     context 'EC2 instance checks passed' do
       it 'should return true' do
         mock_ec2 = mock(AWS::EC2)
         @aws.stub!(:ec2).and_return(mock_ec2)
         mock_ec2.stub_chain(:client, :describe_instance_status).and_return(:instance_status_set => [
-            system_status: {
-                details: [{ name: 'reachability', status: 'passed'}]
-            },
-            instance_status: {
-                details: [{ name: 'reachability', status: 'passed'}]
-            }
+          system_status: {
+            details: [{ name: 'reachability', status: 'passed'}]
+          },
+          instance_status: {
+            details: [{ name: 'reachability', status: 'passed'}]
+          }
         ])
         expect(@aws.send(:systems_ok, mock(AWS::EC2::Instance, id: 'i-123'))).to be_true
       end
+    end
+  end
+
+  context '.purge' do
+    it 'should clean the regions with active Amazon Cloud clusters' do
+      clusters = [
+        { access_key: 'foo', secret_key: 'bar', region: 'us-east-1', active: false },
+        { access_key: 'foo', secret_key: 'bar', region: 'us-west-1', active: false },
+        { access_key: 'foo', secret_key: 'bar', region: 'us-west-2', active: false }
+
+      ].map do |attrs|
+        cluster = Hailstorm::Model::AmazonCloud.new(attrs)
+        cluster.project = Hailstorm::Model::Project.new(project_code: Digest::SHA2.new.to_s[0..5])
+        stub_aws!(cluster)
+        cluster.save!
+        cluster.update_column(:active, true)
+        cluster
+      end
+
+      clusters.last.update_column(:active, false)
+
+      cluster1, cluster2, _cluster3 = clusters
+      mock_cleaner = mock(Hailstorm::Support::AmazonAccountCleaner)
+      mock_cleaner.should_receive(:cleanup).with(false, [cluster1.region, cluster2.region])
+      Hailstorm::Model::AmazonCloud.purge(mock_cleaner)
+      expect(cluster1.agent_ami).to be_nil
+      expect(cluster2.agent_ami).to be_nil
+    end
+  end
+
+  context '#before_generate_load' do
+    it 'should start the agents' do
+      @aws.access_key = 'dummy'
+      @aws.secret_key = 'dummy'
+      @aws.project = Hailstorm::Model::Project.new(project_code: __FILE__)
+      stub_aws!(@aws)
+      jmeter_plan = Hailstorm::Model::JmeterPlan.create!(
+        project: @aws.project,
+        test_plan_name: 'sample',
+        content_hash: 'A',
+        active: false
+      )
+      jmeter_plan.update_column(:active, true)
+      @aws.save!
+      3.times do
+        agent = Hailstorm::Model::MasterAgent.create!(
+          clusterable_id: @aws.id,
+          clusterable_type: @aws.class.name,
+          jmeter_plan: jmeter_plan,
+          active: false
+        )
+        agent.update_column(:active, true)
+      end
+      @aws.should_receive(:start_agent).exactly(3).times
+      @aws.before_generate_load
+    end
+  end
+
+  context '#create_agent' do
+    it 'should split multiple security groups' do
+      @aws.security_group = 'sg-a, sg-b'
+      @aws.stub!(:find_security_group) do |id|
+        mock(AWS::EC2::SecurityGroup, id: id)
+      end
+      @aws.should_receive(:new_ec2_instance_attrs) do |_arg1, arg2|
+        expect(arg2).to eql(%w[sg-a sg-b])
+      end
+      @aws.should_receive(:create_ec2_instance)
+      @aws.create_agent
+    end
+  end
+
+  context '#ec2' do
+    it 'should be refresh-able' do
+      ec2 = @aws.send(:ec2)
+      ec2_other = @aws.send(:ec2)
+      ec2_refreshed = @aws.send(:ec2, true)
+      expect(ec2.object_id).to eql(ec2_other.object_id)
+      expect(ec2.object_id).to_not eql(ec2_refreshed.object_id)
+    end
+  end
+  
+  context '#ec2_instance_ready?' do
+    context 'instance exists' do
+      context 'status is :running' do
+        context 'systems_ok == true' do
+          it 'should be true' do
+            mock_instance = mock(AWS::EC2::Instance, exists?: true, status: :running)
+            @aws.stub!(:systems_ok).and_return(true)
+            expect(@aws.send(:ec2_instance_ready?, mock_instance)).to be_true
+          end
+        end
+      end
+    end
+  end
+
+  context '#ssh_channel_exec_instr' do
+    it 'should return instruction execution status' do
+      mock_channel = double('Mock SSH Channel')
+      mock_channel.stub!(:on_data).and_yield(mock_channel, 'instruction output')
+      mock_channel.stub!(:on_extended_data).and_yield(mock_channel, $stderr, nil)
+      mock_channel.stub!(:wait)
+      mock_channel.stub!(:exec) do |&block|
+        block.call(mock_channel, true)
+      end
+      mock_ssh = mock(Net::SSH)
+      mock_ssh.stub!(:open_channel) do |&block|
+        block.call(mock_channel)
+        mock_channel
+      end
+      out = ''
+      status = @aws.send(:ssh_channel_exec_instr, mock_ssh, 'ls', ->(s) { out += s.to_s })
+      expect(status).to be_true
+      expect(out).to_not be_empty
+    end
+  end
+
+  context '#provision' do
+    it 'should install Hailstorm dependencies on the ec2 instance' do
+      mock_instance = mock(AWS::EC2::Instance, public_ip_address: '120.34.35.58')
+      mock_ssh = mock(Net::SSH)
+      Hailstorm::Support::SSH.stub!(:start).and_yield(mock_ssh)
+      @aws.should_receive(:install_java).with(mock_ssh)
+      @aws.should_receive(:install_jmeter).with(mock_ssh)
+      @aws.stub!(:identity_file_path).and_return(__FILE__)
+      @aws.send(:provision, mock_instance)
+    end
+  end
+  
+  context '#register_hailstorm_ami' do
+    it 'should create an AMI from the instance state' do
+      @aws.project = Hailstorm::Model::Project.create!(project_code: __FILE__)
+      mock_instance = mock(AWS::EC2::Instance, instance_id: 'i-67678')
+      mock_ami = mock(AWS::EC2::Image, state: :available, id: 'ami-123')
+      mock_ec2 = mock(AWS::EC2)
+      @aws.stub!(:ec2).and_return(mock_ec2)
+      mock_ec2.stub_chain(:images, :create).and_return(mock_ami)
+      ami_id = @aws.send(:register_hailstorm_ami, mock_instance)
+      expect(ami_id).to eql(mock_ami.id)
     end
   end
 end

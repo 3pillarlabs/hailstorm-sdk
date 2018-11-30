@@ -109,9 +109,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     def configure(cluster_config, force = false)
       logger.debug { "#{self.class}##{__method__}" }
       # cluster specific attributes
-      cluster_attributes = extract_attrs(cluster_config)
-      clusterable = cluster_klass.where(cluster_attributes).first_or_initialize
-      clusterable.active = cluster_config.active
+      clusterable = find_clusterable_by_attrs(cluster_config)
       is_new_record = clusterable.new_record?
       clusterable.save!
       self.clusterable_id = clusterable.id
@@ -121,17 +119,18 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
         self.id = Hailstorm::Model::Cluster.where(clusterable_id: clusterable.id,
                                                   cluster_type: clusterable.class.name,
                                                   project_id: self.project.id).first.id
-        logger.debug { self.id }
         self.reload
       end
       logger.debug { "#{self.cluster_type}##{self.clusterable_id} instance, proceeding to setup..." }
       clusterable.setup(force)
     end
 
-    def extract_attrs(cluster_config)
+    def find_clusterable_by_attrs(cluster_config)
       cluster_attributes = cluster_config.instance_values.symbolize_keys.except(:cluster_type, :cluster_code, :active)
       cluster_attributes[:project_id] = self.project.id
-      cluster_attributes
+      clusterable = cluster_klass.where(cluster_attributes).first_or_initialize
+      clusterable.active = cluster_config.active
+      clusterable
     end
 
     def terminate
@@ -156,15 +155,20 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     cluster_instance.start_slave_process(redeploy) if self.project.master_slave_mode?
     cluster_instance.start_master_process(redeploy)
     cluster_instance.after_generate_load
+    cluster_instance
   end
 
   # start load generation on all clusters in project
   # @param [Hailstorm::Model::Project] project current project instance
   def self.generate_all_load(project, redeploy = false)
     logger.debug { "#{self}.#{__method__}" }
+    mutex = Mutex.new
+    cluster_instances = []
     self.visit_clusters(project) do |c|
-      c.generate_load(redeploy)
+      ci = c.generate_load(redeploy)
+      mutex.synchronize { cluster_instances.push(ci) }
     end
+    cluster_instances
   end
 
   def stop_load_generation(wait = false, options = nil, aborted = false)
@@ -176,17 +180,21 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
       self.project.current_execution_cycle.collect_client_stats(cluster_instance)
     end
     cluster_instance.after_stop_load_generation(options)
+    cluster_instance
   end
 
   def self.stop_load_generation(project, wait = false, options = nil, aborted = false)
     logger.debug { "#{self}.#{__method__}" }
+    mutex = Mutex.new
+    cluster_instances = []
     self.visit_clusters(project) do |c|
-      c.stop_load_generation(wait, options, aborted)
+      ci = c.stop_load_generation(wait, options, aborted)
+      mutex.synchronize { cluster_instances.push(ci) }
     end
 
     # check if load generation is not stopped on any load agent and raise
     # exception accordingly
-    return if Hailstorm::Model::LoadAgent.where('jmeter_pid IS NOT NULL').all.empty?
+    return cluster_instances if Hailstorm::Model::LoadAgent.where('jmeter_pid IS NOT NULL').all.empty?
     raise(Hailstorm::Exception, 'Load generation could not be stopped on all agents')
   end
 
@@ -211,7 +219,6 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
       agents = c.check_status
       mutex.synchronize { running_agents.push(*agents) } unless agents.empty?
     end
-
     running_agents
   end
 

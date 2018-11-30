@@ -1,5 +1,4 @@
 require 'hailstorm/behavior'
-require 'hailstorm/behavior/clusterable'
 
 # Interface for clusters that are able to provision resources
 module Hailstorm::Behavior::Provisionable
@@ -24,14 +23,6 @@ module Hailstorm::Behavior::Provisionable
     raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 
-  # Implement to get load agent count for each cluster type
-  # @param [Hailstorm::Model::JmeterPlan] _jmeter_plan
-  # @return [Int] count of required load agents to run the test
-  # @abstract
-  def required_load_agent_count(_jmeter_plan)
-    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
-  end
-
   # Implement this method to perform tasks before removing a load agent
   # from the database.
   # @param [Hailstorm::Model::LoadAgent] _load_agent
@@ -47,5 +38,38 @@ module Hailstorm::Behavior::Provisionable
   end
 
   # :nocov:
+
+  def agent_before_save_on_create(agent)
+    start_agent(agent)
+  end
+
+  # Calculates the number of agents to be added based on required and current count.
+  #
+  # @param [ActiveRecord::Relation] query basic relation query that adds common attributes.
+  # @param [Fixnum] required_count
+  # @yield [ActiveRecord::Relation], [Fixnum] Enumerable for agents that need to be removed, Size of Enumerable
+  def agents_to_add(query, required_count, &_block)
+    logger.debug { "#{self.class}##{__method__}" }
+    active_count = query.count
+    activate_count = required_count - active_count
+    if block_given?
+      activate_count.times do
+        yield query, activate_count
+      end
+    end
+    activate_count
+  end
+
+  # Calculates the number of agents to be removed based on required and current count.
+  #
+  # @param [ActiveRecord::Relation] query basic relation query that adds common attributes.
+  # @param [Fixnum] required_count
+  # @yield [ActiveRecord::Relation] Enumerable for agents that need to be removed.
+  def agents_to_remove(query, required_count, &_block)
+    logger.debug { "#{self.class}##{__method__}" }
+    activate_count = agents_to_add(query, required_count)
+    return if activate_count >= 0
+    query.limit(activate_count.abs).each { |agent| yield agent }
+  end
 
 end
