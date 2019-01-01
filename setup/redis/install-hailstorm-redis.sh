@@ -27,9 +27,12 @@ cd $hailstorm_redis_home
 bundle install
 echo $ruby_version > .ruby-version
 
-# install upstart conf for sidekiq
-cp /vagrant/setup/redis/sidekiq.conf /etc/init/sidekiq.conf
-status sidekiq | grep 'stop' || stop sidekiq
-start sidekiq
+# install systemd conf for sidekiq
+cp /vagrant/setup/redis/sidekiq.service /etc/systemd/system/sidekiq.service
+systemctl daemon-reload
+systemctl enable sidekiq.service
+systemctl stop sidekiq.service
+sleep 1
+systemctl start sidekiq.service
 
 exit
