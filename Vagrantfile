@@ -38,7 +38,7 @@ Vagrant.configure(2) do |config|
 	#   git
 	#   npm
 
-  config.vm.provision "sync_clock", :type => :shell, :inline => 'ntpdate ntp.ubuntu.com', :run => 'always'
+  config.vm.provision "sync_clock", :type => :shell, :path => 'setup/sync_clock.sh', :run => 'always'
 
   config.vm.provision "vagrant_user", :type => :shell, :path => 'setup/create_vagrant_user.sh'
 
@@ -98,7 +98,7 @@ Vagrant.configure(2) do |config|
   end
 
   config.vm.define "dev", :primary => true do |dev|
-    dev.vm.box = "ubuntu/trusty64"
+    dev.vm.box = "ubuntu/xenial64"
   	dev.vm.provider "virtualbox" do |vb|
     #   # Display the VirtualBox GUI when booting the machine
     #   vb.gui = true
@@ -145,7 +145,7 @@ Vagrant.configure(2) do |config|
     aws.vm.synced_folder ".", "/vagrant", type: "rsync", rsync__exclude: [".git/", ".gitignore/"]
 
     aws.vm.provider :aws do |ec2, override|
-      ec2.ami = "ami-841f46ff"
+      ec2.ami = "ami-0f9cf087c1f27d9b1"
       ec2.access_key_id, ec2.secret_access_key = aws_keys()
       aws_conf = YAML.load_file('setup/vagrant-aws.yml').reduce({}) { |a, e| a.merge(e[0].to_sym => e[1]) }
       ec2.keypair_name = aws_conf[:keypair_name]
@@ -172,7 +172,7 @@ Vagrant.configure(2) do |config|
     site.vm.synced_folder ".", "/vagrant", type: "rsync", rsync__exclude: [".git/", ".gitignore/", "log/", "tmp/"]
 
     site.vm.provider :aws do |ec2, override|
-      ec2.ami = "ami-841f46ff"
+      ec2.ami = "ami-0f9cf087c1f27d9b1"
       ec2.access_key_id, ec2.secret_access_key = aws_keys()
       require 'yaml'
       aws_conf = YAML.load_file('setup/hailstorm-site/vagrant-site.yml').reduce({}) { |a, e| a.merge(e[0].to_sym => e[1]) }
@@ -198,7 +198,7 @@ Vagrant.configure(2) do |config|
   end
 
 	config.vm.define "site-local" do |site_local|
-		site_local.vm.box = "ubuntu/trusty64"
+		site_local.vm.box = "ubuntu/xenial64"
 		site_local.vm.provider "virtualbox" do |vb|
 		#   Display the VirtualBox GUI when booting the machine
 		#   vb.gui = true

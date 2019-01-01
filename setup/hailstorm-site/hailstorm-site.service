@@ -1,0 +1,27 @@
+# hailstorm-site - systemd config
+
+[Unit]
+Description=Hailstorm Site Server
+After=network.target syslog.target
+
+[Service]
+Type=simple
+# vagrant is the deployment user
+User=vagrant
+Group=vagrant
+Environment=HOME=/home/vagrant RAILS_ENV=production RACK_ENV=production
+Restart=on-failure
+RestartSec=3
+TimeoutStartSec=30
+WorkingDirectory=/vagrant/hailstorm-site
+ExecStart=/bin/bash -c 'source /usr/local/rvm/scripts/rvm && \
+	                      export SECRET_KEY_BASE=`rails secret` && \
+                        puma -C /vagrant/hailstorm-site/config/puma/production.rb -e production \
+                        --dir /vagrant/hailstorm-site --control tcp://127.0.0.1:8899 --control-token=site'
+
+ExecStop=/bin/bash -c 'source /usr/local/rvm/scripts/rvm && \
+                       cd /vagrant/hailstorm-site && \
+                       pumactl -C tcp://127.0.0.1:8899 -T site halt'
+
+[Install]
+WantedBy=multi-user.target

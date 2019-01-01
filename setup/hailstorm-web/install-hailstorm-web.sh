@@ -38,9 +38,13 @@ RAILS_ENV=production rake db:setup
 mkdir -p tmp/cache tmp/pids tmp/sessions tmp/sockets
 chown -R $vagrant_user:$vagrant_user $hailstorm_web_home
 
-# install upstart conf for unicorn
-cp /vagrant/setup/hailstorm-web/hailstorm-web.conf /etc/init/hailstorm-web.conf
-start hailstorm-web
+# install systemd conf for unicorn
+cp /vagrant/setup/hailstorm-web/hailstorm-web.service /etc/systemd/system/hailstorm-web.service
+systemctl daemon-reload
+systemctl enable hailstorm-web.service
+systemctl stop hailstorm-web.service
+sleep 1
+systemctl start hailstorm-web.service
 
 # set nginx-unicorn as default (root) site
 rm -f /etc/nginx/sites-enabled/default # just a symlink

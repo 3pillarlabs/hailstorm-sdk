@@ -1,5 +1,5 @@
 require 'sidekiq'
-require 'hailstorm/application'
+require 'hailstorm/initializer'
 require 'fileutils'
 require 'erubis'
 require 'uri'
@@ -59,13 +59,11 @@ class HailstormProcess
   def project_setup(app_name, app_root_path, callback, upload_dir_path, project_id, environment_data)
     puts 'application setup process started'
 
-    hailstorm_inst = Hailstorm::Application.new
-
     # create enviroment file for app
     template_directory = File.join(Dir.pwd, 'lib', 'templates')
 
     # create app directory structure
-    app_directory = hailstorm_inst.create_project(app_root_path, app_name, true)
+    app_directory = Hailstorm::Initializer.create_project!(app_root_path, app_name, true)
 
     # copy log4j.xml to config directory
     FileUtils.cp File.join(template_directory, 'log4j.xml'), File.join(app_directory, 'config')

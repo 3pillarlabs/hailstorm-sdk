@@ -43,10 +43,14 @@ mkdir -p /usr/local/lib/hailstorm-site/tmp/sockets && chmod 770 /usr/local/lib/h
 chown $vagrant_user:$vagrant_user /usr/local/lib/hailstorm-site/tmp/sockets
 chmod 777 /usr/local/lib/hailstorm-site/tmp/sockets
 
-# install upstart conf for unicorn
-[[ `status hailstorm-site` =~ 'stop' ]] || stop hailstorm-site && sleep 2
-cp /vagrant/setup/hailstorm-site/hailstorm-site.conf /etc/init/hailstorm-site.conf
-start hailstorm-site
+# install systemd conf for unicorn
+cp /vagrant/setup/hailstorm-site/hailstorm-site.service /etc/systemd/system/hailstorm-site.service
+systemctl daemon-reload
+systemctl enable hailstorm-site.service
+systemctl stop hailstorm-site.service
+sleep 2
+systemctl start hailstorm-site.service
+
 
 # set nginx-unicorn as default (root) site
 rm -f /etc/nginx/sites-enabled/default # just a symlink
