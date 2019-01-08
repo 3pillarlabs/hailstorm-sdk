@@ -1,11 +1,12 @@
 require 'digest/sha1'
+require 'nokogiri'
 
 require 'hailstorm'
 require 'hailstorm/model'
 require 'hailstorm/model/load_agent'
 require 'hailstorm/model/slave_agent'
 require 'hailstorm/model/master_agent'
-require 'nokogiri'
+require 'hailstorm/support/file_helper'
 
 # Model class representing a JMeter test plan/script. Each model must be
 # backed by an actual JMeter test plan in app/jmx.
@@ -30,7 +31,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   # Regular expression to match property names, always only matching the name
   # Examples of matches:
   #   ${__property(a)}
-  #   ${_P(a)}
+  #   ${__P(a)}
   #   ${__property(a, 1)}
   # In the first two cases above the regular expression will yield 'a' as the first (and only)
   # subgroup, while the third case will yied the default value as the second subgroup
@@ -46,9 +47,11 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   # determined, a Hailstorm::Exception is raised.
   #
   # @param [Hailstorm::Model::Project] project
+  # @param [Hailstorm::Support::FileHelper] file_helper
   # @return [Array] of Hailstorm::Model::JmeterPlan instances
-  def self.setup(project)
+  def self.setup(project, file_helper = nil)
     logger.debug { "#{self}.#{__method__}" }
+    file_helper ||= Hailstorm::Support::FileHelper.new
     instances = []
     jmeter_config = Hailstorm.application.config.jmeter
 
@@ -56,8 +59,8 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     # load/verify test plans from app/jmx
     if jmeter_config.test_plans.blank? # load
       rexp = Regexp.new('^'.concat(File.join(Hailstorm.root, Hailstorm.app_dir))
-                            .concat('/'))
-      Dir[File.join(Hailstorm.root, Hailstorm.app_dir, '**', '*.jmx')].each do |jmx|
+                           .concat('/'))
+      file_helper.dir_glob_enumerator(File.join(Hailstorm.root, Hailstorm.app_dir, '**', '*.jmx')).each do |jmx|
         test_plans.push(jmx.gsub(rexp, '').gsub(/\.jmx$/, ''))
       end
       if test_plans.blank?
@@ -67,9 +70,8 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     else # verify
       not_found = []
       jmeter_config.test_plans.each do |plan|
-        jmx = File.join(Hailstorm.root, Hailstorm.app_dir,
-                        plan.gsub(/\.jmx$/, '').concat('.jmx'))
-        if File.exist?(jmx)
+        jmx = File.join(Hailstorm.root, Hailstorm.app_dir, plan.gsub(/\.jmx$/, '').concat('.jmx'))
+        if file_helper.file?(jmx)
           test_plans.push(plan.gsub(/\.jmx$/, ''))
         else
           not_found.push(jmx)
@@ -200,9 +202,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   def remote_directory_hierarchy
     logger.debug { "#{self.class}##{__method__}" }
     # pick app sub-directories
-    app_entries = {}
-    local_app_directories(File.join(Hailstorm.root, Hailstorm.app_dir), app_entries)
-    app_entries[Hailstorm.app_dir] = nil if app_entries.empty?
+    app_entries = file_helper.local_app_directories(File.join(Hailstorm.root, Hailstorm.app_dir))
 
     {
       Hailstorm.app_name => {
@@ -218,8 +218,8 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     # Do not upload files with ~, bk, bkp, backup in extension or starting with . (hidden)
     hidden_file_rexp = Regexp.new('^\.')
     backup_file_rexp = Regexp.new('(?:~|bk|bkp|backup|old|tmp)$')
-    Dir[File.join(Hailstorm.root, Hailstorm.app_dir, '**', '*')].each do |entry|
-      next unless File.file?(entry) # if its a regular file
+    file_helper.dir_glob_enumerator(File.join(Hailstorm.root, Hailstorm.app_dir, '**', '*')).each do |entry|
+      next unless file_helper.file?(entry) # if its a regular file
       entry_name = File.basename(entry)
       unless hidden_file_rexp.match(entry_name) || backup_file_rexp.match(entry_name)
         @test_artifacts.push(entry)
@@ -242,17 +242,6 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
       self.errors.add(:test_plan_name, "Unknown properties: #{unknown.join(',')}. Please add these properties to config/environment.rb")
     end
 
-    # reverse check for unused properties
-    unused_properties = []
-    properties_map.keys.each do |name|
-      unused_properties.push(name) unless extracted_property_names.include?(name)
-    end
-    unless unused_properties.empty?
-      logger.warn(
-        "Unused #{'property'.send(unused_properties.size == 1 ? :singularize : :pluralize)}: #{unused_properties.collect { |e| "'#{e}'" }.join(', ')}; detected in plan [#{File.join(Hailstorm.app_dir, "#{self.test_plan_name}.jmx")}]"
-      )
-    end
-
     # check presence of simple data writer
     xpath = '//ResultCollector[@guiclass="SimpleDataWriter"][@enabled="true"]'
     jmeter_document do |doc|
@@ -273,11 +262,11 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     if @loop_forever.nil?
       jmeter_document do |doc|
         e = doc.xpath('//boolProp[@name="LoopController.continue_forever"]')
-        @loop_forever = begin
-                          eval(e.content.strip)
-                        rescue Exception
-                          false
-                        end
+        if e.children.empty?
+          @loop_forever = false
+        else
+          @loop_forever = true.to_s == e.children.first.content
+        end
       end
     end
     @loop_forever
@@ -348,8 +337,11 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   def scenario_definitions
     if @scenario_definitions.nil?
       @scenario_definitions = []
+      tg_idx = 0
       jmeter_document do |doc|
-        doc.xpath('//ThreadGroup[@enabled="true"]').each do |tg|
+        doc.xpath('//ThreadGroup').each do |tg|
+          tg_idx += 1
+          next unless tg['enabled'] == 'true'
           definition = OpenStruct.new
           tg_name = tg['testname']
           tg_comment_node = doc.xpath("//ThreadGroup[@testname=\"#{tg_name}\"]/stringProp[@name=\"TestPlan.comments\"]")
@@ -363,7 +355,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
           # steps
           definition.samplers = []
 
-          tg_xpath_expr_fmt = '//ThreadGroup[@testname="%s"]/../hashTree/hashTree'
+          tg_xpath_expr_fmt = "//ThreadGroup[@testname=\"%s\"]/../hashTree[#{tg_idx}]/hashTree"
           steps_xpath_expr = format(tg_xpath_expr_fmt, tg_name) +
                              '//*[contains(@testclass,"Sampler") and @enabled="true"]'
           logger.debug(steps_xpath_expr)
@@ -391,7 +383,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   end
 
   def properties_map
-    @properties_map ||= JSON.parse(self.properties)
+    @properties_map ||= self.properties ? JSON.parse(self.properties) : {}
   end
 
   # Thread count in the JMeter thread group - if multiple thread groups are
@@ -442,8 +434,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   end
 
   def remote_test_plan
-    [Hailstorm.app_name, Hailstorm.app_dir,
-     "#{self.test_plan_name}.jmx"].join('/')
+    [Hailstorm.app_name, Hailstorm.app_dir, "#{self.test_plan_name}.jmx"].join('/')
   end
 
   # Parses the associated Jmeter file and yields a Nokogiri document or returns
@@ -460,30 +451,6 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
       yield(@jmeter_document)
     else
       @jmeter_document
-    end
-  end
-
-  # Recursively picks directories within app
-  # Example:
-  #  {
-  #    "app" => {
-  #      "admin" => nil,
-  #      "main" => {
-  #        "accounts" => nil,
-  #        "shopping_cart" => nil
-  #      }
-  #    }
-  #  }
-  # (see #remote_directory_hierarchy)
-  def local_app_directories(start_dir, entries = {})
-    logger.debug { "#{self.class}##{__method__}" }
-    Dir[File.join(start_dir, '*')].each do |e|
-      next unless File.directory?(e)
-      parent = File.basename(start_dir).tap do |parent|
-        entries[parent] = {} if entries[parent].nil?
-        entries[parent][File.basename(e)] = nil
-      end
-      local_app_directories(e, entries[parent])
     end
   end
 
@@ -507,9 +474,8 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
           else
             # load from property
             property_name = extract_property_name(element.content)
-            @serialize_threadgroups = eval(properties_map[property_name])
+            @serialize_threadgroups = true.to_s == properties_map[property_name].to_s
           end
-
         end
       end
     end
@@ -562,7 +528,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   end
 
   # extracts all property names from the file and returns Array.
-  # XPATH implementation: Search for all nodes with content the constains "${__".
+  # XPATH implementation: Search for all nodes with content that contains "${__".
   # For each such node, check if content matches PropertyNameRexp, if it matches,
   # traverse up the node hierarchy to find a parent ThreadGroup. If parent ThreadGroup
   # is not found or parent Threadgroup is found with enabled attribute to true, add the
@@ -593,5 +559,9 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     end
 
     @extracted_property_names
+  end
+
+  def file_helper
+    @file_helper ||= Hailstorm::Support::FileHelper.new
   end
 end
