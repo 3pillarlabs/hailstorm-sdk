@@ -106,6 +106,13 @@ cucumber --tag @end-to-end
 cucumber
 ```
 
+### Unit test coverage
+
+```bash
+HAILSTORM_COVERAGE=1 JRUBY_OPTS="--debug" rspec
+```
+Coverage report is generated in ``coverage`` directory. 
+
 # Version 5
 ```ruby
 middleware = Hailstorm::Support::Initializer.create_middleware('hailstorm_spec', '/path/to/project/config/boot.rb')

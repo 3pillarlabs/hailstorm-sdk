@@ -26,7 +26,7 @@ RSpec.configure do |config|
   config.order = 'random'
 
   config.prepend_before(:suite) do
-    middleware = Hailstorm::Initializer.create_middleware('hailstorm_spec', '.', {
+    middleware = Hailstorm::Initializer.create_middleware('hailstorm_spec', __FILE__, {
       adapter: 'jdbcmysql',
       database: 'hailstorm_gem_test',
       username: 'hailstorm_dev',
