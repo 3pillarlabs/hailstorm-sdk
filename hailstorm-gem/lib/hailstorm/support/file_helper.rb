@@ -1,6 +1,7 @@
 require 'hailstorm/support'
 require 'hailstorm/behavior/loggable'
 
+# File helper methods
 class Hailstorm::Support::FileHelper
   include Hailstorm::Behavior::Loggable
 
@@ -19,12 +20,12 @@ class Hailstorm::Support::FileHelper
 
   # Reads directories within a start directory
   # Example:
-  #a
-  #├── b
-  #│  └── d
-  #│      └── e
-  #└── c
-  #    └── f
+  # a
+  # |-- b
+  # |-- |-- d
+  # |--    |__ e
+  # |__ c
+  #    |__ f
   #
   # Results in:
   #  {
@@ -40,8 +41,8 @@ class Hailstorm::Support::FileHelper
   # @return [Hash] hierarchical directory structure
   def local_app_directories(start_dir, entries = {})
     logger.debug { "#{self.class}##{__method__}" }
-    raise(ArgumentError, 'entries should be Hash') unless entries.kind_of?(Hash)
-    queue = [ [ start_dir, entries ] ]
+    raise(ArgumentError, 'entries should be Hash') unless entries.is_a?(Hash)
+    queue = [[start_dir, entries]]
     entries[File.basename(start_dir)] = nil
     queue.each do |path, context|
       key = File.basename(path)
