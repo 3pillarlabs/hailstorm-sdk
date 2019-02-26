@@ -6,6 +6,8 @@ require 'hailstorm/model/project'
 require 'hailstorm/model/amazon_cloud'
 require 'hailstorm/model/data_center'
 require 'hailstorm/model/jmeter_plan'
+require 'hailstorm/model/master_agent'
+require 'hailstorm/model/slave_agent'
 require 'hailstorm/support/configuration'
 
 require 'active_record/base'
@@ -395,6 +397,83 @@ describe Hailstorm::Model::Cluster do
       it 'should initialize a new cluster instance' do
         cluster = Hailstorm::Model::Cluster.new(cluster_type: Hailstorm::Model::AmazonCloud.name)
         expect(cluster.cluster_instance(region: 'us-east-1')).to be_a(Hailstorm::Model::AmazonCloud)
+      end
+    end
+  end
+
+  context Hailstorm::Behavior::Clusterable do
+    context '#start_jmeter_process' do
+      it 'should start jmeter on iterated agents' do
+        agent = Hailstorm::Model::MasterAgent.new
+        agent.should_receive(:upload_scripts)
+        agent.should_receive(:start_jmeter)
+        clusterable = Hailstorm::Model::DataCenter.new
+        clusterable.start_jmeter_process([agent], true)
+      end
+    end
+
+    context '#start_slave_process' do
+      it 'should start jmeter on all slaves' do
+        clusterable = Hailstorm::Model::DataCenter.new
+        expect(clusterable).to respond_to(:slave_agents)
+        agent = Hailstorm::Model::SlaveAgent.new
+        clusterable.stub_chain(:slave_agents, :where).and_return([agent])
+        clusterable.should_receive(:start_jmeter_process)
+        clusterable.start_slave_process
+      end
+    end
+
+    context '#start_master_process' do
+      it 'should start jmeter on all masters' do
+        clusterable = Hailstorm::Model::DataCenter.new
+        expect(clusterable).to respond_to(:master_agents)
+        agent = Hailstorm::Model::MasterAgent.new
+        clusterable.stub_chain(:master_agents, :where).and_return([agent])
+        clusterable.should_receive(:start_jmeter_process)
+        clusterable.start_master_process
+      end
+    end
+    
+    context '#stop_master_process' do
+      it 'should stop jmeter on all master agents' do
+        clusterable = Hailstorm::Model::DataCenter.new
+        expect(clusterable).to respond_to(:master_agents)
+        agent = Hailstorm::Model::MasterAgent.new
+        clusterable.stub_chain(:master_agents, :where).and_return([agent])
+        agent.should_receive(:stop_jmeter).with(false, false)
+        clusterable.stop_master_process
+      end
+    end
+
+    context '#process_jmeter_plan' do
+      before(:each) do
+        @clusterable = Hailstorm::Model::DataCenter.new
+        @jmeter_plan = mock(Hailstorm::Model::JmeterPlan, id: 1)
+        @clusterable.stub!(:master_slave_relation).and_return(:master_agents)
+      end
+      context '#create_or_enable fails with Hailstorm::Exception' do
+        it 'should raise the same error' do
+          @clusterable.stub!(:create_or_enable).and_raise(Hailstorm::Exception, 'mock exception')
+          expect { @clusterable.process_jmeter_plan(@jmeter_plan) }.to raise_error(Hailstorm::Exception)
+        end
+      end
+      context '#create_or_enable fails with exception outside of Hailstorm::Exception hierarchy' do
+        it 'should raise Hailstorm::AgentCreationFailure' do
+          @clusterable.stub!(:create_or_enable).and_raise(Exception, 'mock exception')
+          expect { @clusterable.process_jmeter_plan(@jmeter_plan) }.to raise_error(Exception)
+        end
+      end
+    end
+
+    context '#provision_agents' do
+      it 'process active jmeter_plans in project' do
+        clusterable = Hailstorm::Model::DataCenter.new
+        clusterable.stub!(:destroyed?).and_return(false)
+        clusterable.stub!(:project).and_return(@project)
+        expect(@project).to respond_to(:jmeter_plans)
+        @project.stub_chain(:jmeter_plans, :where, :all).and_return([mock(Hailstorm::Model::JmeterPlan, id: 1)])
+        clusterable.should_receive(:process_jmeter_plan).and_return([])
+        clusterable.provision_agents
       end
     end
   end

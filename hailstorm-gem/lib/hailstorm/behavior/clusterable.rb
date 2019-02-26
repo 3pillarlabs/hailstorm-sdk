@@ -32,16 +32,17 @@ module Hailstorm::Behavior::Clusterable
     # Start JMeter slaves on load agents
     def start_slave_process(redeploy = false)
       logger.debug { "#{self.class}##{__method__}" }
-      visit_collection(self.slave_agents.where(active: true)) do |agent|
-        agent.upload_scripts(redeploy)
-        agent.start_jmeter
-      end
+      start_jmeter_process(self.slave_agents.where(active: true), redeploy)
     end
 
     # Start JMeter master on load agents
     def start_master_process(redeploy = false)
       logger.debug { "#{self.class}##{__method__}" }
-      visit_collection(self.master_agents.where(active: true)) do |agent|
+      start_jmeter_process(self.master_agents.where(active: true), redeploy)
+    end
+
+    def start_jmeter_process(iterable, redeploy)
+      visit_collection(iterable) do |agent|
         agent.upload_scripts(redeploy)
         agent.start_jmeter
       end
