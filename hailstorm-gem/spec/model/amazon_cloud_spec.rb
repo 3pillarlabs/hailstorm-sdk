@@ -828,4 +828,34 @@ describe Hailstorm::Model::AmazonCloud do
       expect(ami_id).to eql(mock_ami.id)
     end
   end
+
+  context Hailstorm::Behavior::Provisionable do
+    context '#agent_before_save_on_create' do
+      it 'should start_agent' do
+        @aws.should_receive(:start_agent)
+        @aws.agent_before_save_on_create(nil)
+      end
+    end
+
+    context '#agents_to_add' do
+      context 'required and current count is same' do
+        it 'should return 0' do
+          query = mock(ActiveRecord::Relation, count: 5)
+          @aws.agents_to_add(query, 5) do
+            fail('control should not reach here')
+          end
+        end
+      end
+      context 'required count is greater than the current count' do
+        it 'should yield and return the differential' do
+          query = mock(ActiveRecord::Relation, count: 3)
+          count = @aws.agents_to_add(query, 5) do |q, c|
+            expect(c).to be == 2
+            expect(q).to be == query
+          end
+          expect(count).to be == 2
+        end
+      end
+    end
+  end
 end
