@@ -39,7 +39,7 @@ Metrics/LineLength:
   Max: 120
 
 Metrics/AbcSize:
-  Max: 25
+  Max: 26
 
 Metrics/MethodLength:
   Max: 25

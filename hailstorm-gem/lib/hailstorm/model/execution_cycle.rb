@@ -20,6 +20,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
   has_many :client_stats, dependent: :destroy
 
+  # TODO: verify if this should be has_one relation
   has_many :target_stats, dependent: :destroy
 
   before_create :set_defaults
@@ -48,21 +49,6 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
                                                        cluster_instance,
                                                        jmeter_plan_results_map[jmeter_plan_id])
     end
-  end
-
-  # Collects the statistics generated at target_host
-  # @param [Hailstorm::Model::TargetHost] target_host
-  def collect_target_stats(target_host)
-    logger.debug { "#{self.class}.#{__method__}" }
-
-    # collect the remote logs
-    log_file_names = target_host.download_remote_log(local_log_path)
-    log_file_paths = nil
-    unless log_file_names.nil?
-      log_file_paths = log_file_names.collect { |n| File.join(local_log_path, n) }
-    end
-
-    Hailstorm::Model::TargetStat.create_target_stats(self, target_host, log_file_paths)
   end
 
   # @param [Hailstorm::Model::Project] project

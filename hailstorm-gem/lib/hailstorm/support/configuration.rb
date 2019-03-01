@@ -13,6 +13,7 @@ class Hailstorm::Support::Configuration
   # x is the response time of the sample
   attr_accessor :samples_breakup_interval
 
+  # JMeter configuration
   class JMeter
     # JMeter version used in project. The default is 2.4. Specify only the version
     # component, example: 2.5 or 2.6
@@ -35,19 +36,29 @@ class Hailstorm::Support::Configuration
       @properties[:all] = {} unless @properties.key?(:all)
 
       if block_given?
-        if options.key?(:test_plan)
-          test_plan_name = options[:test_plan].gsub(/\.jmx$/, '')
-          @properties[:test_plan][test_plan_name] = {}
-          yield @properties[:test_plan][test_plan_name]
-        else
-          yield @properties[:all]
-        end
+        yield_properties(options)
       else
-        if options.key?(:test_plan)
-          @properties[:all].merge(@properties[:test_plan][options[:test_plan]] || {})
-        else
-          @properties[:all]
-        end
+        properties_context(options)
+      end
+    end
+
+    private
+
+    def properties_context(options)
+      if options.key?(:test_plan)
+        @properties[:all].merge(@properties[:test_plan][options[:test_plan]] || {})
+      else
+        @properties[:all]
+      end
+    end
+
+    def yield_properties(options)
+      if options.key?(:test_plan)
+        test_plan_name = options[:test_plan].gsub(/\.jmx$/, '')
+        @properties[:test_plan][test_plan_name] = {}
+        yield @properties[:test_plan][test_plan_name]
+      else
+        yield @properties[:all]
       end
     end
   end
@@ -239,43 +250,16 @@ class Hailstorm::Support::Configuration
         host = TargetHost.new
         yield host
         @hosts.push(host)
+      elsif args.empty?
+        @hosts
       else
-        if args.empty?
-          @hosts
-        else
-          args.each do |e|
-            host = TargetHost.new
-            host.host_name = e
-            @hosts.push(host)
-          end
+        args.each do |e|
+          host = TargetHost.new
+          host.host_name = e
+          @hosts.push(host)
         end
       end
     end
-  end
-
-  # Iterates through the monitors and returns the host definitions
-  # @return [Array] of Hash, with attributes mapped to Hailstorm::Model::TargetHost
-  def target_hosts
-    host_defs = []
-    monitors.each do |monitor|
-      monitor.groups.each do |group|
-        group.hosts.each do |host|
-          hdef = host.instance_values.symbolize_keys
-          hdef[:type] = monitor.monitor_type
-          hdef[:role_name] = group.role
-          %i[executable_path ssh_identity user_name
-             sampling_interval active].each do |sym|
-
-            # take values from monitor unless the hdef contains the key
-            hdef[sym] = monitor.send(sym) unless hdef.key?(sym)
-          end
-          hdef[:active] = true if hdef[:active].nil?
-          host_defs.push(hdef)
-        end
-      end
-    end
-
-    host_defs
   end
 
   # Computes the SHA2 hash of the environment file and contents/structure of JMeter
