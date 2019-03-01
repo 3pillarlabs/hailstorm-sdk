@@ -44,6 +44,12 @@ module Hailstorm::Behavior::SSHable
     File.file?(identity_file_path) && !File.symlink?(identity_file_path)
   end
 
+  # Array of options to connect to a host with SSH. Pass to SSH#start
+  # as *ssh_connection_spec
+  def ssh_connection_spec
+    [self.host_name, self.user_name, ssh_options]
+  end
+
   # Data center default settings
   class Defaults
     SSH_PORT = 22
