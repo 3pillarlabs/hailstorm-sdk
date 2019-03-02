@@ -92,20 +92,19 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       begin
         Hailstorm::Model::Cluster.stop_load_generation(self, wait, options, aborted)
         load_gen_stopped = true
-
         # Update the stopped_at now, so that target monitoring
         # statistics be collected from started_at to stopped_at
         current_execution_cycle.set_stopped_at
-
-        Hailstorm::Model::TargetHost.stop_all_monitoring(self, aborted)
-
-        if aborted
-          current_execution_cycle.aborted!
-        else
+        if !aborted
+          Hailstorm::Model::TargetHost.stop_all_monitoring(self) do |target_host|
+            Hailstorm::Model::TargetStat.create_target_stat(current_execution_cycle, target_host)
+          end
           current_execution_cycle.stopped!
+        else
+          current_execution_cycle.aborted!
         end
       rescue Exception
-        Hailstorm::Model::TargetHost.stop_all_monitoring(self, true) unless load_gen_stopped
+        Hailstorm::Model::TargetHost.stop_all_monitoring(self) unless load_gen_stopped
         current_execution_cycle.aborted!
         raise
       end

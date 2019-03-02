@@ -13,18 +13,17 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
 
   belongs_to :target_host
 
-  before_create :populate_averages
-
   after_create :write_blobs
 
   default_scope { select(DEFAULT_SELECT_COLUMNS.collect { |e| "target_stats.#{e}" }.join(',')) }
 
-  attr_accessor :log_file_paths
-
-  def self.create_target_stats(execution_cycle, target_host, log_file_paths)
+  def self.create_target_stat(execution_cycle, target_host)
     logger.debug { "#{self}.#{__method__}" }
     target_stat = target_host.target_stats.build(execution_cycle_id: execution_cycle.id)
-    target_stat.log_file_paths = log_file_paths
+    target_stat.average_cpu_usage,
+    target_stat.average_memory_usage,
+    target_stat.average_swap_usage = target_host.calculate_average_stats(execution_cycle.started_at,
+                                                                         execution_cycle.stopped_at)
     target_stat.save!
   end
 
@@ -97,16 +96,6 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
   end
 
   private
-
-  def populate_averages
-    logger.debug { "#{self.class}.#{__method__}" }
-    self.target_host.calculate_average_stats(execution_cycle, log_file_paths) do |stats|
-      %i[average_cpu_usage average_memory_usage average_swap_usage].each do |attr|
-        value = stats.send(attr)
-        self.send("#{attr}=", value)
-      end
-    end
-  end
 
   # Fetches data for blob columns and fills them
   def write_blobs

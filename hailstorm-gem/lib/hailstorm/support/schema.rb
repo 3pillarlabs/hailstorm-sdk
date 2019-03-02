@@ -27,6 +27,7 @@ class Hailstorm::Support::Schema
   # List of updates to schema
   def schema_updates
     @schema_updates ||= %i[
+      add_target_host_ssh_port
     ]
   end
 
@@ -76,9 +77,7 @@ class Hailstorm::Support::Schema
       end
     end
     schema_tables.each do |tn|
-      if ActiveRecord::Base.connection.table_exists?(tn)
-        SchemaMigration.create!(migration_name: "create_#{tn}")
-      end
+      SchemaMigration.create!(migration_name: "create_#{tn}") if ActiveRecord::Base.connection.table_exists?(tn)
     end
   end
 
@@ -233,5 +232,9 @@ class Hailstorm::Support::Schema
       t.integer     :chunk_sequence, null: false
       t.binary      :data_chunk, null: false
     end
+  end
+
+  def add_target_host_ssh_port
+    ActiveRecord::Migration.add_column(:target_hosts, :ssh_port, :integer)
   end
 end
