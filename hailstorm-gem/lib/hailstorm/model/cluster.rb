@@ -8,6 +8,7 @@ require 'hailstorm/model/load_agent'
 require 'hailstorm/support/thread'
 require 'hailstorm/behavior/provisionable'
 require 'hailstorm/behavior/clusterable'
+require 'hailstorm/model/client_stat'
 
 # Base class for any platform (/Clusterable) that hosts the load generating set of nodes.
 class Hailstorm::Model::Cluster < ActiveRecord::Base
@@ -177,7 +178,8 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     logger.info "Load generation stopped at #{cluster_instance.slug}"
     unless aborted
       logger.info "Fetching logs from  #{cluster_instance.slug}..."
-      self.project.current_execution_cycle.collect_client_stats(cluster_instance)
+      Hailstorm::Model::ClientStat.collect_client_stats(self.project.current_execution_cycle,
+                                                        cluster_instance)
     end
     cluster_instance.after_stop_load_generation(options)
     cluster_instance

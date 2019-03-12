@@ -65,7 +65,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
         end
         self.reload
       end
-      self.current_execution_cycle.set_started_at(Time.now)
+      self.current_execution_cycle.started!
 
       begin
         Hailstorm::Model::TargetHost.monitor_all(self)

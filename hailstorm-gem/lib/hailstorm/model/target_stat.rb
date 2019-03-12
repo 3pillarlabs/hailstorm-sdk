@@ -13,7 +13,7 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
 
   belongs_to :target_host
 
-  after_create :write_blobs
+  after_create :write_blobs, if: ->(r) { r.target_host.active? }
 
   default_scope { select(DEFAULT_SELECT_COLUMNS.collect { |e| "target_stats.#{e}" }.join(',')) }
 
@@ -51,13 +51,13 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
     grapher.finish(640, 600) # returns path to graph file
   end
 
-  def self.cpu_comparison_graph(execution_cyles)
+  def self.cpu_comparison_graph(execution_cycles)
     grapher_klass = com.brickred.tsg.hailstorm.TargetComparisonGraph
     grapher = grapher_klass.getCpuComparisionBuilder(comparison_graph_path(:cpu,
-                                                                           execution_cyles))
+                                                                           execution_cycles))
     # repeated total_threads_count cause a collapsed graph - bug #Research-440
     domain_labels = []
-    execution_cyles.each do |execution_cycle|
+    execution_cycles.each do |execution_cycle|
       domain_label = execution_cycle.total_threads_count.to_s
       if domain_labels.include?(domain_label)
         domain_label.concat("-#{execution_cycle.id}")
@@ -73,13 +73,13 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
     grapher.build(640, 300) unless domain_labels.empty?
   end
 
-  def self.memory_comparison_graph(execution_cyles)
+  def self.memory_comparison_graph(execution_cycles)
     grapher_klass = com.brickred.tsg.hailstorm.TargetComparisonGraph
     grapher = grapher_klass.getMemoryComparisionBuilder(comparison_graph_path(:memory,
-                                                                              execution_cyles))
+                                                                              execution_cycles))
     # repeated total_threads_count cause a collapsed graph - bug #Research-440
     domain_labels = []
-    execution_cyles.each do |execution_cycle|
+    execution_cycles.each do |execution_cycle|
       domain_label = execution_cycle.total_threads_count.to_s
       if domain_labels.include?(domain_label)
         domain_label.concat("-#{execution_cycle.id}")
