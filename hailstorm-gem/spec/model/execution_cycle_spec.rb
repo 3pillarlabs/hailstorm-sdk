@@ -97,7 +97,7 @@ describe Hailstorm::Model::ExecutionCycle do
   end
 
   context 'with object graph' do
-    before(:all) do
+    before(:each) do
       project = Hailstorm::Model::Project.create!(project_code: 'execution_cycle_spec')
       @execution_cycle = Hailstorm::Model::ExecutionCycle.create!(project: project,
                                                                   status: :stopped,
@@ -216,7 +216,7 @@ describe Hailstorm::Model::ExecutionCycle do
         end_time = Time.new(2011, 6, 3, 16, 28, 40)
         client_stat.stub!(:first_sample_at).and_return(start_time)
         client_stat.stub!(:last_sample_at).and_return(end_time)
-        Hailstorm::Model::ClientStat.stub!(:create_client_stats).and_return(client_stat)
+        Hailstorm::Model::ClientStat.stub!(:create_client_stat).and_return(client_stat)
         @execution_cycle.import_results(@jmeter_plan_1, @data_center, 'a.jtl')
         expect(@execution_cycle.started_at).to be == start_time
         expect(@execution_cycle.stopped_at).to be == end_time

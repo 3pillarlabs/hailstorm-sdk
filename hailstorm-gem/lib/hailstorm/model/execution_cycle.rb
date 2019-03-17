@@ -278,10 +278,10 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   def import_results(jmeter_plan, cluster_instance, result_file_path)
     logger.debug { "#{self.class}.#{__method__}" }
     jmeter_plan.update_column(:latest_threads_count, jmeter_plan.num_threads)
-    client_stat = Hailstorm::Model::ClientStat.create_client_stats(self, jmeter_plan.id,
-                                                                   cluster_instance,
-                                                                   [result_file_path],
-                                                                   false)
+    client_stat = Hailstorm::Model::ClientStat.create_client_stat(self, jmeter_plan.id,
+                                                                  cluster_instance,
+                                                                  [result_file_path],
+                                                                  false)
 
     self.update_attributes!(started_at: client_stat.first_sample_at, stopped_at: client_stat.last_sample_at)
   end

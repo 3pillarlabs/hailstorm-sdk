@@ -39,7 +39,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   # @param [Hailstorm::Behavior::Clusterable] cluster_instance
   def self.collect_client_stats(execution_cycle, cluster_instance)
     logger.debug { "#{self.class}.#{__method__}" }
-    jmeter_plan_results_map = {}
+    jmeter_plan_results_map = Hash.new { |h, k| h[k] = [] }
     result_mutex = Mutex.new
     local_log_path = File.join(Hailstorm.root, Hailstorm.log_dir)
 
@@ -47,43 +47,52 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
       result_file_name = master.result_for(self, local_log_path)
       result_file_path = File.join(local_log_path, result_file_name)
       result_mutex.synchronize do
-        unless jmeter_plan_results_map.key?(master.jmeter_plan_id)
-          jmeter_plan_results_map[master.jmeter_plan_id] = []
-        end
         jmeter_plan_results_map[master.jmeter_plan_id].push(result_file_path)
       end
     end
 
     jmeter_plan_results_map.keys.sort.each do |jmeter_plan_id|
-      self.create_client_stats(execution_cycle, jmeter_plan_id,
-                               cluster_instance,
-                               jmeter_plan_results_map[jmeter_plan_id])
+      self.create_client_stat(execution_cycle, jmeter_plan_id,
+                              cluster_instance,
+                              jmeter_plan_results_map[jmeter_plan_id])
     end
   end
 
-  def self.create_client_stats(execution_cycle, jmeter_plan_id,
-                               clusterable, stat_file_paths, rm_stat_file = true)
-
+  # create 1 record for client_stats if it does not exist yet
+  def self.create_client_stat(execution_cycle, jmeter_plan_id, clusterable, stat_file_paths, rm_stat_file = true)
     # Collate statistics file if needed
     stat_file_path = stat_file_paths.first if stat_file_paths.size == 1
-    stat_file_path ||= combine_stats(stat_file_paths, execution_cycle.id,
-                                     jmeter_plan_id, clusterable.id)
+    stat_file_path ||= combine_stats(stat_file_paths, execution_cycle.id, jmeter_plan_id, clusterable.id, rm_stat_file)
 
-    # create 1 record for client_stats if it does not exist yet
     jmeter_plan = Hailstorm::Model::JmeterPlan.find(jmeter_plan_id)
+    client_stat = nil
+    File.open(stat_file_path, 'r') do |file_io|
+      client_stat = self.do_create_client_stat(execution_cycle, jmeter_plan, clusterable, file_io)
+    end
+
+    # persist file to db and remove file from fs
+    logger.info { "Persisting #{stat_file_path} to DB..." }
+    Hailstorm::Model::JtlFile.persist_file(client_stat, stat_file_path)
+    File.unlink(stat_file_path) if rm_stat_file
+    client_stat
+  end
+
+  # @param [Hailstorm::Model::ExecutionCycle] execution_cycle
+  # @param [Hailstorm::Model::JmeterPlan] jmeter_plan
+  # @param [Hailstorm::Behavior::Clusterable] clusterable
+  # @param [IO] thing IO like interface or String
+  def self.do_create_client_stat(execution_cycle, jmeter_plan, clusterable, thing)
     client_stat = execution_cycle.client_stats
-                                 .where(jmeter_plan_id: jmeter_plan.id,
-                                        clusterable_id: clusterable.id,
-                                        clusterable_type: clusterable.class.name,
-                                        threads_count: jmeter_plan.latest_threads_count)
-                                 .first_or_create!
+                      .where(jmeter_plan_id: jmeter_plan.id,
+                             clusterable_id: clusterable.id,
+                             clusterable_type: clusterable.class.name,
+                             threads_count: jmeter_plan.latest_threads_count)
+                      .first_or_create!
 
     # SAX parsing
     jtl_document = JtlDocument.new(Hailstorm::Model::PageStat, client_stat)
     jtl_parser = Nokogiri::XML::SAX::Parser.new(jtl_document)
-    File.open(stat_file_path, 'r') do |file|
-      jtl_parser.parse(file)
-    end
+    jtl_parser.parse(thing)
 
     # save in db
     jtl_document.page_stats_map.values.each(&:save!)
@@ -104,11 +113,6 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     client_stat.last_sample_at = Time.at((client_stat.end_sample['ts'].to_i + client_stat.end_sample['t'].to_i) / 1000)
 
     client_stat.save!
-
-    # persist file to DB and remove file from FS
-    logger.info { "Persisting #{stat_file_path} to DB..." }
-    Hailstorm::Model::JtlFile.persist_file(client_stat, stat_file_path)
-    File.unlink(stat_file_path) if rm_stat_file
     client_stat
   end
 
