@@ -22,24 +22,22 @@ class Hailstorm::Support::SSH
     ssh_options = { user_known_hosts_file: '/dev/null' }.merge(options)
     if block_given?
       Net::SSH.start(host, user, ssh_options) do |ssh|
-        ssh.extend(ConnectionSessionInstanceMethods)
-        ssh.logger = logger
-        ssh.class_eval do
-          alias_method :net_ssh_exec, :exec
-          include AliasedMethods
-        end
-        yield ssh
+        yield extend_ssh(ssh)
       end
     else
       ssh = Net::SSH.start(host, user, ssh_options)
-      ssh.extend(ConnectionSessionInstanceMethods)
-      ssh.logger = logger
-      ssh.class_eval do
-        alias_method :net_ssh_exec, :exec
-        include AliasedMethods
-      end
-      return ssh
+      extend_ssh(ssh)
     end
+  end
+
+  def self.extend_ssh(ssh)
+    ssh.extend(ConnectionSessionInstanceMethods)
+    ssh.logger = logger
+    ssh.class_eval do
+      alias_method :net_ssh_exec, :exec
+      include AliasedMethods
+    end
+    ssh
   end
 
   # Waits till the SSH connection is available; this does not wait indefinitely,
@@ -52,14 +50,16 @@ class Hailstorm::Support::SSH
   def self.ensure_connection(host, user, options = {})
     logger.debug { "#{self}.#{__method__}" }
     connection_obtained = false
+    max_tries = options[:max_tries] || 3
     num_tries = 0
-    doze_time = 1
-    while (num_tries < 3) && !connection_obtained
+    doze_time = options[:doze_time] || 1
+    while num_tries < max_tries
       begin
         self.start(host, user, options) do |ssh|
           ssh.exec!('ls')
           connection_obtained = true
         end
+        break
       rescue Errno::ECONNREFUSED, Net::SSH::ConnectionTimeout
         logger.debug { "Failed #{num_tries + 1} times, trying again in #{doze_time} seconds..." }
         sleep(doze_time)
@@ -68,9 +68,7 @@ class Hailstorm::Support::SSH
       end
     end
 
-    unless connection_obtained
-      logger.error("Giving up after trying #{num_tries + 1} times")
-    end
+    logger.error("Giving up after trying #{num_tries + 1} times") unless connection_obtained
 
     connection_obtained
   end
@@ -81,19 +79,22 @@ class Hailstorm::Support::SSH
     # @param [String] file_path full path to file on remote system
     # @return [Boolean] true if the file exists
     def file_exists?(file_path)
-      stderr = ''
-      self.exec!("ls #{file_path}") do |_channel, stream, data|
-        stderr << data if stream == :stderr
-      end
-      stderr.blank? # ls success implies dir_path exists, stderr will be blank
+      path_exists?(file_path)
     end
 
     def directory_exists?(dir_path)
+      path_exists?(dir_path, true)
+    end
+
+    # @param [String] path path to file or directory on remote system
+    # @param [Boolean] is_dir true if the path is a directory, other false (default)
+    def path_exists?(path, is_dir = false)
+      cmd = is_dir ? "ls -ld #{path}" : "ls #{path}"
       stderr = ''
-      self.exec!("ls -ld #{dir_path}") do |_channel, stream, data|
+      self.exec!(cmd) do |_channel, stream, data|
         stderr << data if stream == :stderr
       end
-      stderr.blank? # ls success implies dir_path exists, stderr will be blank
+      stderr.blank? # ls success implies path exists, stderr will be blank
     end
 
     # @param [Fixnum] pid process ID of remote process
@@ -107,23 +108,23 @@ class Hailstorm::Support::SSH
     # signals. If the process terminates at a signal the next signal is not
     # tried.
     # @param [Fixnum] pid process ID of remote process
-    def terminate_process(pid)
-      signals = %i[INT TERM KILL]
-      counter = 0
+    # @param [Integer] doze_time time in seconds to wait between signals, default is 5
+    def terminate_process(pid, doze_time = 5)
+      signals = %i[INT TERM KILL].each
       while process_running?(pid)
-        self.exec!("kill -#{signals[counter]} #{pid}")
-        sleep(5)
-        counter += 1 unless counter == 2
+        self.exec!("kill -#{signals.next} #{pid}")
+        sleep(doze_time)
       end
     end
 
     # Similar to #terminate_process and additionally ensures any child process
     # of <tt>pid</tt> are terminated as well.
     # @param [Fixnum] pid process ID of remote process
-    def terminate_process_tree(pid)
+    # @param [Integer] doze_time time in seconds to wait between signals, default is 5
+    def terminate_process_tree(pid, doze_time = 5)
       child_pids = remote_processes.select { |p| p.ppid == pid }.collect(&:pid)
       child_pids.each { |cpid| terminate_process_tree(cpid) }
-      terminate_process(pid)
+      terminate_process(pid, doze_time)
     end
 
     # Creates a directory. If directory already exists no action is taken. If
@@ -174,6 +175,7 @@ class Hailstorm::Support::SSH
       stdout.split("\n").each do |line|
         line.strip!
         next if line.blank? || line.match(/^PID/i)
+
         matcher = ps_line_rexp.match(line)
         process = OpenStruct.new
         process.pid = matcher[1].to_i
@@ -187,6 +189,7 @@ class Hailstorm::Support::SSH
 
   end
 
+  # Methods aliased to other names
   module AliasedMethods
 
     #:nodoc:
