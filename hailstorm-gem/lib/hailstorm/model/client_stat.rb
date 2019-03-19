@@ -59,110 +59,18 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   end
 
   # create 1 record for client_stats if it does not exist yet
-  def self.create_client_stat(execution_cycle, jmeter_plan_id, clusterable, stat_file_paths, rm_stat_file = true)
-    # Collate statistics file if needed
-    stat_file_path = stat_file_paths.first if stat_file_paths.size == 1
-    stat_file_path ||= combine_stats(stat_file_paths, execution_cycle.id, jmeter_plan_id, clusterable.id, rm_stat_file)
-
-    jmeter_plan = Hailstorm::Model::JmeterPlan.find(jmeter_plan_id)
-    client_stat = nil
-    File.open(stat_file_path, 'r') do |file_io|
-      client_stat = self.do_create_client_stat(execution_cycle, jmeter_plan, clusterable, file_io)
-    end
-
-    # persist file to db and remove file from fs
-    logger.info { "Persisting #{stat_file_path} to DB..." }
-    Hailstorm::Model::JtlFile.persist_file(client_stat, stat_file_path)
-    File.unlink(stat_file_path) if rm_stat_file
-    client_stat
-  end
-
   # @param [Hailstorm::Model::ExecutionCycle] execution_cycle
-  # @param [Hailstorm::Model::JmeterPlan] jmeter_plan
-  # @param [Hailstorm::Behavior::Clusterable] clusterable
-  # @param [IO] thing IO like interface or String
-  def self.do_create_client_stat(execution_cycle, jmeter_plan, clusterable, thing)
-    client_stat = execution_cycle.client_stats
-                      .where(jmeter_plan_id: jmeter_plan.id,
-                             clusterable_id: clusterable.id,
-                             clusterable_type: clusterable.class.name,
-                             threads_count: jmeter_plan.latest_threads_count)
-                      .first_or_create!
-
-    # SAX parsing
-    jtl_document = JtlDocument.new(Hailstorm::Model::PageStat, client_stat)
-    jtl_parser = Nokogiri::XML::SAX::Parser.new(jtl_document)
-    jtl_parser.parse(thing)
-
-    # save in db
-    jtl_document.page_stats_map.values.each(&:save!)
-
-    # update aggregates
-    aggregate_samples_count = client_stat.page_stats.sum(:samples_count)
-    test_duration = (client_stat.end_sample['ts'].to_f +
-        client_stat.end_sample['t'].to_f - client_stat.start_timestamp) / 1000.to_f
-
-    client_stat.aggregate_response_throughput = (aggregate_samples_count.to_f / test_duration)
-
-    logger.debug { 'Calculating aggregate_ninety_percentile...' }
-    client_stat.aggregate_ninety_percentile = client_stat.sample_response_times.quantile(90)
-    logger.debug { '... finished calculating aggregate_ninety_percentile' }
-
-    # this is the duration of the last sample sent, it is in milliseconds, so
-    # we divide it by 1000
-    client_stat.last_sample_at = Time.at((client_stat.end_sample['ts'].to_i + client_stat.end_sample['t'].to_i) / 1000)
-
-    client_stat.save!
-    client_stat
-  end
-
-  # Combines two or more JTL files to create new JTL file with combined stats.
-  # The path to full file is returned.
-  # @param [Array] stat_file_paths path to JTL files
-  # @param [Integer] execution_cycle_id
   # @param [Integer] jmeter_plan_id
-  # @param [Integer] clusterable_id ID
-  # @param [Boolean] unlink_stat_files remove the stat files after combining them
-  # @return [String] path to new file
-  def self.combine_stats(stat_file_paths, execution_cycle_id, jmeter_plan_id = nil, clusterable_id = nil,
-                         unlink_stat_files = true)
-
-    xml_decl = '<?xml version="1.0" encoding="UTF-8"?>'
-    test_results_start_tag = '<testResults version="1.2">'
-    test_results_end_tag = '</testResults>'
-    file_unique_ids = [execution_cycle_id]
-    file_unique_ids.push(jmeter_plan_id) unless jmeter_plan_id.nil?
-    file_unique_ids.push(clusterable_id) unless clusterable_id.nil?
-    combined_file_path = File.join(Hailstorm.tmp_path,
-                                   "results-#{file_unique_ids.join('-')}-all.jtl")
-
-    unless File.exist?(combined_file_path)
-      File.open(combined_file_path, 'w') do |combined_file|
-        combined_file.puts xml_decl
-        combined_file.puts test_results_start_tag
-
-        stat_file_paths.each do |file_path|
-          File.open(file_path, 'r') do |file|
-            file.each_line do |line|
-              if line[xml_decl].nil? && line[test_results_start_tag].nil? && line[test_results_end_tag].nil?
-                combined_file.print(line)
-              end
-            end
-          end
-        end
-
-        combined_file.puts test_results_end_tag
-      end
-
-      # remove individual files
-      if unlink_stat_files
-        stat_file_paths.each do |file_path|
-          File.unlink(file_path)
-        end
-      end
-    end
-
-    combined_file_path
+  # @param [Hailstorm::Behavior::Clusterable] clusterable
+  # @param [Array<String>] stat_file_paths
+  # @param [Boolean] rm_stat_file
+  # @return [Hailstorm::Model::ClientStat]
+  # TODO remove rm_stat_file and move the deletion of file(s) back to the caller (chain) where the files are created.
+  def self.create_client_stat(execution_cycle, jmeter_plan_id, clusterable, stat_file_paths, rm_stat_file = true)
+    jmeter_plan = Hailstorm::Model::JmeterPlan.find(jmeter_plan_id)
+    template = ClientStatTemplate.new(jmeter_plan, execution_cycle, clusterable, stat_file_paths, rm_stat_file)
+    template.logger = logger
+    template.create
   end
 
   # @return [String] path to generated image
@@ -199,22 +107,21 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
     error_percentages = self.page_stats.collect(&:percentage_errors)
 
-    grapher = com.brickred.tsg.hailstorm.AggregateGraph.new(aggregate_graph_path)
-    grapher.setPages(page_labels)
-           .setNinetyCentileResponseTimes(response_times[3])
-           .setThresholdTitles(threshold_titles)
-           .setThresholdData(threshold_data)
-           .setErrorPercentages(error_percentages)
-           .create # <-- returns path to generated image
+    build_aggregate_graph(page_labels, response_times, threshold_titles, threshold_data, error_percentages)
   end
 
   def aggregate_stats
     self.page_stats.collect(&:stat_item)
   end
 
-  def self.execution_comparison_graph(execution_cycles)
-    grapher_klass = com.brickred.tsg.hailstorm.ExecutionComparisonGraph
-    grapher = grapher_klass.new(execution_comparison_graph_path(execution_cycles))
+  def self.execution_comparison_graph(execution_cycles, width: 640, height: 600, grapher: nil)
+    graph_path = execution_comparison_graph_path(execution_cycles)
+    if grapher.nil?
+      grapher_klass = com.brickred.tsg.hailstorm.ExecutionComparisonGraph
+      grapher = grapher_klass.new(graph_path)
+    else
+      grapher.output_path = graph_path
+    end
 
     # bug #Research-440
     # store the total_threads_count in a map such that if it is repeated for a
@@ -247,7 +154,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
       grapher.addThroughputDataItem(domain_label, execution_cycle_throughput)
     end
 
-    grapher.build(640, 600) # <-- returns path to generated image
+    grapher.build(width, height) # <-- returns path to generated image
   end
 
   def collect_sample(sample)
@@ -281,7 +188,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   end
 
   # Generates a hits per second graph
-  def self.hits_per_second_graph(execution_cycle)
+  def self.hits_per_second_graph(execution_cycle, width: 640, height: 300, grapher: nil)
     sax_document = Nokogiri::XML::SAX::Document.new
     sax_document.class_eval do
       attr_reader :hit_matrix
@@ -321,16 +228,16 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
       end
     end
 
-    grapher = com.brickred.tsg.hailstorm.TimeSeriesGraph.new('Requests/second', 'Requests', sax_document.start_time)
+    grapher ||= com.brickred.tsg.hailstorm.TimeSeriesGraph.new('Requests/second', 'Requests', sax_document.start_time)
     sax_document.hit_matrix.each do |key, value|
       grapher.addDataPoint(key, value)
     end
 
     grapher.build(File.join(Hailstorm.root, Hailstorm.reports_dir, "hits_per_second_graph_#{execution_cycle.id}"),
-                  640, 300)
+                  width, height)
   end
 
-  def self.active_threads_over_time_graph(execution_cycle)
+  def self.active_threads_over_time_graph(execution_cycle, width: 640, height: 300, grapher: nil)
     sax_document = Nokogiri::XML::SAX::Document.new
     sax_document.class_eval do
       attr_reader :vusers_matrix
@@ -373,8 +280,8 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
       end
     end
 
-    grapher = com.brickred.tsg.hailstorm.TimeSeriesGraph.new('Virtual Users / Second', 'Virtual Users',
-                                                             sax_document.start_time)
+    grapher ||= com.brickred.tsg.hailstorm.TimeSeriesGraph.new('Virtual Users / Second', 'Virtual Users',
+                                                               sax_document.start_time)
     ts_keys = sax_document.vusers_matrix.keys.sort_by(&:to_i)
     ts_keys.each_with_index do |ts, index|
       previous_index = index > 1 ? index - 1 : index
@@ -388,10 +295,10 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
       grapher.addDataPoint(ts, threads_count)
     end
     grapher.build(File.join(Hailstorm.root, Hailstorm.reports_dir, "vusers_per_second_graph_#{execution_cycle.id}"),
-                  640, 300)
+                  width, height)
   end
 
-  def self.throughput_over_time_graph(execution_cycle)
+  def self.throughput_over_time_graph(execution_cycle, width: 640, height: 300, grapher: nil)
     sax_document = Nokogiri::XML::SAX::Document.new
     sax_document.class_eval do
       attr_reader :byte_matrix
@@ -426,14 +333,14 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
       end
     end
 
-    grapher = com.brickred.tsg.hailstorm.TimeSeriesGraph.new('Throughput over time', 'Bytes Transferred',
-                                                             sax_document.start_time)
+    grapher ||= com.brickred.tsg.hailstorm.TimeSeriesGraph.new('Throughput over time', 'Bytes Transferred',
+                                                               sax_document.start_time)
     sax_document.byte_matrix.each do |key, value|
       grapher.addDataPoint(key, value)
     end
 
     grapher.build(File.join(Hailstorm.root, Hailstorm.reports_dir, "throughput_per_second_graph_#{execution_cycle.id}"),
-                  640, 300)
+                  width, height)
   end
 
   def first_sample_at
@@ -474,7 +381,132 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     end
   end
 
+  # Template for creating client_stat
+  class ClientStatTemplate
+    attr_reader :jmeter_plan, :execution_cycle, :clusterable, :stat_file_paths, :rm_stat_file
+    attr_accessor :logger
+
+    def initialize(new_jmeter_plan, new_execution_cycle, new_clusterable, new_stat_file_paths, new_rm_stat_file)
+      @jmeter_plan = new_jmeter_plan
+      @execution_cycle = new_execution_cycle
+      @clusterable = new_clusterable
+      @stat_file_paths = new_stat_file_paths
+      @rm_stat_file = new_rm_stat_file
+    end
+
+    # @return [Hailstorm::Model::ClientStat]
+    def create
+      stat_file_path = collate_stats
+      client_stat = nil
+      File.open(stat_file_path, 'r') do |file_io|
+        client_stat = do_create_client_stat(file_io)
+      end
+
+      persist_jtl(client_stat, stat_file_path)
+      File.unlink(stat_file_path) if rm_stat_file
+
+      client_stat
+    end
+
+    private
+
+    def collate_stats
+      stat_file_path = stat_file_paths.first if stat_file_paths.size == 1
+      stat_file_path || combine_stats
+    end
+
+    # Combines two or more JTL files to create new JTL file with combined stats.
+    def combine_stats
+      xml_decl = '<?xml version="1.0" encoding="UTF-8"?>'
+      test_results_start_tag = '<testResults version="1.2">'
+      test_results_end_tag = '</testResults>'
+      file_unique_ids = [execution_cycle, jmeter_plan, clusterable].compact.map(&:id)
+      combined_file_path = File.join(Hailstorm.tmp_path, "results-#{file_unique_ids.join('-')}-all.jtl")
+
+      return combined_file_path if File.exist?(combined_file_path)
+
+      File.open(combined_file_path, 'w') do |combined_file|
+        combined_file.puts xml_decl
+        combined_file.puts test_results_start_tag
+
+        stat_file_paths.each do |file_path|
+          File.open(file_path, 'r') do |file|
+            file.each_line do |line|
+              if line[xml_decl].nil? && line[test_results_start_tag].nil? && line[test_results_end_tag].nil?
+                combined_file.print(line)
+              end
+            end
+          end
+        end
+
+        combined_file.puts test_results_end_tag
+      end
+
+      # remove individual files
+      if rm_stat_file
+        stat_file_paths.each do |file_path|
+          File.unlink(file_path)
+        end
+      end
+
+      combined_file_path
+    end
+
+    def do_create_client_stat(io_like)
+      client_stat = execution_cycle
+                        .client_stats
+                        .where(jmeter_plan_id: jmeter_plan.id,
+                               clusterable_id: clusterable.id,
+                               clusterable_type: clusterable.class.name,
+                               threads_count: jmeter_plan.latest_threads_count)
+                        .first_or_create!
+
+      # SAX parsing
+      jtl_document = JtlDocument.new(Hailstorm::Model::PageStat, client_stat)
+      jtl_parser = Nokogiri::XML::SAX::Parser.new(jtl_document)
+      jtl_parser.parse(io_like)
+
+      # save in db
+      jtl_document.page_stats_map.values.each(&:save!)
+
+      # update aggregates
+      aggregate_samples_count = client_stat.page_stats.sum(:samples_count)
+      test_duration = (client_stat.end_sample['ts'].to_f +
+          client_stat.end_sample['t'].to_f - client_stat.start_timestamp) / 1000.to_f
+
+      client_stat.aggregate_response_throughput = (aggregate_samples_count.to_f / test_duration)
+
+      logger.debug { 'Calculating aggregate_ninety_percentile...' } if logger
+      client_stat.aggregate_ninety_percentile = client_stat.sample_response_times.quantile(90)
+      logger.debug { '... finished calculating aggregate_ninety_percentile' } if logger
+
+      # this is the duration of the last sample sent, it is in milliseconds, so
+      # we divide it by 1000
+      client_stat.last_sample_at = Time.at((client_stat.end_sample['ts'].to_i + client_stat.end_sample['t'].to_i) / 1000)
+
+      client_stat.save!
+      client_stat
+    end
+
+    # persist file to db and remove file from fs
+    def persist_jtl(client_stat, stat_file_path)
+      logger.info { "Persisting #{stat_file_path} to DB..." } if logger
+      Hailstorm::Model::JtlFile.persist_file(client_stat, stat_file_path)
+    end
+  end
+
   private
+
+  # @return [String] path to generated image
+  def build_aggregate_graph(page_labels, response_times, threshold_titles, threshold_data, error_percentages)
+    grapher = com.brickred.tsg.hailstorm.AggregateGraph.new(aggregate_graph_path)
+    grapher.setPages(page_labels)
+        .setNinetyCentileResponseTimes(response_times[3])
+        .setThresholdTitles(threshold_titles)
+        .setThresholdData(threshold_data)
+        .setErrorPercentages(error_percentages)
+        .create
+  end
 
   def aggregate_graph_path
     File.join(Hailstorm.root, Hailstorm.reports_dir, "aggregate_graph_#{self.id}")

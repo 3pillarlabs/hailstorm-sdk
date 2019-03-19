@@ -1,10 +1,32 @@
 require 'spec_helper'
 require 'tempfile'
+require 'jtl_log_data'
 require 'hailstorm/model/client_stat'
 require 'hailstorm/model/amazon_cloud'
 require 'hailstorm/model/master_agent'
+require 'hailstorm/model/page_stat'
 
 describe Hailstorm::Model::ClientStat do
+
+  def create_client_stat_refs(project = nil)
+    project ||= Hailstorm::Model::Project.create!(project_code: 'execution_cycle_spec')
+    execution_cycle = Hailstorm::Model::ExecutionCycle.create!(project: project,
+                                                               status: :stopped,
+                                                               started_at: Time.now,
+                                                               stopped_at: Time.now + 15.minutes)
+    jmeter_plan = Hailstorm::Model::JmeterPlan.create!(project: project,
+                                                       test_plan_name: 'priming',
+                                                       content_hash: 'A',
+                                                       latest_threads_count: 100)
+    jmeter_plan.update_column(:active, true)
+    clusterable = Hailstorm::Model::AmazonCloud.create!(project: project,
+                                                        access_key: 'A',
+                                                        secret_key: 'A',
+                                                        region: 'us-east-1')
+    clusterable.update_column(:active, true)
+    [clusterable, execution_cycle, jmeter_plan]
+  end
+
   context '.collect_client_stats' do
     it 'should collect create_client_stats' do
       cluster_instance = Hailstorm::Model::AmazonCloud.new
@@ -28,115 +50,203 @@ describe Hailstorm::Model::ClientStat do
   end
 
   context '.create_client_stat' do
-    before(:each) do
-      @execution_cycle = Hailstorm::Model::ExecutionCycle.new
-      @execution_cycle.id = 123
-      @jmeter_plan = Hailstorm::Model::JmeterPlan.new
-      @jmeter_plan.id = 12
-      @clusterable = Hailstorm::Model::AmazonCloud.new
-      Hailstorm::Model::JmeterPlan.stub!(:find).and_return(@jmeter_plan)
-      Hailstorm::Model::ClientStat.stub!(:do_create_client_stat)
-      Hailstorm::Model::JtlFile.stub!(:persist_file)
+    it 'should invoke ClientStatTemplate' do
+      Hailstorm::Model::ClientStat::ClientStatTemplate
+        .any_instance
+        .stub(:create)
+        .and_return(Hailstorm::Model::ClientStat.new)
+      Hailstorm::Model::JmeterPlan.stub!(:find).and_return(mock(Hailstorm::Model::JmeterPlan))
+      expect(Hailstorm::Model::ClientStat
+               .create_client_stat(mock(Hailstorm::Model::ExecutionCycle),
+                                   1,
+                                   mock(Hailstorm::Model::AmazonCloud),
+                                   [])).to be_a(Hailstorm::Model::ClientStat)
     end
-    it 'should not combine_stats for multiple files' do
-      Hailstorm::Model::ClientStat.should_not_receive(:combine_stats)
+  end
+
+  context Hailstorm::Model::ClientStat::ClientStatTemplate do
+    it 'should not combine_stats for single file' do
       stat_file_paths = [ Tempfile.new ]
-      Hailstorm::Model::ClientStat.create_client_stat(@execution_cycle,
-                                                      @jmeter_plan.id,
-                                                      @clusterable,
-                                                      stat_file_paths,
-                                                      false)
+      template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(nil, nil, nil, stat_file_paths, false)
+      template.should_not_receive(:combine_stats)
+      template.stub!(:do_create_client_stat)
+      template.stub!(:persist_jtl)
+      template.create
       stat_file_paths.each { |sfp| sfp.unlink }
     end
     it 'should combine_stats for multiple files' do
       stat_file_paths = [ Tempfile.new, Tempfile.new ]
-      Hailstorm::Model::ClientStat.should_receive(:combine_stats)
-        .with(stat_file_paths, @execution_cycle.id, @jmeter_plan.id, @clusterable.id, false)
-        .and_return(stat_file_paths.first)
-      Hailstorm::Model::ClientStat.create_client_stat(@execution_cycle,
-                                                      @jmeter_plan.id,
-                                                      @clusterable,
-                                                      stat_file_paths,
-                                                      false)
+      template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(nil, nil, nil, stat_file_paths, false)
+      template.should_receive(:combine_stats).and_return(stat_file_paths.first)
+      template.stub!(:do_create_client_stat)
+      template.stub!(:persist_jtl)
+      template.create
       stat_file_paths.each { |sfp| sfp.unlink }
     end
     it 'should delete stat_file_paths' do
       stat_file_paths = [ Tempfile.new, Tempfile.new ]
-      Hailstorm::Model::ClientStat.should_receive(:combine_stats)
-        .with(stat_file_paths, @execution_cycle.id, @jmeter_plan.id, @clusterable.id, true)
-        .and_return(Tempfile.new)
-      Hailstorm::Model::ClientStat.create_client_stat(@execution_cycle,
-                                                      @jmeter_plan.id,
-                                                      @clusterable,
-                                                      stat_file_paths)
+      combined_path = Tempfile.new
+      template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(nil, nil, nil, stat_file_paths, true)
+      template.should_receive(:combine_stats).and_return(combined_path)
+      template.stub!(:do_create_client_stat)
+      template.stub!(:persist_jtl)
+      template.create
+      expect(File.exist?(combined_path)).to be_false
       stat_file_paths.each { |sfp| sfp.unlink }
     end
-  end
-
-  context '.do_create_client_stat' do
     it 'should create a client_stat' do
-      project = Hailstorm::Model::Project.create!(project_code: 'execution_cycle_spec')
-      execution_cycle = Hailstorm::Model::ExecutionCycle.create!(project: project,
-                                                                 status: :stopped,
-                                                                 started_at: Time.now,
-                                                                 stopped_at: Time.now + 15.minutes)
-      jmeter_plan = Hailstorm::Model::JmeterPlan.create!(project: project,
-                                                         test_plan_name: 'priming',
-                                                         content_hash: 'A',
-                                                         latest_threads_count: 100)
-      jmeter_plan.update_column(:active, true)
-      clusterable = Hailstorm::Model::AmazonCloud.create!(project: project,
-                                                          access_key: 'A',
-                                                          secret_key: 'A',
-                                                          region: 'us-east-1')
-      clusterable.update_column(:active, true)
-
+      clusterable, execution_cycle, jmeter_plan = create_client_stat_refs
       Hailstorm::Model::JtlFile.stub!(:persist_file)
+      File.stub!(:open).and_yield(JTL_LOG_DATA.strip_heredoc)
 
+      template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(jmeter_plan, execution_cycle, clusterable, [], false)
+      template.stub!(:collate_stats)
+      client_stat = template.create
+      expect(client_stat).to_not be_nil
+      expect(client_stat.first_sample_at).to_not be_nil
+    end
+
+    it 'should combine samples from multiple files' do
       log_data =<<-JTL
       <?xml version="1.0" encoding="UTF-8"?>
       <testResults version="1.2">
         <sample t="14256" lt="0" ts="1354685431293" s="true" lb="Home Page" rc="200" rm="Number of samples in transaction : 3, number of failing samples : 0" tn=" Static Pages 1-1" dt="" by="33154">
           <httpSample t="13252" lt="13191" ts="1354685436312" s="true" lb="/Home.aspx" rc="200" rm="OK" tn=" Static Pages 1-1" dt="text" by="21967"/>
-          <httpSample t="116" lt="63" ts="1354685454578" s="true" lb="/imagedownload.aspx" rc="200" rm="OK" tn=" Static Pages 1-1" dt="bin" by="10269">
-            <httpSample t="63" lt="63" ts="1354685454578" s="true" lb="http://webshop-test.acetrax.com/imagedownload.aspx?schema=0d2fa497-d898-44d4-b97c-9d9075a5d9f0&amp;channel=F660CA13-0FE8-4F86-9B94-B8A55F7866CD&amp;content_id=21918EC0-ECC7-4397-B7EA-5BE6C2A663D7&amp;field=image_storage&amp;lang=pt&amp;ver=1&amp;filetype=png" rc="302" rm="Found" tn="" dt="text" by="1023"/>
-            <httpSample t="52" lt="52" ts="1354685454642" s="true" lb="http://webshop-test.acetrax.com/img/imgsredirectstate_0d2fa497-d898-44d4-b97c-9d9075a5d9f0$$F660CA13-0FE8-4F86-9B94-B8A55F7866CD$$21918EC0-ECC7-4397-B7EA-5BE6C2A663D7$$image_storage$$pt$$1.png" rc="200" rm="OK" tn=" Static Pages 1-1" dt="bin" by="9246"/>
-          </httpSample>
-          <httpSample t="888" lt="887" ts="1354685459695" s="true" lb="/Generic.aspx" rc="200" rm="OK" tn=" Static Pages 1-1" dt="text" by="918"/>
-        </sample>
-        <sample t="6301" lt="0" ts="1354685443297" s="true" lb="Home Page" rc="200" rm="Number of samples in transaction : 3, number of failing samples : 0" tn=" Static Pages 1-2" dt="" by="33154">
-          <httpSample t="6108" lt="6052" ts="1354685448298" s="true" lb="/Home.aspx" rc="200" rm="OK" tn=" Static Pages 1-2" dt="text" by="21967"/>
-          <httpSample t="114" lt="62" ts="1354685459408" s="true" lb="/imagedownload.aspx" rc="200" rm="OK" tn=" Static Pages 1-2" dt="bin" by="10269">
-            <httpSample t="62" lt="62" ts="1354685459408" s="true" lb="http://webshop-test.acetrax.com/imagedownload.aspx?schema=0d2fa497-d898-44d4-b97c-9d9075a5d9f0&amp;channel=F660CA13-0FE8-4F86-9B94-B8A55F7866CD&amp;content_id=21918EC0-ECC7-4397-B7EA-5BE6C2A663D7&amp;field=image_storage&amp;lang=pt&amp;ver=1&amp;filetype=png" rc="302" rm="Found" tn="" dt="text" by="1023"/>
-            <httpSample t="52" lt="52" ts="1354685459470" s="true" lb="http://webshop-test.acetrax.com/img/imgsredirectstate_0d2fa497-d898-44d4-b97c-9d9075a5d9f0$$F660CA13-0FE8-4F86-9B94-B8A55F7866CD$$21918EC0-ECC7-4397-B7EA-5BE6C2A663D7$$image_storage$$pt$$1.png" rc="200" rm="OK" tn=" Static Pages 1-2" dt="bin" by="9246"/>
-          </httpSample>
-          <httpSample t="79" lt="79" ts="1354685464523" s="true" lb="/Generic.aspx" rc="200" rm="OK" tn=" Static Pages 1-2" dt="text" by="918"/>
-        </sample>
-        <sample t="1183" lt="0" ts="1354685455318" s="true" lb="Home Page" rc="200" rm="Number of samples in transaction : 3, number of failing samples : 0" tn=" Static Pages 1-3" dt="" by="33154">
-          <httpSample t="869" lt="811" ts="1354685460318" s="true" lb="/Home.aspx" rc="200" rm="OK" tn=" Static Pages 1-3" dt="text" by="21967"/>
-          <httpSample t="97" lt="62" ts="1354685466190" s="true" lb="/imagedownload.aspx" rc="200" rm="OK" tn=" Static Pages 1-3" dt="bin" by="10269">
-            <httpSample t="62" lt="62" ts="1354685466190" s="true" lb="http://webshop-test.acetrax.com/imagedownload.aspx?schema=0d2fa497-d898-44d4-b97c-9d9075a5d9f0&amp;channel=F660CA13-0FE8-4F86-9B94-B8A55F7866CD&amp;content_id=21918EC0-ECC7-4397-B7EA-5BE6C2A663D7&amp;field=image_storage&amp;lang=pt&amp;ver=1&amp;filetype=png" rc="302" rm="Found" tn="" dt="text" by="1023"/>
-            <httpSample t="35" lt="35" ts="1354685466252" s="true" lb="http://webshop-test.acetrax.com/img/imgsredirectstate_0d2fa497-d898-44d4-b97c-9d9075a5d9f0$$F660CA13-0FE8-4F86-9B94-B8A55F7866CD$$21918EC0-ECC7-4397-B7EA-5BE6C2A663D7$$image_storage$$pt$$1.png" rc="200" rm="OK" tn=" Static Pages 1-3" dt="bin" by="9246"/>
-          </httpSample>
-          <httpSample t="217" lt="217" ts="1354685471287" s="true" lb="/Generic.aspx" rc="200" rm="OK" tn=" Static Pages 1-3" dt="text" by="918"/>
-        </sample>
-        <sample t="6091" lt="0" ts="1354685460592" s="true" lb="Login Page" rc="200" rm="Number of samples in transaction : 2, number of failing samples : 0" tn=" Static Pages 1-1" dt="" by="9594">
-          <httpSample t="5935" lt="5935" ts="1354685465601" s="true" lb="/Generic.aspx" rc="200" rm="OK" tn=" Static Pages 1-1" dt="text" by="8676"/>
-          <httpSample t="156" lt="156" ts="1354685476537" s="true" lb="/Generic.aspx" rc="200" rm="OK" tn=" Static Pages 1-1" dt="text" by="918"/>
-        </sample>
-        <sample t="2132" lt="0" ts="1354685464604" s="true" lb="Login Page" rc="200" rm="Number of samples in transaction : 2, number of failing samples : 0" tn=" Static Pages 1-2" dt="" by="9594">
-          <httpSample t="1928" lt="1928" ts="1354685469604" s="true" lb="/Generic.aspx" rc="200" rm="OK" tn=" Static Pages 1-2" dt="text" by="8676"/>
-          <httpSample t="204" lt="204" ts="1354685476533" s="true" lb="/Generic.aspx" rc="200" rm="OK" tn=" Static Pages 1-2" dt="text" by="918"/>
-        </sample>
-        <sample t="511" lt="0" ts="1354685471510" s="true" lb="Login Page" rc="200" rm="Number of samples in transaction : 2, number of failing samples : 0" tn=" Static Pages 1-3" dt="" by="9594">
-          <httpSample t="265" lt="264" ts="1354685476512" s="true" lb="/Generic.aspx" rc="200" rm="OK" tn=" Static Pages 1-3" dt="text" by="8676"/>
-          <httpSample t="246" lt="245" ts="1354685481777" s="true" lb="/Generic.aspx" rc="200" rm="OK" tn=" Static Pages 1-3" dt="text" by="918"/>
         </sample>
       </testResults>
       JTL
-      client_stat = Hailstorm::Model::ClientStat
-                      .do_create_client_stat(execution_cycle, jmeter_plan, clusterable, log_data.strip_heredoc)
-      expect(client_stat).to_not be_nil
+      FILES_COUNT = 3
+      stat_file_paths = FILES_COUNT.times.map do
+        Tempfile.new.tap do |file|
+          File.open(file, 'w') do |fio|
+            fio.write(log_data.strip_heredoc)
+          end
+        end
+      end
+
+      template = Hailstorm::Model::ClientStat::ClientStatTemplate
+                   .new(mock(Hailstorm::Model::JmeterPlan, id: 1),
+                        mock(Hailstorm::Model::ExecutionCycle, id: 1),
+                        mock(Hailstorm::Model::AmazonCloud, id: 1),
+                        stat_file_paths,
+                        true)
+
+      template.stub!(:do_create_client_stat)
+      template.should_receive(:persist_jtl) do |_client_stat, combined_path|
+        doc = Nokogiri::XML.parse(File.read(combined_path))
+        expect(doc.xpath('/testResults').length).to be == 1
+        expect(doc.xpath('/testResults/sample').length).to be == FILES_COUNT
+      end
+
+      template.create
+    end
+  end
+
+  context '#aggregate_graph' do
+    it 'should build the graph' do
+      clusterable, execution_cycle, jmeter_plan = create_client_stat_refs
+      client_stat = Hailstorm::Model::ClientStat.create!(execution_cycle: execution_cycle,
+                                                         jmeter_plan: jmeter_plan,
+                                                         clusterable: clusterable,
+                                                         threads_count: 30,
+                                                         aggregate_ninety_percentile: 1500,
+                                                         aggregate_response_throughput: 3000,
+                                                         last_sample_at: Time.new(2010, 10, 7, 14, 23, 45))
+
+      Hailstorm::Model::PageStat.any_instance.stub(:calculate_aggregates)
+      3.times do |index|
+        Hailstorm::Model::PageStat.create!(client_stat: client_stat,
+                                           page_label: "label-#{index}",
+                                           average_response_time: 500,
+                                           median_response_time: 450,
+                                           ninety_percentile_response_time: 470,
+                                           minimum_response_time: 400,
+                                           maximum_response_time: 650,
+                                           percentage_errors: 2.34,
+                                           response_throughput: 1000,
+                                           size_throughput: 123,
+                                           standard_deviation: 1.5,
+                                           samples_breakup_json: '[{"r": 1}, {"r": [1, 3]}, {"r": [3, 5]}, {"r": 5}]')
+      end
+
+      client_stat.should_receive(:build_aggregate_graph)
+      client_stat.aggregate_graph
+    end
+  end
+
+  context '#execution_comparison_graph' do
+    it 'should compare response time and throughput across executions' do
+      project = Hailstorm::Model::Project.create!(project_code: 'execution_cycle_spec')
+      refs_ary = 2.times.map { create_client_stat_refs(project)  }
+      execution_cycles = refs_ary.map do |clusterable, execution_cycle, jmeter_plan|
+        t = Time.new(2010, 10, 7, 14, 23, 45)
+        Hailstorm::Model::ClientStat.create!(execution_cycle: execution_cycle,
+                                             jmeter_plan: jmeter_plan,
+                                             clusterable: clusterable,
+                                             threads_count: 30,
+                                             aggregate_ninety_percentile: 1500,
+                                             aggregate_response_throughput: 3000,
+                                             last_sample_at: t)
+        3.times do |index|
+          Hailstorm::Model::ClientStat.create!(execution_cycle: execution_cycle,
+                                               jmeter_plan: jmeter_plan,
+                                               clusterable: clusterable,
+                                               threads_count: 30 * (index + 1),
+                                               aggregate_ninety_percentile: 1500,
+                                               aggregate_response_throughput: 3000,
+                                               last_sample_at: t + (index + 1).hours)
+        end
+        execution_cycle
+      end
+
+      grapher = double('ExecutionComparisonGraph',
+                       addResponseTimeDataItem: nil,
+                       addThroughputDataItem: nil,
+                       'output_path=': nil)
+      grapher.should_receive(:build)
+      Hailstorm::Model::ClientStat.execution_comparison_graph(execution_cycles, grapher: grapher)
+    end
+  end
+
+  context '#write_jtl' do
+    it 'should export JTL' do
+      clusterable, execution_cycle, jmeter_plan = create_client_stat_refs
+      client_stat = Hailstorm::Model::ClientStat.create!(execution_cycle: execution_cycle,
+                                                         jmeter_plan: jmeter_plan,
+                                                         clusterable: clusterable,
+                                                         threads_count: 30,
+                                                         aggregate_ninety_percentile: 1500,
+                                                         aggregate_response_throughput: 3000,
+                                                         last_sample_at: Time.new(2010, 10, 7, 14, 23, 45))
+      Hailstorm::Model::JtlFile.stub!(:export_file)
+      expect(client_stat.write_jtl('foo', true)).to match(/^foo.+\.jtl$/)
+    end
+  end
+
+  context 'TimeSeriesGraph' do
+    it 'should build the graphs' do
+      clusterable, execution_cycle, jmeter_plan = create_client_stat_refs
+      2.times.map do |index|
+        Hailstorm::Model::ClientStat.create!(execution_cycle: execution_cycle,
+                                             jmeter_plan: jmeter_plan,
+                                             clusterable: clusterable,
+                                             threads_count: 30 * (index + 1),
+                                             aggregate_ninety_percentile: 1500,
+                                             aggregate_response_throughput: 3000,
+                                             last_sample_at: Time.new(2010, 10, 7, 14 + index, 23, 45))
+      end
+
+      Hailstorm::Model::ClientStat.any_instance.stub(:write_jtl) do
+        file_path = Tempfile.new
+        File.write(file_path, JTL_LOG_DATA)
+        file_path
+      end
+
+      grapher = double('TimeSeriesGraph', addDataPoint: nil)
+      grapher.should_receive(:build).exactly(3).times
+      Hailstorm::Model::ClientStat.hits_per_second_graph(execution_cycle, grapher: grapher)
+      Hailstorm::Model::ClientStat.active_threads_over_time_graph(execution_cycle, grapher: grapher)
+      Hailstorm::Model::ClientStat.throughput_over_time_graph(execution_cycle, grapher: grapher)
     end
   end
 end
