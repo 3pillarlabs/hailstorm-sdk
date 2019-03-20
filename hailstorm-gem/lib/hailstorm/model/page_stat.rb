@@ -55,11 +55,7 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
     self.samples_breakup(sample_response_time)
 
     # 's' is either "true" or "false"
-    sample_success = begin
-                       eval(sample['s'])
-                     rescue Exception
-                       false
-                     end
+    sample_success = sample['s'] == true.to_s
     self.errors_count += 1 unless sample_success
   end
 
@@ -123,7 +119,7 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
   private
 
   def set_defaults
-    self.samples_count = 0 if self.new_record?
+    self.samples_count = 0 if self.new_record? && self.samples_count.blank?
     self.cumulative_response_time = 0
     self.cumulative_squared_response_time = 0
     self.page_sample_times = Hailstorm::Support::Quantile.new
@@ -157,13 +153,5 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
       partition[:p] = format('%2.2f', (partition[:c].to_f * 100) / self.samples_count)
     end
     self.samples_breakup_json = self.samples_breakup.to_json
-  end
-
-  # Calculates the array index for percentile
-  # @param [Fixnum] percentile example 50, 90
-  # @return [Fixnum]
-  def percentile_index(percentile)
-    index = (self.samples_count * percentile.to_f / 100).to_i
-    index.zero? ? index : index - 1
   end
 end
