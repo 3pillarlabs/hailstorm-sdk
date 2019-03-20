@@ -26,6 +26,7 @@ RSpec.configure do |config|
   config.order = 'random'
 
   config.prepend_before(:suite) do
+    FileUtils.mkdir_p(File.join(File.expand_path('../..', __FILE__), Hailstorm.tmp_dir))
     middleware = Hailstorm::Initializer.create_middleware('hailstorm_spec', __FILE__, {
       adapter: 'jdbcmysql',
       database: 'hailstorm_gem_test',
