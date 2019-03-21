@@ -10,6 +10,7 @@ require 'hailstorm/support/collection_helper'
 
 # Statistics collected on the 'client' side.
 # @author Sayantam Dey
+# TODO Rubocop fixes
 class Hailstorm::Model::ClientStat < ActiveRecord::Base
   include Hailstorm::Support::CollectionHelper
 
@@ -52,9 +53,9 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     end
 
     jmeter_plan_results_map.keys.sort.each do |jmeter_plan_id|
-      self.create_client_stat(execution_cycle, jmeter_plan_id,
-                              cluster_instance,
-                              jmeter_plan_results_map[jmeter_plan_id])
+      stat_file_paths = jmeter_plan_results_map[jmeter_plan_id]
+      self.create_client_stat(execution_cycle, jmeter_plan_id, cluster_instance, stat_file_paths)
+      stat_file_paths.each { |file_path| File.unlink(file_path) }
     end
   end
 
@@ -64,11 +65,10 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   # @param [Hailstorm::Behavior::Clusterable] clusterable
   # @param [Array<String>] stat_file_paths
   # @param [Boolean] rm_stat_file
-  # @return [Hailstorm::Model::ClientStat]
-  # TODO remove rm_stat_file and move the deletion of file(s) back to the caller (chain) where the files are created.
-  def self.create_client_stat(execution_cycle, jmeter_plan_id, clusterable, stat_file_paths, rm_stat_file = true)
+  # @return [[Hailstorm::Model::ClientStat, String]] [client_stat, combined_file_path: nil]
+  def self.create_client_stat(execution_cycle, jmeter_plan_id, clusterable, stat_file_paths)
     jmeter_plan = Hailstorm::Model::JmeterPlan.find(jmeter_plan_id)
-    template = ClientStatTemplate.new(jmeter_plan, execution_cycle, clusterable, stat_file_paths, rm_stat_file)
+    template = ClientStatTemplate.new(jmeter_plan, execution_cycle, clusterable, stat_file_paths)
     template.logger = logger
     template.create
   end
@@ -383,36 +383,37 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
   # Template for creating client_stat
   class ClientStatTemplate
-    attr_reader :jmeter_plan, :execution_cycle, :clusterable, :stat_file_paths, :rm_stat_file
+    attr_reader :jmeter_plan, :execution_cycle, :clusterable, :stat_file_paths
     attr_accessor :logger
 
-    def initialize(new_jmeter_plan, new_execution_cycle, new_clusterable, new_stat_file_paths, new_rm_stat_file)
+    def initialize(new_jmeter_plan, new_execution_cycle, new_clusterable, new_stat_file_paths)
       @jmeter_plan = new_jmeter_plan
       @execution_cycle = new_execution_cycle
       @clusterable = new_clusterable
       @stat_file_paths = new_stat_file_paths
-      @rm_stat_file = new_rm_stat_file
     end
 
-    # @return [Hailstorm::Model::ClientStat]
+    # @return [[Hailstorm::Model::ClientStat, String]] [client_stat, combined_file_path: nil]
     def create
-      stat_file_path = collate_stats
+      stat_file_path, combined = collate_stats
       client_stat = nil
       File.open(stat_file_path, 'r') do |file_io|
         client_stat = do_create_client_stat(file_io)
       end
 
       persist_jtl(client_stat, stat_file_path)
-      File.unlink(stat_file_path) if rm_stat_file
 
-      client_stat
+      tuple = [client_stat]
+      tuple.push(stat_file_path) if combined
+      tuple
     end
 
     private
 
     def collate_stats
       stat_file_path = stat_file_paths.first if stat_file_paths.size == 1
-      stat_file_path || combine_stats
+      stat_file_path ||= combine_stats
+      [stat_file_path, stat_file_paths.size > 1]
     end
 
     # Combines two or more JTL files to create new JTL file with combined stats.
@@ -422,8 +423,6 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
       test_results_end_tag = '</testResults>'
       file_unique_ids = [execution_cycle, jmeter_plan, clusterable].compact.map(&:id)
       combined_file_path = File.join(Hailstorm.tmp_path, "results-#{file_unique_ids.join('-')}-all.jtl")
-
-      return combined_file_path if File.exist?(combined_file_path)
 
       File.open(combined_file_path, 'w') do |combined_file|
         combined_file.puts xml_decl
@@ -440,13 +439,6 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
         end
 
         combined_file.puts test_results_end_tag
-      end
-
-      # remove individual files
-      if rm_stat_file
-        stat_file_paths.each do |file_path|
-          File.unlink(file_path)
-        end
       end
 
       combined_file_path

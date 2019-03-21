@@ -45,6 +45,7 @@ describe Hailstorm::Model::ClientStat do
       end
       cluster_instance.stub_chain(:master_agents, :where).and_return(agents)
       Hailstorm::Model::ClientStat.should_receive(:create_client_stat).exactly(uniq_ids.size).times
+      File.stub!(:unlink)
       Hailstorm::Model::ClientStat.collect_client_stats(mock(Hailstorm::Model::ExecutionCycle), cluster_instance)
     end
   end
@@ -54,20 +55,20 @@ describe Hailstorm::Model::ClientStat do
       Hailstorm::Model::ClientStat::ClientStatTemplate
         .any_instance
         .stub(:create)
-        .and_return(Hailstorm::Model::ClientStat.new)
+        .and_return([Hailstorm::Model::ClientStat.new, nil])
       Hailstorm::Model::JmeterPlan.stub!(:find).and_return(mock(Hailstorm::Model::JmeterPlan))
       expect(Hailstorm::Model::ClientStat
                .create_client_stat(mock(Hailstorm::Model::ExecutionCycle),
                                    1,
                                    mock(Hailstorm::Model::AmazonCloud),
-                                   [])).to be_a(Hailstorm::Model::ClientStat)
+                                   []).first).to be_a(Hailstorm::Model::ClientStat)
     end
   end
 
   context Hailstorm::Model::ClientStat::ClientStatTemplate do
     it 'should not combine_stats for single file' do
       stat_file_paths = [ Tempfile.new ]
-      template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(nil, nil, nil, stat_file_paths, false)
+      template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(nil, nil, nil, stat_file_paths)
       template.should_not_receive(:combine_stats)
       template.stub!(:do_create_client_stat)
       template.stub!(:persist_jtl)
@@ -76,7 +77,7 @@ describe Hailstorm::Model::ClientStat do
     end
     it 'should combine_stats for multiple files' do
       stat_file_paths = [ Tempfile.new, Tempfile.new ]
-      template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(nil, nil, nil, stat_file_paths, false)
+      template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(nil, nil, nil, stat_file_paths)
       template.should_receive(:combine_stats).and_return(stat_file_paths.first)
       template.stub!(:do_create_client_stat)
       template.stub!(:persist_jtl)
@@ -86,12 +87,11 @@ describe Hailstorm::Model::ClientStat do
     it 'should delete stat_file_paths' do
       stat_file_paths = [ Tempfile.new, Tempfile.new ]
       combined_path = Tempfile.new
-      template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(nil, nil, nil, stat_file_paths, true)
+      template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(nil, nil, nil, stat_file_paths)
       template.should_receive(:combine_stats).and_return(combined_path)
       template.stub!(:do_create_client_stat)
       template.stub!(:persist_jtl)
       template.create
-      expect(File.exist?(combined_path)).to be_false
       stat_file_paths.each { |sfp| sfp.unlink }
     end
     it 'should create a client_stat' do
@@ -99,9 +99,9 @@ describe Hailstorm::Model::ClientStat do
       Hailstorm::Model::JtlFile.stub!(:persist_file)
       File.stub!(:open).and_yield(JTL_LOG_DATA.strip_heredoc)
 
-      template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(jmeter_plan, execution_cycle, clusterable, [], false)
+      template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(jmeter_plan, execution_cycle, clusterable, [])
       template.stub!(:collate_stats)
-      client_stat = template.create
+      client_stat, = template.create
       expect(client_stat).to_not be_nil
       expect(client_stat.first_sample_at).to_not be_nil
     end
@@ -128,8 +128,7 @@ describe Hailstorm::Model::ClientStat do
                    .new(mock(Hailstorm::Model::JmeterPlan, id: 1),
                         mock(Hailstorm::Model::ExecutionCycle, id: 1),
                         mock(Hailstorm::Model::AmazonCloud, id: 1),
-                        stat_file_paths,
-                        true)
+                        stat_file_paths)
 
       template.stub!(:do_create_client_stat)
       template.should_receive(:persist_jtl) do |_client_stat, combined_path|
