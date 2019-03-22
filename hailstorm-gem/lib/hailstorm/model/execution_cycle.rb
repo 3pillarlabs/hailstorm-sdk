@@ -285,6 +285,10 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     self.update_attributes!(started_at: client_stat.first_sample_at, stopped_at: client_stat.last_sample_at)
   end
 
+  def aborted?
+    self.status.to_s.to_sym == States::ABORTED
+  end
+
   private
 
   def set_defaults

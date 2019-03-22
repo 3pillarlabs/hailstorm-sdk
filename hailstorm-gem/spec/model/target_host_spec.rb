@@ -1,5 +1,6 @@
 require 'spec_helper'
 require 'hailstorm/model/target_host'
+require 'hailstorm/model/target_stat'
 require 'hailstorm/model/project'
 require 'hailstorm/support/configuration'
 
@@ -158,9 +159,10 @@ describe Hailstorm::Model::TargetHost do
                                             active: true,
                                             project: project)
       Hailstorm::Model::TestMonitor.any_instance.should_receive(:stop_monitoring)
-      affected = []
-      Hailstorm::Model::TargetHost.stop_all_monitoring(project) { |t| affected.push(t) }
-      expect(affected.size).to be == 1
+      Hailstorm::Model::TargetStat.should_receive(:create_target_stat)
+      Hailstorm::Model::TargetHost.stop_all_monitoring(project,
+                                                       project.current_execution_cycle,
+                                                       create_target_stat: true)
     end
   end
 

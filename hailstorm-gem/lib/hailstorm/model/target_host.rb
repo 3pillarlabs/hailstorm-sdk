@@ -1,4 +1,5 @@
 require 'hailstorm/model'
+require 'hailstorm/model/target_stat'
 require 'hailstorm/behavior/moniterable'
 require 'hailstorm/support/thread'
 
@@ -110,12 +111,12 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
 
   # Stops monitoring on all target hosts. Each target_host is stopped in a new
   # thread. Blocks till all threads are done.
-  def self.stop_all_monitoring(project)
+  def self.stop_all_monitoring(project, execution_cycle, create_target_stat: true)
     logger.debug { "#{self}.#{__method__}" }
     moniterables(project).each do |target_host|
       Hailstorm::Support::Thread.start(target_host) do |t|
         t.do_stop_monitoring
-        yield t if block_given?
+        Hailstorm::Model::TargetStat.create_target_stat(execution_cycle, t) if create_target_stat
       end
     end
 

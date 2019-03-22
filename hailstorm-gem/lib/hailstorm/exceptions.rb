@@ -172,4 +172,23 @@ module Hailstorm
     end
   end
 
+  # Execution cycle exists, but it should not.
+  class ExecutionCycleExistsException < DiagnosticAwareException
+
+    def initialize(started_at)
+      @started_at = started_at
+    end
+
+    def diagnostics
+      "You have already started an execution cycle at #{@started_at}. Please stop or abort first."
+    end
+  end
+
+  # Execution cycle does not exist, but it should.
+  class ExecutionCycleNotExistsException < DiagnosticAwareException
+
+    def diagnostics
+      'Nothing to stop... no tests running'
+    end
+  end
 end
