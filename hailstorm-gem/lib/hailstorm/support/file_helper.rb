@@ -9,7 +9,7 @@ class Hailstorm::Support::FileHelper
 
   # Instance methods. Module enables use of helper as a mixed-in module and a class.
   module InstanceMethods
-    # Iterator over JMeter test plans in the project app directory
+    # Iterator over a directory
     # @return [Enumerator]
     # @param [String] glob
     def dir_glob_enumerator(glob)
