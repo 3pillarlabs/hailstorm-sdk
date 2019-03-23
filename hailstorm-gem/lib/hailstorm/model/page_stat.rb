@@ -4,6 +4,7 @@ require 'hailstorm/support/quantile'
 
 # A PageStat is the statistics for a sampler.
 # @author Sayantam Dey
+# TODO Rubocop fixes
 class Hailstorm::Model::PageStat < ActiveRecord::Base
   belongs_to :client_stat
 
