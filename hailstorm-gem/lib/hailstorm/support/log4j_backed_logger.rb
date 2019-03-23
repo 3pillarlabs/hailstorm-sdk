@@ -72,6 +72,7 @@ class Hailstorm::Support::Log4jBackedLogger
     end
   end
 
+  # logger.add is used by net-ssh
   def add(severity, message = nil, progname = nil)
     # map the severity & log_method
     log4j_severity,
