@@ -9,16 +9,15 @@ require 'hailstorm/behavior/loggable'
 class Hailstorm::Support::AmazonAccountCleaner
   include Hailstorm::Behavior::Loggable
 
-  REQUIRED_AWS_KEYS = %i[access_key_id secret_access_key].freeze
+  attr_reader :aws_config, :doze_seconds
 
-  attr_reader :aws_config
+  def initialize(access_key_id:, secret_access_key:, max_retries: 3, doze_seconds: 5)
+    @aws_config = {
+      access_key_id: access_key_id,
+      secret_access_key: secret_access_key
+    }.merge(logger: logger, max_retries: max_retries)
 
-  def initialize(aws_config = {})
-    # check arguments
-    REQUIRED_AWS_KEYS.each do |key|
-      raise(ArgumentError, ":#{key} needed") if aws_config[key].blank?
-    end
-    @aws_config = aws_config.merge(logger: logger, max_retries: 3)
+    @doze_seconds = doze_seconds
     @default_security_group = Hailstorm::Model::AmazonCloud::Defaults::SECURITY_GROUP
   end
 
@@ -61,9 +60,10 @@ class Hailstorm::Support::AmazonAccountCleaner
   def terminate_instances(ec2)
     ec2.instances.each do |instance|
       next unless instance.status == :running
+
       logger.info { "Terminating instance##{instance.id}..." }
       instance.terminate
-      sleep(5) until instance.status == :terminated
+      sleep(doze_seconds) until instance.status == :terminated
       logger.info { "... instance##{instance.id} terminated" }
     end
   end
@@ -71,6 +71,7 @@ class Hailstorm::Support::AmazonAccountCleaner
   def deregister_amis(ec2)
     ec2.images.with_owner(:self).each do |image|
       next unless image.state == :available
+
       logger.info { "Deregistering AMI##{image.id}..." }
       image.deregister
       logger.info { "... AMI##{image.id} deregistered" }
@@ -80,6 +81,7 @@ class Hailstorm::Support::AmazonAccountCleaner
   def delete_snapshots(ec2)
     ec2.snapshots.with_owner(:self).each do |snapshot|
       next unless snapshot.status == :completed
+
       logger.info { "Deleting snapshot##{snapshot.id}" }
       snapshot.delete
       logger.info { "... snapshot##{snapshot.id} deleted" }
@@ -95,10 +97,10 @@ class Hailstorm::Support::AmazonAccountCleaner
 
   def delete_security_groups(ec2)
     ec2.security_groups.each do |security_group|
-      if security_group.name == @default_security_group
-        security_group.delete
-        logger.info { "Security group##{security_group.name} deleted" }
-      end
+      next unless security_group.name == @default_security_group
+
+      security_group.delete
+      logger.info { "Security group##{security_group.name} deleted" }
     end
   end
 end
