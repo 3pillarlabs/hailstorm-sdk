@@ -32,9 +32,11 @@ module Hailstorm
       @message ||= diagnostics.gsub(/[ \t]{2,}/, ' ').freeze
     end
 
+    # :nocov:
     def diagnostics
-      ''
+      raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
+    # :nocov:
   end
 
   # Incompatible configuration
@@ -61,29 +63,6 @@ module Hailstorm
       %(One or more agents could not be prepared for load generation.
         This can happen due to issues in your cluster(Amazon or data-center)
         or a misconfiguration. Try 'setup force'.)
-    end
-  end
-
-  # JMeter installation problem
-  class JMeterVersionNotFound < DiagnosticAwareException
-
-    attr_reader :jmeter_version, :bucket_name, :jmeter_file_path
-
-    # @param [Object] jmeter_version
-    # @param [String] bucket_name
-    # @param [String] jmeter_file_path
-    def initialize(jmeter_version, bucket_name, jmeter_file_path)
-      @jmeter_version = jmeter_version
-      @bucket_name = bucket_name
-      @jmeter_file_path = jmeter_file_path
-    end
-
-    def diagnostics
-      %(The JMeter version '#{jmeter_version}' from '#{jmeter_file_path}' specified in
-        [config/environment.rb] cannot be installed. If you would like to use
-        a custom JMeter package, make sure the associated {VERSION}.tgz file is
-        uploaded to Amazon S3 bucket '#{bucket_name}'. If you are unsure,
-        remove the jmeter_version property.)
     end
   end
 

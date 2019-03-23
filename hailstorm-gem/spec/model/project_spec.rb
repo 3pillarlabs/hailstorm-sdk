@@ -93,7 +93,10 @@ describe Hailstorm::Model::Project do
       it 'should raise error' do
         project = Hailstorm::Model::Project.new(project_code: 'project_spec')
         project.stub!(:current_execution_cycle).and_return(Hailstorm::Model::ExecutionCycle.new)
-        expect { project.start }.to raise_error(Hailstorm::ExecutionCycleExistsException)
+        expect { project.start }
+          .to(
+            raise_error(Hailstorm::ExecutionCycleExistsException) { |error| expect(error.diagnostics).to_not be_blank }
+          )
       end
     end
 
@@ -131,7 +134,13 @@ describe Hailstorm::Model::Project do
     context 'current_execution_cycle does not exist' do
       it 'should raise error' do
         project = Hailstorm::Model::Project.new(project_code: 'project_spec')
-        expect { project.stop }.to raise_error(Hailstorm::ExecutionCycleNotExistsException)
+        expect { project.stop }
+          .to(
+            raise_error(Hailstorm::ExecutionCycleNotExistsException) do |error|
+              expect(error.diagnostics).to_not be_blank
+              expect(error.message).to_not be_blank
+            end
+          )
       end
     end
 

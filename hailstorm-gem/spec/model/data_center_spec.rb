@@ -314,6 +314,13 @@ describe Hailstorm::Model::DataCenter do
         it 'should not persist the instance with failed checks' do
           expect(@dc.load_agents.where(public_ip_address: '172.17.0.3').first).to be_nil
         end
+        it 'should raise Hailstorm::DataCenterAccessFailure' do
+          @dc.unstub!(:connection_ok?)
+          @dc.stub!(:connection_ok?).and_return(false)
+          master_agent = Hailstorm::Model::MasterAgent.new(private_ip_address: '172.17.0.2')
+          expect { @dc.send(:agent_before_save_on_create, master_agent) }
+            .to raise_error(Hailstorm::DataCenterAccessFailure) { |error| expect(error.diagnostics).to_not be_blank }
+        end
       end
       context 'java is not installed or version is incorrect' do
         before(:each) do
@@ -330,6 +337,13 @@ describe Hailstorm::Model::DataCenter do
         it 'should not persist the instance with failed checks' do
           expect(@dc.load_agents.where(public_ip_address: '172.17.0.3').first).to be_nil
         end
+        it 'should raise Hailstorm::DataCenterJavaFailure' do
+          @dc.unstub!(:java_ok?)
+          @dc.stub!(:java_ok?).and_return(false)
+          master_agent = Hailstorm::Model::MasterAgent.new(private_ip_address: '172.17.0.2')
+          expect { @dc.send(:agent_before_save_on_create, master_agent) }
+            .to raise_error(Hailstorm::DataCenterJavaFailure) { |error| expect(error.diagnostics).to_not be_blank }
+        end
       end
       context 'jmeter is not installed or version is not correct' do
         before(:each) do
@@ -345,6 +359,13 @@ describe Hailstorm::Model::DataCenter do
         end
         it 'should not persist the instance with failed checks' do
           expect(@dc.load_agents.where(public_ip_address: '172.17.0.3').first).to be_nil
+        end
+        it 'should raise Hailstorm::DataCenterJMeterFailure' do
+          @dc.unstub!(:jmeter_ok?)
+          @dc.stub!(:jmeter_ok?).and_return(false)
+          master_agent = Hailstorm::Model::MasterAgent.new(private_ip_address: '172.17.0.2')
+          expect { @dc.send(:agent_before_save_on_create, master_agent) }
+            .to raise_error(Hailstorm::DataCenterJMeterFailure) { |error| expect(error.diagnostics).to_not be_blank }
         end
       end
     end

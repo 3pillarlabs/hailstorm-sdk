@@ -460,7 +460,8 @@ describe Hailstorm::Model::Cluster do
       context '#create_or_enable fails with exception outside of Hailstorm::Exception hierarchy' do
         it 'should raise Hailstorm::AgentCreationFailure' do
           @clusterable.stub!(:create_or_enable).and_raise(Exception, 'mock exception')
-          expect { @clusterable.process_jmeter_plan(@jmeter_plan) }.to raise_error(Exception)
+          expect { @clusterable.process_jmeter_plan(@jmeter_plan) }
+              .to raise_error(Hailstorm::AgentCreationFailure) { |error| expect(error.diagnostics).to_not be_blank }
         end
       end
     end
