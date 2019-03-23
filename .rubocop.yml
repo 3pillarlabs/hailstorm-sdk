@@ -35,6 +35,9 @@ Style/RedundantSelf:
 Style/Not:
   Enabled: false
 
+Style/RegexpLiteral:
+  Enabled: false
+
 Metrics/LineLength:
   Max: 120
 

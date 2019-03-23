@@ -1,10 +1,11 @@
-require 'nokogiri'
-require 'zip/filesystem'
-
 require 'hailstorm/support'
+require 'nokogiri'
+require 'hailstorm/support/file_helper'
 
 # Report builder
 class Hailstorm::Support::ReportBuilder
+  include Hailstorm::Support::FileHelper::InstanceMethods
+
   attr_accessor :title
 
   attr_accessor :jmeter_plans
@@ -17,10 +18,10 @@ class Hailstorm::Support::ReportBuilder
 
   attr_reader :report_format
 
-  def initialize(options = {})
+  def initialize(format: 'docx', report_type: 'standard')
     @images = []
-    @report_format = options[:format] || 'docx'
-    @report_type = options[:type] || 'standard'
+    @report_format = format
+    @report_type = report_type
   end
 
   def test_summary_rows
@@ -35,6 +36,7 @@ class Hailstorm::Support::ReportBuilder
     end
   end
 
+  # Summary of each test/execution cycle
   class TestSummaryRow
     attr_accessor :index
     attr_accessor :jmeter_plans
@@ -43,7 +45,9 @@ class Hailstorm::Support::ReportBuilder
 
     attr_writer :target_hosts
     def target_hosts
-      (@target_hosts || []).collect(&:host_name).join(', ')
+      @target_hosts ||= []
+      host_names = @target_hosts.collect { |e| e.respond_to?(:host_name) ? e.host_name : e.to_s }
+      host_names.join(', ')
     end
   end
 
@@ -62,13 +66,12 @@ class Hailstorm::Support::ReportBuilder
   # Target names (Array) grouped by role across all execution_detail_items
   # @return [Hash]
   def targets_by_role
-    self.execution_detail_items.inject({}) do |group, ex|
+    self.execution_detail_items.each_with_object({}) do |ex, group|
       acc = ex.target_stats.each_with_object({}) do |t, map|
         map[t.role_name] ||= []
         map[t.role_name] << t.host_name
       end
       acc.each_pair { |k, v| group[k].nil? ? group.merge!(k => v) : group[k].concat(v).uniq! }
-      acc
     end
   end
 
@@ -80,6 +83,7 @@ class Hailstorm::Support::ReportBuilder
     end
   end
 
+  # Table of contents item
   class TocItem
     attr_accessor :builder
     attr_accessor :toc_id
@@ -90,6 +94,7 @@ class Hailstorm::Support::ReportBuilder
     end
   end
 
+  # Execution item
   class ExecutionDetail < TocItem
     attr_accessor :index
     attr_accessor :total_threads_count
@@ -151,36 +156,42 @@ class Hailstorm::Support::ReportBuilder
     end
   end
 
-  def client_comparison_graph
-    @client_comparison_graph ||= Graph.new
-    if block_given?
-      yield @client_comparison_graph
-      @client_comparison_graph.enlist(self)
-    else
-      @client_comparison_graph
+  # Graphs that compare across execution detail items
+  module ComparisonGraphs
+    def client_comparison_graph
+      @client_comparison_graph ||= Graph.new
+      if block_given?
+        yield @client_comparison_graph
+        @client_comparison_graph.enlist(self)
+      else
+        @client_comparison_graph
+      end
+    end
+
+    def target_cpu_comparison_graph
+      @target_cpu_comparison_graph ||= Graph.new
+      if block_given?
+        yield @target_cpu_comparison_graph
+        @target_cpu_comparison_graph.enlist(self)
+      else
+        @target_cpu_comparison_graph
+      end
+    end
+
+    def target_memory_comparison_graph
+      @target_memory_comparison_graph ||= Graph.new
+      if block_given?
+        yield @target_memory_comparison_graph
+        @target_memory_comparison_graph.enlist(self)
+      else
+        @target_memory_comparison_graph
+      end
     end
   end
 
-  def target_cpu_comparison_graph
-    @target_cpu_comparison_graph ||= Graph.new
-    if block_given?
-      yield @target_cpu_comparison_graph
-      @target_cpu_comparison_graph.enlist(self)
-    else
-      @target_cpu_comparison_graph
-    end
-  end
+  include ComparisonGraphs
 
-  def target_memory_comparison_graph
-    @target_memory_comparison_graph ||= Graph.new
-    if block_given?
-      yield @target_memory_comparison_graph
-      @target_memory_comparison_graph.enlist(self)
-    else
-      @target_memory_comparison_graph
-    end
-  end
-
+  # Each item corresponds one cluster
   class ClusterItem < TocItem
     attr_accessor :name
 
@@ -195,16 +206,7 @@ class Hailstorm::Support::ReportBuilder
       end
     end
 
-    def comparison_graph
-      @comparison_graph ||= Hailstorm::Support::ReportBuilder::Graph.new
-      if block_given?
-        yield @comparison_graph
-        @comparison_graph.enlist(builder)
-      else
-        @comparison_graph
-      end
-    end
-
+    # Client statistics
     class ClientStatItem < Hailstorm::Support::ReportBuilder::TocItem
       attr_accessor :name
       attr_accessor :threads_count
@@ -222,6 +224,7 @@ class Hailstorm::Support::ReportBuilder
     end
   end
 
+  # Target statistics
   class TargetStatItem < TocItem
     attr_accessor :role_name
     attr_accessor :host_name
@@ -235,18 +238,9 @@ class Hailstorm::Support::ReportBuilder
         @utilization_graph
       end
     end
-
-    def comparison_graph
-      @comparison_graph ||= Graph.new
-      if block_given?
-        yield @comparison_graph
-        @comparison_graph.enlist(builder)
-      else
-        @comparison_graph
-      end
-    end
   end
 
+  # Graph (image)
   class Graph
     attr_accessor :chart_model
 
@@ -277,30 +271,20 @@ class Hailstorm::Support::ReportBuilder
 
   def build(reports_path, report_file_name)
     @current_report_path = File.join(reports_path, report_file_name.gsub(/\/$/, ''))
-
     extract_docx_template
-
     evaluate_template
-
     report_file_path = zip_to_docx
-
     # cleanup
     FileUtils.rmtree(current_report_path)
-
     report_file_path
   end
 
   private
 
-  def canned_doc_path
-    @canned_doc_path ||= File.join(report_templates_path, report_format,
-                                   "#{report_type}.docx")
-  end
-
   def extract_docx_template
     FileUtils.mkdir_p(current_report_path)
-
-    Zip::File.foreach(canned_doc_path) do |zip_entry|
+    doc_path = File.join(report_templates_path, report_format, "#{report_type}.docx")
+    Zip::File.foreach(doc_path) do |zip_entry|
       disk_dir = File.dirname(zip_entry.to_s)
       FileUtils.mkdir_p(File.join(current_report_path, disk_dir))
       zip_entry.extract(File.join(current_report_path, zip_entry.to_s)) { true } # overwrite existing files
@@ -308,7 +292,22 @@ class Hailstorm::Support::ReportBuilder
   end
 
   def evaluate_template
-    # process images
+    process_images
+
+    context_vars = { report: self }
+    template_file_path = File.join(report_templates_path, report_format, report_type, 'document') # document.xml.erb
+
+    engine = ActionView::Base.new
+    engine.view_paths.push(File.dirname(template_file_path))
+    engine.assign(context_vars)
+    File.open(File.join(current_report_path, 'word', 'document.xml'), 'w') do |docxml|
+      docxml.print(engine.render(file: template_file_path,
+                                 formats: [:xml],
+                                 handlers: [:erb]))
+    end
+  end
+
+  def process_images
     rels_doc_xml = nil
     rels_xml = File.join(current_report_path, 'word', '_rels', 'document.xml.rels')
     File.open(rels_xml, 'r') do |io|
@@ -324,6 +323,13 @@ class Hailstorm::Support::ReportBuilder
       template_image_nodeset.remove
     end
 
+    add_image_refs(media_path, rels_doc_xml)
+    File.open(rels_xml, 'w') do |io|
+      rels_doc_xml.write_xml_to(io)
+    end
+  end
+
+  def add_image_refs(media_path, rels_doc_xml)
     self.images.each do |graph|
       relationship = Nokogiri::XML::Element.new('Relationship', rels_doc_xml)
       relationship['Id'] = graph.embed_id
@@ -332,45 +338,16 @@ class Hailstorm::Support::ReportBuilder
       rels_doc_xml.elements.first.add_child(relationship)
       FileUtils.move(graph.chart_model.getFilePath, media_path)
     end
-    File.open(rels_xml, 'w') do |io|
-      rels_doc_xml.write_xml_to(io)
-    end
-
-    context_vars = { report: self }
-
-    template_file_path = File.join(report_templates_path, report_format,
-                                   report_type, 'document') # document.xml.erb
-
-    engine = ActionView::Base.new
-    engine.view_paths.push(File.dirname(template_file_path))
-    engine.assign(context_vars)
-    File.open(File.join(current_report_path, 'word', 'document.xml'), 'w') do |docxml|
-      docxml.print(engine.render(file: template_file_path,
-                                 formats: [:xml],
-                                 handlers: [:erb]))
-    end
   end
 
   def zip_to_docx
-    rexp = Regexp.compile("#{current_report_path}/")
     patterns = [File.join(current_report_path, '**', '*'),
                 File.join(current_report_path, '_rels', '.rels')] # explicitly add hidden file
 
     report_file_path = "#{current_report_path}.docx"
-
     FileUtils.safe_unlink(report_file_path)
 
-    Zip::File.open(report_file_path, Zip::File::CREATE) do |zipfile|
-      Dir[*patterns].sort.each do |entry|
-        zip_entry = entry.gsub(rexp, '')
-        if File.directory?(entry)
-          zipfile.mkdir(zip_entry)
-        else
-          zipfile.add(zip_entry, entry) { true }
-        end
-      end
-    end
-
+    zip_dir(current_report_path, report_file_path, patterns: patterns)
     report_file_path
   end
 
