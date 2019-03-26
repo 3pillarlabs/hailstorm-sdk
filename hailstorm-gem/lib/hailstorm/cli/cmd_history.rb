@@ -15,6 +15,7 @@ class Hailstorm::Cli::CmdHistory
 
   def reload_saved_history
     return unless File.exist?(saved_history_path)
+
     File.open(saved_history_path, 'r') do |f|
       f.each_line { |l| memory.push(l.chomp) }
     end

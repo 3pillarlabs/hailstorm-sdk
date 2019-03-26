@@ -3,8 +3,11 @@ require 'hailstorm/model/execution_cycle'
 require 'hailstorm/model/amazon_cloud'
 require 'hailstorm/model/data_center'
 require 'hailstorm/model/nmon'
+require 'client_stats_helper'
 
 describe Hailstorm::Model::ExecutionCycle do
+
+  include ClientStatsHelper
 
   def generate_execution_cycles(cycle_ids = [])
     cycle_ids.map do |cycle_id|
@@ -52,9 +55,9 @@ describe Hailstorm::Model::ExecutionCycle do
         Hailstorm::Model::ClientStat.stub!(:hits_per_second_graph).and_return(chart_model)
         Hailstorm::Model::ClientStat.stub!(:active_threads_over_time_graph).and_return(chart_model)
         Hailstorm::Model::ClientStat.stub!(:throughput_over_time_graph).and_return(chart_model)
-        Hailstorm::Model::ClientStat.stub!(:execution_comparison_graph).and_return(chart_model)
-        Hailstorm::Model::TargetStat.stub!(:cpu_comparison_graph).and_return(chart_model)
-        Hailstorm::Model::TargetStat.stub!(:memory_comparison_graph).and_return(chart_model)
+        Hailstorm::Model::ExecutionCycle.stub!(:client_comparison_graph).and_return(chart_model)
+        Hailstorm::Model::ExecutionCycle.stub!(:cpu_comparison_graph).and_return(chart_model)
+        Hailstorm::Model::ExecutionCycle.stub!(:memory_comparison_graph).and_return(chart_model)
         Hailstorm::Model::ExecutionCycle.create_report(project, cycle_ids, builder)
       end
     end
@@ -252,4 +255,96 @@ describe Hailstorm::Model::ExecutionCycle do
       expect(execution_cycle.execution_duration).to be == '02:10:05'
     end
   end
+
+  context Hailstorm::Model::ExecutionCycle::GraphBuilderFactory do
+    it 'should create cpu target_comparison_graph builder' do
+      expect(Hailstorm::Model::ExecutionCycle::GraphBuilderFactory
+               .target_comparison_graph('foo', metric: :cpu)).to_not be_nil
+    end
+
+    it 'should create memory target_comparison_graph builder' do
+      expect(Hailstorm::Model::ExecutionCycle::GraphBuilderFactory
+                 .target_comparison_graph('foo', metric: :memory)).to_not be_nil
+    end
+
+    it 'should raise error if unknown metric is applied' do
+      klass = Hailstorm::Model::ExecutionCycle::GraphBuilderFactory
+      expect { klass.target_comparison_graph('foo', metric: :other) }.to raise_error(ArgumentError)
+    end
+
+    it 'should create client_comparison_graph builder' do
+      expect(Hailstorm::Model::ExecutionCycle::GraphBuilderFactory
+              .client_comparison_graph('foo')).to_not be_nil
+    end
+  end
+
+  context 'execution_cycles comparison graph' do
+    it 'should build the graph' do
+      project = Hailstorm::Model::Project.create!(project_code: 'target_stat_spec')
+      target_host = Hailstorm::Model::Nmon.create!(host_name: 'a',
+                                                   project: project,
+                                                   role_name: 'server',
+                                                   ssh_identity: 'a',
+                                                   user_name: 'ubuntu')
+      target_host.update_column(:active, true)
+      execution_cycles = [30, 30, 50, 100].map.with_index do |threads_count, index|
+        t = Time.new(2010, 10, 8, 10, 0, 0)
+        execution_cycle = Hailstorm::Model::ExecutionCycle.create!(project: project,
+                                                                   status: :stopped,
+                                                                   started_at: t,
+                                                                   stopped_at: t + index.hours)
+        execution_cycle.stub!(:total_threads_count).and_return(threads_count)
+
+        Hailstorm::Model::TargetStat.any_instance.stub(:write_blobs)
+        2.times do
+          Hailstorm::Model::TargetStat.create!(execution_cycle: execution_cycle,
+                                               target_host: target_host,
+                                               average_cpu_usage: 25.0,
+                                               average_memory_usage: 2345.5)
+        end
+        execution_cycle
+      end
+
+      grapher = double('TargetComparisonGraph').as_null_object
+      grapher.should_receive(:build).exactly(2).times
+
+      Hailstorm::Model::ExecutionCycle.cpu_comparison_graph(execution_cycles, builder: grapher)
+      Hailstorm::Model::ExecutionCycle.memory_comparison_graph(execution_cycles, builder: grapher)
+    end
+  end
+
+  context '#client_comparison_graph' do
+    it 'should compare response time and throughput across executions' do
+      project = Hailstorm::Model::Project.create!(project_code: 'execution_cycle_spec')
+      refs_ary = 2.times.map { create_client_stat_refs(project)  }
+      execution_cycles = refs_ary.map do |clusterable, execution_cycle, jmeter_plan|
+        t = Time.new(2010, 10, 7, 14, 23, 45)
+        Hailstorm::Model::ClientStat.create!(execution_cycle: execution_cycle,
+                                             jmeter_plan: jmeter_plan,
+                                             clusterable: clusterable,
+                                             threads_count: 30,
+                                             aggregate_ninety_percentile: 1500,
+                                             aggregate_response_throughput: 3000,
+                                             last_sample_at: t)
+        3.times do |index|
+          Hailstorm::Model::ClientStat.create!(execution_cycle: execution_cycle,
+                                               jmeter_plan: jmeter_plan,
+                                               clusterable: clusterable,
+                                               threads_count: 30 * (index + 1),
+                                               aggregate_ninety_percentile: 1500,
+                                               aggregate_response_throughput: 3000,
+                                               last_sample_at: t + (index + 1).hours)
+        end
+        execution_cycle
+      end
+
+      grapher = double('ExecutionComparisonGraph',
+                       addResponseTimeDataItem: nil,
+                       addThroughputDataItem: nil,
+                       'output_path=': nil)
+      grapher.should_receive(:build)
+      Hailstorm::Model::ExecutionCycle.client_comparison_graph(execution_cycles, builder: grapher)
+    end
+  end
+
 end

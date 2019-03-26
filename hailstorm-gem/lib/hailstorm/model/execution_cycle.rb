@@ -27,123 +27,6 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
   before_create :set_defaults
 
-  # Generates the report from the builder and contextual objects
-  class ReportGenerator
-    attr_reader :builder, :project, :execution_cycles
-
-    # @param [Hailstorm::Support::ReportBuilder] new_builder
-    # @param [Hailstorm::Model::Project] new_project
-    # @param [Array<Hailstorm::Model::ExecutionCycle>] new_execution_cycles
-    def initialize(new_builder, new_project, new_execution_cycles)
-      @builder = new_builder
-      @project = new_project
-      @execution_cycles = new_execution_cycles
-    end
-
-    def create
-      builder.title = project.project_code.humanize
-
-      add_execution_cycles
-
-      # adding aggregate graphs over all execution_cycles
-      add_comparision_graphs unless execution_cycles.size == 1
-
-      reports_path = File.join(Hailstorm.root, Hailstorm.reports_dir)
-      timestamp = Time.now.strftime('%Y%m%d%H%M%S')
-      report_file_name = "#{project.project_code}-#{timestamp}" # minus extn
-
-      builder.build(reports_path, report_file_name) # returns path to generated file
-    end
-
-    private
-
-    def add_execution_cycles
-      execution_cycles.each do |execution_cycle|
-        builder.jmeter_plans = execution_cycle.jmeter_plans
-        add_test_summary(execution_cycle)
-
-        builder.execution_detail_items do |execution_item|
-          execution_item.total_threads_count = execution_cycle.total_threads_count
-          add_clusters(execution_cycle, execution_item)
-          add_time_series(execution_cycle, execution_item)
-          add_target_stats(execution_cycle, execution_item)
-        end
-      end
-    end
-
-    def add_test_summary(execution_cycle)
-      builder.test_summary_rows do |row|
-        row.jmeter_plans = execution_cycle.jmeter_plans.collect(&:plan_name).join(', ')
-        row.test_duration = execution_cycle.execution_duration
-        row.total_threads_count = execution_cycle.total_threads_count
-        row.target_hosts = execution_cycle.target_hosts
-      end
-    end
-
-    def add_clusters(execution_cycle, execution_item)
-      execution_cycle.clusters.each do |cluster|
-        execution_item.clusters do |cluster_item|
-          cluster_item.name = cluster.slug
-          add_client_stats(cluster, cluster_item, execution_cycle)
-        end
-      end
-    end
-
-    def add_client_stats(cluster, cluster_item, execution_cycle)
-      cluster
-        .client_stats
-        .where(execution_cycle_id: execution_cycle.id)
-        .each do |client_stat|
-
-        cluster_item.client_stats do |client_stat_item|
-          client_stat_item.name = client_stat.jmeter_plan.plan_name
-          client_stat_item.threads_count = client_stat.threads_count
-          client_stat_item.aggregate_stats = client_stat.aggregate_stats
-          client_stat_item.aggregate_graph do |g|
-            g.chart_model = client_stat.aggregate_graph
-          end
-        end
-      end
-    end
-
-    def add_time_series(execution_cycle, execution_item)
-      execution_item.hits_per_second_graph do |g|
-        g.chart_model = Hailstorm::Model::ClientStat.hits_per_second_graph(execution_cycle)
-      end
-      execution_item.active_threads_over_time_graph do |g|
-        g.chart_model = Hailstorm::Model::ClientStat.active_threads_over_time_graph(execution_cycle)
-      end
-      execution_item.throughput_over_time_graph do |g|
-        g.chart_model = Hailstorm::Model::ClientStat.throughput_over_time_graph(execution_cycle)
-      end
-    end
-
-    def add_target_stats(execution_cycle, execution_item)
-      execution_cycle.target_stats.each do |target_stat|
-        execution_item.target_stats do |target_stat_item|
-          target_stat_item.role_name = target_stat.target_host.role_name
-          target_stat_item.host_name = target_stat.target_host.host_name
-          target_stat_item.utilization_graph do |g|
-            g.chart_model = target_stat.utilization_graph
-          end
-        end
-      end
-    end
-
-    def add_comparision_graphs
-      builder.client_comparison_graph do |graph|
-        graph.chart_model = Hailstorm::Model::ClientStat.execution_comparison_graph(execution_cycles)
-      end
-
-      builder.target_cpu_comparison_graph do |graph|
-        graph.chart_model = Hailstorm::Model::TargetStat.cpu_comparison_graph(execution_cycles)
-      end
-      builder.target_memory_comparison_graph do |graph|
-        graph.chart_model = Hailstorm::Model::TargetStat.memory_comparison_graph(execution_cycles)
-      end
-    end
-  end
-
   # @param [Hailstorm::Model::Project] project
   # @param [Array<Integer>] cycle_ids
   # @param [Hailstorm::Support::ReportBuilder] report_builder
@@ -166,6 +49,21 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     conditions ||= { id: report_sequence_list }
 
     project.execution_cycles.where(conditions).order(:started_at).all
+  end
+
+  def self.client_comparison_graph(execution_cycles, width: 640, height: 600, builder: nil)
+    grapher = ClientComparisonGraphBuilder.new(execution_cycles, builder: builder)
+    grapher.build(width: width, height: height)
+  end
+
+  def self.cpu_comparison_graph(execution_cycles, width: 640, height: 300, builder: nil)
+    grapher = TargetComparisonGraphBuilder.new(execution_cycles, metric: :cpu, builder: builder)
+    grapher.build(width: width, height: height, &:average_cpu_usage)
+  end
+
+  def self.memory_comparison_graph(execution_cycles, width: 640, height: 300, builder: nil)
+    grapher = TargetComparisonGraphBuilder.new(execution_cycles, metric: :memory, builder: builder)
+    grapher.build(width: width, height: height, &:average_memory_usage)
   end
 
   # @return [String] started_at in YYYY-MM-DD HH:MM format
@@ -226,6 +124,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   # @return [String]
   def execution_duration
     return nil if self.stopped_at.nil?
+
     duration_seconds = self.stopped_at - self.started_at
     dhc = duration_seconds / 3600 # hours component
     dhc_mod = duration_seconds % 3600
@@ -287,6 +186,249 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
   def aborted?
     self.status.to_s.to_sym == States::ABORTED
+  end
+
+  # Generates the report from the builder and contextual objects
+  class ReportGenerator
+    attr_reader :builder, :project, :execution_cycles
+
+    # @param [Hailstorm::Support::ReportBuilder] new_builder
+    # @param [Hailstorm::Model::Project] new_project
+    # @param [Array<Hailstorm::Model::ExecutionCycle>] new_execution_cycles
+    def initialize(new_builder, new_project, new_execution_cycles)
+      @builder = new_builder
+      @project = new_project
+      @execution_cycles = new_execution_cycles
+    end
+
+    def create
+      self.builder.title = project.project_code.humanize
+
+      add_execution_cycles
+
+      # adding aggregate graphs over all execution_cycles
+      add_comparision_graphs unless execution_cycles.size == 1
+
+      reports_path = File.join(Hailstorm.root, Hailstorm.reports_dir)
+      timestamp = Time.now.strftime('%Y%m%d%H%M%S')
+      report_file_name = "#{project.project_code}-#{timestamp}" # minus extn
+
+      self.builder.build(reports_path, report_file_name) # returns path to generated file
+    end
+
+    private
+
+    def add_execution_cycles
+      execution_cycles.each do |execution_cycle|
+        self.builder.jmeter_plans = execution_cycle.jmeter_plans
+        add_test_summary(execution_cycle)
+
+        self.builder.execution_detail_items do |execution_item|
+          execution_item.total_threads_count = execution_cycle.total_threads_count
+          add_clusters(execution_cycle, execution_item)
+          add_time_series(execution_cycle, execution_item)
+          add_target_stats(execution_cycle, execution_item)
+        end
+      end
+    end
+
+    def add_test_summary(execution_cycle)
+      self.builder.test_summary_rows do |row|
+        row.jmeter_plans = execution_cycle.jmeter_plans.collect(&:plan_name).join(', ')
+        row.test_duration = execution_cycle.execution_duration
+        row.total_threads_count = execution_cycle.total_threads_count
+        row.target_hosts = execution_cycle.target_hosts
+      end
+    end
+
+    def add_clusters(execution_cycle, execution_item)
+      execution_cycle.clusters.each do |cluster|
+        execution_item.clusters do |cluster_item|
+          cluster_item.name = cluster.slug
+          add_client_stats(cluster, cluster_item, execution_cycle)
+        end
+      end
+    end
+
+    def add_client_stats(cluster, cluster_item, execution_cycle)
+      cluster
+          .client_stats
+          .where(execution_cycle_id: execution_cycle.id)
+          .each do |client_stat|
+
+        cluster_item.client_stats do |client_stat_item|
+          client_stat_item.name = client_stat.jmeter_plan.plan_name
+          client_stat_item.threads_count = client_stat.threads_count
+          client_stat_item.aggregate_stats = client_stat.aggregate_stats
+          client_stat_item.aggregate_graph do |g|
+            g.chart_model = client_stat.aggregate_graph
+          end
+        end
+      end
+    end
+
+    def add_time_series(execution_cycle, execution_item)
+      execution_item.hits_per_second_graph do |g|
+        g.chart_model = Hailstorm::Model::ClientStat.hits_per_second_graph(execution_cycle)
+      end
+      execution_item.active_threads_over_time_graph do |g|
+        g.chart_model = Hailstorm::Model::ClientStat.active_threads_over_time_graph(execution_cycle)
+      end
+      execution_item.throughput_over_time_graph do |g|
+        g.chart_model = Hailstorm::Model::ClientStat.throughput_over_time_graph(execution_cycle)
+      end
+    end
+
+    def add_target_stats(execution_cycle, execution_item)
+      execution_cycle.target_stats.each do |target_stat|
+        execution_item.target_stats do |target_stat_item|
+          target_stat_item.role_name = target_stat.target_host.role_name
+          target_stat_item.host_name = target_stat.target_host.host_name
+          target_stat_item.utilization_graph do |g|
+            g.chart_model = target_stat.utilization_graph
+          end
+        end
+      end
+    end
+
+    def add_comparision_graphs
+      self.builder.client_comparison_graph do |graph|
+        graph.chart_model = Hailstorm::Model::ExecutionCycle.client_comparison_graph(execution_cycles)
+      end
+
+      self.builder.target_cpu_comparison_graph do |graph|
+        graph.chart_model = Hailstorm::Model::ExecutionCycle.cpu_comparison_graph(execution_cycles)
+      end
+      self.builder.target_memory_comparison_graph do |graph|
+        graph.chart_model = Hailstorm::Model::ExecutionCycle.memory_comparison_graph(execution_cycles)
+      end
+    end
+  end
+
+  # Builds client comparison graphs across execution cycles
+  class ClientComparisonGraphBuilder
+
+    attr_reader :execution_cycles, :grapher
+
+    def initialize(execution_cycles, builder: nil)
+      @execution_cycles = execution_cycles
+      @grapher = GraphBuilderFactory.client_comparison_graph(output_path, other_builder: builder)
+    end
+
+    def build(width:, height:)
+      # bug #Research-440
+      # store the total_threads_count in a map such that if it is repeated for a
+      # particular execution_cycle, the sequence Id is appended. This prevents the
+      # points from collapsing in the graph.
+      domain_labels = []
+      execution_cycles.each do |execution_cycle|
+        count_client_stats = 0
+        total_ninety_percentile_response_time = 0.0
+        total_transactions_per_second = 0.0
+
+        execution_cycle.client_stats.each do |client_stat|
+          count_client_stats += 1
+          total_ninety_percentile_response_time += client_stat.aggregate_ninety_percentile
+          total_transactions_per_second += client_stat.aggregate_response_throughput
+        end
+
+        execution_cycle_response_time = (total_ninety_percentile_response_time.to_f /
+            count_client_stats).round(2)
+
+        domain_label = execution_cycle.total_threads_count.to_s
+        domain_label.concat("-#{execution_cycle.id}") if domain_labels.include?(domain_label) # repeated total_threads_count(domain_label)
+        domain_labels.push(domain_label)
+
+        grapher.addResponseTimeDataItem(domain_label, execution_cycle_response_time)
+
+        execution_cycle_throughput = (total_transactions_per_second.to_f / count_client_stats).round(2)
+        grapher.addThroughputDataItem(domain_label, execution_cycle_throughput)
+      end
+
+      grapher.build(width, height) # <-- returns path to generated image
+    end
+
+    private
+
+    def output_path
+      if @output_path.nil?
+        start_id = execution_cycles.first.id
+        end_id = execution_cycles.last.id
+        @output_path = File.join(Hailstorm.root,
+                                 Hailstorm.reports_dir,
+                                 "client_execution_comparison_graph_#{start_id}-#{end_id}")
+
+      end
+
+      @output_path
+    end
+  end
+
+  # Builds target comparison graphs across execution_cycles
+  class TargetComparisonGraphBuilder
+
+    attr_reader :execution_cycles, :metric, :grapher
+
+    def initialize(execution_cycles, metric:, builder: nil)
+      @execution_cycles = execution_cycles
+      @metric = metric
+      @grapher = GraphBuilderFactory.target_comparison_graph(output_path, metric: metric, other_builder: builder)
+    end
+
+    def build(width:, height:)
+      # repeated total_threads_count cause a collapsed graph - bug #Research-440
+      domain_labels = []
+      execution_cycles.each do |execution_cycle|
+        domain_label = execution_cycle.total_threads_count.to_s
+        domain_label.concat("-#{execution_cycle.id}") if domain_labels.include?(domain_label)
+        domain_labels.push(domain_label)
+        execution_cycle.target_stats.includes(:target_host).each do |target_stat|
+          data_point = yield target_stat
+          grapher.addDataItem(data_point, target_stat.target_host.host_name, domain_label)
+        end
+      end
+
+      grapher.build(width, height) unless domain_labels.empty?
+    end
+
+    private
+
+    def output_path
+      @output_path ||=
+          File.join(Hailstorm.root,
+                    Hailstorm.reports_dir,
+                    "#{metric}_comparison_graph_#{execution_cycles.first.id}-#{execution_cycles.last.id}")
+    end
+  end
+
+  # Factory module for graph builders
+  module GraphBuilderFactory
+
+    def self.target_comparison_graph(output_path, metric:, other_builder: nil)
+      if other_builder.nil?
+        grapher_klass = com.brickred.tsg.hailstorm.TargetComparisonGraph
+        case metric
+        when :cpu
+          grapher_klass.getCpuComparisionBuilder(output_path)
+        when :memory
+          grapher_klass.getMemoryComparisionBuilder(output_path)
+        else
+          raise(ArgumentError, 'metric must be either :cpu or :memory')
+        end
+      else
+        other_builder.output_path = output_path
+        other_builder
+      end
+    end
+
+    def self.client_comparison_graph(output_path, other_builder: nil)
+      if other_builder
+        other_builder.output_path = output_path
+        other_builder
+      else
+        com.brickred.tsg.hailstorm.ExecutionComparisonGraph.new(output_path)
+      end
+    end
   end
 
   private

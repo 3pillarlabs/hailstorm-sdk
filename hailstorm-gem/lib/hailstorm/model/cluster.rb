@@ -197,6 +197,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     # check if load generation is not stopped on any load agent and raise
     # exception accordingly
     return cluster_instances if Hailstorm::Model::LoadAgent.where('jmeter_pid IS NOT NULL').all.empty?
+
     raise(Hailstorm::Exception, 'Load generation could not be stopped on all agents')
   end
 
@@ -246,6 +247,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
 
   def set_cluster_code
     return unless self.cluster_code.nil?
+
     self.cluster_code = Haikunator.haikunate(100) until self.class.where(cluster_code: self.cluster_code)
                                                             .count.zero?
   end

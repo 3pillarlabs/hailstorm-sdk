@@ -91,6 +91,7 @@ class Hailstorm::Support::Log4jBackedLogger
                        [logger_level_impl::DEBUG, :debug]
                      end
     return unless @log4j_logger.isEnabledFor(log4j_severity)
+
     if message.nil?
       message = if block_given?
                   yield

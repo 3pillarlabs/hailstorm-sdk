@@ -68,6 +68,7 @@ module Hailstorm::Behavior::Clusterable
                          master_slave_relation(jmeter_plan))
       rescue Exception => e
         raise(e) if e.is_a?(Hailstorm::Exception)
+
         logger.debug(e.message)
         logger.debug { "\n".concat(e.backtrace.join("\n")) }
         raise(Hailstorm::AgentCreationFailure)
@@ -81,6 +82,7 @@ module Hailstorm::Behavior::Clusterable
 
         # abort if more than 1 master agent is present
         raise(Hailstorm::MasterSlaveSwitchOnConflict) if query.all.count > 1
+
         # one master is necessary
         query.first_or_create!.tap { |agent| agent.update_column(:active, true) }
         :slave_agents
@@ -91,6 +93,7 @@ module Hailstorm::Behavior::Clusterable
                                  .where(jmeter_plan_id: jmeter_plan.id)
                                  .all.count
         raise(Hailstorm::MasterSlaveSwitchOffConflict) if slave_agents_count > 0
+
         :master_agents
       end
     end
@@ -119,8 +122,8 @@ module Hailstorm::Behavior::Clusterable
       activated_agents
     end
 
-    def activate_agent(activated_agents, count, mutex, q)
-      agent = q.unscope(where: :active).where(active: false).first_or_initialize { |r| r.active = true }
+    def activate_agent(activated_agents, count, mutex, query)
+      agent = query.unscope(where: :active).where(active: false).first_or_initialize { |r| r.active = true }
       if agent.new_record?
         create_new_agent(activated_agents, agent, count, mutex) do |initialized_agent|
           agent_before_save_on_create(initialized_agent)
@@ -292,6 +295,7 @@ module Hailstorm::Behavior::Clusterable
   # @return [Array<Hailstorm::Model::LoadAgent>]  activated agents
   def provision_agents
     return if self.destroyed?
+
     logger.debug { "#{self.class}##{__method__}" }
     self.project.jmeter_plans.where(active: true).all.collect { |jmeter_plan| process_jmeter_plan(jmeter_plan) }.flatten
   end
@@ -317,6 +321,7 @@ module Hailstorm::Behavior::Clusterable
   # disable all associated load_agents
   def disable_agents
     return if self.destroyed?
+
     logger.debug { "#{self.class}##{__method__}" }
     self.load_agents.each { |agent| agent.update_column(:active, false) }
   end

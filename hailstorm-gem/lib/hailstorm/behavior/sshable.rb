@@ -17,6 +17,7 @@ module Hailstorm::Behavior::SSHable
   def ssh_options
     unless @ssh_options
       raise(NoMethodError, "#{self.class}#ssh_port method/attribute missing") unless self.respond_to?(:ssh_port)
+
       @ssh_options = { keys: identity_file_path }
       @ssh_options[:port] = self.ssh_port if self.ssh_port && self.ssh_port.to_i != Defaults::SSH_PORT
     end

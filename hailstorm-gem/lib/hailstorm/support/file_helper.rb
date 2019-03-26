@@ -47,6 +47,7 @@ class Hailstorm::Support::FileHelper
     def local_app_directories(start_dir, entries = {})
       logger.debug { "#{self.class}##{__method__}" }
       raise(ArgumentError, 'entries should be Hash') unless entries.is_a?(Hash)
+
       queue = [[start_dir, entries]]
       entries[File.basename(start_dir)] = nil
       queue.each do |path, context|
@@ -83,7 +84,7 @@ class Hailstorm::Support::FileHelper
     # @param [Array<String>] patterns
     def zip_dir(dir_path, output_file_path, patterns: nil)
       rexp = Regexp.compile("#{dir_path}/")
-      patterns ||= [ File.join(dir_path, '**', '*') ]
+      patterns ||= [File.join(dir_path, '**', '*')]
 
       Zip::File.open(output_file_path, Zip::File::CREATE) do |zipfile|
         Dir[*patterns].sort.each do |entry|

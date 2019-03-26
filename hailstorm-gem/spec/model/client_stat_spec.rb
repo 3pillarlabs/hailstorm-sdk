@@ -5,27 +5,11 @@ require 'hailstorm/model/client_stat'
 require 'hailstorm/model/amazon_cloud'
 require 'hailstorm/model/master_agent'
 require 'hailstorm/model/page_stat'
+require 'client_stats_helper'
 
 describe Hailstorm::Model::ClientStat do
 
-  def create_client_stat_refs(project = nil)
-    project ||= Hailstorm::Model::Project.create!(project_code: 'execution_cycle_spec')
-    execution_cycle = Hailstorm::Model::ExecutionCycle.create!(project: project,
-                                                               status: :stopped,
-                                                               started_at: Time.now,
-                                                               stopped_at: Time.now + 15.minutes)
-    jmeter_plan = Hailstorm::Model::JmeterPlan.create!(project: project,
-                                                       test_plan_name: 'priming',
-                                                       content_hash: 'A',
-                                                       latest_threads_count: 100)
-    jmeter_plan.update_column(:active, true)
-    clusterable = Hailstorm::Model::AmazonCloud.create!(project: project,
-                                                        access_key: 'A',
-                                                        secret_key: 'A',
-                                                        region: 'us-east-1')
-    clusterable.update_column(:active, true)
-    [clusterable, execution_cycle, jmeter_plan]
-  end
+  include ClientStatsHelper
 
   context '.collect_client_stats' do
     it 'should collect create_client_stats' do
@@ -168,42 +152,17 @@ describe Hailstorm::Model::ClientStat do
                                            samples_breakup_json: '[{"r": 1}, {"r": [1, 3]}, {"r": [3, 5]}, {"r": 5}]')
       end
 
-      client_stat.should_receive(:build_aggregate_graph)
-      client_stat.aggregate_graph
-    end
-  end
-
-  context '#execution_comparison_graph' do
-    it 'should compare response time and throughput across executions' do
-      project = Hailstorm::Model::Project.create!(project_code: 'execution_cycle_spec')
-      refs_ary = 2.times.map { create_client_stat_refs(project)  }
-      execution_cycles = refs_ary.map do |clusterable, execution_cycle, jmeter_plan|
-        t = Time.new(2010, 10, 7, 14, 23, 45)
-        Hailstorm::Model::ClientStat.create!(execution_cycle: execution_cycle,
-                                             jmeter_plan: jmeter_plan,
-                                             clusterable: clusterable,
-                                             threads_count: 30,
-                                             aggregate_ninety_percentile: 1500,
-                                             aggregate_response_throughput: 3000,
-                                             last_sample_at: t)
-        3.times do |index|
-          Hailstorm::Model::ClientStat.create!(execution_cycle: execution_cycle,
-                                               jmeter_plan: jmeter_plan,
-                                               clusterable: clusterable,
-                                               threads_count: 30 * (index + 1),
-                                               aggregate_ninety_percentile: 1500,
-                                               aggregate_response_throughput: 3000,
-                                               last_sample_at: t + (index + 1).hours)
+      builder = double('GraphBuilder', create: 'foo.png', 'output_path=': nil)
+      class << builder
+        def method_missing(name, *args, &block)
+          if name =~ /^set/
+            self
+          else
+            super
+          end
         end
-        execution_cycle
       end
-
-      grapher = double('ExecutionComparisonGraph',
-                       addResponseTimeDataItem: nil,
-                       addThroughputDataItem: nil,
-                       'output_path=': nil)
-      grapher.should_receive(:build)
-      Hailstorm::Model::ClientStat.execution_comparison_graph(execution_cycles, grapher: grapher)
+      client_stat.aggregate_graph(builder: builder)
     end
   end
 
@@ -222,7 +181,7 @@ describe Hailstorm::Model::ClientStat do
     end
   end
 
-  context 'TimeSeriesGraph' do
+  context 'time series graphs' do
     it 'should build the graphs' do
       clusterable, execution_cycle, jmeter_plan = create_client_stat_refs
       2.times.map do |index|
@@ -241,11 +200,29 @@ describe Hailstorm::Model::ClientStat do
         file_path
       end
 
-      grapher = double('TimeSeriesGraph', addDataPoint: nil)
+      grapher = double('TimeSeriesGraph',
+                       addDataPoint: nil,
+                       'series_name=': nil,
+                       'range_name=': nil,
+                       'start_time=': nil)
+
       grapher.should_receive(:build).exactly(3).times
-      Hailstorm::Model::ClientStat.hits_per_second_graph(execution_cycle, grapher: grapher)
-      Hailstorm::Model::ClientStat.active_threads_over_time_graph(execution_cycle, grapher: grapher)
-      Hailstorm::Model::ClientStat.throughput_over_time_graph(execution_cycle, grapher: grapher)
+      Hailstorm::Model::ClientStat.hits_per_second_graph(execution_cycle, builder: grapher)
+      Hailstorm::Model::ClientStat.active_threads_over_time_graph(execution_cycle, builder: grapher)
+      Hailstorm::Model::ClientStat.throughput_over_time_graph(execution_cycle, builder: grapher)
+    end
+  end
+
+  context Hailstorm::Model::ClientStat::GraphBuilderFactory do
+    it 'should create aggregate_graph builder' do
+      expect(Hailstorm::Model::ClientStat::GraphBuilderFactory.aggregate_graph(identifier: 1)).to_not be_nil
+    end
+
+    it 'should create time_series_graph builder' do
+      expect(Hailstorm::Model::ClientStat::GraphBuilderFactory
+               .time_series_graph(series_name: 'Requests/second',
+                                  range_name: 'Requests',
+                                  start_time: Time.now.to_i)).to_not be_nil
     end
   end
 end

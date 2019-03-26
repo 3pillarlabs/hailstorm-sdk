@@ -58,6 +58,7 @@ class Hailstorm::Support::Schema
     migrations = SchemaMigration.all.collect { |r| r.migration_name.to_sym }
     schema_updates.each do |name|
       next if migrations.include?(name)
+
       # :nocov:
       logger.debug { name }
       self.send(name)

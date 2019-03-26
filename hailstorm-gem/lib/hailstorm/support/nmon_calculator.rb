@@ -47,11 +47,13 @@ class Hailstorm::Support::NmonCalculator
   # @param [String] line
   def match_cpu_sample(line)
     return nil unless CPU_REXP.match(line) && @cpu_samples_count < self.samples_count
+
     # this is the CPU_ALL line
     # 0       1                 2       3
     # CPU_ALL,CPU Total ubuntu,<User%>,<Sys%>,Wait%,Idle%,Busy,CPUs
     tokens = line.split(COMMA_REXP)
     return nil if tokens[2] == 'User%' # skip header
+
     cpu_tokens = tokens.slice(2, 2).collect(&:to_f)
     total_cpu = cpu_tokens.inject(0.0) { |s, e| s + e }
     @cumulative_cpu_usage += total_cpu
@@ -62,11 +64,13 @@ class Hailstorm::Support::NmonCalculator
 
   def match_mem_sample(line)
     return nil unless MEM_REXP.match(line) && @memory_samples_count < self.samples_count
+
     # this is the MEM line
     # 0   1                  2        3         4        5         6       7        8       9
     # MEM,Memory MB vmtuxbox,memtotal,hightotal,lowtotal,swaptotal,memfree,highfree,lowfree,swapfree,...
     mem_tokens = line.split(COMMA_REXP)
     return nil if mem_tokens[2] == 'memtotal' # skip header
+
     mem_total = mem_tokens[2].to_f
     swap_total = mem_tokens[5].to_f
     mem_free = mem_tokens[6].to_f

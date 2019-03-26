@@ -22,6 +22,7 @@ module Hailstorm::Support::Waiter
       before_yield_time = Time.now.to_i
       result = yield
       return result if result
+
       sleep(sleep_duration)
       total_elapsed += (Time.now.to_i - before_yield_time)
     end

@@ -30,10 +30,10 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
 
   # @return [String] path to outfile file
   def utilization_graph(width: 640, height: 600, builder: nil)
-    grapher = graph_builder_factory.utilization_graph(utilization_graph_path,
-                                                      self.target_host.sampling_interval,
-                                                      other_builder: builder)
-    grapher ||= builder
+    output_path = File.join(Hailstorm.root, Hailstorm.reports_dir, "target_stat_graph_#{self.id}")
+    grapher = GraphBuilderFactory.utilization_graph(output_path,
+                                                    self.target_host.sampling_interval,
+                                                    other_builder: builder)
     grapher.startBuilder
 
     cpu_usage_file_path = dump_usage_data(:cpu, :cpu_usage_trend)
@@ -50,16 +50,6 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
     end
 
     grapher.finish(width, height) # returns path to graph file
-  end
-
-  def self.cpu_comparison_graph(execution_cycles, width: 640, height: 300, builder: nil)
-    grapher = ComparisonGraphBuilder.new(execution_cycles, metric: :cpu, builder: builder)
-    grapher.build(width: width, height: height, &:average_cpu_usage)
-  end
-
-  def self.memory_comparison_graph(execution_cycles, width: 640, height: 300, builder: nil)
-    grapher = ComparisonGraphBuilder.new(execution_cycles, metric: :memory, builder: builder)
-    grapher.build(width: width, height: height, &:average_memory_usage)
   end
 
   private
@@ -98,9 +88,6 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
               "#{metric}_trend-#{self.execution_cycle.id}-#{self.target_host.id}.log#{inflated ? '' : '.gz'}")
   end
 
-  def utilization_graph_path
-    File.join(Hailstorm.root, Hailstorm.reports_dir, "target_stat_graph_#{self.id}")
-  end
 
   # Dumps the uncompressed metric blobs to a temporary location
   # @param [Symbol] metric one of :memory, :cpu. :swap
@@ -125,81 +112,18 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
     file_path
   end
 
-  def graph_builder_factory
-    @graph_builder_factory ||= GraphBuilderFactory.new
-  end
-
   # Factory for building graph builders
   class GraphBuilderFactory
 
-    def utilization_graph(output_path, sampling_interval, other_builder: nil)
+    def self.utilization_graph(output_path, sampling_interval, other_builder: nil)
       if other_builder.nil?
         grapher_klass = com.brickred.tsg.hailstorm.ResourceUtilizationGraph
         grapher_klass.new(output_path, sampling_interval)
       else
         other_builder.output_path = output_path
         other_builder.sampling_interval = sampling_interval
-        nil
+        other_builder
       end
-    end
-
-    def target_comparison_graph(output_path, metric, other_builder: nil)
-      if other_builder.nil?
-        grapher_klass = com.brickred.tsg.hailstorm.TargetComparisonGraph
-        case metric
-        when :cpu
-          grapher_klass.getCpuComparisionBuilder(output_path)
-        when :memory
-          grapher_klass.getMemoryComparisionBuilder(output_path)
-        else
-          raise(ArgumentError, 'metric must be either :cpu or :mem')
-        end
-      else
-        other_builder.output_path = output_path
-        nil
-      end
-    end
-  end
-
-  # Builds comparison graphs across execution_cycles
-  class ComparisonGraphBuilder
-
-    attr_reader :execution_cycles, :metric, :grapher
-
-    def initialize(execution_cycles, metric:, builder: nil)
-      @execution_cycles = execution_cycles
-      @metric = metric
-      @grapher = graph_builder_factory.target_comparison_graph(output_path, metric, other_builder: builder)
-      @grapher ||= builder
-    end
-
-    def build(width:, height:)
-      # repeated total_threads_count cause a collapsed graph - bug #Research-440
-      domain_labels = []
-      execution_cycles.each do |execution_cycle|
-        domain_label = execution_cycle.total_threads_count.to_s
-        domain_label.concat("-#{execution_cycle.id}") if domain_labels.include?(domain_label)
-        domain_labels.push(domain_label)
-        execution_cycle.target_stats.includes(:target_host).each do |target_stat|
-          data_point = yield target_stat
-          grapher.addDataItem(data_point, target_stat.target_host.host_name, domain_label)
-        end
-      end
-
-      grapher.build(width, height) unless domain_labels.empty?
-    end
-
-    private
-
-    def output_path
-      @output_path ||=
-        File.join(Hailstorm.root,
-                  Hailstorm.reports_dir,
-                  "#{metric}_comparison_graph_#{execution_cycles.first.id}-#{execution_cycles.last.id}")
-    end
-
-    def graph_builder_factory
-      @graph_builder_factory ||= GraphBuilderFactory.new
     end
   end
 end

@@ -45,12 +45,8 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
 
     sample_start_time = sample['ts'].to_i
     sample_end_time = sample_start_time + sample_response_time
-    if self.min_start_time.nil? || (sample_start_time < self.min_start_time)
-      self.min_start_time = sample_start_time
-    end
-    if self.max_end_time.nil? || (sample_end_time > self.max_end_time)
-      self.max_end_time = sample_end_time
-    end
+    self.min_start_time = sample_start_time if self.min_start_time.nil? || (sample_start_time < self.min_start_time)
+    self.max_end_time = sample_end_time if self.max_end_time.nil? || (sample_end_time > self.max_end_time)
     self.cumulative_bytes += sample['by'].to_i
 
     self.samples_breakup(sample_response_time)
@@ -97,11 +93,9 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
             partition_to_update = partition
             break
           end
-        else
-          if (srt_seconds >= range.first) && (srt_seconds < range.last)
-            partition_to_update = partition
-            break
-          end
+        elsif srt_seconds >= range.first && srt_seconds < range.last
+          partition_to_update = partition
+          break
         end
       end
 

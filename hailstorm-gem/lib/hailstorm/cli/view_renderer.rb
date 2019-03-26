@@ -43,11 +43,11 @@ class Hailstorm::Cli::ViewRenderer
     end
   end
 
-  def render_show(q, show_active, what)
+  def render_show(query, show_active, what)
     should_show = ->(kind) { what == kind || %i[active all].include?(what) }
-    puts view_template.render_jmeter_plans(q[:jmeter_plans], show_active) if should_show.call(:jmeter)
-    puts view_template.render_load_agents(q[:clusters], show_active) if should_show.call(:cluster)
-    puts view_template.render_target_hosts(q[:target_hosts], show_active) if should_show.call(:monitor)
+    puts view_template.render_jmeter_plans(query[:jmeter_plans], show_active) if should_show.call(:jmeter)
+    puts view_template.render_load_agents(query[:clusters], show_active) if should_show.call(:cluster)
+    puts view_template.render_target_hosts(query[:target_hosts], show_active) if should_show.call(:monitor)
   end
 
   def view_template

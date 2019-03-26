@@ -81,6 +81,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
       test_plans.push(jmx.gsub(rexp, '').gsub(/\.jmx$/, ''))
     end
     raise(Hailstorm::Exception, "No test plans in #{Hailstorm.app_dir}.") if test_plans.blank?
+
     test_plans
   end
 
@@ -96,6 +97,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
       end
     end
     raise(Hailstorm::Exception, "Not all test plans found:\n#{not_found.join("\n")}") unless not_found.empty?
+
     test_plans
   end
 
@@ -265,6 +267,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
       backup_file_rexp = Regexp.new('(?:~|bk|bkp|backup|old|tmp)$')
       file_helper.dir_glob_enumerator(File.join(Hailstorm.root, Hailstorm.app_dir, '**', '*')).each do |entry|
         next unless file_helper.file?(entry) # if its a regular file
+
         entry_name = File.basename(entry)
         @test_artifacts.push(entry) unless hidden_file_rexp.match(entry_name) || backup_file_rexp.match(entry_name)
       end
@@ -376,6 +379,7 @@ please add to your test plan(s).")
           doc.xpath('//ThreadGroup').each do |tg|
             tg_idx += 1
             next unless tg['enabled'] == 'true'
+
             @scenario_definitions.push(create_defn(doc, tg, tg_idx))
           end
         end
@@ -463,6 +467,7 @@ please add to your test plan(s).")
         doc.xpath('//*[contains(text(),"${__")]').each do |prop_element|
           property_name, default_value = parse_name_value(prop_element)
           next if property_name.nil?
+
           parent_thread_group = prop_element.ancestors('ThreadGroup').first
 
           if parent_thread_group.nil? || parent_thread_group['enabled'] == true.to_s
@@ -478,14 +483,15 @@ please add to your test plan(s).")
     def parse_name_value(prop_element)
       match_data = PROPERTY_NAME_REXP.match(prop_element.content)
       return nil if match_data.nil?
+
       property_name = match_data[1]
       default_value = match_data.size > 2 ? match_data[2] : nil
       [property_name, default_value]
     end
 
-    def create_defn(doc, tg, tg_idx)
+    def create_defn(doc, tgr, tg_idx)
       definition = OpenStruct.new
-      tg_name = tg['testname']
+      tg_name = tgr['testname']
       tg_comment_node = doc.xpath("//ThreadGroup[@testname=\"#{tg_name}\"]/stringProp[@name=\"TestPlan.comments\"]")
                            .first
       definition.thread_group = tg_comment_node.nil? ? tg_name.to_s : "#{tg_name}: #{tg_comment_node.content}"

@@ -30,6 +30,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
     self.save! if save_on_setup?
     return unless self.active? || force
+
     logger.info("Provisioning #{self.machines.size} #{self.class} machines...")
     provision_agents
   end

@@ -16,9 +16,9 @@ class Hailstorm::Support::Thread
     logger.debug { "#{self}.#{__method__}" }
     if Hailstorm.application.multi_threaded?
       # :nocov:
-      thread = Thread.start(args) do |args|
+      thread = Thread.start(args) do |thread_args|
         begin
-          yield(*args)
+          yield(*thread_args)
         rescue Object => e
           logger.error(e.message)
           logger.debug { "\n".concat(e.backtrace.join("\n")) }
