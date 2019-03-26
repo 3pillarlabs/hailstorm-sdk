@@ -88,7 +88,6 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
               "#{metric}_trend-#{self.execution_cycle.id}-#{self.target_host.id}.log#{inflated ? '' : '.gz'}")
   end
 
-
   # Dumps the uncompressed metric blobs to a temporary location
   # @param [Symbol] metric one of :memory, :cpu. :swap
   # @param [Symbol] db_column_name
