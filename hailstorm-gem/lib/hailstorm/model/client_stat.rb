@@ -10,7 +10,6 @@ require 'hailstorm/support/collection_helper'
 
 # Statistics collected on the 'client' side.
 # @author Sayantam Dey
-# TODO Rubocop fixes
 class Hailstorm::Model::ClientStat < ActiveRecord::Base
   include Hailstorm::Support::CollectionHelper
 
@@ -71,84 +70,6 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     template = ClientStatTemplate.new(jmeter_plan, execution_cycle, clusterable, stat_file_paths)
     template.logger = logger
     template.create
-  end
-
-  # Generates a hits per second graph
-  def self.hits_per_second_graph(execution_cycle, width: 640, height: 300, builder: nil)
-    sax_document = ResponseTimeFreqDist.new
-    sax_parser = Nokogiri::XML::SAX::Parser.new(sax_document)
-    execution_cycle.client_stats.each do |client_stat|
-      export_file = client_stat.write_jtl(Hailstorm.tmp_path, true)
-      File.open(export_file, 'r') do |file|
-        sax_parser.parse(file)
-      end
-    end
-
-    grapher = GraphBuilderFactory.time_series_graph(series_name: 'Requests/second',
-                                                    range_name: 'Requests',
-                                                    start_time: sax_document.start_time,
-                                                    other_builder: builder)
-    sax_document.hit_matrix.each do |key, value|
-      grapher.addDataPoint(key, value)
-    end
-
-    output_path = File.join(Hailstorm.root, Hailstorm.reports_dir, "hits_per_second_graph_#{execution_cycle.id}")
-    grapher.build(output_path, width, height)
-  end
-
-  def self.active_threads_over_time_graph(execution_cycle, width: 640, height: 300, builder: nil)
-    sax_document = VirtualUserTimeDist.new
-    sax_parser = Nokogiri::XML::SAX::Parser.new(sax_document)
-
-    execution_cycle.client_stats.each do |client_stat|
-      export_file = client_stat.write_jtl(Hailstorm.tmp_path, true)
-      File.open(export_file, 'r') do |file|
-        sax_parser.parse(file)
-      end
-    end
-
-    grapher = GraphBuilderFactory.time_series_graph(series_name: 'Virtual Users / Second',
-                                                    range_name: 'Virtual Users',
-                                                    start_time: sax_document.start_time,
-                                                    other_builder: builder)
-
-    ts_keys = sax_document.vusers_matrix.keys.sort_by(&:to_i)
-    ts_keys.each_with_index do |ts, index|
-      previous_index = index > 1 ? index - 1 : index
-      next_index = index < ts_keys.size - 1 ? index + 1 : index
-      previous_count = sax_document.vusers_matrix[ts_keys[previous_index]]
-      threads_count = sax_document.vusers_matrix[ts]
-      next_count = sax_document.vusers_matrix[ts_keys[next_index]]
-      if (previous_count == next_count) && (previous_count > threads_count)
-        threads_count = previous_count # dip correction
-      end
-      grapher.addDataPoint(ts, threads_count)
-    end
-
-    output_path = File.join(Hailstorm.root, Hailstorm.reports_dir, "vusers_per_second_graph_#{execution_cycle.id}")
-    grapher.build(output_path, width, height)
-  end
-
-  def self.throughput_over_time_graph(execution_cycle, width: 640, height: 300, builder: nil)
-    sax_document = ThroughputTimeDist.new
-    sax_parser = Nokogiri::XML::SAX::Parser.new(sax_document)
-    execution_cycle.client_stats.each do |client_stat|
-      export_file = client_stat.write_jtl(Hailstorm.tmp_path, true)
-      File.open(export_file, 'r') do |file|
-        sax_parser.parse(file)
-      end
-    end
-
-    grapher = GraphBuilderFactory.time_series_graph(series_name: 'Throughput over time',
-                                                    range_name: 'Bytes Transferred',
-                                                    start_time: sax_document.start_time,
-                                                    other_builder: builder)
-    sax_document.byte_matrix.each do |key, value|
-      grapher.addDataPoint(key, value)
-    end
-
-    output_path = File.join(Hailstorm.root, Hailstorm.reports_dir, "throughput_per_second_graph_#{execution_cycle.id}")
-    grapher.build(output_path, width, height)
   end
 
   # @return [String] path to generated image
@@ -305,130 +226,35 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
                            threads_count: jmeter_plan.latest_threads_count)
                     .first_or_create!
 
-      # SAX parsing
       jtl_document = JtlDocument.new(Hailstorm::Model::PageStat, client_stat)
       jtl_parser = Nokogiri::XML::SAX::Parser.new(jtl_document)
       jtl_parser.parse(io_like)
-
       # save in db
       jtl_document.page_stats_map.values.each(&:save!)
-
-      # update aggregates
       aggregate_samples_count = client_stat.page_stats.sum(:samples_count)
+      update_aggregates(client_stat, aggregate_samples_count)
+      client_stat.save!
+      client_stat
+    end
+
+    # SAX parsing to update attributes
+    def update_aggregates(client_stat, aggregate_samples_count)
       test_duration = (client_stat.end_sample['ts'].to_f +
           client_stat.end_sample['t'].to_f - client_stat.start_timestamp) / 1000.to_f
 
       client_stat.aggregate_response_throughput = (aggregate_samples_count.to_f / test_duration)
-
-      logger.debug { 'Calculating aggregate_ninety_percentile...' } if logger
       client_stat.aggregate_ninety_percentile = client_stat.sample_response_times.quantile(90)
-      logger.debug { '... finished calculating aggregate_ninety_percentile' } if logger
 
       # this is the duration of the last sample sent, it is in milliseconds, so
       # we divide it by 1000
       sample_duration = (client_stat.end_sample['ts'].to_i + client_stat.end_sample['t'].to_i)
       client_stat.last_sample_at = Time.at(sample_duration / 1000)
-
-      client_stat.save!
-      client_stat
     end
 
     # persist file to db and remove file from fs
     def persist_jtl(client_stat, stat_file_path)
       logger.info { "Persisting #{stat_file_path} to DB..." } if logger
       Hailstorm::Model::JtlFile.persist_file(client_stat, stat_file_path)
-    end
-  end
-
-  # SAX document that calculates a response time frequency distribution
-  class ResponseTimeFreqDist < Nokogiri::XML::SAX::Document
-    attr_reader :hit_matrix
-    attr_reader :start_time
-
-    def start_document
-      @level = 0
-      @hit_matrix = {} if @hit_matrix.nil?
-    end
-
-    def start_element(name, attrs = [])
-      return unless %w[httpSample sample].include?(name)
-
-      @level += 1
-      attrs_map = Hash[attrs]
-      tms = attrs_map['ts'].to_i # ms
-      ts = tms / 1000 # sec
-      @hit_matrix[ts] = @hit_matrix[ts].to_i + 1 if @parent_ts.nil? || (@parent_ts != ts)
-      @parent_ts = ts if @level == 1
-      @start_time = tms if @start_time.nil? || (@start_time > tms)
-    end
-
-    def end_element(name)
-      return unless %w[httpSample sample].include?(name)
-
-      @level -= 1
-      @parent_ts = nil if @level.zero?
-    end
-  end
-
-  # Creates a virtual users distribution over time
-  class VirtualUserTimeDist < Nokogiri::XML::SAX::Document
-    attr_reader :vusers_matrix
-    attr_reader :start_time
-
-    def start_document
-      @vusers_matrix = {} if @vusers_matrix.nil?
-      @start_time = nil
-      @host_matrix = {} if @host_matrix.nil?
-    end
-
-    def start_element(name, attrs = [])
-      return unless %w[httpSample sample].include?(name)
-
-      attrs_map = Hash[attrs]
-      tms = attrs_map['ts'].to_i # ms
-      ts = tms / 1000 # sec
-      num_active_threads = attrs_map['na'].to_i
-
-      if num_active_threads > 0
-        host_name = attrs_map['hn']
-        @host_matrix[ts] = [] if @host_matrix[ts].nil?
-        if !@host_matrix[ts].include?(host_name)
-          @vusers_matrix[ts] = @vusers_matrix[ts].to_i + num_active_threads
-        elsif @vusers_matrix[ts].to_i < num_active_threads
-          @vusers_matrix[ts] = num_active_threads
-        end
-        @host_matrix[ts].push(host_name) unless @host_matrix[ts].include?(host_name)
-      end
-
-      @start_time = tms if @start_time.nil? || (@start_time > tms)
-    end
-  end
-
-  # Creates throughput distribution over time
-  class ThroughputTimeDist < Nokogiri::XML::SAX::Document
-    attr_reader :byte_matrix
-    attr_reader :start_time
-
-    def start_document
-      @level = 0
-      @byte_matrix = {} if @byte_matrix.nil?
-    end
-
-    def start_element(name, attrs = [])
-      return unless %w[httpSample sample].include?(name)
-
-      if @level.zero?
-        attrs_map = Hash[attrs]
-        tms = attrs_map['ts'].to_i # ms
-        ts = tms / 1000 # sec
-        @byte_matrix[ts] = @byte_matrix[ts].to_i + attrs_map['by'].to_i
-        @start_time = tms if @start_time.nil? || (@start_time > tms)
-      end
-      @level += 1
-    end
-
-    def end_element(name)
-      @level -= 1 if %w[httpSample sample].include?(name)
     end
   end
 
@@ -442,17 +268,6 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
         other_builder
       else
         com.brickred.tsg.hailstorm.AggregateGraph.new(output_path)
-      end
-    end
-
-    def self.time_series_graph(series_name:, range_name:, start_time:, other_builder: nil)
-      if other_builder
-        other_builder.series_name = series_name
-        other_builder.range_name = range_name
-        other_builder.start_time = start_time
-        other_builder
-      else
-        com.brickred.tsg.hailstorm.TimeSeriesGraph.new(series_name, range_name, start_time)
       end
     end
   end
