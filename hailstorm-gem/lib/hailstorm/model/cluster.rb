@@ -9,9 +9,11 @@ require 'hailstorm/support/thread'
 require 'hailstorm/behavior/provisionable'
 require 'hailstorm/behavior/clusterable'
 require 'hailstorm/model/client_stat'
+require 'hailstorm/support/collection_helper'
 
 # Base class for any platform (/Clusterable) that hosts the load generating set of nodes.
 class Hailstorm::Model::Cluster < ActiveRecord::Base
+  include Hailstorm::Support::CollectionHelper
 
   belongs_to :project
   before_create :set_cluster_code
@@ -62,7 +64,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
 
       def klass.terminate(project)
         logger.debug { "#{self}.#{__method__}" }
-        self.visit_clusters(project, &:terminate)
+        self.visit_collection(project.clusters.all, &:terminate)
       end
     end
 
@@ -165,7 +167,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     logger.debug { "#{self}.#{__method__}" }
     mutex = Mutex.new
     cluster_instances = []
-    self.visit_clusters(project) do |c|
+    self.visit_collection(project.clusters.all) do |c|
       ci = c.generate_load(redeploy)
       mutex.synchronize { cluster_instances.push(ci) }
     end
@@ -189,7 +191,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     logger.debug { "#{self}.#{__method__}" }
     mutex = Mutex.new
     cluster_instances = []
-    self.visit_clusters(project) do |c|
+    self.visit_collection(project.clusters.all) do |c|
       ci = c.stop_load_generation(wait, options, aborted)
       mutex.synchronize { cluster_instances.push(ci) }
     end
@@ -218,7 +220,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     logger.debug { "#{self}.#{__method__}" }
     mutex = Mutex.new
     running_agents = []
-    self.visit_clusters(project) do |c|
+    self.visit_collection(project.clusters.all) do |c|
       agents = c.check_status
       mutex.synchronize { running_agents.push(*agents) } unless agents.empty?
     end
@@ -227,18 +229,6 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
 
   def destroy_clusterable
     cluster_instance.destroy! unless cluster_instance.new_record?
-  end
-
-  def self.visit_clusters(project, &_block)
-    project_clusters = project.clusters.all
-    if project_clusters.count == 1
-      yield project_clusters.first
-    else
-      project_clusters.each do |cluster|
-        Hailstorm::Support::Thread.start(cluster) { |c| yield c }
-      end
-      Hailstorm::Support::Thread.join
-    end
   end
 
   def purge
