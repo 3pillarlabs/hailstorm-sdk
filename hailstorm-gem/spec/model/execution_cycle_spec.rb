@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'jtl_log_data'
 require 'hailstorm/model/execution_cycle'
 require 'hailstorm/model/amazon_cloud'
 require 'hailstorm/model/data_center'
@@ -52,9 +53,9 @@ describe Hailstorm::Model::ExecutionCycle do
             .stub!(:execution_cycles_for_report)
             .and_return(generate_execution_cycles(cycle_ids))
         chart_model = mock('ChartModel', getFilePath: '', getWidth: 800, getHeight: 600)
-        Hailstorm::Model::ClientStat.stub!(:hits_per_second_graph).and_return(chart_model)
-        Hailstorm::Model::ClientStat.stub!(:active_threads_over_time_graph).and_return(chart_model)
-        Hailstorm::Model::ClientStat.stub!(:throughput_over_time_graph).and_return(chart_model)
+        Hailstorm::Model::ExecutionCycle.any_instance.stub(:hits_per_second_graph).and_return(chart_model)
+        Hailstorm::Model::ExecutionCycle.any_instance.stub(:active_threads_over_time_graph).and_return(chart_model)
+        Hailstorm::Model::ExecutionCycle.any_instance.stub(:throughput_over_time_graph).and_return(chart_model)
         Hailstorm::Model::ExecutionCycle.stub!(:client_comparison_graph).and_return(chart_model)
         Hailstorm::Model::ExecutionCycle.stub!(:cpu_comparison_graph).and_return(chart_model)
         Hailstorm::Model::ExecutionCycle.stub!(:memory_comparison_graph).and_return(chart_model)
@@ -276,6 +277,14 @@ describe Hailstorm::Model::ExecutionCycle do
       expect(Hailstorm::Model::ExecutionCycle::GraphBuilderFactory
               .client_comparison_graph('foo')).to_not be_nil
     end
+
+    it 'should create time_series_graph builder' do
+      expect(Hailstorm::Model::ExecutionCycle::GraphBuilderFactory
+                 .time_series_graph(series_name: 'Requests/second',
+                                    range_name: 'Requests',
+                                    start_time: Time.now.to_i)).to_not be_nil
+    end
+
   end
 
   context 'execution_cycles comparison graph' do
@@ -347,4 +356,32 @@ describe Hailstorm::Model::ExecutionCycle do
     end
   end
 
+  context 'time series graphs' do
+    it 'should build the graphs' do
+      clusterable, execution_cycle, jmeter_plan = create_client_stat_refs
+      2.times.map do |index|
+        Hailstorm::Model::ClientStat.create!(execution_cycle: execution_cycle,
+                                             jmeter_plan: jmeter_plan,
+                                             clusterable: clusterable,
+                                             threads_count: 30 * (index + 1),
+                                             aggregate_ninety_percentile: 1500,
+                                             aggregate_response_throughput: 3000,
+                                             last_sample_at: Time.new(2010, 10, 7, 14 + index, 23, 45))
+      end
+
+      Hailstorm::Model::ClientStat.any_instance.stub(:write_jtl) do
+        file_path = Tempfile.new
+        File.write(file_path, JTL_LOG_DATA)
+        file_path
+      end
+
+      grapher = double('TimeSeriesGraph', addDataPoint: nil, 'series_name=': nil, 'range_name=': nil,
+                       'start_time=': nil)
+
+      grapher.should_receive(:build).exactly(3).times
+      execution_cycle.hits_per_second_graph(builder: grapher)
+      execution_cycle.active_threads_over_time_graph(builder: grapher)
+      execution_cycle.throughput_over_time_graph(builder: grapher)
+    end
+  end
 end
