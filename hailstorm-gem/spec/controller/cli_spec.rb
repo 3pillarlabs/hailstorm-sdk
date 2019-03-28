@@ -8,16 +8,12 @@ describe Hailstorm::Controller::Cli do
   before(:each) do
     @middleware = Hailstorm.application
     @app = Hailstorm::Controller::Cli.new(@middleware)
-    @app.stub!(:saved_history_path).and_return(File.join(java.lang.System.getProperty('user.home'),
-                                                         '.spec_hailstorm_history'))
+    expect(@app.cmd_history).to respond_to(:saved_history_path)
+    @app.cmd_history.stub!(:saved_history_path).and_return(File.join(Hailstorm.root, 'spec_hailstorm_history'))
     ActiveRecord::Base.stub!(:clear_all_connections!)
   end
 
   context '#process_commands' do
-    # before(:each) do
-    #   @app.stub!(:cmd_history).and_return(mock(Hailstorm::Cli::CmdHistory).as_null_object)
-    #   @app.stub!(:cmd_executor).and_return(mock(Hailstorm::Cli::CmdExecutor).as_null_object)
-    # end
     context 'nil command' do
       context 'exit_ok? == true' do
         it 'should set @exit_command_counter < 0' do
