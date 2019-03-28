@@ -30,87 +30,23 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
     self.increment(:samples_count)
 
     sample_response_time = sample['t'].to_i
-    self.cumulative_response_time += sample_response_time
-    self.cumulative_squared_response_time += (sample_response_time**2)
-    self.page_sample_times.push(sample_response_time)
-
-    if self.minimum_response_time.nil? || (sample_response_time < self.minimum_response_time)
-      self.minimum_response_time = sample_response_time
-    end
-
-    if self.maximum_response_time.nil? || (sample_response_time > self.maximum_response_time)
-      self.maximum_response_time = sample_response_time
-    end
+    calc_response_time_facts(sample_response_time)
 
     sample_start_time = sample['ts'].to_i
-    sample_end_time = sample_start_time + sample_response_time
-    if self.min_start_time.nil? || (sample_start_time < self.min_start_time)
-      self.min_start_time = sample_start_time
-    end
-    if self.max_end_time.nil? || (sample_end_time > self.max_end_time)
-      self.max_end_time = sample_end_time
-    end
+    calc_stat_duration(sample_response_time, sample_start_time)
+
     self.cumulative_bytes += sample['by'].to_i
 
     self.samples_breakup(sample_response_time)
 
     # 's' is either "true" or "false"
-    sample_success = begin
-                       eval(sample['s'])
-                     rescue Exception
-                       false
-                     end
+    sample_success = sample['s'] == true.to_s
     self.errors_count += 1 unless sample_success
   end
 
   def samples_breakup(sample_response_time = nil)
-    if @samples_breakup.nil?
-      # example ranges = [1, [1,3], [3,5], [5,10], [10,20], 20]
-      ranges = []
-      self.client_stat
-          .execution_cycle
-          .project
-          .samples_breakup_interval # example "1,3,5,10,20"
-          .split(/\s*,\s*/)
-          .collect(&:to_i)
-          .each do |boundary|
-
-        if ranges.empty?
-          ranges.push(boundary, boundary)
-        else
-          last_boundary = ranges.pop
-          ranges.push([last_boundary, boundary], boundary)
-        end
-      end
-      @min_range ||= ranges.first
-      @max_range ||= ranges.last
-      @samples_breakup = ranges.collect { |r| { r: r, c: 0, p: nil } }
-      # @samples_breakup would be an Array of Hash
-    end
-
-    unless sample_response_time.nil?
-      srt_seconds = (sample_response_time.to_f / 1000)
-      partition_to_update = nil
-      @samples_breakup.each do |partition|
-        range = partition[:r]
-        if !range.is_a?(Array)
-          if ((range == @min_range) && (srt_seconds < range)) ||
-             ((range == @max_range) && (srt_seconds >= range))
-
-            partition_to_update = partition
-            break
-          end
-        else
-          if (srt_seconds >= range.first) && (srt_seconds < range.last)
-            partition_to_update = partition
-            break
-          end
-        end
-      end
-
-      partition_to_update[:c] += 1
-    end
-
+    @samples_breakup ||= init_samples_breakup
+    update_samples_breakup(sample_response_time) unless sample_response_time.nil?
     @samples_breakup
   end
 
@@ -122,8 +58,74 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
 
   private
 
+  def update_samples_breakup(sample_response_time)
+    srt_seconds = (sample_response_time.to_f / 1000)
+    partition_to_update = nil
+    @samples_breakup.each do |partition|
+      partition_to_update = find_partition(srt_seconds, partition)
+      break if partition_to_update
+    end
+
+    partition_to_update[:c] += 1
+  end
+
+  def find_partition(srt_seconds, partition)
+    partition_to_update = nil
+    range = partition[:r]
+    if !range.is_a?(Array)
+      partition_to_update = partition if out_of_range?(range, srt_seconds)
+    elsif srt_seconds >= range.first && srt_seconds < range.last
+      partition_to_update = partition
+    end
+
+    partition_to_update
+  end
+
+  def out_of_range?(range, srt_seconds)
+    ((range == @min_range) && (srt_seconds < range)) || ((range == @max_range) && (srt_seconds >= range))
+  end
+
+  # example ranges = [1, [1,3], [3,5], [5,10], [10,20], 20]
+  # @return [Array<Hash>]
+  def init_samples_breakup
+    ranges = []
+    self.client_stat
+        .execution_cycle
+        .project
+        .samples_breakup_interval # example "1,3,5,10,20"
+        .split(/\s*,\s*/)
+        .collect(&:to_i)
+        .each do |boundary|
+
+      if ranges.empty?
+        ranges.push(boundary, boundary)
+      else
+        last_boundary = ranges.pop
+        ranges.push([last_boundary, boundary], boundary)
+      end
+    end
+    @min_range ||= ranges.first
+    @max_range ||= ranges.last
+    ranges.collect { |r| { r: r, c: 0, p: nil } }
+  end
+
+  def calc_stat_duration(response_time, start_time)
+    end_time = start_time + response_time
+    self.min_start_time = start_time if choose_min(value: start_time, min: self.min_start_time)
+    self.max_end_time = end_time if choose_max(value: end_time, max: self.max_end_time)
+  end
+
+  def calc_response_time_facts(response_time)
+    self.cumulative_response_time += response_time
+    self.cumulative_squared_response_time += (response_time**2)
+    self.page_sample_times.push(response_time)
+
+    self.minimum_response_time = response_time if choose_min(value: response_time, min: self.minimum_response_time)
+    self.maximum_response_time = response_time if choose_max(value: response_time, max: self.maximum_response_time)
+  end
+
   def set_defaults
-    self.samples_count = 0 if self.new_record?
+    self.samples_count = 0 if self.new_record? && self.samples_count.blank?
     self.cumulative_response_time = 0
     self.cumulative_squared_response_time = 0
     self.page_sample_times = Hailstorm::Support::Quantile.new
@@ -133,37 +135,41 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
 
   def calculate_aggregates
     self.average_response_time = (self.cumulative_response_time.to_f / self.samples_count)
-
-    logger.debug { "Calculating median_response_time for #{self.page_label}..." }
-    self.median_response_time = self.page_sample_times.quantile(50)
-    logger.debug { "Calculating ninety_percentile_response_time for #{self.page_label}..." }
-    self.ninety_percentile_response_time = self.page_sample_times.quantile(90)
-    logger.debug { '... finished calculating quantiles' }
-
-    self.size_throughput = (self.cumulative_bytes.to_f * 1000) /
-                           ((self.max_end_time - self.min_start_time) * 1024)
-    # KB/sec
-
-    self.response_throughput = (self.samples_count.to_f * 1000) /
-                               (self.max_end_time - self.min_start_time)
-
+    compute_quantiles
+    compute_throughput
     self.percentage_errors = (self.errors_count.to_f / self.samples_count) * 100
-
     self.standard_deviation = ((self.cumulative_squared_response_time.to_f / self.samples_count) -
         (self.average_response_time**2))**0.5
+    compute_samples_breakup
+  end
 
-    # calculate percentage for @samples_breakup
+  def compute_samples_breakup
     self.samples_breakup.each do |partition|
       partition[:p] = format('%2.2f', (partition[:c].to_f * 100) / self.samples_count)
     end
     self.samples_breakup_json = self.samples_breakup.to_json
   end
 
-  # Calculates the array index for percentile
-  # @param [Fixnum] percentile example 50, 90
-  # @return [Fixnum]
-  def percentile_index(percentile)
-    index = (self.samples_count * percentile.to_f / 100).to_i
-    index.zero? ? index : index - 1
+  def compute_throughput
+    self.size_throughput = (self.cumulative_bytes.to_f * 1000) / ((self.max_end_time - self.min_start_time) * 1024)
+    # KB/sec
+
+    self.response_throughput = (self.samples_count.to_f * 1000) / (self.max_end_time - self.min_start_time)
+  end
+
+  def compute_quantiles
+    logger.debug { "Calculating median_response_time for #{self.page_label}..." }
+    self.median_response_time = self.page_sample_times.quantile(50)
+    logger.debug { "Calculating ninety_percentile_response_time for #{self.page_label}..." }
+    self.ninety_percentile_response_time = self.page_sample_times.quantile(90)
+    logger.debug { '... finished calculating quantiles' }
+  end
+
+  def choose_min(value:, min:)
+    min.nil? || value < min
+  end
+
+  def choose_max(value:, max:)
+    max.nil? || value > max
   end
 end

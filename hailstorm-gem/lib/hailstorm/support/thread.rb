@@ -15,9 +15,10 @@ class Hailstorm::Support::Thread
   def self.start(*args)
     logger.debug { "#{self}.#{__method__}" }
     if Hailstorm.application.multi_threaded?
-      thread = Thread.start(args) do |args|
+      # :nocov:
+      thread = Thread.start(args) do |thread_args|
         begin
-          yield(*args)
+          yield(*thread_args)
         rescue Object => e
           logger.error(e.message)
           logger.debug { "\n".concat(e.backtrace.join("\n")) }
@@ -30,6 +31,7 @@ class Hailstorm::Support::Thread
       Thread.current[:spawned].push(thread)
 
       return thread
+      # :nocov:
     else
       yield(*args)
     end
@@ -45,12 +47,14 @@ class Hailstorm::Support::Thread
     thread_exceptions = []
     spawned = Thread.current[:spawned]
     until spawned.blank?
+      # :nocov:
       t = spawned.shift
       begin
         t.join
       rescue Object => e
         thread_exceptions.push(e)
       end
+      # :nocov:
     end
 
     raise Hailstorm::ThreadJoinException, thread_exceptions unless thread_exceptions.empty?

@@ -58,11 +58,16 @@ class Hailstorm::Support::Schema
     migrations = SchemaMigration.all.collect { |r| r.migration_name.to_sym }
     schema_updates.each do |name|
       next if migrations.include?(name)
+
+      # :nocov:
       logger.debug { name }
       self.send(name)
       SchemaMigration.create!(migration_name: name)
+      # :nocov:
     end
   end
+
+  # :nocov:
 
   def create_table(table_name)
     logger.debug("Creating #{table_name} table...")
@@ -237,4 +242,6 @@ class Hailstorm::Support::Schema
   def add_target_host_ssh_port
     ActiveRecord::Migration.add_column(:target_hosts, :ssh_port, :integer)
   end
+
+  # :nocov:
 end

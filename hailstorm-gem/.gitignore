@@ -1,5 +1,5 @@
 lib/hailstorm/java/bin
-tmp/*
+build/
 .idea
 .ruby-version
 .project

@@ -218,7 +218,7 @@ describe Hailstorm::Model::Cluster do
       it 'should generate load on all clusters' do
         Hailstorm::Model::Cluster.configure_all(@project, @config)
         @project.build_current_execution_cycle.save!
-        @project.current_execution_cycle.set_started_at(Time.now)
+        @project.current_execution_cycle.started!
         cluster_instances = Hailstorm::Model::Cluster.generate_all_load(@project)
         expect(cluster_instances.length).to eql(@config.clusters.length)
       end
@@ -228,7 +228,7 @@ describe Hailstorm::Model::Cluster do
         @project.update_column(:master_slave_mode, true)
         Hailstorm::Model::Cluster.configure_all(@project, @config)
         @project.build_current_execution_cycle.save!
-        @project.current_execution_cycle.set_started_at(Time.now)
+        @project.current_execution_cycle.started!
         cluster_instances = Hailstorm::Model::Cluster.generate_all_load(@project)
         expect(cluster_instances.length).to eql(@config.clusters.length)
       end
@@ -256,7 +256,7 @@ describe Hailstorm::Model::Cluster do
 
       Hailstorm::Model::Cluster.configure_all(@project, config)
       @project.build_current_execution_cycle.save!
-      @project.current_execution_cycle.set_started_at(Time.now)
+      @project.current_execution_cycle.started!
       Hailstorm::Model::Cluster.generate_all_load(@project)
 
       agents = Hailstorm::Model::Cluster.check_status(@project)
@@ -286,7 +286,7 @@ describe Hailstorm::Model::Cluster do
       @project.current_execution_cycle.stub!(:collect_client_stats)
 
       Hailstorm::Model::Cluster.configure_all(@project, config)
-      @project.current_execution_cycle.set_started_at(Time.now)
+      @project.current_execution_cycle.started!
       Hailstorm::Model::Cluster.generate_all_load(@project)
 
       cluster_instances = Hailstorm::Model::Cluster.stop_load_generation(@project)
@@ -308,7 +308,7 @@ describe Hailstorm::Model::Cluster do
         @project.current_execution_cycle.stub!(:collect_client_stats)
 
         Hailstorm::Model::Cluster.configure_all(@project, config)
-        @project.current_execution_cycle.set_started_at(Time.now)
+        @project.current_execution_cycle.started!
         Hailstorm::Model::Cluster.generate_all_load(@project)
 
         Hailstorm::Model::LoadAgent.stub_chain(:where, :all) { [ mock(Hailstorm::Model::LoadAgent) ] }
@@ -460,7 +460,8 @@ describe Hailstorm::Model::Cluster do
       context '#create_or_enable fails with exception outside of Hailstorm::Exception hierarchy' do
         it 'should raise Hailstorm::AgentCreationFailure' do
           @clusterable.stub!(:create_or_enable).and_raise(Exception, 'mock exception')
-          expect { @clusterable.process_jmeter_plan(@jmeter_plan) }.to raise_error(Exception)
+          expect { @clusterable.process_jmeter_plan(@jmeter_plan) }
+              .to raise_error(Hailstorm::AgentCreationFailure) { |error| expect(error.diagnostics).to_not be_blank }
         end
       end
     end

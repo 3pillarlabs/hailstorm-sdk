@@ -17,6 +17,7 @@ class Hailstorm::Model::SlaveAgent < Hailstorm::Model::LoadAgent
   def stop_jmeter(_wait = false, _aborted = false, doze_time = 60)
     logger.debug { "#{self.class}##{__method__}" }
     return unless jmeter_running?
+
     Hailstorm::Support::SSH.start(self.public_ip_address,
                                   self.clusterable.user_name,
                                   self.clusterable.ssh_options) do |ssh|

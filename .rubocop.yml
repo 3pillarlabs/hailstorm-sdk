@@ -20,6 +20,9 @@ AllCops:
 Lint/RescueException:
   Enabled: false
 
+Lint/InheritException:
+  Enabled: false
+
 Layout/EmptyLinesAroundModuleBody:
   Enabled: false
 
@@ -33,6 +36,12 @@ Style/RedundantSelf:
   Enabled: false
 
 Style/Not:
+  Enabled: false
+
+Style/RegexpLiteral:
+  Enabled: false
+
+Style/ExpandPathArguments:
   Enabled: false
 
 Metrics/LineLength:
@@ -50,3 +59,5 @@ Metrics/ClassLength:
 Metrics/ModuleLength:
   Max: 150
 
+Performance/Caller:
+  Enabled: false

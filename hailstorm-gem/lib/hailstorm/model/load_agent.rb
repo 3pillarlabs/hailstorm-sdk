@@ -63,6 +63,7 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
   # @param [Boolean] force defaults to false
   def upload_scripts(force = false)
     return unless script_upload_needed?(force)
+
     logger.info("Uploading script #{self.jmeter_plan.test_plan_name}...")
     Hailstorm::Support::SSH.start(*ssh_start_args) do |ssh|
       remote_sync(ssh, force)
@@ -76,6 +77,7 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
 
   def evaluate_execute(command_template)
     return if command_template.nil?
+
     logger.debug(command_template)
     command = evaluate_command(command_template)
     logger.debug(command)
@@ -111,10 +113,12 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
     until tries >= max_tries
       sleep(doze_time)
       break unless ssh.process_running?(self.jmeter_pid)
+
       tries += 1
     end
 
     return if tries < max_tries
+
     # graceful shutdown is not happening
     ssh.terminate_process_tree(self.jmeter_pid)
   end

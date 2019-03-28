@@ -69,6 +69,7 @@ module Hailstorm::Behavior::Provisionable
     logger.debug { "#{self.class}##{__method__}" }
     activate_count = agents_to_add(query, required_count)
     return if activate_count >= 0
+
     query.limit(activate_count.abs).each { |agent| yield agent }
   end
 

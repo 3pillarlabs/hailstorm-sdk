@@ -66,6 +66,7 @@ class Hailstorm::Middleware::CommandInterpreter
       break if match_data
     end
     raise(Hailstorm::UnknownCommandException, "#{command} is unknown") unless match_data
+
     match_data
   end
 

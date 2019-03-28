@@ -26,7 +26,13 @@ RSpec.configure do |config|
   config.order = 'random'
 
   config.prepend_before(:suite) do
-    middleware = Hailstorm::Initializer.create_middleware('hailstorm_spec', __FILE__, {
+    build_path = File.join(File.expand_path('../..', __FILE__), 'build')
+    FileUtils.mkdir_p(build_path)
+    boot_file_path = File.join(build_path, 'config', 'boot.rb')
+    FileUtils.mkdir_p(File.join(build_path, Hailstorm.tmp_dir))
+    FileUtils.mkdir_p(File.join(build_path, Hailstorm.tmp_dir, 'remove_dir'))
+    FileUtils.touch(File.join(build_path, Hailstorm.tmp_dir, 'remove_file'))
+    middleware = Hailstorm::Initializer.create_middleware('hailstorm_spec', boot_file_path, {
       adapter: 'jdbcmysql',
       database: 'hailstorm_gem_test',
       username: 'hailstorm_dev',

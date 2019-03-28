@@ -1,5 +1,6 @@
 require 'hailstorm/support'
 require 'hailstorm/behavior/loggable'
+require 'zip/filesystem'
 
 # File helper methods
 class Hailstorm::Support::FileHelper
@@ -9,7 +10,7 @@ class Hailstorm::Support::FileHelper
 
   # Instance methods. Module enables use of helper as a mixed-in module and a class.
   module InstanceMethods
-    # Iterator over JMeter test plans in the project app directory
+    # Iterator over a directory
     # @return [Enumerator]
     # @param [String] glob
     def dir_glob_enumerator(glob)
@@ -46,6 +47,7 @@ class Hailstorm::Support::FileHelper
     def local_app_directories(start_dir, entries = {})
       logger.debug { "#{self.class}##{__method__}" }
       raise(ArgumentError, 'entries should be Hash') unless entries.is_a?(Hash)
+
       queue = [[start_dir, entries]]
       entries[File.basename(start_dir)] = nil
       queue.each do |path, context|
@@ -74,6 +76,26 @@ class Hailstorm::Support::FileHelper
         end
       end
       File.unlink(gzip_file_path) if unlink_gzip
+    end
+
+    # Same as zip -o out_file dir/
+    # @param [String] dir_path
+    # @param [String] output_file_path
+    # @param [Array<String>] patterns
+    def zip_dir(dir_path, output_file_path, patterns: nil)
+      rexp = Regexp.compile("#{dir_path}/")
+      patterns ||= [File.join(dir_path, '**', '*')]
+
+      Zip::File.open(output_file_path, Zip::File::CREATE) do |zipfile|
+        Dir[*patterns].sort.each do |entry|
+          zip_entry = entry.gsub(rexp, '')
+          if File.directory?(entry)
+            zipfile.mkdir(zip_entry)
+          else
+            zipfile.add(zip_entry, entry) { true }
+          end
+        end
+      end
     end
   end
 

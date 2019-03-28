@@ -334,8 +334,8 @@ describe Hailstorm::Model::AmazonCloud do
           Hailstorm::Model::MasterAgent.create!(clusterable_id: @aws.id, clusterable_type: @aws.class.name,
                                                 jmeter_plan: @jmeter_plan)
         end
-        expect { @aws.send(:process_jmeter_plan, @jmeter_plan) }.to raise_exception(
-                                                                        Hailstorm::MasterSlaveSwitchOnConflict)
+        expect { @aws.send(:process_jmeter_plan, @jmeter_plan) }
+          .to raise_error(Hailstorm::MasterSlaveSwitchOnConflict) { |error| expect(error.diagnostics).to_not be_nil }
       end
       it 'should create or enable other slave agents' do
         Hailstorm::Model::MasterAgent.create!(clusterable_id: @aws.id, clusterable_type: @aws.class.name,
@@ -353,18 +353,20 @@ describe Hailstorm::Model::AmazonCloud do
   end
 
   context 'on update(active: false)' do
-    it 'should disable load agents' do
+    before(:each) do
       @aws.project = Hailstorm::Model::Project.create!(project_code: 'amazon_cloud_spec')
       @aws.access_key = 'dummy'
       @aws.secret_key = 'dummy'
       @aws.region = 'ua-east-1'
       @aws.save!
 
-      jmeter_plan = Hailstorm::Model::JmeterPlan.create!(project: @aws.project, test_plan_name: 'A',
-                                                         content_hash: 'A')
+      @jmeter_plan = Hailstorm::Model::JmeterPlan.create!(project: @aws.project, test_plan_name: 'A',
+                                                          content_hash: 'A')
+    end
+    it 'should disable master agents' do
       2.times do
         Hailstorm::Model::MasterAgent.create!(clusterable_id: @aws.id, clusterable_type: @aws.class.name,
-                                              jmeter_plan: jmeter_plan)
+                                              jmeter_plan: @jmeter_plan)
       end
 
       @aws.update_column(:active, true)
@@ -372,6 +374,13 @@ describe Hailstorm::Model::AmazonCloud do
       @aws.load_agents.each do |ag|
         expect(ag).to_not be_active
       end
+    end
+
+    it 'should raise error if 1 or more slave_agents exist' do
+      Hailstorm::Model::SlaveAgent.create!(clusterable_id: @aws.id, clusterable_type: @aws.class.name,
+                                           jmeter_plan: @jmeter_plan)
+      expect { @aws.send(:process_jmeter_plan, @jmeter_plan) }
+          .to raise_error(Hailstorm::MasterSlaveSwitchOffConflict) { |error| expect(error.diagnostics).to_not be_nil }
     end
   end
   
@@ -627,6 +636,11 @@ describe Hailstorm::Model::AmazonCloud do
       end
       expect(@aws.send(:install_java, double('ssh'))).to_not be_empty
     end
+    it 'should raise error if installation fails' do
+      @aws.stub!(:ssh_channel_exec_instr).and_return(nil)
+      expect { @aws.send(:install_java, double('ssh')) }
+        .to raise_error(Hailstorm::JavaInstallationException) { |error| expect(error.diagnostics).to_not be_blank }
+    end
   end
 
   context '#install_jmeter' do
@@ -826,6 +840,18 @@ describe Hailstorm::Model::AmazonCloud do
       mock_ec2.stub_chain(:images, :create).and_return(mock_ami)
       ami_id = @aws.send(:register_hailstorm_ami, mock_instance)
       expect(ami_id).to eql(mock_ami.id)
+    end
+    it 'should raise Hailstorm::AmiCreationFailure if AMI state is not available' do
+      @aws.project = Hailstorm::Model::Project.create!(project_code: __FILE__)
+      mock_instance = mock(AWS::EC2::Instance, instance_id: 'i-67678')
+      mock_ami = mock(AWS::EC2::Image, state: :pending,
+                      id: 'ami-123', state_reason: OpenStruct.new(code: 'NET', message: 'network error'))
+      mock_ec2 = mock(AWS::EC2)
+      @aws.stub!(:ec2).and_return(mock_ec2)
+      mock_ec2.stub_chain(:images, :create).and_return(mock_ami)
+      @aws.stub!(:wait_for)
+      expect { @aws.send(:register_hailstorm_ami, mock_instance) }
+        .to raise_error(Hailstorm::AmiCreationFailure) { |error| expect(error.diagnostics).to_not be_blank }
     end
   end
 

@@ -37,6 +37,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     unless invoked_from_start || settings_modified? || force
       raise(Hailstorm::Exception, 'No changes to project configuration detected.')
     end
+
     logger.info('Setting up the project...')
     self.update_attributes!(config_attributes)
     begin
@@ -53,61 +54,56 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   def start(redeploy = false)
     logger.debug { "#{self.class}##{__method__}" }
 
-    # add an execution_cycle
-    if current_execution_cycle.nil?
-      build_current_execution_cycle.save! # buildABC is provided by has_one :ABC relation
-      if settings_modified?
-        begin
-          setup(false, true) # (force, invoked_from_start)
-        rescue Exception
-          self.current_execution_cycle.aborted!
-          raise
-        end
-        self.reload
-      end
-      self.current_execution_cycle.set_started_at(Time.now)
+    # if one exists, user must stop/abort it first
+    unless self.current_execution_cycle.nil?
+      raise Hailstorm::ExecutionCycleExistsException, current_execution_cycle.started_at
+    end
 
+    # add an execution_cycle
+    build_current_execution_cycle.save! # buildABC is provided by has_one :ABC relation
+    if settings_modified?
       begin
-        Hailstorm::Model::TargetHost.monitor_all(self)
-        Hailstorm::Model::Cluster.generate_all_load(self, redeploy)
+        setup(false, true) # (force, invoked_from_start)
       rescue Exception
         self.current_execution_cycle.aborted!
         raise
       end
+      self.reload
+    end
+    self.current_execution_cycle.started!
 
-    else
-      # if one exists, user must stop/abort it first
-      raise(Hailstorm::Exception,
-            "You have already started an execution cycle at #{current_execution_cycle.started_at}. Please stop or abort first!")
+    begin
+      Hailstorm::Model::TargetHost.monitor_all(self)
+      Hailstorm::Model::Cluster.generate_all_load(self, redeploy)
+    rescue Exception
+      self.current_execution_cycle.aborted!
+      raise
     end
   end
 
   # Delegate to target_hosts and clusters
   def stop(wait = false, options = nil, aborted = false)
     logger.debug { "#{self.class}##{__method__}" }
-    if current_execution_cycle.nil?
-      raise(Hailstorm::Exception, 'Nothing to stop... no tests running')
-    else
-      load_gen_stopped = false
-      begin
-        Hailstorm::Model::Cluster.stop_load_generation(self, wait, options, aborted)
-        load_gen_stopped = true
-        # Update the stopped_at now, so that target monitoring
-        # statistics be collected from started_at to stopped_at
-        current_execution_cycle.set_stopped_at
-        if !aborted
-          Hailstorm::Model::TargetHost.stop_all_monitoring(self) do |target_host|
-            Hailstorm::Model::TargetStat.create_target_stat(current_execution_cycle, target_host)
-          end
-          current_execution_cycle.stopped!
-        else
-          current_execution_cycle.aborted!
-        end
-      rescue Exception
-        Hailstorm::Model::TargetHost.stop_all_monitoring(self) unless load_gen_stopped
+    raise(Hailstorm::ExecutionCycleNotExistsException) if current_execution_cycle.nil?
+
+    begin
+      Hailstorm::Model::Cluster.stop_load_generation(self, wait, options, aborted)
+      # Update the stopped_at now, so that target monitoring
+      # statistics be collected from started_at to stopped_at
+      current_execution_cycle.set_stopped_at
+      if !aborted
+        current_execution_cycle.stopped!
+      else
         current_execution_cycle.aborted!
-        raise
       end
+    rescue Exception
+      current_execution_cycle.aborted!
+      raise
+    ensure
+      Hailstorm::Model::TargetHost
+        .stop_all_monitoring(self,
+                             current_execution_cycle,
+                             create_target_stat: !(aborted || current_execution_cycle.aborted?))
     end
   end
 
@@ -127,32 +123,13 @@ class Hailstorm::Model::Project < ActiveRecord::Base
 
   def results(operation, cycle_ids = nil, format = nil)
     logger.debug { "#{self.class}##{__method__}" }
-
-    selected_execution_cycles =
-      Hailstorm::Model::ExecutionCycle.execution_cycles_for_report(self,
-                                                                   cycle_ids)
-    case operation
-    when :show
-      selected_execution_cycles
-    when :exclude
-      raise(Hailstorm::Exception, 'missing argument') if cycle_ids.blank?
-      selected_execution_cycles.each(&:excluded!)
-    when :include
-      raise(Hailstorm::Exception, 'missing argument') if cycle_ids.blank?
-      selected_execution_cycles.each(&:stopped!)
-    when :export
-      selected_execution_cycles.each do |ex|
-        export_paths = ex.export_results
-        logger.info { "Results exported to:\n#{export_paths.join("\n")}" }
-        zip_exports(selected_execution_cycles) if format.to_s.to_sym == :zip
-      end
-    when :import
-      do_import(cycle_ids)
+    selected_execution_cycles = Hailstorm::Model::ExecutionCycle.execution_cycles_for_report(self, cycle_ids)
+    executor = ResultsOperationExecutor.new(self, cycle_ids, selected_execution_cycles, format)
+    executor.logger = logger
+    if operation && executor.respond_to?(operation)
+      executor.send(operation)
     else
-      # generate report
-      logger.info('Creating report for stopped tests...')
-      report_path = Hailstorm::Model::ExecutionCycle.create_report(self, cycle_ids)
-      logger.info { "Report generated to: #{report_path}" } unless report_path.blank?
+      executor.report
     end
   end
 
@@ -162,14 +139,19 @@ class Hailstorm::Model::Project < ActiveRecord::Base
 
   # Returns an array of load_agents as recorded in the database
   def load_agents
-    self.clusters
-        .map { |e| e.cluster_instance }
-        .reduce([]) { |acc, e| acc.push(*e.load_agents) }
+    self.clusters.map(&:cluster_instance).reduce([]) { |acc, e| acc.push(*e.load_agents) }
   end
 
   # Purges all clusters in the project
   def purge_clusters
     self.clusters.each(&:purge)
+  end
+
+  # @return [Boolean] true if configuration settings have been modified
+  def settings_modified?
+    modified = self.serial_version.nil? || self.serial_version != config.serial_version
+    Hailstorm.application.load_config if modified
+    modified
   end
 
   ###################### PRIVATE METHODS #######################################
@@ -206,14 +188,6 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     Hailstorm::Model::TargetHost.configure_all(self, config)
   end
 
-  # @return [Boolean] true if configuration settings have been modified
-  def settings_modified?
-    (self.serial_version.nil? ||
-        self.serial_version != config.serial_version).tap do |modified|
-      Hailstorm.application.load_config if modified
-    end
-  end
-
   def config
     Hailstorm.application.config
   end
@@ -229,57 +203,116 @@ class Hailstorm::Model::Project < ActiveRecord::Base
                             end
   end
 
-  def do_import(cycle_ids)
-    self.setup(force = false, invoked_from_start = false) if settings_modified?
-    jtl_file_paths = []
-    file_path, options = cycle_ids
-    options = options ? options.symbolize_keys : {}
-    if file_path.nil?
-      glob = File.join(Hailstorm.root, Hailstorm.results_import_dir, '*.jtl')
-      Dir[glob].sort.each { |fp| jtl_file_paths << fp }
-    else
-      jtl_file_paths << file_path
-    end
-    jmeter_plan = if options.key?(:jmeter)
-                    self.jmeter_plans.where(test_plan_name: options[:jmeter]).first
-                  else
-                    self.jmeter_plans.all.first
-                  end
+  # Executes results operations
+  class ResultsOperationExecutor
 
-    cluster_instance = if options.key?(:cluster)
-                         self.clusters.where(cluster_code: options[:cluster]).first.cluster_instance
-                       else
-                         self.clusters.all.first.cluster_instance
-                       end
-    jtl_file_paths.each do |jfp|
-      exec_cycle = if options.key?(:exec)
-                     self.execution_cycles.where(id: options[:exec]).first
-                   else
-                     self.execution_cycles.create!(
-                       status: Hailstorm::Model::ExecutionCycle::States::STOPPED,
-                       started_at: Time.now
-                     )
-                   end
-      exec_cycle.import_results(jmeter_plan, cluster_instance, jfp)
-    end
-  end
+    attr_reader :project, :cycle_ids, :execution_cycles, :format
+    attr_accessor :logger
 
-  def zip_exports(data)
-    reports_path = File.join(Hailstorm.root, Hailstorm.reports_dir)
-    timestamp = Time.now.strftime('%Y%m%d%H%M%S')
-    zip_file_path = File.join(reports_path, "jtl-#{timestamp}.zip")
-    FileUtils.safe_unlink zip_file_path
-    Zip::File.open(zip_file_path, Zip::File::CREATE) do |zf|
-      data.each do |ex|
-        seq_dir = "SEQUENCE-#{ex.id}"
-        zf.mkdir(seq_dir)
-        Dir["#{reports_path}/#{seq_dir}/*.jtl"].each do |jtl_file|
-          ze = "#{seq_dir}/#{File.basename(jtl_file)}"
-          zf.add(ze, jtl_file) {true}
-        end
+    def initialize(project, cycle_ids, execution_cycles, format)
+      @project = project
+      @cycle_ids = cycle_ids
+      @execution_cycles = execution_cycles
+      @format = format
+    end
+
+    def show
+      execution_cycles
+    end
+
+    def exclude
+      raise(Hailstorm::Exception, 'missing argument') if cycle_ids.blank?
+
+      execution_cycles.each(&:excluded!)
+    end
+
+    def include
+      raise(Hailstorm::Exception, 'missing argument') if cycle_ids.blank?
+
+      execution_cycles.each(&:stopped!)
+    end
+
+    def export
+      execution_cycles.each do |ex|
+        export_paths = ex.export_results
+        logger.info { "Results exported to:\n#{export_paths.join("\n")}" }
+        zip_exports if format.to_s.to_sym == :zip
       end
     end
-    logger.info { "Results zipped to #{zip_file_path}" }
+
+    def import
+      project.setup(false, false) if project.settings_modified?
+      jtl_file_paths = []
+      file_path, options = cycle_ids
+      options = options ? options.symbolize_keys : {}
+      find_files(file_path, jtl_file_paths)
+      jmeter_plan = jmeter_plan(options)
+      cluster_instance = cluster_instance(options)
+      jtl_file_paths.each do |jfp|
+        execution_cycle = execution_cycle(options)
+        execution_cycle.import_results(jmeter_plan, cluster_instance, jfp)
+      end
+    end
+
+    def report
+      logger.info('Creating report for stopped tests...')
+      report_path = Hailstorm::Model::ExecutionCycle.create_report(project, cycle_ids)
+      logger.info { "Report generated to: #{report_path}" } unless report_path.blank?
+    end
+
+    private
+
+    def execution_cycle(options)
+      if options.key?(:exec)
+        project.execution_cycles.where(id: options[:exec]).first
+      else
+        project.execution_cycles.create!(status: Hailstorm::Model::ExecutionCycle::States::STOPPED,
+                                         started_at: Time.now)
+      end
+    end
+
+    def cluster_instance(options)
+      if options.key?(:cluster)
+        project.clusters.where(cluster_code: options[:cluster]).first.cluster_instance
+      else
+        project.clusters.all.first.cluster_instance
+      end
+    end
+
+    def jmeter_plan(options)
+      if options.key?(:jmeter)
+        project.jmeter_plans.where(test_plan_name: options[:jmeter]).first
+      else
+        project.jmeter_plans.all.first
+      end
+    end
+
+    def find_files(file_path, jtl_file_paths)
+      if file_path.nil?
+        glob = File.join(Hailstorm.root, Hailstorm.results_import_dir, '*.jtl')
+        Dir[glob].sort.each { |fp| jtl_file_paths << fp }
+      else
+        jtl_file_paths << file_path
+      end
+    end
+
+    def zip_exports
+      reports_path = File.join(Hailstorm.root, Hailstorm.reports_dir)
+      timestamp = Time.now.strftime('%Y%m%d%H%M%S')
+      zip_file_path = File.join(reports_path, "jtl-#{timestamp}.zip")
+      FileUtils.safe_unlink(zip_file_path)
+      Zip::File.open(zip_file_path, Zip::File::CREATE) do |zf|
+        execution_cycles.each do |ex|
+          seq_dir = "SEQUENCE-#{ex.id}"
+          zf.mkdir(seq_dir)
+          Dir["#{reports_path}/#{seq_dir}/*.jtl"].each do |jtl_file|
+            ze = "#{seq_dir}/#{File.basename(jtl_file)}"
+            zf.add(ze, jtl_file) { true }
+          end
+        end
+      end
+      logger.info { "Results zipped to #{zip_file_path}" }
+    end
   end
 
   # Default settings

@@ -34,6 +34,7 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
         end
 
         break if self.executable_pid.blank?
+
         ssh.terminate_process(self.executable_pid)
         self.executable_pid = nil
       end
@@ -44,6 +45,7 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
     def start_monitoring
       logger.debug { "#{self.class}##{__method__}" }
       return unless self.executable_pid.nil?
+
       Hailstorm::Support::SSH.start(*ssh_connection_spec) do |ssh|
         ssh.make_directory(NMON_OUTPUT_PATH) unless ssh.directory_exists?(NMON_OUTPUT_PATH)
 
@@ -61,8 +63,10 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
     def stop_monitoring(doze_time = 5)
       logger.debug { "#{self.class}##{__method__}" }
       return if self.executable_pid.nil?
+
       Hailstorm::Support::SSH.start(*ssh_connection_spec) do |ssh|
         break unless ssh.process_running?(self.executable_pid)
+
         ssh.exec!("kill -USR2 #{self.executable_pid}")
         sleep(doze_time)
         if ssh.process_running?(self.executable_pid)
