@@ -51,4 +51,18 @@ describe Hailstorm::Support::JavaInstaller do
       expect(installer).to be_a(Hailstorm::Support::JavaInstaller::Trusty)
     end
   end
+
+  context Hailstorm::Support::JavaInstaller::AbstractInstaller do
+    before(:each) do
+      @empty_installer = Object.new.extend(Hailstorm::Support::JavaInstaller::AbstractInstaller)
+    end
+
+    it 'should have empty instructions' do
+      expect(@empty_installer.instructions).to be_empty
+    end
+
+    it 'should not need sudo privilege' do
+      expect(@empty_installer).to_not be_sudo
+    end
+  end
 end
