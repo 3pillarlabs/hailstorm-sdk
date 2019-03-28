@@ -95,7 +95,11 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
       Hailstorm::Support::Thread.start(target_host, &:do_start_monitoring)
     end
 
-    Hailstorm::Support::Thread.join
+    begin
+      Hailstorm::Support::Thread.join
+    rescue StandardError
+      raise(Hailstorm::Exception, 'Monitoring could not be started on one or more hosts')
+    end
   end
 
   # Calls #stop_monitoring() and persists state changes. After changes are
@@ -120,7 +124,11 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
       end
     end
 
-    Hailstorm::Support::Thread.join
+    begin
+      Hailstorm::Support::Thread.join
+    rescue StandardError
+      raise(Hailstorm::Exception, 'Monitoring could not be stopped on one or more hosts')
+    end
   end
 
   # Calls #cleanup() and persists state changes
@@ -138,7 +146,11 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
       Hailstorm::Support::Thread.start(target_host, &:do_cleanup)
     end
 
-    Hailstorm::Support::Thread.join
+    begin
+      Hailstorm::Support::Thread.join
+    rescue StandardError
+      raise(Hailstorm::Exception, 'Monitoring could not be terminated on one or more hosts')
+    end
   end
 
   def self.moniterables(project, only_active = true)
