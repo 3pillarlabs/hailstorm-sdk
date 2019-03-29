@@ -871,9 +871,7 @@ describe Hailstorm::Model::AmazonCloud do
       context 'required and current count is same' do
         it 'should return 0' do
           query = mock(ActiveRecord::Relation, count: 5)
-          @aws.agents_to_add(query, 5) do
-            fail('control should not reach here')
-          end
+          expect(@aws.agents_to_add(query, 5) { }).to be_zero
         end
       end
       context 'required count is greater than the current count' do
