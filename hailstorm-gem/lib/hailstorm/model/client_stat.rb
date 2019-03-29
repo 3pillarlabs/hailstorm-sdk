@@ -43,7 +43,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     result_mutex = Mutex.new
     local_log_path = File.join(Hailstorm.root, Hailstorm.log_dir)
 
-    self.visit_collection(cluster_instance.master_agents.where(active: true)) do |master|
+    self.visit_collection(cluster_instance.master_agents.where(active: true).all) do |master|
       result_file_name = master.result_for(self, local_log_path)
       result_file_path = File.join(local_log_path, result_file_name)
       result_mutex.synchronize do

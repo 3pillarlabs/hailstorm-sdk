@@ -27,7 +27,7 @@ describe Hailstorm::Model::ClientStat do
         uniq_ids.push(id) unless uniq_ids.include?(id)
         agent_generator.call(id, file)
       end
-      cluster_instance.stub_chain(:master_agents, :where).and_return(agents)
+      cluster_instance.stub_chain(:master_agents, :where, :all).and_return(agents)
       Hailstorm::Model::ClientStat.should_receive(:create_client_stat).exactly(uniq_ids.size).times
       File.stub!(:unlink)
       Hailstorm::Model::ClientStat.collect_client_stats(mock(Hailstorm::Model::ExecutionCycle), cluster_instance)

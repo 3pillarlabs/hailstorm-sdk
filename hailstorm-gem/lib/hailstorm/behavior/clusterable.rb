@@ -51,7 +51,7 @@ module Hailstorm::Behavior::Clusterable
     # Stop JMeter master process on load agents
     def stop_master_process(wait = false, aborted = false)
       logger.debug { "#{self.class}##{__method__}" }
-      visit_collection(self.master_agents.where(active: true)) do |master|
+      visit_collection(self.master_agents.where(active: true).all) do |master|
         master.stop_jmeter(wait, aborted)
       end
     end
@@ -307,7 +307,7 @@ module Hailstorm::Behavior::Clusterable
     logger.debug { "#{self.class}##{__method__}" }
     mutex = Mutex.new
     running_agents = []
-    visit_collection(self.master_agents.where(active: true)) do |master|
+    visit_collection(self.master_agents.where(active: true).all) do |master|
       agent = master.check_status
       mutex.synchronize { running_agents.push(agent) } unless agent.nil?
     end

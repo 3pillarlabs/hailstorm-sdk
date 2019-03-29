@@ -442,7 +442,7 @@ describe Hailstorm::Model::Cluster do
         clusterable = Hailstorm::Model::DataCenter.new
         expect(clusterable).to respond_to(:master_agents)
         agent = Hailstorm::Model::MasterAgent.new
-        clusterable.stub_chain(:master_agents, :where).and_return([agent])
+        clusterable.stub_chain(:master_agents, :where, :all).and_return([agent])
         agent.should_receive(:stop_jmeter).with(false, false)
         clusterable.stop_master_process
       end
