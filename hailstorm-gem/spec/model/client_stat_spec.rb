@@ -154,6 +154,7 @@ describe Hailstorm::Model::ClientStat do
 
       builder = double('GraphBuilder', create: 'foo.png', 'output_path=': nil)
       class << builder
+        # :nocov:
         def method_missing(name, *args, &block)
           if name =~ /^set/
             self
@@ -161,6 +162,7 @@ describe Hailstorm::Model::ClientStat do
             super
           end
         end
+        # :nocov:
       end
       client_stat.aggregate_graph(builder: builder)
     end
