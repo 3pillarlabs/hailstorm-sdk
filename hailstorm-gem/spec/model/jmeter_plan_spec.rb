@@ -8,6 +8,7 @@ describe Hailstorm::Model::JmeterPlan do
   before(:all) do
     src_path = File.expand_path("../../../features/data/#{JMX_FILE_NAME}.jmx", __FILE__)
     dest_dir_path = File.join(Hailstorm.root, Hailstorm.app_dir)
+    FileUtils.mkdir_p(dest_dir_path)
     FileUtils.cp(src_path, dest_dir_path)
   end
 
