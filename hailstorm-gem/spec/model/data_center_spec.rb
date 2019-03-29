@@ -330,6 +330,8 @@ describe Hailstorm::Model::DataCenter do
           @dc.unstub!(:connection_ok?)
           @dc.stub!(:connection_ok?).and_return(false)
           master_agent = Hailstorm::Model::MasterAgent.new(private_ip_address: '172.17.0.2')
+          master_agent.stub!(:persisted?).and_return(true)
+          master_agent.should_receive(:update_attribute).with(:active, false)
           expect { @dc.send(:agent_before_save_on_create, master_agent) }
             .to raise_error(Hailstorm::DataCenterAccessFailure) { |error| expect(error.diagnostics).to_not be_blank }
         end
