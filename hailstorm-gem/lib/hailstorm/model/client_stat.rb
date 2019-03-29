@@ -39,6 +39,16 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   # @param [Hailstorm::Behavior::Clusterable] cluster_instance
   def self.collect_client_stats(execution_cycle, cluster_instance)
     logger.debug { "#{self.class}.#{__method__}" }
+    jmeter_plan_results_map = fetch_results(cluster_instance)
+    jmeter_plan_results_map.keys.sort.each do |jmeter_plan_id|
+      stat_file_paths = jmeter_plan_results_map[jmeter_plan_id]
+      self.create_client_stat(execution_cycle, jmeter_plan_id, cluster_instance, stat_file_paths)
+      stat_file_paths.each { |file_path| File.unlink(file_path) }
+    end
+  end
+
+  # @param [Hailstorm::Behavior::Clusterable] cluster_instance
+  def self.fetch_results(cluster_instance)
     jmeter_plan_results_map = Hash.new { |h, k| h[k] = [] }
     result_mutex = Mutex.new
     local_log_path = File.join(Hailstorm.root, Hailstorm.log_dir)
@@ -51,11 +61,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
       end
     end
 
-    jmeter_plan_results_map.keys.sort.each do |jmeter_plan_id|
-      stat_file_paths = jmeter_plan_results_map[jmeter_plan_id]
-      self.create_client_stat(execution_cycle, jmeter_plan_id, cluster_instance, stat_file_paths)
-      stat_file_paths.each { |file_path| File.unlink(file_path) }
-    end
+    jmeter_plan_results_map
   end
 
   # create 1 record for client_stats if it does not exist yet
