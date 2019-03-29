@@ -25,7 +25,6 @@ describe Hailstorm::Model::Project do
 
     context 'success paths' do
       before(:each) do
-        # @project.stub!(:settings_modified?).and_return(true)
         Hailstorm.application.stub!(:load_config)
         @project.serial_version = 'B'
         Hailstorm::Model::JmeterPlan.stub!(:setup)
@@ -60,6 +59,14 @@ describe Hailstorm::Model::Project do
         context '< 2.6' do
           it 'should raise error' do
             @mock_config.jmeter.version = '2.5.1'
+            expect { @project.setup }.to raise_exception
+            expect(@project.errors).to have_key(:jmeter_version)
+          end
+        end
+
+        context 'not matching x.y.z format' do
+          it 'should raise error' do
+            @mock_config.jmeter.version = '-1'
             expect { @project.setup }.to raise_exception
             expect(@project.errors).to have_key(:jmeter_version)
           end
