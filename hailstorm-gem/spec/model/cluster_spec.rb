@@ -11,7 +11,6 @@ require 'hailstorm/model/slave_agent'
 require 'hailstorm/support/configuration'
 
 require 'active_record/base'
-require 'jmeter_plan_spec_overrides'
 
 module Hailstorm
   module Model
