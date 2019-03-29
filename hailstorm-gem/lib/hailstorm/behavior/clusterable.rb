@@ -138,8 +138,7 @@ module Hailstorm::Behavior::Clusterable
     # @param [Hailstorm::Model::LoadAgent] agent load agent to be created
     # @param [Fixnum] count #agents that will be created
     # @param [Mutex] mutex Mutex to synchronize addition of agents to activated_agents
-    # @param [Block] _block
-    def create_new_agent(activated_agents, agent, count, mutex, &_block)
+    def create_new_agent(activated_agents, agent, count, mutex)
       if count > 1
         Hailstorm::Support::Thread.start(agent) do |agent_instance|
           begin
@@ -225,7 +224,7 @@ module Hailstorm::Behavior::Clusterable
 
     def destroy_all_agents
       logger.debug { "#{self.class}##{__method__}" }
-      visit_collection(self.load_agents) do |agent|
+      visit_collection(self.load_agents.all) do |agent|
         yield agent
       end
     end

@@ -337,7 +337,10 @@ describe Hailstorm::Model::Cluster do
       clusterables_stub!
       mock_agent = mock(Hailstorm::Model::LoadAgent).as_null_object
       mock_agent.stub!(:transaction).and_yield
-      Hailstorm::Model::AmazonCloud.any_instance.stub(:destroy_all_agents).and_yield(mock_agent)
+      Hailstorm::Model::AmazonCloud
+        .any_instance
+        .stub_chain(:load_agents, :all)
+        .and_return([mock_agent])
 
       Hailstorm::Model::Cluster.configure_all(@project, config)
       expect(Hailstorm::Model::AmazonCloud.count).to be > 0
