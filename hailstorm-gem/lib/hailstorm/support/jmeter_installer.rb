@@ -48,18 +48,22 @@ class Hailstorm::Support::JmeterInstaller
       )
     end
 
+    # :nocov:
     # Override to provide instructions specific to installation strategy
     def install_instructions
       []
     end
+    # :nocov:
 
     # Override to perform checks or operations before install
     def pre_install; end
 
+    # :nocov:
     # Override to provide the path to the JMeter installation directory
     def jmeter_home
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
+    # :nocov:
   end
 
   # Installation with a tarball

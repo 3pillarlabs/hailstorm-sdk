@@ -1,1 +1,5 @@
-SimpleCov.start if ENV['HAILSTORM_COVERAGE']
+if ENV['HAILSTORM_COVERAGE']
+  SimpleCov.start do
+    add_filter '/build/'
+  end
+end

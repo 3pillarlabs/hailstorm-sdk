@@ -3,14 +3,14 @@ require 'hailstorm/cli'
 # Command history for CLI
 class Hailstorm::Cli::CmdHistory
 
-  DEFAULT_HISTORY_SIZE = 1000
+  DEFAULT_MAX_HISTORY = 1000
 
   attr_reader :memory
-  attr_reader :command_history_size
+  attr_reader :max_history_size
 
-  def initialize(memory)
+  def initialize(memory, max_history_size: DEFAULT_MAX_HISTORY)
     @memory = memory
-    @command_history_size = (ENV['HAILSTORM_HISTORY_LINES'] || DEFAULT_HISTORY_SIZE).to_i
+    @max_history_size = (ENV['HAILSTORM_HISTORY_LINES'] || max_history_size).to_i
   end
 
   def reload_saved_history
@@ -28,10 +28,10 @@ class Hailstorm::Cli::CmdHistory
   def save_history(command)
     create_history_file
     command_history = read_command_history
-    return unless command_history.empty? || command_history.last != command
+    return command_history unless command_history.empty? || command_history.last != command
 
     command_history.push(command.chomp)
-    if command_history.size == DEFAULT_HISTORY_SIZE
+    if command_history.size == max_history_size
       File.open(saved_history_path, 'w') do |f|
         command_history.each { |c| f.puts(c) }
       end
@@ -40,6 +40,8 @@ class Hailstorm::Cli::CmdHistory
         f.puts(command)
       end
     end
+
+    command_history
   end
 
   def pop
@@ -53,7 +55,7 @@ class Hailstorm::Cli::CmdHistory
     File.open(saved_history_path, 'r') do |f|
       f.each_line { |l| command_history.push(l.chomp) unless l.blank? }
     end
-    command_history.shift if command_history.size == command_history_size
+    command_history.shift if command_history.size == max_history_size
     command_history
   end
 

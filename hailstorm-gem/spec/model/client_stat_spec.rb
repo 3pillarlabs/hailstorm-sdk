@@ -27,7 +27,7 @@ describe Hailstorm::Model::ClientStat do
         uniq_ids.push(id) unless uniq_ids.include?(id)
         agent_generator.call(id, file)
       end
-      cluster_instance.stub_chain(:master_agents, :where).and_return(agents)
+      cluster_instance.stub_chain(:master_agents, :where, :all).and_return(agents)
       Hailstorm::Model::ClientStat.should_receive(:create_client_stat).exactly(uniq_ids.size).times
       File.stub!(:unlink)
       Hailstorm::Model::ClientStat.collect_client_stats(mock(Hailstorm::Model::ExecutionCycle), cluster_instance)
@@ -154,6 +154,7 @@ describe Hailstorm::Model::ClientStat do
 
       builder = double('GraphBuilder', create: 'foo.png', 'output_path=': nil)
       class << builder
+        # :nocov:
         def method_missing(name, *args, &block)
           if name =~ /^set/
             self
@@ -161,6 +162,7 @@ describe Hailstorm::Model::ClientStat do
             super
           end
         end
+        # :nocov:
       end
       client_stat.aggregate_graph(builder: builder)
     end

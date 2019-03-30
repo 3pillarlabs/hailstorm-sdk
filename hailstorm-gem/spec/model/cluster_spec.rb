@@ -11,7 +11,6 @@ require 'hailstorm/model/slave_agent'
 require 'hailstorm/support/configuration'
 
 require 'active_record/base'
-require 'jmeter_plan_spec_overrides'
 
 module Hailstorm
   module Model
@@ -337,7 +336,10 @@ describe Hailstorm::Model::Cluster do
       clusterables_stub!
       mock_agent = mock(Hailstorm::Model::LoadAgent).as_null_object
       mock_agent.stub!(:transaction).and_yield
-      Hailstorm::Model::AmazonCloud.any_instance.stub(:destroy_all_agents).and_yield(mock_agent)
+      Hailstorm::Model::AmazonCloud
+        .any_instance
+        .stub_chain(:load_agents, :all)
+        .and_return([mock_agent])
 
       Hailstorm::Model::Cluster.configure_all(@project, config)
       expect(Hailstorm::Model::AmazonCloud.count).to be > 0
@@ -439,7 +441,7 @@ describe Hailstorm::Model::Cluster do
         clusterable = Hailstorm::Model::DataCenter.new
         expect(clusterable).to respond_to(:master_agents)
         agent = Hailstorm::Model::MasterAgent.new
-        clusterable.stub_chain(:master_agents, :where).and_return([agent])
+        clusterable.stub_chain(:master_agents, :where, :all).and_return([agent])
         agent.should_receive(:stop_jmeter).with(false, false)
         clusterable.stop_master_process
       end

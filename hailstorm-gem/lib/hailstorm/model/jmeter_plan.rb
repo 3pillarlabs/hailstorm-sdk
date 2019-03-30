@@ -529,16 +529,13 @@ please add to your test plan(s).")
     def jmeter_document
       logger.debug { "#{self.class}##{__method__}" }
       if @jmeter_document.nil?
-        File.open(self.test_plan_file_path, 'r') do |file|
+        File.open(test_plan_file_path, 'r') do |file|
           @jmeter_document = Nokogiri::XML.parse(file)
         end
       end
 
-      if block_given?
-        yield(@jmeter_document)
-      else
-        @jmeter_document
-      end
+      yield(@jmeter_document) if block_given?
+      @jmeter_document
     end
   end
 

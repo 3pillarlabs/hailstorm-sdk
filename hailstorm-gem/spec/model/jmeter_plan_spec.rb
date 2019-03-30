@@ -1,19 +1,28 @@
 require 'spec_helper'
 require 'hailstorm/model/project'
 require 'hailstorm/model/jmeter_plan'
-require 'jmeter_plan_spec_overrides'
 
 describe Hailstorm::Model::JmeterPlan do
+  JMX_FILE_NAME = 'hailstorm-site-basic'
+  SOURCE_JMX_PATH = File.expand_path("../../../features/data/#{JMX_FILE_NAME}.jmx", __FILE__)
+
+  before(:all) do
+    dest_dir_path = File.join(Hailstorm.root, Hailstorm.app_dir)
+    FileUtils.mkdir_p(dest_dir_path)
+    FileUtils.cp(SOURCE_JMX_PATH, dest_dir_path)
+  end
 
   before(:each) do
     @jmeter_plan = Hailstorm::Model::JmeterPlan.new
-    @jmeter_plan.test_plan_name = 'hailstorm-site-basic'
-    @jmeter_plan.extend(JmeterPlanSpecOverrides)
+    class << @jmeter_plan
+      attr_writer :properties_map
+    end
+    @jmeter_plan.test_plan_name = JMX_FILE_NAME
     @jmeter_plan.validate_plan = true
     @jmeter_plan.active = true
 
-    @file_helper = mock(Hailstorm::Support::FileHelper)
-    @jmeter_plan.stub!(:file_helper).and_return(@file_helper)
+    @file_helper = mock(@jmeter_plan.send(:file_helper).class)
+    @jmeter_plan.instance_variable_set('@file_helper', @file_helper)
   end
 
   context '#validate_plan' do
@@ -58,9 +67,10 @@ describe Hailstorm::Model::JmeterPlan do
   context '.setup' do
     before(:each) do
       @project = Hailstorm::Model::Project.create!(project_code: __FILE__)
-      Hailstorm::Model::JmeterPlan.any_instance
-          .stub(:test_plan_file_path)
-          .and_return(@jmeter_plan.test_plan_file_path)
+      Hailstorm::Model::JmeterPlan
+        .any_instance
+        .stub(:test_plan_file_path)
+        .and_return(SOURCE_JMX_PATH)
     end
     it 'should disable load agents of existing plans' do
       Hailstorm.application.config.jmeter do |jmeter|
@@ -158,18 +168,11 @@ describe Hailstorm::Model::JmeterPlan do
     end
   end
 
-  context '#test_plan_file_path' do
-    it 'should be full path to the file' do
-      path = @jmeter_plan.test_plan_file_path
-      expect(File.absolute_path(path)).to be == path
-    end
-  end
-
   context '#slave_command' do
     it 'should add the properties to the command' do
       clusterable = mock(Hailstorm::Behavior::Clusterable)
-      clusterable.stub!(:required_load_agent_count).and_return(3)
-      @jmeter_plan.properties = { NumUsers: 900, Duration: 600 }.to_json
+      clusterable.stub!(:required_load_agent_count).and_return(10)
+      @jmeter_plan.properties = { NumUsers: 5, Duration: 600 }.to_json
       command = @jmeter_plan.slave_command('192.168.0.102', clusterable)
       expect(command).to match_regex(/NumUsers=/)
       expect(command).to match_regex(/Duration=/)

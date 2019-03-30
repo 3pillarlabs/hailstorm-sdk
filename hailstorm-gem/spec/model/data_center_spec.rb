@@ -265,6 +265,18 @@ describe Hailstorm::Model::DataCenter do
                                                     private_ip_address: '172.17.0.3').first
         expect(agent).to_not be_active
       end
+      it 'should not persist a load agent if setup fails' do
+        @dc.setup
+        @dc.machines = %w[172.17.0.2 172.17.0.4 172.17.0.5] # removed .3 and added .5
+        @dc.stub!(:connection_ok?) do |agent|
+          agent.public_ip_address !~ /0\.5$/
+        end
+        @dc.setup
+        agent = Hailstorm::Model::MasterAgent.where(jmeter_plan_id: @jmeter_plan.id, clusterable_id: @dc.id,
+                                                    clusterable_type: @dc.class.to_s,
+                                                    private_ip_address: '172.17.0.5').first
+        expect(agent).to be_nil
+      end
     end
     context 'without any changes' do
       it 'should not save' do
@@ -318,6 +330,8 @@ describe Hailstorm::Model::DataCenter do
           @dc.unstub!(:connection_ok?)
           @dc.stub!(:connection_ok?).and_return(false)
           master_agent = Hailstorm::Model::MasterAgent.new(private_ip_address: '172.17.0.2')
+          master_agent.stub!(:persisted?).and_return(true)
+          master_agent.should_receive(:update_attribute).with(:active, false)
           expect { @dc.send(:agent_before_save_on_create, master_agent) }
             .to raise_error(Hailstorm::DataCenterAccessFailure) { |error| expect(error.diagnostics).to_not be_blank }
         end

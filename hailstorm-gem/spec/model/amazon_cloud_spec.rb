@@ -244,7 +244,7 @@ describe Hailstorm::Model::AmazonCloud do
 
   context '#create_ec2_instance' do
     before(:each) do
-      @aws.stub!(:ensure_ssh_connectivity).and_return(true)
+      @aws.stub!(:ec2_instance_ready?).and_return(true)
       @aws.stub!(:ssh_options).and_return({})
       @mock_instance = mock('MockInstance', id: 'A', public_ip_address: '8.8.8.4')
       mock_instance_collection = mock('MockInstanceCollection', create: @mock_instance)
@@ -253,9 +253,14 @@ describe Hailstorm::Model::AmazonCloud do
     end
     context 'when ec2_instance_ready? is true' do
       it 'should return clean_instance' do
-        @aws.stub!(:ec2_instance_ready?).and_return(true)
+        @aws.stub!(:ensure_ssh_connectivity).and_return(true)
         instance = @aws.send(:create_ec2_instance, {})
         expect(instance).to eql(@mock_instance)
+      end
+
+      it 'should raise error if ssh connectivity fails' do
+        Hailstorm::Support::SSH.stub!(:ensure_connection).and_return(false)
+        expect { @aws.send(:create_ec2_instance, {}) }.to raise_error(Hailstorm::Exception)
       end
     end
   end
@@ -454,12 +459,11 @@ describe Hailstorm::Model::AmazonCloud do
       mock_ec2 = mock(AWS::EC2)
       @aws.stub!(:ec2) { mock_ec2 }
       @load_agent = Hailstorm::Model::MasterAgent.new(identifier: 'i-w23457889113')
-      @mock_instance = mock_ec2_instance(mock_ec2, @load_agent, [:running, :terminated])
+      @mock_instance = mock_ec2_instance(mock_ec2, @load_agent, [:terminated])
     end
     context 'ec2 instance exists' do
       it 'should terminate the ec2 instance' do
         @mock_instance.stub!(:exists?).and_return(true)
-        @aws.stub!(:wait_for)
         @mock_instance.should_receive(:terminate)
         @aws.before_destroy_load_agent(@load_agent)
       end
@@ -867,9 +871,7 @@ describe Hailstorm::Model::AmazonCloud do
       context 'required and current count is same' do
         it 'should return 0' do
           query = mock(ActiveRecord::Relation, count: 5)
-          @aws.agents_to_add(query, 5) do
-            fail('control should not reach here')
-          end
+          expect(@aws.agents_to_add(query, 5) { }).to be_zero
         end
       end
       context 'required count is greater than the current count' do

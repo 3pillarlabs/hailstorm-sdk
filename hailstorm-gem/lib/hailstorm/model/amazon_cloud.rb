@@ -350,7 +350,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     end
 
     def ensure_ssh_connectivity(instance)
-      Hailstorm::Support::SSH.ensure_connection(instance.public_ip_address, self.user_name, ssh_options)
+      return if Hailstorm::Support::SSH.ensure_connection(instance.public_ip_address, self.user_name, ssh_options)
+
+      raise(Hailstorm::Exception, "Failed to connect to #{instance.id}")
     end
 
     # Predicate that returns true once the EC2 instance is ready.

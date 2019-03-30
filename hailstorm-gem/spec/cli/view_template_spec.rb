@@ -32,7 +32,9 @@ describe Hailstorm::Cli::ViewTemplate do
                                                  jmeter_plan: @test_plan, active: false,
                                                  public_ip_address: '8.8.8.8', jmeter_pid: 9123)
       la.update_column(:active, true)
-      cluster = Hailstorm::Model::Cluster.create!(project: @project, cluster_type: amz.class.name)
+      cluster = Hailstorm::Model::Cluster.create!(project: @project,
+                                                  cluster_type: amz.class.name,
+                                                  clusterable_id: amz.id)
       amz.update_column(:active, true)
       expect { @app.render_load_agents([cluster], true) }.to_not raise_error
     end
