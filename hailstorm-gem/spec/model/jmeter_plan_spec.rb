@@ -4,12 +4,12 @@ require 'hailstorm/model/jmeter_plan'
 
 describe Hailstorm::Model::JmeterPlan do
   JMX_FILE_NAME = 'hailstorm-site-basic'
+  SOURCE_JMX_PATH = File.expand_path("../../../features/data/#{JMX_FILE_NAME}.jmx", __FILE__)
 
   before(:all) do
-    src_path = File.expand_path("../../../features/data/#{JMX_FILE_NAME}.jmx", __FILE__)
     dest_dir_path = File.join(Hailstorm.root, Hailstorm.app_dir)
     FileUtils.mkdir_p(dest_dir_path)
-    FileUtils.cp(src_path, dest_dir_path)
+    FileUtils.cp(SOURCE_JMX_PATH, dest_dir_path)
   end
 
   before(:each) do
@@ -67,7 +67,10 @@ describe Hailstorm::Model::JmeterPlan do
   context '.setup' do
     before(:each) do
       @project = Hailstorm::Model::Project.create!(project_code: __FILE__)
-      Hailstorm::Model::JmeterPlan.any_instance.stub(:validate_plan)
+      Hailstorm::Model::JmeterPlan
+        .any_instance
+        .stub(:test_plan_file_path)
+        .and_return(SOURCE_JMX_PATH)
     end
     it 'should disable load agents of existing plans' do
       Hailstorm.application.config.jmeter do |jmeter|
