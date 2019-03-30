@@ -44,6 +44,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       setup_jmeter_plans
       configure_clusters(force)
       configure_target_hosts
+      self.reload
     rescue Exception
       self.update_column(:serial_version, nil)
       raise
