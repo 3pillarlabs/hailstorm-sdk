@@ -27,6 +27,7 @@ RSpec.configure do |config|
 
   config.prepend_before(:suite) do
     build_path = File.join(File.expand_path('../..', __FILE__), 'build')
+    FileUtils.rm_rf(build_path)
     FileUtils.mkdir_p(build_path)
     boot_file_path = File.join(build_path, 'config', 'boot.rb')
     FileUtils.mkdir_p(File.join(build_path, Hailstorm.tmp_dir))
