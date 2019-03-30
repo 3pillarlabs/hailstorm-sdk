@@ -1,10 +1,15 @@
 # Hailstorm SDK
 
-[![Build Status](https://travis-ci.org/3pillarlabs/hailstorm-sdk.svg?branch=master)](https://travis-ci.org/3pillarlabs/hailstorm-sdk)
+
 
 This SDK has all the Hailstorm applications -
-* hailstorm-gem
+* hailstorm-gem 
+  [![Build Status](https://travis-ci.org/3pillarlabs/hailstorm-sdk.svg?branch=develop)](https://travis-ci.org/3pillarlabs/hailstorm-sdk)
+  [![Maintainability](https://api.codeclimate.com/v1/badges/f6dc4763071d01bcd14e/maintainability)](https://codeclimate.com/github/3pillarlabs/hailstorm-sdk/maintainability)
+  [![Test Coverage](https://api.codeclimate.com/v1/badges/f6dc4763071d01bcd14e/test_coverage)](https://codeclimate.com/github/3pillarlabs/hailstorm-sdk/test_coverage)
+  
 * hailstorm-redis
+
 * hailstorm-web
 
 This SDK can be used to create a virtual machine that contains all the applications.
