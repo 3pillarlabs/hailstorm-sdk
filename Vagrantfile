@@ -110,6 +110,7 @@ Vagrant.configure(2) do |config|
   	end
     dev.vm.network "private_network", ip: "192.168.17.10"
     dev.vm.network 'forwarded_port', :guest => 80, :host => 8080, :autocorrect => true
+    dev.vm.network 'forwarded_port', :guest => 3306, :host => 3306
     common_provision(dev)
   end
 
