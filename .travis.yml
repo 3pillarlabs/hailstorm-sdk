@@ -16,7 +16,7 @@ install: bundle install
 gemfile: hailstorm-gem/Gemfile
 script:
   - cd hailstorm-gem
-  - HAILSTORM_COVERAGE="true" JRUBY_OPTS="--debug" rspec
+  - HAILSTORM_COVERAGE="true" JRUBY_OPTS="--debug" rspec -f HailstormCiFormatter
   - cd ../
 
 before_script:
