@@ -6,24 +6,29 @@ require 'rspec/core/formatters/base_text_formatter'
 # Progress is shown as per progress formatter.
 class HailstormCiFormatter < RSpec::Core::Formatters::BaseTextFormatter
 
-  attr_accessor :stdout_str_io, :stderr_str_io, :pw_out, :pw_err, :java_stdout, :java_stderr
+  attr_reader :io_stream
+
+  def initialize(output)
+    super(output)
+    @io_stream = IoStream.new
+  end
 
   def start(example_count)
     super(example_count)
 
-    capture_io
+    self.io_stream.capture_io
   end
 
   def example_started(example)
     super(example)
 
-    capture_io
+    self.io_stream.capture_io
   end
 
   def example_passed(example)
     super(example)
 
-    restore_io
+    self.io_stream.restore_io
 
     output.print success_color('.')
   end
@@ -31,7 +36,7 @@ class HailstormCiFormatter < RSpec::Core::Formatters::BaseTextFormatter
   def example_pending(example)
     super(example)
 
-    restore_io
+    self.io_stream.restore_io
 
     output.print pending_color('*')
   end
@@ -39,20 +44,13 @@ class HailstormCiFormatter < RSpec::Core::Formatters::BaseTextFormatter
   def example_failed(example)
     super(example)
 
-    restore_io
-
-    captured_io_value = [
-      stdout_str_io.string,
-      read_out_stream,
-      stderr_str_io.string,
-      read_err_stream
-    ].select { |s| s.to_s.length > 0 }.join("\n")
+    self.io_stream.restore_io
 
     class << example
       attr_reader :captured_io
     end
 
-    example.instance_variable_set('@captured_io', captured_io_value)
+    example.instance_variable_set('@captured_io', self.io_stream.read_captured_io)
 
     output.print failure_color('F')
   end
@@ -70,63 +68,120 @@ class HailstormCiFormatter < RSpec::Core::Formatters::BaseTextFormatter
     end
   end
 
-  private
+  # IO adapter
+  class IoStream
 
-  def capture_stdout
-    self.stdout_str_io = StringIO.new
-    $stdout = self.stdout_str_io
-    self.java_stdout = java.lang.System.out
-    self.pw_out.close unless self.pw_out.nil?
-    self.pw_out = out_stream
-    java.lang.System.setOut(self.pw_out)
+    attr_reader :stdout_stream, :stderr_stream
+
+    def initialize
+      @stdout_stream = StdOutStream.new
+      @stderr_stream = StdErrStream.new
+    end
+
+    def capture_io
+      stdout_stream.capture_io
+      stderr_stream.capture_io
+    end
+
+    def restore_io
+      stdout_stream.restore_io
+      stderr_stream.restore_io
+    end
+
+    def read_captured_io
+      [stdout_stream.read_captured_io, stderr_stream.read_captured_io]
+        .flatten
+        .select { |s| s.to_s.length > 0 }
+        .join("\n")
+    end
   end
 
-  def capture_stderr
-    self.stderr_str_io = StringIO.new
-    $stderr = self.stderr_str_io
-    self.java_stderr = java.lang.System.err
-    self.pw_err.close unless self.pw_err.nil?
-    self.pw_err = err_stream
-    java.lang.System.setErr(self.pw_err)
+  # Capturable interface
+  module IoCapturable
+    def capture_io
+      raise(NotImplementedError, "#{self.class.name}##{__method__}")
+    end
+
+    def restore_io
+      raise(NotImplementedError, "#{self.class.name}##{__method__}")
+    end
+
+    def read_captured_io
+      raise(NotImplementedError, "#{self.class.name}##{__method__}")
+    end
   end
 
-  def capture_io
-    capture_stdout
-    capture_stderr
+  # stdout
+  class StdOutStream
+    include IoCapturable
+
+    attr_accessor :stdout_str_io, :pw_out, :java_stdout
+
+    def capture_io
+      self.stdout_str_io = StringIO.new
+      $stdout = self.stdout_str_io
+      self.java_stdout = java.lang.System.out
+      self.pw_out.close unless self.pw_out.nil?
+      self.pw_out = out_stream
+      java.lang.System.setOut(self.pw_out)
+    end
+
+    def restore_io
+      $stdout = STDOUT
+      java.lang.System.setOut(self.java_stdout)
+      self.pw_out.close
+    end
+
+    def read_captured_io
+      [stdout_str_io.string, read_out_stream]
+    end
+
+    private
+
+    def out_stream
+      @byte_out_stream = java.io.ByteArrayOutputStream.new
+      java.io.PrintStream.new(@byte_out_stream)
+    end
+
+    def read_out_stream
+      @byte_out_stream.to_string('utf-8')
+    end
   end
 
-  def restore_stdout
-    $stdout = STDOUT
-    java.lang.System.setOut(self.java_stdout)
-    self.pw_out.close
-  end
+  # stderr
+  class StdErrStream
+    include IoCapturable
 
-  def restore_stderr
-    $stderr = STDERR
-    java.lang.System.setErr(self.java_stderr)
-    self.pw_err.close
-  end
+    attr_accessor :stderr_str_io, :pw_err, :java_stderr
 
-  def restore_io
-    restore_stdout
-    restore_stderr
-  end
+    def capture_io
+      self.stderr_str_io = StringIO.new
+      $stderr = self.stderr_str_io
+      self.java_stderr = java.lang.System.err
+      self.pw_err.close unless self.pw_err.nil?
+      self.pw_err = err_stream
+      java.lang.System.setErr(self.pw_err)
+    end
 
-  def out_stream
-    @byte_out_stream = java.io.ByteArrayOutputStream.new
-    java.io.PrintStream.new(@byte_out_stream)
-  end
+    def restore_io
+      $stderr = STDERR
+      java.lang.System.setErr(self.java_stderr)
+      self.pw_err.close
+    end
 
-  def err_stream
-    @byte_err_stream = java.io.ByteArrayOutputStream.new
-    java.io.PrintStream.new(@byte_err_stream)
-  end
+    def read_captured_io
+      [stderr_str_io.string, read_err_stream]
+    end
 
-  def read_out_stream
-    @byte_out_stream.to_string('utf-8')
-  end
+    private
 
-  def read_err_stream
-    @byte_err_stream.to_string('utf-8')
+    def err_stream
+      @byte_err_stream = java.io.ByteArrayOutputStream.new
+      java.io.PrintStream.new(@byte_err_stream)
+    end
+
+    def read_err_stream
+      @byte_err_stream.to_string('utf-8')
+    end
   end
 end
