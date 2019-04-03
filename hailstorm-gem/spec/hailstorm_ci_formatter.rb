@@ -10,6 +10,7 @@ class HailstormCiFormatter < RSpec::Core::Formatters::BaseTextFormatter
 
   def initialize(output)
     super(output)
+
     @io_stream = IoStream.new
   end
 
@@ -139,12 +140,12 @@ class HailstormCiFormatter < RSpec::Core::Formatters::BaseTextFormatter
     private
 
     def out_stream
-      @byte_out_stream = java.io.ByteArrayOutputStream.new
-      java.io.PrintStream.new(@byte_out_stream)
+      @out_stream = java.io.ByteArrayOutputStream.new
+      java.io.PrintStream.new(@out_stream)
     end
 
     def read_out_stream
-      @byte_out_stream.to_string('utf-8')
+      @out_stream.to_string('utf-8')
     end
   end
 
@@ -176,12 +177,12 @@ class HailstormCiFormatter < RSpec::Core::Formatters::BaseTextFormatter
     private
 
     def err_stream
-      @byte_err_stream = java.io.ByteArrayOutputStream.new
-      java.io.PrintStream.new(@byte_err_stream)
+      @err_stream = java.io.ByteArrayOutputStream.new
+      java.io.PrintStream.new(@err_stream)
     end
 
     def read_err_stream
-      @byte_err_stream.to_string('utf-8')
+      @err_stream.to_string('utf-8')
     end
   end
 end
