@@ -1,4 +1,5 @@
-require 'hailstorm'
+require 'hailstorm/extensions'
+require 'hailstorm/initializer/eager_load'
 
 # Initializer for Hailstorm project
 module Hailstorm::Initializer
@@ -8,12 +9,11 @@ module Hailstorm::Initializer
   # @param [String] invocation_path the path this application will be installed
   # @param [String] arg_app_name the argument provided for creating project
   # @param [Boolean] quiet false, by default; set true to not emit to stdout
-  # @param [String] gem_path local path to gem installation
+  # @param [Array<Struct>] gems to add, each is a struct with (name, path)
   # @return [String] root_path local path to the application root
-  def self.create_project!(invocation_path, arg_app_name, quiet = false, gem_path = nil)
-    require 'hailstorm/initializer/eager_load'
+  def self.create_project!(invocation_path, arg_app_name, quiet = false, gems = [])
     require 'hailstorm/initializer/project_structure'
-    project_creator = Hailstorm::Initializer::ProjectStructure.new(invocation_path, arg_app_name, quiet, gem_path)
+    project_creator = Hailstorm::Initializer::ProjectStructure.new(invocation_path, arg_app_name, quiet, gems)
     project_creator.create_app_structure
   end
 
@@ -26,7 +26,6 @@ module Hailstorm::Initializer
   def self.create_middleware(app_name, boot_file_path, connection_spec = nil, env_config = nil)
     Hailstorm.app_name = app_name
     Hailstorm.root = File.expand_path('../..', boot_file_path)
-    require 'hailstorm/initializer/eager_load'
     require 'hailstorm/initializer/log_config'
     require 'hailstorm/initializer/java_classpath'
     require 'hailstorm/initializer/tmp_directory'

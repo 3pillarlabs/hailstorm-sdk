@@ -15,8 +15,4 @@ module Hailstorm::Controller::Application
   def initialize(middleware)
     @middleware = middleware
   end
-
-  def current_project
-    @current_project ||= Hailstorm::Model::Project.where(project_code: Hailstorm.app_name).first_or_create!
-  end
 end

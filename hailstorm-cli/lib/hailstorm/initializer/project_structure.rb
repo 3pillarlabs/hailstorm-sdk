@@ -3,13 +3,13 @@ require 'hailstorm/initializer'
 # Creates the structure for a project
 class Hailstorm::Initializer::ProjectStructure
 
-  attr_reader :invocation_path, :arg_app_name, :quiet, :gem_path
+  attr_reader :invocation_path, :arg_app_name, :quiet, :gems
 
-  def initialize(invocation_path, arg_app_name, quiet, gem_path)
+  def initialize(invocation_path, arg_app_name, quiet, gems)
     @invocation_path = invocation_path
     @arg_app_name = arg_app_name
     @quiet = quiet
-    @gem_path = gem_path
+    @gems = gems
   end
 
   def create_app_structure
@@ -57,7 +57,7 @@ class Hailstorm::Initializer::ProjectStructure
   def create_gemfile
     engine = ActionView::Base.new
     engine.assign(jruby_pageant: !File::ALT_SEPARATOR.nil?, # File::ALT_SEPARATOR is nil on non-windows
-                  gem_path: gem_path)
+                  gems: gems)
     File.open(File.join(root_path, 'Gemfile'), 'w') do |f|
       f.print(engine.render(file: File.join(skeleton_path, 'Gemfile')))
     end

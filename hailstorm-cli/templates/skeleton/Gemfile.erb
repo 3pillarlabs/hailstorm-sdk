@@ -1,9 +1,12 @@
 source "https://rubygems.org"
 
-<%- if @gem_path -%>
-gem "hailstorm", :path => "<%= @gem_path %>"
+<%- if @gems -%>
+<%- @gems.each do |gem| %>
+gem "<%= gem.name %>", :path => "<%= gem.path %>"
+<%- end %>
 <%- else -%>
 gem "hailstorm"
+gem "hailstorm-cli"
 <%- end -%>
 gem "activerecord-jdbcmysql-adapter"
 <%- if @jruby_pageant %>

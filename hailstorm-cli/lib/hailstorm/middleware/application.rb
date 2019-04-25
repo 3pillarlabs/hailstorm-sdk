@@ -81,7 +81,7 @@ class Hailstorm::Middleware::Application
   private
 
   def database_name
-    Hailstorm.app_name
+    @database_name ||= Hailstorm.is_production? ? 'hailstorm_production' : 'hailstorm_development'
   end
 
   def create_database_if_not_exists
@@ -112,7 +112,9 @@ class Hailstorm::Middleware::Application
       @connection_spec = {
         pool: 50,
         wait_timeout: 30.minutes
-      }.merge(@connection_spec).merge(database: database_name)
+      }.merge(@connection_spec)
+
+      @connection_spec[:database] ||= database_name
     end
 
     @connection_spec

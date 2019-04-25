@@ -21,7 +21,7 @@ describe Hailstorm::Middleware::Application do
       ActiveRecord::Base.stub!(:clear_all_connections!)
       @app.stub!(:connection_spec).and_return(
         adapter: 'jdbcmysql',
-        database: 'hailstorm_gem_test',
+        database: 'hailstorm_test',
         host: 'localhost',
         port: 3306,
         username: 'hailstorm_dev',
@@ -118,7 +118,7 @@ describe Hailstorm::Middleware::Application do
   end
 
   context '#connection_spec' do
-    it 'should ignores blank properties' do
+    it 'should ignore blank properties' do
       @app.stub!(:load_db_properties).and_return(x: 1, y: ' ', z: nil)
       conn_spec = @app.send(:connection_spec)
       expect(conn_spec).to include(:x)
@@ -131,12 +131,17 @@ describe Hailstorm::Middleware::Application do
       conn_spec = @app.send(:connection_spec)
       expect(conn_spec).to include(:database)
     end
-    it 'should override :database key' do
-      props = {adapter: 'mysql', database: 'to_be_overridden'}
+    it 'should not override :database key' do
+      props = {adapter: 'mysql', database: 'hailstorm_test'}
       @app.stub!(:load_db_properties).and_return(props)
       conn_spec = @app.send(:connection_spec)
-      expect(conn_spec[:database]).to_not be == props[:database]
-      expect(conn_spec[:database]).to match(Regexp.new(Hailstorm.app_name))
+      expect(conn_spec[:database]).to be == props[:database]
+    end
+    it 'should provide :database if not present in spec' do
+      props = {adapter: 'mysql'}
+      @app.stub!(:load_db_properties).and_return(props)
+      conn_spec = @app.send(:connection_spec)
+      expect(conn_spec[:database]).to match(/^hailstorm_/)
     end
     context ':adapter is sqlite|derby' do
       %w[sqlite derby].each do |adapter|

@@ -26,6 +26,10 @@ class Hailstorm::Controller::Cli
     @shell_binding_ctx = FreeShell.new.binding_context
   end
 
+  def current_project
+    @current_project ||= Hailstorm::Model::Project.where(project_code: Hailstorm.app_name).first_or_create!
+  end
+
   # Processes the user commands and options
   def process_commands
     logger.debug { ["\n", '*' * 80, "Application started at #{Time.now}", '-' * 80].join("\n") }

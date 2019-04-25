@@ -1,5 +1,6 @@
 require 'spec_helper'
 require 'hailstorm/initializer'
+require 'ostruct'
 
 describe Hailstorm::Initializer do
 
@@ -7,7 +8,11 @@ describe Hailstorm::Initializer do
     it 'should create the Hailstorm application project structure' do
       root_path = Dir.mktmpdir
       app_name = 'spec'
-      Hailstorm::Initializer.create_project!(root_path, app_name, true, '/usr/local/lib/hailstorm-gem')
+      gems = [
+        OpenStruct.new(name: 'hailstorm', path: '/path/to/hailstorm-gem'),
+        OpenStruct.new(name: 'hailstorm-cli', path: '/path/to/hailstorm-cli'),
+      ]
+      Hailstorm::Initializer.create_project!(root_path, app_name, true, gems)
 
       expect(File.directory?(File.join(root_path, app_name, Hailstorm.db_dir))).to be_true
       expect(File.directory?(File.join(root_path, app_name, Hailstorm.app_dir))).to be_true
