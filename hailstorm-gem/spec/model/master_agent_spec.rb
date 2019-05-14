@@ -113,7 +113,9 @@ describe Hailstorm::Model::MasterAgent do
     it 'should download and return local_file_name' do
       @master_agent.public_ip_address = '123.45.6.78'
 
-      @master_agent.stub!(:jmeter_plan).and_return(Hailstorm::Model::JmeterPlan.new)
+      jmeter_plan = Hailstorm::Model::JmeterPlan.new
+      jmeter_plan.project = Hailstorm::Model::Project.new(project_code: 'master_agent_spec')
+      @master_agent.stub!(:jmeter_plan).and_return(jmeter_plan)
       expect(@master_agent.jmeter_plan).to respond_to(:remote_log_file)
       @master_agent.jmeter_plan.stub!(:remote_log_file).and_return('results-234-1.jtl')
 
@@ -126,7 +128,7 @@ describe Hailstorm::Model::MasterAgent do
       @master_agent.stub!(:gunzip_file)
 
       local_file_name = @master_agent.result_for(mock(Hailstorm::Model::ExecutionCycle),
-                                                 Hailstorm.log_dir)
+                                                 RSpec.configuration.build_path)
       expect(local_file_name).to be == 'results-234-1-123_45_6_78.jtl'
     end
   end

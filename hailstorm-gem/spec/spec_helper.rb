@@ -5,19 +5,37 @@
 #
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
 require 'simplecov'
-require 'hailstorm/initializer/eager_load'
-require 'hailstorm/initializer'
-require 'hailstorm/support/configuration'
-require 'active_record/base'
-require 'test_schema'
 
 $CLASSPATH << File.dirname(__FILE__)
+
+require 'hailstorm/initializer/java_classpath'
+require 'hailstorm/initializer/eager_load'
+require 'hailstorm/support/configuration'
+require 'hailstorm/support/schema'
+require 'active_record/base'
+require 'test_schema'
+require 'hailstorm/support/thread'
+require 'hailstorm/support/log4j_backed_logger'
+require 'hailstorm/behavior/file_store'
+
 ENV['HAILSTORM_ENV'] = 'test'
+
+# disable threading in unit tests
+class Hailstorm::Support::Thread
+  def self.start(*args)
+    yield(*args)
+  end
+end
+
+BUILD_PATH = File.join(File.expand_path('../..', __FILE__), 'build').freeze
+FileUtils.rm_rf(BUILD_PATH)
+FileUtils.mkdir_p(BUILD_PATH)
 
 RSpec.configure do |config|
   config.treat_symbols_as_metadata_keys_with_true_values = true
   config.run_all_when_everything_filtered = true
   config.filter_run :focus
+  config.add_setting(:build_path, default: BUILD_PATH)
 
   # Run specs in random order to surface order dependencies. If you find an
   # order dependency and want to debug it, you can fix the order by providing
@@ -26,17 +44,24 @@ RSpec.configure do |config|
   config.order = 'random'
 
   config.prepend_before(:suite) do
-    build_path = File.join(File.expand_path('../..', __FILE__), 'build')
-    FileUtils.rm_rf(build_path)
-    FileUtils.mkdir_p(build_path)
-    middleware = Hailstorm::Initializer.create_middleware('hailstorm_spec', boot_file_path, {
+    connection_spec = {
       adapter: 'jdbcmysql',
       database: 'hailstorm_test',
       username: 'hailstorm_dev',
       password: 'hailstorm_dev'
-    }, Hailstorm::Support::Configuration.new)
+    }
 
-    middleware.multi_threaded = false # disable threading in unit tests
+    ActiveRecord::Base.logger = Hailstorm::Support::Log4jBackedLogger.get_logger(ActiveRecord::Base)
+    ActiveRecord::Base.establish_connection(connection_spec) # this is lazy, does not fail!
+    begin
+      ActiveRecord::Base.connection.exec_query('select 1')
+    rescue ActiveRecord::ActiveRecordError
+      ActiveRecord::Base.establish_connection(connection_spec.merge(database: nil))
+      ActiveRecord::Base.connection.create_database(connection_spec[:database])
+      ActiveRecord::Base.establish_connection(connection_spec)
+    end
+
+    Hailstorm::Support::Schema.create_schema
   end
 
   config.append_after(:suite) do
@@ -54,7 +79,7 @@ RSpec.configure do |config|
     end
   end
 
-  config.append_after(:each) do
-    Hailstorm.test_application = nil if Hailstorm.respond_to?(:test_application)
+  config.after(:each) do
+    Hailstorm.fs = nil
   end
 end

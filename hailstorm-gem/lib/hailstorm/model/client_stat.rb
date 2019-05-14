@@ -51,7 +51,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   def self.fetch_results(cluster_instance)
     jmeter_plan_results_map = Hash.new { |h, k| h[k] = [] }
     result_mutex = Mutex.new
-    local_log_path = File.join(Hailstorm.root, Hailstorm.log_dir)
+    local_log_path = Hailstorm.workspace(cluster_instance.project.project_code).tmp_path
 
     self.visit_collection(cluster_instance.master_agents.where(active: true).all) do |master|
       result_file_name = master.result_for(self, local_log_path)
@@ -79,11 +79,13 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   end
 
   # @return [String] path to generated image
-  def aggregate_graph(builder: nil)
+  def aggregate_graph(builder: nil, working_path:)
     page_labels = self.page_stats.collect(&:page_label)
     threshold_data, threshold_titles = build_threshold_matrix
     error_percentages = self.page_stats.collect(&:percentage_errors)
-    grapher = GraphBuilderFactory.aggregate_graph(identifier: self.id, other_builder: builder)
+    grapher = GraphBuilderFactory.aggregate_graph(identifier: self.id,
+                                                  other_builder: builder,
+                                                  working_path: working_path)
     grapher.setPages(page_labels)
            .setNinetyCentileResponseTimes(response_time_matrix[3])
            .setThresholdTitles(threshold_titles)
@@ -108,16 +110,16 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     self.sample_response_times.push(sample['t'])
   end
 
-  # @param [String] export_dir directory for exported files
+  # @param [String] export_dir_path Path to local directory for exported files
   # @return [String] path to exported file
-  def write_jtl(export_dir, append_id = false)
+  def write_jtl(export_dir_path, append_id = false)
     require(self.clusterable_type.underscore)
     file_name = [self.clusterable.slug.gsub(/[\W\s]+/, '_'),
                  self.jmeter_plan.test_plan_name.gsub(/[\W\s]+/, '_')].join('-')
     file_name.concat("-#{self.id}") if append_id
     file_name.concat('.jtl')
 
-    export_file = File.join(export_dir, file_name)
+    export_file = File.join(export_dir_path, file_name)
     Hailstorm::Model::JtlFile.export_file(self, export_file) unless File.exist?(export_file)
     export_file
   end
@@ -201,7 +203,8 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
       test_results_start_tag = '<testResults version="1.2">'
       test_results_end_tag = '</testResults>'
       file_unique_ids = [execution_cycle, jmeter_plan, clusterable].compact.map(&:id)
-      combined_file_path = File.join(Hailstorm.tmp_path, "results-#{file_unique_ids.join('-')}-all.jtl")
+      combined_file_path = File.join(Hailstorm.workspace(execution_cycle.project.project_code).tmp_path,
+                                     "results-#{file_unique_ids.join('-')}-all.jtl")
 
       File.open(combined_file_path, 'w') do |combined_file|
         combined_file.puts xml_decl
@@ -267,8 +270,8 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   # Builder factory of graphs
   module GraphBuilderFactory
 
-    def self.aggregate_graph(identifier:, other_builder: nil)
-      output_path = File.join(Hailstorm.root, Hailstorm.reports_dir, "aggregate_graph_#{identifier}")
+    def self.aggregate_graph(identifier:, other_builder: nil, working_path:)
+      output_path = File.join(working_path, "aggregate_graph_#{identifier}")
       if other_builder
         other_builder.output_path = output_path
         other_builder

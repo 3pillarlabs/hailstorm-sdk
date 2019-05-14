@@ -12,10 +12,6 @@ describe Hailstorm::Middleware::Application do
    @app = Hailstorm::Middleware::Application.new
   end
 
-  it 'should have multi_thread enabled' do
-    expect(@app).to be_multi_threaded
-  end
-
   context '#check_database' do
     before(:each) do
       ActiveRecord::Base.stub!(:clear_all_connections!)
@@ -143,17 +139,6 @@ describe Hailstorm::Middleware::Application do
       conn_spec = @app.send(:connection_spec)
       expect(conn_spec[:database]).to match(/^hailstorm_/)
     end
-    context ':adapter is sqlite|derby' do
-      %w[sqlite derby].each do |adapter|
-        before(:each) do
-          @app.stub!(:load_db_properties).and_return(adapter: adapter)
-        end
-        it 'should disable multi_threaded mode' do
-          @app.send(:connection_spec)
-          expect(@app).to_not be_multi_threaded
-        end
-      end
-    end
     context ':adapter is not sqlite|derby' do
       it 'should add default properties' do
         @app.stub!(:load_db_properties).and_return(adapter: 'mysql')
@@ -190,6 +175,60 @@ describe Hailstorm::Middleware::Application do
       end
       props_map = @app.send(:load_db_properties, db_props_file_path)
       expect(props_map).to be == { adapter: 'jdbcmysql', database: '', host: 'localhost' }
+    end
+  end
+
+  context '#config_serial_version' do
+    def write_jtl(file_name)
+      app_path = File.join(Hailstorm.root, Hailstorm.app_dir)
+      FileUtils.mkdir_p(app_path)
+      jmeter_plan_path = File.join(app_path, "#{file_name}.jmx")
+      File.open(jmeter_plan_path, 'w') do |file|
+        file.write('<xml></xml>')
+      end
+    end
+
+    def write_configuration_file(num_lines: )
+      FileUtils.mkdir_p(File.join(Hailstorm.root, Hailstorm.config_dir))
+      File.open(Hailstorm.environment_file_path, 'w') do |file|
+        num_lines.times do |index|
+          file.puts("line #{index}")
+        end
+      end
+    end
+
+    before(:all) do
+      FileUtils.rm_rf(File.join(Hailstorm.root, Hailstorm.app_dir))
+    end
+
+    it 'should compute the digest of JMeter plans and configuration file' do
+      %w[a b].each(&method(:write_jtl))
+      write_configuration_file(num_lines: 2)
+      expect(@app.config_serial_version).to_not be_nil
+    end
+
+    it 'should change if a new JMeter plan is added' do
+      %w[a b].each(&method(:write_jtl))
+
+      write_configuration_file(num_lines: 2)
+      digest1 = @app.config_serial_version
+
+      write_jtl('c')
+      digest2 = @app.config_serial_version
+
+      expect(digest1).to_not eq(digest2)
+    end
+
+    it 'should change if the configuration file is modified' do
+      %w[a b].each(&method(:write_jtl))
+      write_configuration_file(num_lines: 2)
+
+      digest1 = @app.config_serial_version
+
+      write_configuration_file(num_lines: 3)
+      digest2 = @app.config_serial_version
+
+      expect(digest1).to_not eq(digest2)
     end
   end
 end

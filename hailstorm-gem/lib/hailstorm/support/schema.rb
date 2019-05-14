@@ -26,9 +26,7 @@ class Hailstorm::Support::Schema
 
   # List of updates to schema
   def schema_updates
-    @schema_updates ||= %i[
-      add_target_host_ssh_port
-    ]
+    @schema_updates ||= %i[]
   end
 
   class SchemaMigration < ActiveRecord::Base
@@ -41,9 +39,7 @@ class Hailstorm::Support::Schema
     schema.update
   end
 
-  # Creates the application schema in the application db directory.
-  # A sqlite3 database is created. The database name is <tt>#{Hailstorm.app_name}.sqlite3</tt>.
-  # If the tables already exist, nothing is changed.
+  # Creates the application schema. If the tables already exist, nothing is changed.
   def create
     create_schema_migrations
     table_migrations = SchemaMigration.all.collect(&:migration_name).select { |e| e =~ /^create_/ }
@@ -175,6 +171,7 @@ class Hailstorm::Support::Schema
       t.string      :user_name, default: nil
       t.integer     :sampling_interval, null: false
       t.boolean     :active, null: false, default: false
+      t.integer     :ssh_port
     end
   end
 
@@ -237,10 +234,6 @@ class Hailstorm::Support::Schema
       t.integer     :chunk_sequence, null: false
       t.binary      :data_chunk, null: false
     end
-  end
-
-  def add_target_host_ssh_port
-    ActiveRecord::Migration.add_column(:target_hosts, :ssh_port, :integer)
   end
 
   # :nocov:

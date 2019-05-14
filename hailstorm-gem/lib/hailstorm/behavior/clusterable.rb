@@ -3,6 +3,7 @@ require 'hailstorm/model/jmeter_plan'
 require 'hailstorm/model/slave_agent'
 require 'hailstorm/model/master_agent'
 require 'hailstorm/support/collection_helper'
+require 'hailstorm/exceptions'
 
 # Defines an interface for an entity that wants to take control of the cluster
 # of load agents.

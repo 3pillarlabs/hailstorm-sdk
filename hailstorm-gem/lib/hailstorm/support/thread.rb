@@ -7,35 +7,29 @@ class Hailstorm::Support::Thread
 
   include Hailstorm::Behavior::Loggable
 
-  # Start a new Ruby thread. The thread is push to Hailstorm.application.threads
-  # so they can be joined on later. *args are passed as thread local variables
-  # to the newly created thread.
-  # @param [Object] *args
+  # :nocov:
+  # Start a new Ruby thread. args are passed as thread local variables to the newly created thread.
+  # @param [Array] args
   # @return [Thread] the thread object
   def self.start(*args)
     logger.debug { "#{self}.#{__method__}" }
-    if Hailstorm.application.multi_threaded?
-      # :nocov:
-      thread = Thread.start(args) do |thread_args|
-        begin
-          yield(*thread_args)
-        rescue Object => e
-          logger.error(e.message)
-          logger.debug { "\n".concat(e.backtrace.join("\n")) }
-          raise
-        ensure
-          ActiveRecord::Base.connection.close
-        end
+    thread = Thread.start(args) do |thread_args|
+      begin
+        yield(*thread_args)
+      rescue Object => e
+        logger.error(e.message)
+        logger.debug { "\n".concat(e.backtrace.join("\n")) }
+        raise
+      ensure
+        ActiveRecord::Base.connection.close
       end
-      Thread.current[:spawned] ||= []
-      Thread.current[:spawned].push(thread)
-
-      return thread
-      # :nocov:
-    else
-      yield(*args)
     end
+    Thread.current[:spawned] ||= []
+    Thread.current[:spawned].push(thread)
+
+    return thread
   end
+  # :nocov:
 
   # Joins all threads spawned by current thread and clears active connections.
   # @raise [Hailstorm::Exception] if not all threads finished gracefully.

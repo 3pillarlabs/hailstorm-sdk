@@ -1,5 +1,4 @@
 require 'ostruct'
-require 'active_support/all'
 require 'active_record'
 require 'action_dispatch/http/mime_type'
 require 'action_view'

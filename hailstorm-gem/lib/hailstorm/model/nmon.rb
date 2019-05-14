@@ -17,8 +17,6 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
 
   validates :sampling_interval, numericality: { greater_than: 0 }, if: proc { |r| r.active? }
 
-  validate :identity_file_exists, if: proc { |r| r.active? }
-
   before_validation :set_defaults
 
   # Operations of a monitor
@@ -102,7 +100,6 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
       File.open(local_log_file_path, 'r') do |log_io|
         averages.push(*analyze_log_file(log_io, started_at, stopped_at))
       end
-      File.unlink(local_log_file_path) if Hailstorm.is_production?
       averages
     end
 
@@ -204,21 +201,25 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
 
     private
 
+    def workspace
+      @workspace ||= Hailstorm.workspace(self.project.project_code)
+    end
+
     def cpu_trend_file_path
-      File.join(Hailstorm.tmp_path, "cpu_trend-#{current_execution_context}-#{id}.log")
+      File.join(workspace.tmp_path, "cpu_trend-#{current_execution_context}-#{id}.log")
     end
 
     def memory_trend_file_path
-      File.join(Hailstorm.tmp_path, "memory_trend-#{current_execution_context}-#{id}.log")
+      File.join(workspace.tmp_path, "memory_trend-#{current_execution_context}-#{id}.log")
     end
 
     def swap_trend_file_path
-      File.join(Hailstorm.tmp_path, "swap_trend-#{current_execution_context}-#{id}.log")
+      File.join(workspace.tmp_path, "swap_trend-#{current_execution_context}-#{id}.log")
     end
 
     def download_remote_log
       logger.debug { "#{self.class}##{__method__}" }
-      local_log_file_path = File.join(Hailstorm.root, Hailstorm.log_dir, nmon_outfile_name)
+      local_log_file_path = File.join(workspace.tmp_path, nmon_outfile_name)
       Hailstorm::Support::SSH.start(*ssh_connection_spec) do |ssh|
         ssh.download(nmon_outfile_path, local_log_file_path)
       end
@@ -270,10 +271,6 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
     @nmon_outfile_name ||= [log_file_name, 'nmon'].join('.')
   end
 
-  def identity_file_exists
-    errors.add(:ssh_identity, "not found at #{identity_file_path}") unless identity_file_ok?
-  end
-
   def identity_file_name
     @identity_file_name ||= self.ssh_identity.gsub(/\.pem$/, '').concat('.pem')
   end
@@ -282,5 +279,12 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
   def set_defaults
     self.executable_path ||= '/usr/bin/nmon'
     self.sampling_interval ||= 10
+    return unless self.ssh_identity
+
+    begin
+      transfer_identity_file
+    rescue Errno::ENOENT => not_found
+      errors.add(:ssh_identity, not_found.message)
+    end
   end
 end

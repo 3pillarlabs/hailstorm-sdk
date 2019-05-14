@@ -70,6 +70,16 @@ describe Hailstorm::Cli::CmdExecutor do
       @app.view_renderer.should_receive(:render_status)
       @app.interpret_execute('status')
     end
+
+    context "'results import' command" do
+      it 'should modify sequences to be array of file paths in default results import directory' do
+        Dir.stub!('[]'.to_sym).and_return(%w[b.jtl a.jtl])
+        @app.command_execution_template.should_receive(:results)
+          .with(false, nil, :import, [%w[a.jtl b.jtl], {'jmeter' => '1', 'cluster' => '2'}])
+        @app.execute_method_args([false, nil, :import, [nil, {'jmeter' => '1', 'cluster' => '2'}]],
+                                 :results)
+      end
+    end
   end
 
   context '#show' do

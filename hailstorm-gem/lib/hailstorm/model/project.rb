@@ -24,26 +24,33 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   has_one  :current_execution_cycle, -> { where(status: 'started').order('started_at DESC') },
            class_name: 'Hailstorm::Model::ExecutionCycle'
 
+  validates_presence_of :project_code
+
   validates :custom_jmeter_installer_url, 'Hailstorm::Model::JmeterInstallerUrl' => true,
                                           if: ->(r) { r.custom_jmeter_installer_url }
   validates :jmeter_version, 'Hailstorm::Model::JmeterVersion' => true, if: ->(r) { r.jmeter_version }
 
   before_save :set_defaults
 
+  attr_writer :settings_modified
+
+  after_initialize { |project| project.settings_modified = false }
+
   # Sets up the project for first time or subsequent use
   # @param [Boolean] force
   # @param [Boolean] invoked_from_start
-  def setup(force = false, invoked_from_start = false)
+  # @param [Hailstorm::Support::Configuration] config
+  def setup(config:, force: false, invoked_from_start: false)
     unless invoked_from_start || settings_modified? || force
       raise(Hailstorm::Exception, 'No changes to project configuration detected.')
     end
 
     logger.info('Setting up the project...')
-    self.update_attributes!(config_attributes)
+    save_config_attrs!(config)
     begin
-      setup_jmeter_plans
-      configure_clusters(force)
-      configure_target_hosts
+      setup_jmeter_plans(config)
+      configure_clusters(config, force)
+      configure_target_hosts(config)
       self.reload
     rescue Exception
       self.update_column(:serial_version, nil)
@@ -52,7 +59,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   end
 
   # Starts the load generation and target monitoring tasks
-  def start(redeploy = false)
+  def start(redeploy: false, config:)
     logger.debug { "#{self.class}##{__method__}" }
 
     # if one exists, user must stop/abort it first
@@ -64,7 +71,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     build_current_execution_cycle.save! # buildABC is provided by has_one :ABC relation
     if settings_modified?
       begin
-        setup(false, true) # (force, invoked_from_start)
+        setup(invoked_from_start: true, config: config, force: true)
       rescue Exception
         self.current_execution_cycle.aborted!
         raise
@@ -122,11 +129,12 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     self.update_column(:serial_version, nil)
   end
 
-  def results(operation, cycle_ids = nil, format = nil)
+  def results(operation, cycle_ids: nil, format: nil, config:)
     logger.debug { "#{self.class}##{__method__}" }
     selected_execution_cycles = Hailstorm::Model::ExecutionCycle.execution_cycles_for_report(self, cycle_ids)
     executor = ResultsOperationExecutor.new(self, cycle_ids, selected_execution_cycles, format)
     executor.logger = logger
+    executor.config = config
     if operation && executor.respond_to?(operation)
       executor.send(operation)
     else
@@ -148,49 +156,44 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     self.clusters.each(&:purge)
   end
 
-  # @return [Boolean] true if configuration settings have been modified
   def settings_modified?
-    modified = self.serial_version.nil? || self.serial_version != config.serial_version
-    Hailstorm.application.load_config if modified
-    modified
+    @settings_modified
   end
 
   ###################### PRIVATE METHODS #######################################
   private
 
   # Extract attributes from config
-  def config_attributes
-    updated_attrs = { serial_version: config.serial_version, master_slave_mode: config.master_slave_mode,
-                      samples_breakup_interval: config.samples_breakup_interval }
+  def save_config_attrs!(config)
+    self.master_slave_mode = config.master_slave_mode
+    self.samples_breakup_interval = config.samples_breakup_interval
     if config.jmeter.custom_installer_url
       url = config.jmeter.custom_installer_url
       if config.jmeter.version
         logger.warn("Custom installer '#{url}' overrides configured version '#{config.jmeter.version}'")
       end
-      updated_attrs[:custom_jmeter_installer_url] = url
+      self.custom_jmeter_installer_url = url
     else
-      updated_attrs[:jmeter_version] = config.jmeter.version
+      self.jmeter_version = config.jmeter.version
     end
-    updated_attrs
+
+    self.save!
   end
 
-  def setup_jmeter_plans
+  # @param [Hailstorm::Support::Configuration] config
+  def setup_jmeter_plans(config)
     logger.info('Reading and validating JMeter plans...')
-    Hailstorm::Model::JmeterPlan.setup(self)
+    Hailstorm::Model::JmeterPlan.setup(self, config)
   end
 
-  def configure_clusters(force)
+  def configure_clusters(config, force)
     logger.info('Setting up clusters...')
     Hailstorm::Model::Cluster.configure_all(self, config, force)
   end
 
-  def configure_target_hosts
+  def configure_target_hosts(config)
     logger.info('Setting up targets...')
     Hailstorm::Model::TargetHost.configure_all(self, config)
-  end
-
-  def config
-    Hailstorm.application.config
   end
 
   def set_defaults
@@ -202,13 +205,14 @@ class Hailstorm::Model::Project < ActiveRecord::Base
                               strategy_klass = Hailstorm::Support::JmeterInstaller::Tarball::DownloadUrlStrategy
                               strategy_klass.extract_jmeter_version(self.custom_jmeter_installer_url)
                             end
+    self.project_code.gsub!(/[\W]+/, '_')
   end
 
   # Executes results operations
   class ResultsOperationExecutor
 
     attr_reader :project, :cycle_ids, :execution_cycles, :format
-    attr_accessor :logger
+    attr_accessor :logger, :config
 
     def initialize(project, cycle_ids, execution_cycles, format)
       @project = project
@@ -234,31 +238,35 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     end
 
     def export
+      export_dir_path = Hailstorm.workspace(project.project_code).tmp_path
       execution_cycles.each do |ex|
-        export_paths = ex.export_results
-        logger.info { "Results exported to:\n#{export_paths.join("\n")}" }
-        zip_exports if format.to_s.to_sym == :zip
+        seq_path = File.join(export_dir_path, "SEQUENCE-#{ex.id}")
+        FileUtils.mkdir_p(seq_path)
+        ex.export_results(seq_path)
       end
+      zip_path = zip_exports(export_dir_path) if format.to_s.to_sym == :zip
+      Hailstorm.fs.export_jtl(self.project.project_code, zip_path || export_dir_path)
     end
 
     def import
-      project.setup(false, false) if project.settings_modified?
-      jtl_file_paths = []
-      file_path, options = cycle_ids
+      project.setup(force: false, invoked_from_start: false, config: self.config) if project.settings_modified?
+      jtl_file_paths, options = cycle_ids
       options = options ? options.symbolize_keys : {}
-      find_files(file_path, jtl_file_paths)
       jmeter_plan = jmeter_plan(options)
       cluster_instance = cluster_instance(options)
-      jtl_file_paths.each do |jfp|
+      jtl_file_paths.each do |remote_path|
         execution_cycle = execution_cycle(options)
-        execution_cycle.import_results(jmeter_plan, cluster_instance, jfp)
+        local_path = Hailstorm.fs.copy_jtl(project.project_code,
+                                           from_path: remote_path,
+                                           to_path: Hailstorm.workspace(project.project_code).tmp_path)
+        execution_cycle.import_results(jmeter_plan, cluster_instance, local_path)
       end
     end
 
     def report
       logger.info('Creating report for stopped tests...')
-      report_path = Hailstorm::Model::ExecutionCycle.create_report(project, cycle_ids)
-      logger.info { "Report generated to: #{report_path}" } unless report_path.blank?
+      local_report_path = Hailstorm::Model::ExecutionCycle.create_report(project, cycle_ids)
+      Hailstorm.fs.export_report(project.project_code, local_report_path) unless local_report_path.blank?
     end
 
     private
@@ -288,31 +296,22 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       end
     end
 
-    def find_files(file_path, jtl_file_paths)
-      if file_path.nil?
-        glob = File.join(Hailstorm.root, Hailstorm.results_import_dir, '*.jtl')
-        Dir[glob].sort.each { |fp| jtl_file_paths << fp }
-      else
-        jtl_file_paths << file_path
-      end
-    end
-
-    def zip_exports
-      reports_path = File.join(Hailstorm.root, Hailstorm.reports_dir)
+    def zip_exports(path)
       timestamp = Time.now.strftime('%Y%m%d%H%M%S')
-      zip_file_path = File.join(reports_path, "jtl-#{timestamp}.zip")
+      zip_file_path = File.join(Hailstorm.workspace(project.project_code).tmp_path, "jtl-#{timestamp}.zip")
       FileUtils.safe_unlink(zip_file_path)
       Zip::File.open(zip_file_path, Zip::File::CREATE) do |zf|
         execution_cycles.each do |ex|
           seq_dir = "SEQUENCE-#{ex.id}"
           zf.mkdir(seq_dir)
-          Dir["#{reports_path}/#{seq_dir}/*.jtl"].each do |jtl_file|
+          Dir["#{path}/#{seq_dir}/*.jtl"].each do |jtl_file|
             ze = "#{seq_dir}/#{File.basename(jtl_file)}"
             zf.add(ze, jtl_file) { true }
           end
         end
       end
-      logger.info { "Results zipped to #{zip_file_path}" }
+
+      zip_file_path
     end
   end
 

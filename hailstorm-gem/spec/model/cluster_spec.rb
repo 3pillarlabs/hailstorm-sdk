@@ -59,6 +59,9 @@ def clusterables_stub!
   klasses.each do |k|
     k.any_instance.stub(:check_status).and_return([mock(Hailstorm::Model::MasterAgent)])
   end
+
+  Hailstorm::Model::AmazonCloud.any_instance.stub(:transfer_identity_file)
+  Hailstorm::Model::DataCenter.any_instance.stub(:transfer_identity_file)
 end
 
 describe Hailstorm::Model::Cluster do
@@ -175,6 +178,7 @@ describe Hailstorm::Model::Cluster do
   context '#configure' do
     context ':amazon_cloud' do
       it 'should persist all configuration options' do
+        Hailstorm::Model::AmazonCloud.any_instance.stub(:transfer_identity_file)
         config = Hailstorm::Support::Configuration.new
         config.clusters(:amazon_cloud) do |aws|
           aws.access_key = 'blah'

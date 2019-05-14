@@ -46,6 +46,8 @@ describe Hailstorm::Controller::Cli do
     end
     context "'start' command" do
       it 'should modify the readline prompt' do
+        @middleware.stub!(:config_serial_version).and_return('A')
+        @app.stub!(:settings_modified?).and_return(false)
         cmds_ite = ['start', nil].each_with_index
         Readline.stub!(:readline) do |_p, _h|
           cmd, idx = cmds_ite.next
@@ -129,6 +131,11 @@ describe Hailstorm::Controller::Cli do
   end
 
   context '#process_cmd_line' do
+    before(:each) do
+      @middleware.stub!(:config_serial_version).and_return('A')
+      @app.stub!(:settings_modified?).and_return(false)
+    end
+
     %i[quit exit].each do |cmd|
       context 'exit_ok? == true' do
         context "'#{cmd}' command" do

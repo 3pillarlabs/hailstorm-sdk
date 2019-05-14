@@ -7,6 +7,7 @@ require 'hailstorm/model/load_agent'
 require 'hailstorm/model/slave_agent'
 require 'hailstorm/model/master_agent'
 require 'hailstorm/support/file_helper'
+require 'hailstorm/support/workspace'
 
 # Model class representing a JMeter test plan/script. Each model must be
 # backed by an actual JMeter test plan in app/jmx.
@@ -23,6 +24,10 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   PROPERTY_NAME_REXP = Regexp.new('^\$\{__(?:P|property)\((.+?)(?:\)|\s*,\s*(.+?)\))\}$')
 
   JTL_FILE_EXTN = 'jtl'.freeze
+
+  APP_DIR = 'jmeter'.freeze
+
+  LOG_DIR = 'log'.freeze
 
   belongs_to :project
 
@@ -54,46 +59,37 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   # determined, a Hailstorm::Exception is raised.
   #
   # @param [Hailstorm::Model::Project] project
-  # @param [Hailstorm::Support::FileHelper] file_helper
-  # @return [Array] of Hailstorm::Model::JmeterPlan instances
-  def self.setup(project, file_helper = nil)
+  # @param [Hailstorm::Support::Configuration] config
+  # @return [Array] Hailstorm::Model::JmeterPlan instances
+  def self.setup(project, config)
     logger.debug { "#{self}.#{__method__}" }
-    file_helper ||= Hailstorm::Support::FileHelper.new
-    jmeter_config = Hailstorm.application.config.jmeter
+    jmeter_config = config.jmeter
+    jmeter_plans = Hailstorm.fs.fetch_jmeter_plans(project.project_code)
 
     # load/verify test plans from app/jmx
-    test_plans = if jmeter_config.test_plans.blank?
-                   load_all_test_plans(file_helper)
-                 else
-                   load_selected_plans(jmeter_config, file_helper)
-                 end
+    verified_plans = jmeter_config.test_plans.blank? ? jmeter_plans : load_selected_plans(jmeter_config, jmeter_plans)
+    raise(Hailstorm::Exception, "No test plans loaded.") if verified_plans.blank?
+
+    # transfer files to workspace
+    workspace = Hailstorm.workspace(project.project_code)
+    workspace.make_app_layout(Hailstorm.fs.app_dir_tree(project.project_code))
+    Hailstorm.fs.transfer_jmeter_artifacts(project.project_code, workspace.app_path)
 
     # disable all plans and enable as per config.test_plans
     project.jmeter_plans.each { |jp| jp.update_attribute(:active, false) }
 
-    to_jmeter_plans(jmeter_config, project, test_plans)
+    to_jmeter_plans(jmeter_config, project, verified_plans)
   end
 
-  def self.load_all_test_plans(file_helper)
-    test_plans = []
-    rexp = Regexp.new('^'.concat(File.join(Hailstorm.root, Hailstorm.app_dir)).concat('/'))
-    file_helper.dir_glob_enumerator(File.join(Hailstorm.root, Hailstorm.app_dir, '**', '*.jmx')).each do |jmx|
-      test_plans.push(jmx.gsub(rexp, '').gsub(/\.jmx$/, ''))
-    end
-    raise(Hailstorm::Exception, "No test plans in #{Hailstorm.app_dir}.") if test_plans.blank?
-
-    test_plans
-  end
-
-  def self.load_selected_plans(jmeter_config, file_helper)
+  def self.load_selected_plans(jmeter_config, jmeter_files)
     not_found = []
     test_plans = []
     jmeter_config.test_plans.each do |plan|
-      jmx = File.join(Hailstorm.root, Hailstorm.app_dir, plan.gsub(/\.jmx$/, '').concat('.jmx'))
-      if file_helper.file?(jmx)
-        test_plans.push(plan.gsub(/\.jmx$/, ''))
+      path = jmeter_files.find { |path| path == plan }
+      if path
+        test_plans.push(plan)
       else
-        not_found.push(jmx)
+        not_found.push(plan)
       end
     end
     raise(Hailstorm::Exception, "Not all test plans found:\n#{not_found.join("\n")}") unless not_found.empty?
@@ -118,7 +114,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   # Useful for finding the process ID on remote agent.
   # @return [String] binary_name
   def self.binary_name
-    'jmeter'
+    'jmeter'.freeze
   end
 
   # Compares the calculated hash for source on disk and the
@@ -190,7 +186,8 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     private
 
     def remote_working_dir
-      [Hailstorm.app_name, Hailstorm.app_dir, File.dirname("#{self.test_plan_name}.jmx")].join('/')
+      # FIXME: use File.dirname(test_plan_path)
+      [self.project.project_code, APP_DIR, File.dirname("#{self.test_plan_name}.jmx")].join('/')
     end
 
     # -J<name>=<value>
@@ -216,7 +213,8 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     end
 
     def remote_test_plan
-      [Hailstorm.app_name, Hailstorm.app_dir, "#{self.test_plan_name}.jmx"].join('/')
+      # FIXME: use File.dirname(test_plan_path)
+      [self.project.project_code, APP_DIR, "#{self.test_plan_name}.jmx"].join('/')
     end
   end
 
@@ -253,31 +251,30 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     # @return [Hash] directory hierarchy to create on remote load agent
     def remote_directory_hierarchy
       logger.debug { "#{self.class}##{__method__}" }
-      # pick app sub-directories
-      app_entries = file_helper.local_app_directories(File.join(Hailstorm.root, Hailstorm.app_dir))
-      { Hailstorm.app_name => { Hailstorm.log_dir => nil }.merge(app_entries) }
+      layout = {}
+      layout[self.project.project_code] = {}
+      layout[self.project.project_code][LOG_DIR] = nil
+      layout[self.project.project_code].merge!(Hailstorm.fs.app_dir_tree(self.project.project_code))
+      layout
     end
 
     # @return [Array] of local files needed for JMeter to operate
     def test_artifacts
       logger.debug { "#{self.class}##{__method__}" }
-      @test_artifacts = []
+      test_artifacts = []
       # Do not upload files with ~, bk, bkp, backup in extension or starting with . (hidden)
       hidden_file_rexp = Regexp.new('^\.')
       backup_file_rexp = Regexp.new('(?:~|bk|bkp|backup|old|tmp)$')
-      file_helper.dir_glob_enumerator(File.join(Hailstorm.root, Hailstorm.app_dir, '**', '*')).each do |entry|
-        next unless file_helper.file?(entry) # if its a regular file
-
+      Hailstorm.workspace(self.project.project_code).app_entries.each do |entry|
         entry_name = File.basename(entry)
-        @test_artifacts.push(entry) unless hidden_file_rexp.match(entry_name) || backup_file_rexp.match(entry_name)
+        test_artifacts.push(entry) unless hidden_file_rexp.match(entry_name) || backup_file_rexp.match(entry_name)
       end
 
-      logger.debug { @test_artifacts.inspect }
-      @test_artifacts
+      test_artifacts
     end
 
     def remote_log_dir
-      @remote_log_dir ||= [Hailstorm.app_name, Hailstorm.log_dir].join('/')
+      @remote_log_dir ||= [self.project.project_code, LOG_DIR].join('/')
     end
 
     def remote_log_file(slave = false, execution_cycle = nil)
@@ -299,16 +296,14 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
         unknown.push(name) if properties_map[name].blank?
       end
       unless unknown.empty?
-        self.errors.add(:test_plan_name, "Unknown properties: #{unknown.join(',')}. \
-Please add these properties to config/environment.rb")
+        self.errors.add(:test_plan_name, "Unknown properties: #{unknown.join(',')} in #{self.test_plan_name}")
       end
 
       # check presence of simple data writer
       xpath = '//ResultCollector[@guiclass="SimpleDataWriter"][@enabled="true"]'
       jmeter_document do |doc|
         if doc.xpath(xpath).first.nil?
-          self.errors.add(:test_plan_name, "Missing 'Simple Data Writer' JMeter listener, \
-please add to your test plan(s).")
+          self.errors.add(:test_plan_name, "Missing 'Simple Data Writer' JMeter listener in #{self.test_plan_name}")
         end
       end
 
@@ -529,8 +524,8 @@ please add to your test plan(s).")
     def jmeter_document
       logger.debug { "#{self.class}##{__method__}" }
       if @jmeter_document.nil?
-        File.open(test_plan_file_path, 'r') do |file|
-          @jmeter_document = Nokogiri::XML.parse(file)
+        Hailstorm.workspace(self.project.project_code).open_app_file(self.test_plan_name) do |io|
+          @jmeter_document = Nokogiri::XML.parse(io)
         end
       end
 
@@ -550,8 +545,8 @@ please add to your test plan(s).")
 
   def calculate_content_hash
     digest = Digest::SHA2.new
-    File.open(test_plan_file_path, 'r') do |f|
-      digest.update(f.gets)
+    Hailstorm.workspace(self.project.project_code).open_app_file(self.test_plan_name) do |io|
+      digest.update(io.read)
     end
 
     digest.hexdigest
@@ -559,11 +554,6 @@ please add to your test plan(s).")
 
   def set_content_hash
     self.content_hash = calculate_content_hash
-  end
-
-  # @return [String] path to the local test plan
-  def test_plan_file_path
-    File.join(Hailstorm.root, Hailstorm.app_dir, "#{self.test_plan_name}.jmx")
   end
 
   def disable_load_agents

@@ -30,22 +30,11 @@ class Hailstorm::Middleware::Application
     Hailstorm.application
   end
 
-  attr_writer :multi_threaded
-
   attr_writer :logger
 
   attr_accessor :command_interpreter
 
   attr_writer :config
-
-  # Constructor
-  def initialize
-    @multi_threaded = true
-  end
-
-  def multi_threaded?
-    @multi_threaded
-  end
 
   def config(&_block)
     @config ||= Hailstorm::Support::Configuration.new
@@ -78,6 +67,25 @@ class Hailstorm::Middleware::Application
     @connection_spec = spec.symbolize_keys if spec
   end
 
+  # Computes the SHA2 hash of the environment file and contents/structure of JMeter
+  # directory.
+  # @return [String]
+  def config_serial_version
+    digest = Digest::SHA2.new
+
+    Dir[File.join(Hailstorm.root, Hailstorm.app_dir, '**', '*.jmx')].sort.each do |file|
+      digest.update(file)
+    end
+
+    File.open(Hailstorm.environment_file_path, 'r') do |ef|
+      ef.each_line do |line|
+        digest.update(line)
+      end
+    end
+
+    digest.hexdigest
+  end
+
   private
 
   def database_name
@@ -100,22 +108,13 @@ class Hailstorm::Middleware::Application
   def connection_spec
     return @connection_spec if @connection_spec
 
-    #  load and filter keys without an empty value
-    @connection_spec = load_db_properties.reject { |_k, v| v.blank? }
+    # set defaults which can be overridden, and load and filter keys without an empty value
+    @connection_spec = {
+      pool: 50,
+      wait_timeout: 30.minutes
+    }.merge(load_db_properties.reject { |_k, v| v.blank? })
 
-    # switch off multithread mode for sqlite & derby
-    if @connection_spec[:adapter] =~ /(?:sqlite|derby)/i
-      @multi_threaded = false
-      @connection_spec[:database] = File.join(Hailstorm.root, Hailstorm.db_dir, "#{database_name}.db")
-    else
-      # set defaults which can be overridden
-      @connection_spec = {
-        pool: 50,
-        wait_timeout: 30.minutes
-      }.merge(@connection_spec)
-
-      @connection_spec[:database] ||= database_name
-    end
+    @connection_spec[:database] ||= database_name
 
     @connection_spec
   end

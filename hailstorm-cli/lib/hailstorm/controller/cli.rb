@@ -45,6 +45,12 @@ Type help to get started...
   end
 
   def process_cmd_line(*args)
+    current_serial_version = middleware.config_serial_version
+    if settings_modified?(current_serial_version)
+      middleware.load_config
+      current_project.settings_modified = true
+      current_project.serial_version = current_serial_version
+    end
     post_process(cmd_executor.interpret_execute(args))
   rescue StandardError => error
     handle_error(args, error)
@@ -152,6 +158,12 @@ Type help to get started...
       self.exit_command_counter += 1
       logger.warn { 'You have running load agents: terminate first or quit/exit explicitly' }
     end
+  end
+
+  # @param [String] current_serial_version Current serial version, however it is computed
+  # @return [Boolean] true if configuration settings have been modified
+  def settings_modified?(current_serial_version)
+    current_project.serial_version.nil? || current_project.serial_version != current_serial_version
   end
 
   # Simple shell for executing code within the Hailstorm shell

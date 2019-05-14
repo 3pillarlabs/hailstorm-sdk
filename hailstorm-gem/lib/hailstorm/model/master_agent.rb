@@ -67,7 +67,7 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
     Hailstorm::Support::SSH.start(self.public_ip_address, self.clusterable.user_name,
                                   self.clusterable.ssh_options) do |ssh|
 
-      ssh.exec!("gzip -q #{remote_file_path}") # Research-604
+      ssh.exec!("gzip -q #{remote_file_path}") # downloading a compressed file is orders of magnitude faster than raw
       ssh.download("#{remote_file_path}.gz", local_compressed_file_path)
     end
     gunzip_file(local_compressed_file_path, local_file_path, true)

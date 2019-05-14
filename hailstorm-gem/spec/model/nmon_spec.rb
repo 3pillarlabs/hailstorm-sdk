@@ -7,7 +7,8 @@ describe Hailstorm::Model::Nmon do
   before(:each) do
     @nmon = Hailstorm::Model::Nmon.new(active: true, ssh_identity: 'papi',
                                        user_name: 'ubuntu', host_name: 's01', role_name: 'db')
-    @nmon.stub!(:identity_file_ok?).and_return(true)
+    @nmon.project = Hailstorm::Model::Project.new(project_code: 'nmon_spec')
+    @nmon.stub!(:transfer_identity_file)
     expect(@nmon).to be_valid
     @mock_ssh = mock(Net::SSH)
     Hailstorm::Support::SSH.stub!(:start).and_yield(@mock_ssh)

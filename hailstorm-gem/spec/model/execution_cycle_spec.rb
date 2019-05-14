@@ -121,7 +121,8 @@ describe Hailstorm::Model::ExecutionCycle do
                                                             latest_threads_count: 100)
       @jmeter_plan_2.update_column(:active, true)
 
-      @data_center = Hailstorm::Model::DataCenter.create!(project: project, machines: '["172.16.8.100"]')
+      @data_center = Hailstorm::Model::DataCenter.create!(project: project, machines: '["172.16.8.100"]',
+                                                          ssh_identity: 'a')
       @data_center.update_column(:active, true)
 
       @zero_time = Time.new(2012, 2, 21, 10, 43, 23)
@@ -205,7 +206,7 @@ describe Hailstorm::Model::ExecutionCycle do
         FileUtils.stub!(:rm_rf)
         FileUtils.stub!(:mkpath)
         Hailstorm::Model::ClientStat.any_instance.stub(:write_jtl) { |dir| "#{dir}/a.jtl" }
-        paths = @execution_cycle.export_results
+        paths = @execution_cycle.export_results(RSpec.configuration.build_path)
         expect(paths.size).to be == 2
       end
     end
@@ -290,6 +291,7 @@ describe Hailstorm::Model::ExecutionCycle do
   context 'execution_cycles comparison graph' do
     it 'should build the graph' do
       project = Hailstorm::Model::Project.create!(project_code: 'target_stat_spec')
+      Hailstorm::Model::Nmon.any_instance.stub(:transfer_identity_file)
       target_host = Hailstorm::Model::Nmon.create!(host_name: 'a',
                                                    project: project,
                                                    role_name: 'server',
@@ -317,8 +319,12 @@ describe Hailstorm::Model::ExecutionCycle do
       grapher = double('TargetComparisonGraph').as_null_object
       grapher.should_receive(:build).exactly(2).times
 
-      Hailstorm::Model::ExecutionCycle.cpu_comparison_graph(execution_cycles, builder: grapher)
-      Hailstorm::Model::ExecutionCycle.memory_comparison_graph(execution_cycles, builder: grapher)
+      Hailstorm::Model::ExecutionCycle.cpu_comparison_graph(execution_cycles,
+                                                            builder: grapher,
+                                                            working_path: RSpec.configuration.build_path)
+      Hailstorm::Model::ExecutionCycle.memory_comparison_graph(execution_cycles,
+                                                               builder: grapher,
+                                                               working_path: RSpec.configuration.build_path)
     end
   end
 
@@ -352,7 +358,9 @@ describe Hailstorm::Model::ExecutionCycle do
                        addThroughputDataItem: nil,
                        'output_path=': nil)
       grapher.should_receive(:build)
-      Hailstorm::Model::ExecutionCycle.client_comparison_graph(execution_cycles, builder: grapher)
+      Hailstorm::Model::ExecutionCycle.client_comparison_graph(execution_cycles,
+                                                               builder: grapher,
+                                                               working_path: RSpec.configuration.build_path)
     end
   end
 
@@ -379,9 +387,9 @@ describe Hailstorm::Model::ExecutionCycle do
                        'start_time=': nil)
 
       grapher.should_receive(:build).exactly(3).times
-      execution_cycle.hits_per_second_graph(builder: grapher)
-      execution_cycle.active_threads_over_time_graph(builder: grapher)
-      execution_cycle.throughput_over_time_graph(builder: grapher)
+      execution_cycle.hits_per_second_graph(builder: grapher, working_path: RSpec.configuration.build_path)
+      execution_cycle.active_threads_over_time_graph(builder: grapher, working_path: RSpec.configuration.build_path)
+      execution_cycle.throughput_over_time_graph(builder: grapher, working_path: RSpec.configuration.build_path)
     end
   end
 end

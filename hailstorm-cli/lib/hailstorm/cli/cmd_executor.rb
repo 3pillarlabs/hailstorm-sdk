@@ -29,6 +29,11 @@ class Hailstorm::Cli::CmdExecutor
   end
 
   def execute_method_args(method_args, method_name)
+    if method_name == :results
+      if method_args[2] == :import # command is 'results import [jmeter=1]'
+        method_args[3] = find_files(*method_args[3])
+      end
+    end
     values = command_execution_template.send(method_name, *method_args)
     render_method = "render_#{method_name}".to_sym
     render_args = values.is_a?(Array) ? values : [values]
@@ -66,10 +71,21 @@ class Hailstorm::Cli::CmdExecutor
   end
 
   def command_execution_template
-    @command_execution_template ||= Hailstorm::Middleware::CommandExecutionTemplate.new(project)
+    @command_execution_template ||= Hailstorm::Middleware::CommandExecutionTemplate.new(project, middleware.config)
   end
 
   def view_renderer
     @view_renderer ||= Hailstorm::Cli::ViewRenderer.new(project)
+  end
+
+  private
+
+  def find_files(file_path, options)
+    if file_path.nil?
+      glob = File.join(Hailstorm.root, Hailstorm.results_import_dir, '*.jtl')
+      [Dir[glob].sort, options]
+    else
+      [[file_path], options]
+    end
   end
 end

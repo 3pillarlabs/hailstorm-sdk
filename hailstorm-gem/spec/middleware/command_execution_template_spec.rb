@@ -6,12 +6,14 @@ require 'hailstorm/model/amazon_cloud'
 require 'hailstorm/model/cluster'
 require 'hailstorm/model/execution_cycle'
 require 'hailstorm/model/master_agent'
+require 'hailstorm/support/configuration'
 
 describe Hailstorm::Middleware::CommandExecutionTemplate do
 
   before(:each) do
     mock_delegate = mock(Hailstorm::Model::Project)
-    @app = Hailstorm::Middleware::CommandExecutionTemplate.new(mock_delegate)
+    config = Hailstorm::Support::Configuration.new
+    @app = Hailstorm::Middleware::CommandExecutionTemplate.new(mock_delegate, config)
   end
 
   %i[setup start stop abort terminate results].each do |cmd|

@@ -10,9 +10,17 @@ require 'hailstorm/initializer/eager_load'
 require 'hailstorm/initializer'
 require 'hailstorm/support/configuration'
 require 'active_record/base'
+require 'hailstorm/support/thread'
 
 $CLASSPATH << File.dirname(__FILE__)
 ENV['HAILSTORM_ENV'] = 'test'
+
+# disable threading in unit tests
+class Hailstorm::Support::Thread
+  def self.start(*args)
+    yield(*args)
+  end
+end
 
 RSpec.configure do |config|
   config.treat_symbols_as_metadata_keys_with_true_values = true
@@ -33,14 +41,12 @@ RSpec.configure do |config|
     FileUtils.mkdir_p(File.join(build_path, Hailstorm.tmp_dir))
     FileUtils.mkdir_p(File.join(build_path, Hailstorm.tmp_dir, 'remove_dir'))
     FileUtils.touch(File.join(build_path, Hailstorm.tmp_dir, 'remove_file'))
-    middleware = Hailstorm::Initializer.create_middleware('hailstorm_spec', boot_file_path, {
+    Hailstorm::Initializer.create_middleware('hailstorm_spec', boot_file_path, {
       adapter: 'jdbcmysql',
       database: 'hailstorm_test',
       username: 'hailstorm_dev',
       password: 'hailstorm_dev'
     }, Hailstorm::Support::Configuration.new)
-
-    middleware.multi_threaded = false # disable threading in unit tests
   end
 
   config.append_after(:suite) do

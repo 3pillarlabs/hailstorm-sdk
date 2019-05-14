@@ -40,7 +40,8 @@ describe Hailstorm::Model::AmazonCloud do
     @aws.send(:region_base_ami_map).should_not be_empty
   end
 
-  it 'should be valid with the keys' do
+  it 'should be valid with project and the keys' do
+    @aws.project = Hailstorm::Model::Project.new(project_code: 'amazon_cloud_spec')
     @aws.access_key = 'foo'
     @aws.secret_key = 'bar'
     expect(@aws).to be_valid
@@ -131,7 +132,6 @@ describe Hailstorm::Model::AmazonCloud do
         aws.should_receive(:set_availability_zone)
         aws.should_receive(:create_agent_ami)
         aws.should_receive(:provision_agents)
-        aws.should_receive(:secure_identity_file)
 
         aws.active = true
         aws.setup
@@ -163,6 +163,7 @@ describe Hailstorm::Model::AmazonCloud do
   context '#ssh_options' do
     before(:each) do
       @aws.ssh_identity = 'blah'
+      @aws.project = Hailstorm::Model::Project.new(project_code: 'amazon_cloud_spec')
     end
     context 'standard SSH port' do
       it 'should have :keys' do
@@ -188,6 +189,7 @@ describe Hailstorm::Model::AmazonCloud do
 
   context 'non-standard SSH ports' do
     before(:each) do
+      @aws.project = Hailstorm::Model::Project.new(project_code: 'amazon_cloud_spec')
       @aws.ssh_port = 8022
       @aws.active = true
       @aws.stub(:identity_file_exists, nil) { true }
@@ -535,17 +537,8 @@ describe Hailstorm::Model::AmazonCloud do
   end
 
   context '#identity_file_exists' do
-    context 'identity_file_path exists' do
-      context 'identity_file_path is not a regular file' do
-        it 'should add an error on ssh_identity' do
-          @aws.ssh_identity = 'secure'
-          @aws.region = 'us-east-1'
-          File.stub!(:exist?).and_return(true)
-          File.stub!(:file?).and_return(false)
-          @aws.send(:identity_file_exists)
-          expect(@aws.errors[:ssh_identity]).to have(1).error
-        end
-      end
+    before(:each) do
+      @aws.project = Hailstorm::Model::Project.new(project_code: 'amazon_cloud_spec')
     end
     context 'identity_file_path does not exist' do
       before(:each) do
@@ -553,14 +546,15 @@ describe Hailstorm::Model::AmazonCloud do
         File.stub!(:exist?).and_return(false)
         @aws.ssh_identity = 'secure'
         @aws.stub!(:ec2).and_return(mock(AWS::EC2))
-        @mock_key_pair = mock(AWS::EC2::KeyPair, private_key: 'A')
+        @mock_key_pair = mock(AWS::EC2::KeyPair, private_key: 'A', name: 'mock_key_pair')
         @aws.send(:ec2).stub!(:key_pairs).and_return({@aws.ssh_identity => @mock_key_pair})
       end
       context 'ec2 key_pair exists' do
         it 'should add an error on ssh_identity' do
           @mock_key_pair.stub!(:exists?).and_return(true)
+          @mock_key_pair.should_receive(:delete)
+          @aws.should_receive(:create_key_pair)
           @aws.send(:identity_file_exists)
-          expect(@aws.errors[:ssh_identity]).to have(1).error
         end
       end
       context 'ec2 key_pair does not exist' do
@@ -568,6 +562,7 @@ describe Hailstorm::Model::AmazonCloud do
           @mock_key_pair.stub!(:exists?).and_return(false)
           @aws.send(:ec2).stub_chain(:key_pairs, :create).and_return(@mock_key_pair)
           @mock_key_pair.should_receive(:private_key)
+          File.stub!(:chmod)
           @aws.send(:identity_file_exists)
         end
       end

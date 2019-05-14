@@ -1,15 +1,19 @@
 require 'spec_helper'
 require 'hailstorm/model/project'
 require 'hailstorm/model/jmeter_plan'
+require 'hailstorm/support/configuration'
+require 'hailstorm/behavior/file_store'
 
 describe Hailstorm::Model::JmeterPlan do
   JMX_FILE_NAME = 'hailstorm-site-basic'
   SOURCE_JMX_PATH = File.expand_path("../../../features/data/#{JMX_FILE_NAME}.jmx", __FILE__)
 
-  before(:all) do
-    dest_dir_path = File.join(Hailstorm.root, Hailstorm.app_dir)
-    FileUtils.mkdir_p(dest_dir_path)
-    FileUtils.cp(SOURCE_JMX_PATH, dest_dir_path)
+  def app_file_fixture
+    io = File.open(SOURCE_JMX_PATH, 'r')
+    mock_workspace = mock(Hailstorm::Support::Workspace)
+    mock_workspace.stub!(:open_app_file).and_yield(io)
+    Hailstorm.stub!(:workspace).and_return(mock_workspace)
+    [io, mock_workspace]
   end
 
   before(:each) do
@@ -20,22 +24,44 @@ describe Hailstorm::Model::JmeterPlan do
     @jmeter_plan.test_plan_name = JMX_FILE_NAME
     @jmeter_plan.validate_plan = true
     @jmeter_plan.active = true
-
-    @file_helper = mock(@jmeter_plan.send(:file_helper).class)
-    @jmeter_plan.instance_variable_set('@file_helper', @file_helper)
   end
 
   context '#validate_plan' do
+    before(:each) do
+      @jmeter_plan.project = Hailstorm::Model::Project.new(project_code: 'jmeter_spec')
+      workspace = mock(Hailstorm::Support::Workspace)
+      @source_jmx_io = File.open(SOURCE_JMX_PATH, 'r')
+      workspace.stub!(:open_app_file).and_yield(@source_jmx_io)
+      Hailstorm.stub!(:workspace).and_return(workspace)
+    end
+
+    after(:each) do
+      @source_jmx_io.close
+    end
+
     context 'when all properties in plan are defined in the model properties' do
       it 'should be valid' do
-        @jmeter_plan.properties_map = { NumUsers: 10, Duration: 180, ServerName: 'foo.com', RampUp: 0, StartupDelay: 0 }.stringify_keys
+        @jmeter_plan.properties_map = {
+          NumUsers: 10,
+          Duration: 180,
+          ServerName: 'foo.com',
+          RampUp: 0,
+          StartupDelay: 0
+        }.stringify_keys
+
         expect(@jmeter_plan).to be_valid
       end
     end
 
     context 'when any property in plan is not defined in the model properties' do
       it 'should not be valid' do
-        @jmeter_plan.properties_map = { Duration: 180, ServerName: 'foo.com', RampUp: 0, StartupDelay: 0 }.stringify_keys
+        @jmeter_plan.properties_map = {
+          Duration: 180,
+          ServerName: 'foo.com',
+          RampUp: 0,
+          StartupDelay: 0
+        }.stringify_keys
+
         expect(@jmeter_plan).to_not be_valid
       end
     end
@@ -58,58 +84,74 @@ describe Hailstorm::Model::JmeterPlan do
 
   context 'when property with default value is defined in model properties as well' do
     it 'the value from model properties takes precedence' do
+      @jmeter_plan.project = Hailstorm::Model::Project.new(project_code: 'jmeter_spec')
       @jmeter_plan.properties_map = { NumUsers: 10, Duration: 180, ServerName: 'foo.com', RampUp: 10 }.stringify_keys
+      io, = app_file_fixture
       @jmeter_plan.send(:extracted_property_names)
       expect(@jmeter_plan.properties_map['RampUp']).to eq(10)
+      io.close
     end
   end
 
   context '.setup' do
     before(:each) do
+      Hailstorm.fs = mock(Hailstorm::Behavior::FileStore)
       @project = Hailstorm::Model::Project.create!(project_code: __FILE__)
-      Hailstorm::Model::JmeterPlan
-        .any_instance
-        .stub(:test_plan_file_path)
-        .and_return(SOURCE_JMX_PATH)
+      @source_jmx_io, mock_workspace = app_file_fixture
+      Hailstorm.fs.stub!(:app_dir_tree).and_return({app: nil}.stringify_keys)
+      Hailstorm.fs.stub!(:transfer_jmeter_artifacts)
+      mock_workspace.stub!(:make_app_layout)
+      mock_workspace.stub!(:app_path)
+      mock_workspace.unstub!(:open_app_file)
+      mock_workspace.stub!(:open_app_file) do |_path, &block|
+        File.open(SOURCE_JMX_PATH, 'r') { |io| block.call(io) }
+      end
     end
+
+    after(:each) do
+      @source_jmx_io.close
+    end
+
     it 'should disable load agents of existing plans' do
-      Hailstorm.application.config.jmeter do |jmeter|
+      config = Hailstorm::Support::Configuration.new
+      config.jmeter do |jmeter|
         jmeter.properties do |property|
           property['NumUsers'] = 10
           property['Duration'] = 60
         end
       end
-      jmx_files = %w[a.jmx b.jmx]
-      @file_helper.stub!(:dir_glob_enumerator).and_return(jmx_files.each)
-      Hailstorm::Model::JmeterPlan.setup(@project, @file_helper)
+      jmx_files = %w[a b]
+      Hailstorm.fs.stub!(:fetch_jmeter_plans).and_return(jmx_files)
+      Hailstorm::Model::JmeterPlan.setup(@project, config)
       jmx_files.pop
-      @file_helper.stub!(:dir_glob_enumerator).and_return(jmx_files.each)
       @project.reload
-      Hailstorm::Model::JmeterPlan.setup(@project, @file_helper)
+      Hailstorm::Model::JmeterPlan.setup(@project, config)
       expect(Hailstorm::Model::JmeterPlan.where(test_plan_name: 'a').first).to be_active
       expect(Hailstorm::Model::JmeterPlan.where(test_plan_name: 'b').first).to_not be_active
     end
     context 'test_plans not specified in configuration' do
       context 'test_plans present in app_dir' do
         it 'should save all test_plans in app_dir' do
-          Hailstorm.application.config.jmeter do |jmeter|
+          config = Hailstorm::Support::Configuration.new
+          config.jmeter do |jmeter|
             jmeter.properties do |property|
               property['NumUsers'] = 10
               property['Duration'] = 60
             end
           end
-          jmx_files = %w[a.jmx b.jmx]
-          @file_helper.stub!(:dir_glob_enumerator).and_return(jmx_files.each)
-          saved_plans = Hailstorm::Model::JmeterPlan.setup(@project, @file_helper)
+          jmx_files = %w[a b]
+          Hailstorm.fs.stub!(:fetch_jmeter_plans).and_return(jmx_files)
+          saved_plans = Hailstorm::Model::JmeterPlan.setup(@project, config)
           expect(saved_plans.size).to be == jmx_files.size
         end
       end
       context 'no test_plans in app_dir' do
         it 'should raise error' do
-          Hailstorm.application.config.jmeter.test_plans = nil
-          @file_helper.stub!(:dir_glob_enumerator).and_return([].each)
+          config = Hailstorm::Support::Configuration.new
+          config.jmeter.test_plans = nil
+          Hailstorm.fs.stub!(:fetch_jmeter_plans).and_return([])
           expect {
-            Hailstorm::Model::JmeterPlan.setup(@project, @file_helper)
+            Hailstorm::Model::JmeterPlan.setup(@project, config)
           }.to raise_error(Hailstorm::Exception)
         end
       end
@@ -117,29 +159,29 @@ describe Hailstorm::Model::JmeterPlan do
     context 'test_plans specified in configuration' do
       context 'all specified plans exist' do
         it 'should save specified test_plans in app_dir' do
-          jmx_files = %w[a.jmx b.jmx]
-          Hailstorm.application.config.jmeter do |jmeter|
+          jmx_files = %w[a b]
+          config = Hailstorm::Support::Configuration.new
+          config.jmeter do |jmeter|
             jmeter.test_plans = jmx_files
             jmeter.properties do |property|
               property['NumUsers'] = 10
               property['Duration'] = 60
             end
           end
-          @file_helper.stub!(:file?).and_return(true)
-          saved_plans = Hailstorm::Model::JmeterPlan.setup(@project, @file_helper)
+          Hailstorm.fs.stub!(:fetch_jmeter_plans).and_return(jmx_files)
+          saved_plans = Hailstorm::Model::JmeterPlan.setup(@project, config)
           expect(saved_plans.size).to be == jmx_files.size
         end
       end
       context 'any plan does not exist' do
         it 'should raise error' do
-          Hailstorm.application.config.jmeter do |jmeter|
+          config = Hailstorm::Support::Configuration.new
+          config.jmeter do |jmeter|
             jmeter.test_plans = %w[a.jmx b.jmx]
           end
-          @file_helper.stub!(:file?) do |arg|
-            arg.to_s == 'a.jmx' ? true : false
-          end
+          Hailstorm.fs.stub!(:fetch_jmeter_plans).and_return(%w[a])
           expect {
-            Hailstorm::Model::JmeterPlan.setup(@project, @file_helper)
+            Hailstorm::Model::JmeterPlan.setup(@project, config)
           }.to raise_error(Hailstorm::Exception)
         end
       end
@@ -147,11 +189,20 @@ describe Hailstorm::Model::JmeterPlan do
   end
 
   context '#content_modified?' do
+    before(:each) do
+      @source_jmx_io, = app_file_fixture
+    end
+
+    after(:each) do
+      @source_jmx_io.close
+    end
+
     context 'new instance' do
       it 'should be true' do
         expect(@jmeter_plan).to be_content_modified
       end
     end
+
     context 'saved instance' do
       it 'should be false' do
         @jmeter_plan.project = Hailstorm::Model::Project.create!(project_code: __FILE__)
@@ -160,8 +211,10 @@ describe Hailstorm::Model::JmeterPlan do
         expect(@jmeter_plan).to_not be_content_modified
       end
     end
+
     context 'modified plan in saved instance' do
       it 'should be true' do
+        @jmeter_plan.project = Hailstorm::Model::Project.new(project_code: 'jmeter_spec')
         @jmeter_plan.content_hash = 'A'
         expect(@jmeter_plan).to be_content_modified
       end
@@ -172,15 +225,19 @@ describe Hailstorm::Model::JmeterPlan do
     it 'should add the properties to the command' do
       clusterable = mock(Hailstorm::Behavior::Clusterable)
       clusterable.stub!(:required_load_agent_count).and_return(10)
+      @jmeter_plan.project = Hailstorm::Model::Project.new(project_code: 'jmeter_spec')
       @jmeter_plan.properties = { NumUsers: 5, Duration: 600 }.to_json
+      io, = app_file_fixture
       command = @jmeter_plan.slave_command('192.168.0.102', clusterable)
       expect(command).to match_regex(/NumUsers=/)
       expect(command).to match_regex(/Duration=/)
+      io.close
     end
   end
 
   context '#master_command' do
     before(:each) do
+      @source_jmx_io, = app_file_fixture
       @jmeter_plan.project = Hailstorm::Model::Project.create!(project_code: __FILE__)
       @jmeter_plan.properties = { NumUsers: 900, Duration: 600 }.to_json
       @jmeter_plan.save!
@@ -188,6 +245,11 @@ describe Hailstorm::Model::JmeterPlan do
       @clusterable = mock(Hailstorm::Behavior::Clusterable)
       @clusterable.stub!(:required_load_agent_count).and_return(3)
     end
+
+    after(:each) do
+      @source_jmx_io.close
+    end
+
     context 'without slave agents' do
       it 'should add the properties to the command' do
         command = @jmeter_plan.master_command('192.168.0.100',
@@ -211,7 +273,9 @@ describe Hailstorm::Model::JmeterPlan do
 
   context '#remote_directory_hierarchy' do
     it 'should have the log key' do
-      @file_helper.stub!(:local_app_directories).and_return({app: nil}.stringify_keys)
+      @jmeter_plan.project = Hailstorm::Model::Project.new(project_code: 'jmeter_spec')
+      Hailstorm.fs = mock(Hailstorm::Behavior::FileStore)
+      Hailstorm.fs.stub!(:app_dir_tree).and_return({app: nil}.stringify_keys)
       structure = @jmeter_plan.remote_directory_hierarchy
       value = structure.values.first
       expect(value).to include('app')
@@ -221,12 +285,12 @@ describe Hailstorm::Model::JmeterPlan do
 
   context '#test_artifacts' do
     it 'should skip hidden and backup files' do
-      @file_helper.stub!(:file?).and_return(true)
-      @file_helper.stub!(:dir_glob_enumerator).and_return(%w[
-                                                          /home/foo/app/baz.jmx
-                                                          /home/foo/app/baz.jmx~
-                                                          /home/foo/app/.bar.jmx
-                                                          ])
+      workspace = mock(Hailstorm::Support::Workspace)
+      workspace
+        .stub!(:app_entries)
+        .and_return(%w[/home/foo/app/baz.jmx /home/foo/app/baz.jmx~ /home/foo/app/.bar.jmx])
+      Hailstorm.stub!(:workspace).and_return(workspace)
+      @jmeter_plan.project = Hailstorm::Model::Project.new(project_code: 'jmeter_plan_spec')
       artifacts = @jmeter_plan.test_artifacts
       expect(artifacts).to include('/home/foo/app/baz.jmx')
       expect(artifacts).to_not include('/home/foo/app/baz.jmx~')
