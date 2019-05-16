@@ -21,7 +21,7 @@ describe Hailstorm::Model::DataCenter do
     dc = Hailstorm::Model::DataCenter.new(ssh_identity: 'hacker', active: true, machines: ['172.17.0.2'])
     dc.project = Hailstorm::Model::Project.new(project_code: 'data_center_spec')
     dc.stub!(:transfer_identity_file).and_raise(Errno::ENOENT, 'mock error')
-    dc.valid?
+    expect(dc).to_not be_valid
     expect(dc.errors).to include(:ssh_identity)
   end
 

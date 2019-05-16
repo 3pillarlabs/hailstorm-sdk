@@ -2,6 +2,7 @@ require 'hailstorm/behavior'
 
 # Abstract filesystem
 module Hailstorm::Behavior::FileStore
+  # :nocov:
 
   # Export a report
   #
@@ -76,4 +77,6 @@ module Hailstorm::Behavior::FileStore
   include JMeter
   include ExecutionCycle
   include SSHable
+
+  # :nocov:
 end

@@ -6,7 +6,6 @@ require 'hailstorm/model'
 require 'hailstorm/model/load_agent'
 require 'hailstorm/model/slave_agent'
 require 'hailstorm/model/master_agent'
-require 'hailstorm/support/file_helper'
 require 'hailstorm/support/workspace'
 
 # Model class representing a JMeter test plan/script. Each model must be
@@ -185,11 +184,6 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
 
     private
 
-    def remote_working_dir
-      # FIXME: use File.dirname(test_plan_path)
-      [self.project.project_code, APP_DIR, File.dirname("#{self.test_plan_name}.jmx")].join('/')
-    end
-
     # -J<name>=<value>
     # For threads_count properties, redistributes the load across agents
     def property_options(clusterable)
@@ -210,11 +204,6 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
       end
 
       @property_options
-    end
-
-    def remote_test_plan
-      # FIXME: use File.dirname(test_plan_path)
-      [self.project.project_code, APP_DIR, "#{self.test_plan_name}.jmx"].join('/')
     end
   end
 
@@ -284,6 +273,18 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
         execution_cycle ||= self.project.current_execution_cycle
         "results-#{execution_cycle.id}-#{self.id}.#{JTL_FILE_EXTN}"
       end
+    end
+
+    private
+
+    def remote_working_dir
+      # FIXME: use File.dirname(test_plan_path)
+      [self.project.project_code, APP_DIR, File.dirname("#{self.test_plan_name}.jmx")].join('/')
+    end
+
+    def remote_test_plan
+      # FIXME: use File.dirname(test_plan_path)
+      [self.project.project_code, APP_DIR, "#{self.test_plan_name}.jmx"].join('/')
     end
   end
 
@@ -565,9 +566,5 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   def extract_property_name(property_content)
     rexp_matcher = PROPERTY_NAME_REXP.match(property_content.strip)
     rexp_matcher.nil? ? nil : rexp_matcher[1]
-  end
-
-  def file_helper
-    @file_helper ||= Hailstorm::Support::FileHelper.new
   end
 end

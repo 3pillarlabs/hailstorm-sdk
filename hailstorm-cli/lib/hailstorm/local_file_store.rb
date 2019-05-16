@@ -1,12 +1,14 @@
 require 'hailstorm'
 require 'hailstorm/behavior/file_store'
+require 'hailstorm/behavior/loggable'
 
 # Local file system implementation of file store.
 class Hailstorm::LocalFileStore
   include Hailstorm::Behavior::FileStore
+  include Hailstorm::Behavior::Loggable
 
   def fetch_jmeter_plans(_project_code)
-    file_prefix = File.join(Hailstorm.root, Hailstorm.app_dir).concat('/')
+    file_prefix = File.join(Hailstorm.root, Hailstorm.app_dir).concat(File::SEPARATOR)
     Dir[File.join(Hailstorm.root, Hailstorm.app_dir, '**', '*.jmx')]
       .map { |n| n.split(file_prefix).last.gsub(/\.jmx$/, '') }
   end
@@ -34,9 +36,7 @@ class Hailstorm::LocalFileStore
   #       "c" => { "f" => nil }
   #    }
   #  }
-  def tree_dir(start_dir, entries = nil)
-    raise(ArgumentError, 'entries should be Hash') unless entries.is_a?(Hash)
-
+  def tree_dir(start_dir, entries = {})
     queue = [[start_dir, entries]]
     entries[File.basename(start_dir)] = nil
     queue.each do |path, context|

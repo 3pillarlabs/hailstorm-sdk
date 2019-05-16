@@ -22,7 +22,6 @@ exclude_patterns:
   - 'hailstorm-gem/lib/hailstorm/java/**/*'
   - 'hailstorm-gem/spec/**/*'
   - 'hailstorm-gem/templates/**/*'
-  - 'hailstorm-gem/tmp/**/*'
   - 'hailstorm-redis/**/*'
   - 'hailstorm-site/**/*'
   - 'hailstorm-web/**/*'

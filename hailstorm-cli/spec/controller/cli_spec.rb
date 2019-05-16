@@ -14,6 +14,11 @@ describe Hailstorm::Controller::Cli do
   end
 
   context '#process_commands' do
+    before(:each) do
+      @middleware.stub!(:config_serial_version).and_return('A')
+      @app.stub!(:settings_modified?).and_return(false)
+    end
+
     context 'nil command' do
       context 'exit_ok? == true' do
         it 'should set @exit_command_counter < 0' do
@@ -148,6 +153,7 @@ describe Hailstorm::Controller::Cli do
           end
         end
       end
+
       context 'exit_ok? == false' do
         before(:each) do
           @app.stub!(:exit_ok?).and_return(false)
@@ -169,6 +175,16 @@ describe Hailstorm::Controller::Cli do
       end
     end
 
+    context '#settings_modified? == true' do
+      it 'should reload the configuration' do
+        @app.unstub!(:settings_modified?)
+        @app.stub!(:settings_modified?).and_return(true)
+        @middleware.should_receive(:load_config)
+        project = Hailstorm::Model::Project.new
+        @app.stub!(:current_project).and_return(project)
+        @app.process_cmd_line('help')
+      end
+    end
   end
 
   context '#handle_exit' do
@@ -185,6 +201,14 @@ describe Hailstorm::Controller::Cli do
           expect(@app.exit_command_counter).to be == 3
         end
       end
+    end
+  end
+
+  context '#settings_modified?' do
+    it 'should be true if project is not upto date with configuration' do
+      project = Hailstorm::Model::Project.new(serial_version: 'A')
+      @app.stub!(:current_project).and_return(project)
+      expect(@app.send(:settings_modified?, 'B')).to be_true
     end
   end
 end
