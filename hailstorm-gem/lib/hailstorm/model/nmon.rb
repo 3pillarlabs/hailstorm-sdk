@@ -13,11 +13,13 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
   # Path to nmon output files on target_host
   NMON_OUTPUT_PATH = '/tmp/nmon_output'.freeze
 
+  before_validation :set_defaults
+
   validates :executable_path, :ssh_identity, :user_name, presence: true, if: proc { |r| r.active? }
 
   validates :sampling_interval, numericality: { greater_than: 0 }, if: proc { |r| r.active? }
 
-  before_validation :set_defaults
+  validate :identity_file_ok, if: proc { |r| r.active? }
 
   # Operations of a monitor
   module MoniterableOps
@@ -279,12 +281,5 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
   def set_defaults
     self.executable_path ||= '/usr/bin/nmon'
     self.sampling_interval ||= 10
-    return unless self.ssh_identity
-
-    begin
-      transfer_identity_file
-    rescue Errno::ENOENT => not_found
-      errors.add(:ssh_identity, not_found.message)
-    end
   end
 end

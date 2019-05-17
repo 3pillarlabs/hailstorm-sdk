@@ -63,7 +63,7 @@ module Hailstorm::Behavior::SSHable
 
     if Pathname.new(self.ssh_identity).absolute?
       file_path = self.ssh_identity
-      file_name = File.basename(file_path)
+      file_name = identity_file_name
     else
       file_path = identity_file_name
       file_name = file_path
