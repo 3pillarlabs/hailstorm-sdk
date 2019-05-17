@@ -53,7 +53,7 @@ class Hailstorm::Support::Workspace
 
   # @return [String] path to app
   def app_path
-    @app_path = workspace_dir_path(APP_DIR)
+    @app_path ||= workspace_dir_path(APP_DIR)
   end
 
   # If a block is given, yield the IO instance associated with the app file,
@@ -74,12 +74,14 @@ class Hailstorm::Support::Workspace
 
   # @return [String]
   def workspace_path
-    @workspace_path = File.join(user_home, ROOT_DIR, WORKSPACE_DIR, self.project_code)
+    @workspace_path ||= File.join(user_home,
+                                  ROOT_DIR,
+                                  WORKSPACE_DIR, "#{self.project_code}-#{Thread.current.object_id}")
   end
 
   # @return [String]
   def tmp_path
-    @tmp_path = workspace_dir_path(TMP_DIR)
+    @tmp_path ||= workspace_dir_path(TMP_DIR)
   end
 
   # Creates a directory in the workspace temporary directory.
