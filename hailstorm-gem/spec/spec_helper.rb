@@ -4,6 +4,7 @@
 # loaded once.
 #
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
+require 'bundler/setup'
 require 'simplecov'
 
 $CLASSPATH << File.dirname(__FILE__)
@@ -46,7 +47,7 @@ RSpec.configure do |config|
   config.prepend_before(:suite) do
     connection_spec = {
       adapter: 'jdbcmysql',
-      database: 'hailstorm_test',
+      database: ENV['HAILSTORM_SPEC_DB'] || 'hailstorm_test',
       username: 'hailstorm_dev',
       password: 'hailstorm_dev'
     }

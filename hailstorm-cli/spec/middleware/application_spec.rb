@@ -14,28 +14,18 @@ describe Hailstorm::Middleware::Application do
 
   context '#check_database' do
     before(:each) do
-      ActiveRecord::Base.stub!(:clear_all_connections!)
-      @app.stub!(:connection_spec).and_return(
-        adapter: 'jdbcmysql',
-        database: 'hailstorm_test',
-        host: 'localhost',
-        port: 3306,
-        username: 'hailstorm_dev',
-        password: 'hailstorm_dev'
-      )
-      @mock_connection = double('Mock Database Connection').as_null_object
-      ActiveRecord::Base.stub!(:connection).and_return(@mock_connection)
+      @app.stub!(:connection_spec).and_return(Hailstorm.application.send(:connection_spec))
+      Hailstorm::Support::Schema.stub!(:create_schema)
     end
     context 'when database does not exist' do
       it 'should create a database' do
-        @mock_connection.stub!(:exec_query).and_raise(ActiveRecord::ActiveRecordError)
+        @app.stub!(:test_connection!).and_raise(ActiveRecord::ActiveRecordError)
         @app.should_receive(:create_database)
         @app.check_database
       end
     end
     context 'when database already exists' do
       it 'should not create a database' do
-        @mock_connection.stub!(:exec_query).and_return(1)
         @app.should_not_receive(:create_database)
         @app.check_database
       end

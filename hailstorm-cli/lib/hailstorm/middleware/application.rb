@@ -93,10 +93,14 @@ class Hailstorm::Middleware::Application
   end
 
   def create_database_if_not_exists
-    ActiveRecord::Base.connection.exec_query('select 1')
+    test_connection!
   rescue ActiveRecord::ActiveRecordError
     logger.info 'Database does not exist, creating...'
     create_database
+  end
+
+  def test_connection!
+    ActiveRecord::Base.connection.exec_query('select 1')
   end
 
   def create_database

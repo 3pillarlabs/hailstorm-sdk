@@ -4,6 +4,7 @@
 # loaded once.
 #
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
+require 'bundler/setup'
 require 'simplecov'
 require 'hailstorm'
 require 'hailstorm/initializer/eager_load'
@@ -43,7 +44,7 @@ RSpec.configure do |config|
     FileUtils.touch(File.join(build_path, Hailstorm.tmp_dir, 'remove_file'))
     Hailstorm::Initializer.create_middleware('hailstorm_spec', boot_file_path, {
       adapter: 'jdbcmysql',
-      database: 'hailstorm_test',
+      database: ENV['HAILSTORM_SPEC_DB'] || 'hailstorm_test',
       username: 'hailstorm_dev',
       password: 'hailstorm_dev'
     }, Hailstorm::Support::Configuration.new)
