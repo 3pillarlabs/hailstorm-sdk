@@ -95,7 +95,7 @@ Type help to get started...
   end
 
   def handle_unknown_command(instr)
-    if Hailstorm.is_production?
+    if Hailstorm.production?
       logger.error { "Unknown command: #{instr}" }
       return
     end

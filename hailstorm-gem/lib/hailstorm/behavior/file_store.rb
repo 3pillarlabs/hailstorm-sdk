@@ -49,18 +49,17 @@ module Hailstorm::Behavior::FileStore
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
 
-    # Copies a JTL file to the given path
+    # Copies a JTL file to the given path.
+    # copy_jtl(project_code, from_path:, to_path:)
     #
     # @param [String] _project_code
-    # @param [String] from_path
-    # @param [String] to_path
     # @return [String] path to copied file
-    # noinspection RubyUnusedLocalVariable
-    def copy_jtl(_project_code, from_path:, to_path:)
+    def copy_jtl(_project_code, *_args)
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
   end
 
+  # For SSH
   module SSHable
 
     # Opens the identity file for reading. If path to identity file is absolute, project_code is

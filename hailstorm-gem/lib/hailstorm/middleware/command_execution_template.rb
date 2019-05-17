@@ -52,7 +52,7 @@ class Hailstorm::Middleware::CommandExecutionTemplate
 
   def results(*args)
     extract_last, format, operation, sequences = args
-    data = model_delegate.results(operation, cycle_ids: sequences, format:format, config: config)
+    data = model_delegate.results(operation, cycle_ids: sequences, format: format, config: config)
     tailed_data = extract_last && !data.empty? ? [data.last] : data
     [tailed_data, operation, format]
   end

@@ -67,12 +67,10 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
 
     # load/verify test plans from app/jmx
     verified_plans = jmeter_config.test_plans.blank? ? jmeter_plans : load_selected_plans(jmeter_config, jmeter_plans)
-    raise(Hailstorm::Exception, "No test plans loaded.") if verified_plans.blank?
+    raise(Hailstorm::Exception, 'No test plans loaded.') if verified_plans.blank?
 
     # transfer files to workspace
-    workspace = Hailstorm.workspace(project.project_code)
-    workspace.make_app_layout(Hailstorm.fs.app_dir_tree(project.project_code))
-    Hailstorm.fs.transfer_jmeter_artifacts(project.project_code, workspace.app_path)
+    transfer_artifacts(project)
 
     # disable all plans and enable as per config.test_plans
     project.jmeter_plans.each { |jp| jp.update_attribute(:active, false) }
@@ -84,7 +82,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     not_found = []
     test_plans = []
     jmeter_config.test_plans.each do |plan|
-      path = jmeter_files.find { |path| path == plan }
+      path = jmeter_files.find { |jf| jf == plan }
       if path
         test_plans.push(plan)
       else
@@ -94,6 +92,12 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     raise(Hailstorm::Exception, "Not all test plans found:\n#{not_found.join("\n")}") unless not_found.empty?
 
     test_plans
+  end
+
+  def self.transfer_artifacts(project)
+    workspace = Hailstorm.workspace(project.project_code)
+    workspace.make_app_layout(Hailstorm.fs.app_dir_tree(project.project_code))
+    Hailstorm.fs.transfer_jmeter_artifacts(project.project_code, workspace.app_path)
   end
 
   def self.to_jmeter_plans(jmeter_config, project, test_plans)

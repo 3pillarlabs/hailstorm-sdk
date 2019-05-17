@@ -30,9 +30,7 @@ class Hailstorm::Cli::CmdExecutor
 
   def execute_method_args(method_args, method_name)
     if method_name == :results
-      if method_args[2] == :import # command is 'results import [jmeter=1]'
-        method_args[3] = find_files(*method_args[3])
-      end
+      method_args[3] = find_files(*method_args[3]) if method_args[2] == :import # command is 'results import [jmeter=1]'
     end
     values = command_execution_template.send(method_name, *method_args)
     render_method = "render_#{method_name}".to_sym

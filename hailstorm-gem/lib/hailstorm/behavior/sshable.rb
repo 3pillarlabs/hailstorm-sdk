@@ -43,12 +43,10 @@ module Hailstorm::Behavior::SSHable
 
   # Transfers the identity file to workspace. Adds ActiveRecord::Error on ssh_identity if transfer fails.
   def identity_file_ok
-    begin
-      transfer_identity_file
-    rescue Errno::ENOENT => not_found
-      logger.debug(not_found.backtrace.join("\n"))
-      errors.add(:ssh_identity, not_found.message)
-    end
+    transfer_identity_file
+  rescue Errno::ENOENT => not_found
+    logger.debug(not_found.backtrace.join("\n"))
+    errors.add(:ssh_identity, not_found.message)
   end
 
   # Array of options to connect to a host with SSH. Pass to SSH#start

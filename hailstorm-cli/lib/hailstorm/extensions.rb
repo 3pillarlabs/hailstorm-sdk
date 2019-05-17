@@ -7,38 +7,42 @@ module Hailstorm
 
   PRODUCTION_ENV = :production
 
-  @@root = nil
-  @@app_name = nil
-  @@application = nil
+  @root = nil
+  @app_name = nil
+  @application = nil
 
   # The application root path. Access this by calling <tt>Hailstorm.root</tt>
+  # @return [String]
   def self.root
-    @@root
+    @root
   end
 
   # Sets the root path of the application
-  # @param [String] root path of application
-  # @return [String]
+  # @param [String] new_root path of application
   def self.root=(new_root)
-    @@root = new_root
+    @root = new_root
   end
 
   # Application name
+  # @return [String]
   def self.app_name
-    @@app_name
+    @app_name
   end
 
+  # @param [String] new_app_name application name
   def self.app_name=(new_app_name)
-    @@app_name = new_app_name
+    @app_name = new_app_name
   end
 
   # Application instance
+  # @return [Hailstorm::Middleware::Application]
   def self.application
-    @@application
+    @application
   end
 
+  # @param [Hailstorm::Middleware::Application] new_application
   def self.application=(new_application)
-    @@application = new_application
+    @application = new_application
   end
 
   # Directory name used to store database and other files.
@@ -108,7 +112,7 @@ module Hailstorm
     ]
   end
 
-  def self.is_production?
+  def self.production?
     self.env == PRODUCTION_ENV
   end
 end

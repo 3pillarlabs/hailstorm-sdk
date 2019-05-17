@@ -27,7 +27,7 @@ class Hailstorm::Support::Thread
     Thread.current[:spawned] ||= []
     Thread.current[:spawned].push(thread)
 
-    return thread
+    thread
   end
   # :nocov:
 

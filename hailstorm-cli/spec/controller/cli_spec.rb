@@ -84,7 +84,7 @@ describe Hailstorm::Controller::Cli do
     context 'rescue UnknownCommandException' do
       context 'Hailstorm.is_production? == false' do
         before(:each) do
-          Hailstorm.stub!(:is_production?).and_return(false)
+          Hailstorm.stub!(:production?).and_return(false)
         end
         it 'should evaluate command as Ruby' do
           cmds = ['puts "Hello, World"', '1 + 2', 'hello', nil]
@@ -102,7 +102,7 @@ describe Hailstorm::Controller::Cli do
       end
       context 'Hailstorm.is_production? == true' do
         it 'should save the commands in history' do
-          Hailstorm.stub!(:is_production?).and_return(true)
+          Hailstorm.stub!(:production?).and_return(true)
           cmds = ['puts "Hello, World"', nil]
           cmds_ite = cmds.each
           Readline.stub!(:readline) { |_p, _h| cmds_ite.next }

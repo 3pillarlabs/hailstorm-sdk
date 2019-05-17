@@ -60,13 +60,13 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
   def self.cpu_comparison_graph(execution_cycles, width: 640, height: 300, builder: nil, working_path:)
     grapher = TargetComparisonGraphBuilder.new(execution_cycles, metric: :cpu, builder: builder,
-                                               working_path: working_path)
+                                                                 working_path: working_path)
     grapher.build(width: width, height: height, &:average_cpu_usage)
   end
 
   def self.memory_comparison_graph(execution_cycles, width: 640, height: 300, builder: nil, working_path:)
     grapher = TargetComparisonGraphBuilder.new(execution_cycles, metric: :memory, builder: builder,
-                                               working_path: working_path)
+                                                                 working_path: working_path)
     grapher.build(width: width, height: height, &:average_memory_usage)
   end
 
@@ -262,9 +262,8 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
       @builder = new_builder
       @project = new_project
       @execution_cycles = new_execution_cycles
-      @working_path = Hailstorm
-                        .workspace(@project.project_code)
-                        .make_tmp_dir("#{@execution_cycles.first.id}-#{@execution_cycles.last.id}")
+      @working_path = Hailstorm.workspace(@project.project_code)
+                               .make_tmp_dir("#{@execution_cycles.first.id}-#{@execution_cycles.last.id}")
     end
 
     def create

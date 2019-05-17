@@ -89,7 +89,7 @@ class Hailstorm::Middleware::Application
   private
 
   def database_name
-    @database_name ||= Hailstorm.is_production? ? 'hailstorm_production' : 'hailstorm_development'
+    @database_name ||= Hailstorm.production? ? 'hailstorm_production' : 'hailstorm_development'
   end
 
   def create_database_if_not_exists

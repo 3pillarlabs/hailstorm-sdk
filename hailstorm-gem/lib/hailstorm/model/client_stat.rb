@@ -199,13 +199,18 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
     # Combines two or more JTL files to create new JTL file with combined stats.
     def combine_stats
-      xml_decl = '<?xml version="1.0" encoding="UTF-8"?>'
-      test_results_start_tag = '<testResults version="1.2">'
-      test_results_end_tag = '</testResults>'
       file_unique_ids = [execution_cycle, jmeter_plan, clusterable].compact.map(&:id)
       combined_file_path = File.join(Hailstorm.workspace(execution_cycle.project.project_code).tmp_path,
                                      "results-#{file_unique_ids.join('-')}-all.jtl")
 
+      write_combined_file(combined_file_path)
+      combined_file_path
+    end
+
+    def write_combined_file(combined_file_path)
+      xml_decl = '<?xml version="1.0" encoding="UTF-8"?>'
+      test_results_start_tag = '<testResults version="1.2">'
+      test_results_end_tag = '</testResults>'
       File.open(combined_file_path, 'w') do |combined_file|
         combined_file.puts xml_decl
         combined_file.puts test_results_start_tag
@@ -222,8 +227,6 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
         combined_file.puts test_results_end_tag
       end
-
-      combined_file_path
     end
 
     def do_create_client_stat(io_like)
