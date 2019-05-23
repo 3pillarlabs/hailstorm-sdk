@@ -29,8 +29,8 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
   end
 
   # @return [String] path to outfile file
-  def utilization_graph(width: 640, height: 600, builder: nil)
-    output_path = File.join(Hailstorm.root, Hailstorm.reports_dir, "target_stat_graph_#{self.id}")
+  def utilization_graph(width: 640, height: 600, builder: nil, working_path:)
+    output_path = File.join(working_path, "target_stat_graph_#{self.id}")
     grapher = GraphBuilderFactory.utilization_graph(output_path,
                                                     self.target_host.sampling_interval,
                                                     other_builder: builder)
@@ -84,7 +84,7 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
   end
 
   def blob_file_path(metric, inflated = false)
-    File.join(Hailstorm.tmp_path,
+    File.join(Hailstorm.workspace(self.execution_cycle.project.project_code).tmp_path,
               "#{metric}_trend-#{self.execution_cycle.id}-#{self.target_host.id}.log#{inflated ? '' : '.gz'}")
   end
 

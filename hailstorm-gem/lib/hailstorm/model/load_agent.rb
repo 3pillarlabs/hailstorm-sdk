@@ -137,11 +137,12 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
 
   def upload_files(ssh, test_artifacts)
     logger.debug { "#{self.class}##{__method__}" }
-    root_regexp = Regexp.compile("#{Hailstorm.root}#{File::Separator}")
+    code = self.clusterable.project.project_code
+    root_regexp = Regexp.compile("#{Hailstorm.workspace(code).workspace_path}#{File::Separator}")
     test_artifacts.each do |local|
       remote = format('%<home>s/%<app>s/%<path>s',
                       home: self.clusterable.user_home,
-                      app: Hailstorm.app_name,
+                      app: code,
                       path: local.gsub(root_regexp, ''))
 
       ssh.upload(local, remote)

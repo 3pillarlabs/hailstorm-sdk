@@ -1,0 +1,50 @@
+#!/usr/bin/env jruby
+# Initialization script for Hailstorm CLI project
+
+require 'optparse'
+
+hailstorm_gem_path = nil
+options = OptionParser.new do |opts|
+  opts.banner = <<-BANNER
+Initialization script for a Hailstorm application.
+
+Usage
+    #{$PROGRAM_NAME} -h | --help
+    #{$PROGRAM_NAME} <app-name>
+
+Example
+
+    hailstorm shopping_cart
+  BANNER
+
+  opts.separator ''
+  opts.separator 'Options'
+  opts.on('-gPATH', '--gem-path=PATH', 'Specify path to Hailstorm gem') do |g|
+    hailstorm_gem_path = File.absolute_path(g)
+  end
+  opts.on_tail('-h', '--help', 'Show this help') do
+    puts options.to_s
+    exit 0
+  end
+end
+
+options.parse!
+
+if ARGV.length > 0
+  hailstorm_cli_path = File.expand_path('../..', __FILE__)
+
+  $LOAD_PATH.unshift("#{hailstorm_gem_path}/lib")
+  $LOAD_PATH.unshift("#{hailstorm_cli_path}/lib")
+
+  require 'hailstorm/initializer'
+
+  gems = [
+    OpenStruct.new(name: 'hailstorm', path: hailstorm_gem_path),
+    OpenStruct.new(name: 'hailstorm-cli', path: hailstorm_cli_path),
+  ]
+  Hailstorm::Initializer.create_project!(Dir.pwd, ARGV.first, false, gems)
+else
+  puts options.to_s
+  puts ''
+  abort('unspecified argument!')
+end

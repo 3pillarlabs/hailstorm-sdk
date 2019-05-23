@@ -131,7 +131,7 @@ describe Hailstorm::Support::ReportBuilder do
       end
 
       FileUtils.stub!(:move)
-      report_builder.build(File.join(Hailstorm.root, Hailstorm.reports_dir), 'a.docx')
+      report_builder.build(RSpec.configuration.build_path, 'a.docx')
     end
   end
 end

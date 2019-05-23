@@ -76,20 +76,7 @@ class Hailstorm::Support::Log4jBackedLogger
   def add(severity, message = nil, progname = nil)
     # map the severity & log_method
     log4j_severity,
-    log_method_sym = case severity
-                     when Logger::DEBUG
-                       [logger_level_impl::DEBUG, :debug]
-                     when Logger::INFO
-                       [logger_level_impl::INFO, :info]
-                     when Logger::WARN
-                       [logger_level_impl::WARN, :warn]
-                     when Logger::ERROR
-                       [logger_level_impl::ERROR, :error]
-                     when Logger::FATAL
-                       [logger_level_impl::FATAL, :fatal]
-                     else
-                       [logger_level_impl::DEBUG, :debug]
-                     end
+    log_method_sym = map_severity(severity)
     return unless @log4j_logger.isEnabledFor(log4j_severity)
 
     if message.nil?
@@ -140,6 +127,25 @@ class Hailstorm::Support::Log4jBackedLogger
 
   def respond_to_missing?(*)
     super
+  end
+
+  private
+
+  def map_severity(severity)
+    case severity
+    when Logger::DEBUG
+      [logger_level_impl::DEBUG, :debug]
+    when Logger::INFO
+      [logger_level_impl::INFO, :info]
+    when Logger::WARN
+      [logger_level_impl::WARN, :warn]
+    when Logger::ERROR
+      [logger_level_impl::ERROR, :error]
+    when Logger::FATAL
+      [logger_level_impl::FATAL, :fatal]
+    else
+      [logger_level_impl::DEBUG, :debug]
+    end
   end
 
 end

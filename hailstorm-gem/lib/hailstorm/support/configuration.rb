@@ -261,24 +261,4 @@ class Hailstorm::Support::Configuration
       end
     end
   end
-
-  # Computes the SHA2 hash of the environment file and contents/structure of JMeter
-  # directory.
-  # @return [String]
-  def serial_version
-    digest = Digest::SHA2.new
-
-    Dir[File.join(Hailstorm.root, Hailstorm.app_dir, '**', '*.jmx')].sort.each do |file|
-      digest.update(file)
-    end
-
-    File.open(Hailstorm.environment_file_path, 'r') do |ef|
-      ef.each_line do |line|
-        digest.update(line)
-      end
-    end
-
-    digest.hexdigest
-  end
-  alias compute_serial_version serial_version
 end

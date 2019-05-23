@@ -4,5 +4,5 @@ machines:
   - host B
 
 
-# Uncomment and set the port if using a non-standard SSH port, like when using Docker with xhyve VM
+# Uncomment and set the port if using a non-standard SSH port
 #ssh_port: 8022

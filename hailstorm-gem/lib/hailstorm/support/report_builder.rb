@@ -271,6 +271,7 @@ class Hailstorm::Support::ReportBuilder
 
   def build(reports_path, report_file_name)
     @current_report_path = File.join(reports_path, report_file_name.gsub(/\/$/, ''))
+    FileUtils.mkdir_p(current_report_path)
     extract_docx_template
     evaluate_template
     report_file_path = zip_to_docx
@@ -282,7 +283,6 @@ class Hailstorm::Support::ReportBuilder
   private
 
   def extract_docx_template
-    FileUtils.mkdir_p(current_report_path)
     doc_path = File.join(report_templates_path, report_format, "#{report_type}.docx")
     Zip::File.foreach(doc_path) do |zip_entry|
       disk_dir = File.dirname(zip_entry.to_s)
@@ -352,6 +352,6 @@ class Hailstorm::Support::ReportBuilder
   end
 
   def report_templates_path
-    @report_templates_path ||= File.join(Hailstorm.templates_path, 'report')
+    @report_templates_path ||= File.join(Hailstorm.gem_templates_path, 'report')
   end
 end

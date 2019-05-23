@@ -13,13 +13,13 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
   # Path to nmon output files on target_host
   NMON_OUTPUT_PATH = '/tmp/nmon_output'.freeze
 
+  before_validation :set_defaults
+
   validates :executable_path, :ssh_identity, :user_name, presence: true, if: proc { |r| r.active? }
 
   validates :sampling_interval, numericality: { greater_than: 0 }, if: proc { |r| r.active? }
 
-  validate :identity_file_exists, if: proc { |r| r.active? }
-
-  before_validation :set_defaults
+  validate :identity_file_ok, if: proc { |r| r.active? }
 
   # Operations of a monitor
   module MoniterableOps
@@ -102,7 +102,6 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
       File.open(local_log_file_path, 'r') do |log_io|
         averages.push(*analyze_log_file(log_io, started_at, stopped_at))
       end
-      File.unlink(local_log_file_path) if Hailstorm.is_production?
       averages
     end
 
@@ -204,21 +203,25 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
 
     private
 
+    def workspace
+      @workspace ||= Hailstorm.workspace(self.project.project_code)
+    end
+
     def cpu_trend_file_path
-      File.join(Hailstorm.tmp_path, "cpu_trend-#{current_execution_context}-#{id}.log")
+      File.join(workspace.tmp_path, "cpu_trend-#{current_execution_context}-#{id}.log")
     end
 
     def memory_trend_file_path
-      File.join(Hailstorm.tmp_path, "memory_trend-#{current_execution_context}-#{id}.log")
+      File.join(workspace.tmp_path, "memory_trend-#{current_execution_context}-#{id}.log")
     end
 
     def swap_trend_file_path
-      File.join(Hailstorm.tmp_path, "swap_trend-#{current_execution_context}-#{id}.log")
+      File.join(workspace.tmp_path, "swap_trend-#{current_execution_context}-#{id}.log")
     end
 
     def download_remote_log
       logger.debug { "#{self.class}##{__method__}" }
-      local_log_file_path = File.join(Hailstorm.root, Hailstorm.log_dir, nmon_outfile_name)
+      local_log_file_path = File.join(workspace.tmp_path, nmon_outfile_name)
       Hailstorm::Support::SSH.start(*ssh_connection_spec) do |ssh|
         ssh.download(nmon_outfile_path, local_log_file_path)
       end
@@ -268,10 +271,6 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
 
   def nmon_outfile_name
     @nmon_outfile_name ||= [log_file_name, 'nmon'].join('.')
-  end
-
-  def identity_file_exists
-    errors.add(:ssh_identity, "not found at #{identity_file_path}") unless identity_file_ok?
   end
 
   def identity_file_name

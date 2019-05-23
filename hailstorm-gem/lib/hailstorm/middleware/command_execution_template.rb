@@ -7,9 +7,13 @@ class Hailstorm::Middleware::CommandExecutionTemplate
   include Hailstorm::Behavior::Loggable
 
   attr_reader :model_delegate
+  attr_reader :config
 
-  def initialize(new_model_delegate)
+  # @param [Object] new_model_delegate
+  # @param [Hailstorm::Support::Configuration] new_config
+  def initialize(new_model_delegate, new_config)
     @model_delegate = new_model_delegate
+    @config = new_config
   end
 
   # Sets up the load agents and targets.
@@ -17,14 +21,14 @@ class Hailstorm::Middleware::CommandExecutionTemplate
   # Pushes the monitoring artifacts to targets.
   def setup(*args)
     force = args.empty? ? false : true
-    model_delegate.setup(force)
+    model_delegate.setup(force: force, config: config)
   end
 
   # Starts the load generation and monitoring on targets
   def start(*args)
     logger.info('Starting load generation and monitoring on targets...')
     redeploy = args.empty? ? false : true
-    model_delegate.start(redeploy)
+    model_delegate.start(redeploy: redeploy, config: config)
   end
 
   # Stops the load generation and monitoring on targets and collects all logs
@@ -48,7 +52,7 @@ class Hailstorm::Middleware::CommandExecutionTemplate
 
   def results(*args)
     extract_last, format, operation, sequences = args
-    data = model_delegate.results(operation, sequences, format)
+    data = model_delegate.results(operation, cycle_ids: sequences, format: format, config: config)
     tailed_data = extract_last && !data.empty? ? [data.last] : data
     [tailed_data, operation, format]
   end

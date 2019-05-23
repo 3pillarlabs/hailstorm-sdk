@@ -2,6 +2,7 @@ require 'spec_helper'
 require 'hailstorm/model/load_agent'
 require 'hailstorm/model/jmeter_plan'
 require 'hailstorm/model/amazon_cloud'
+require 'hailstorm/model/project'
 
 describe Hailstorm::Model::LoadAgent do
 
@@ -37,45 +38,49 @@ describe Hailstorm::Model::LoadAgent do
       end
 
       it 'should sync the local app hierarchy with remote' do
+        project_code = 'load_agent_spec'
         clusterable = Hailstorm::Model::AmazonCloud.new(user_name: 'ubuntu')
+        clusterable.project = Hailstorm::Model::Project.new(project_code: project_code)
         expect(clusterable).to respond_to(:ssh_options)
         clusterable.stub!(:ssh_options).and_return({})
         @load_agent.stub!(:clusterable).and_return(clusterable)
 
         expect(@load_agent.jmeter_plan).to respond_to(:remote_directory_hierarchy)
-        @load_agent.jmeter_plan
+        @load_agent
+          .jmeter_plan
           .stub!(:remote_directory_hierarchy)
-          .and_return({ Hailstorm.app_name => { log: nil, store: { admin: nil } } })
+          .and_return({ project_code => { log: nil, app: { store: { admin: nil } } }.deep_stringify_keys })
 
         mock_ssh = mock(Net::SSH)
         Hailstorm::Support::SSH.stub!(:start).and_yield(mock_ssh)
         dir_paths = []
         mock_ssh.stub!(:make_directory) { |dp| dir_paths << dp }
-        mock_ssh.should_receive(:make_directory).exactly(4).times
+        mock_ssh.should_receive(:make_directory).exactly(5).times
 
+        root_path = Hailstorm.workspace(project_code).app_path
         expect(@load_agent.jmeter_plan).to respond_to(:test_artifacts)
         @load_agent.jmeter_plan
           .stub!(:test_artifacts)
           .and_return([
-            "#{File.join(Hailstorm.root, Hailstorm.app_dir, 'store', 'prime.jmx')}",
-            "#{File.join(Hailstorm.root, Hailstorm.app_dir, 'store', 'admin', 'prime.jmx')}"
+            "#{File.join(root_path, 'store', 'prime.jmx')}",
+            "#{File.join(root_path, 'store', 'admin', 'prime.jmx')}"
           ])
         mock_ssh.stub!(:upload) { |local, remote| dir_paths.push([local, remote]) }
         mock_ssh.should_receive(:upload).exactly(2).times
 
         @load_agent.upload_scripts
 
-        expect(dir_paths).to include("/home/ubuntu/#{Hailstorm.app_name}")
-        expect(dir_paths).to include("/home/ubuntu/#{Hailstorm.app_name}/log")
-        expect(dir_paths).to include("/home/ubuntu/#{Hailstorm.app_name}/store")
-        expect(dir_paths).to include("/home/ubuntu/#{Hailstorm.app_name}/store/admin")
+        expect(dir_paths).to include("/home/ubuntu/#{project_code}")
+        expect(dir_paths).to include("/home/ubuntu/#{project_code}/log")
+        expect(dir_paths).to include("/home/ubuntu/#{project_code}/app/store")
+        expect(dir_paths).to include("/home/ubuntu/#{project_code}/app/store/admin")
         expect(dir_paths).to include([
           @load_agent.jmeter_plan.test_artifacts[0],
-          "/home/ubuntu/#{Hailstorm.app_name}/jmeter/store/prime.jmx"
+          "/home/ubuntu/#{project_code}/app/store/prime.jmx"
         ])
         expect(dir_paths).to include([
           @load_agent.jmeter_plan.test_artifacts[1],
-          "/home/ubuntu/#{Hailstorm.app_name}/jmeter/store/admin/prime.jmx"
+          "/home/ubuntu/#{project_code}/app/store/admin/prime.jmx"
         ])
       end
 

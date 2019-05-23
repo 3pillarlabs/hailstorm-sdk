@@ -31,6 +31,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   # @param [Hailstorm::Model::Project] project
   # @param [Array<Integer>] cycle_ids
   # @param [Hailstorm::Support::ReportBuilder] report_builder
+  # @return [String] path to generated report
   def self.create_report(project, cycle_ids, report_builder = nil)
     reported_execution_cyles = self.execution_cycles_for_report(project, cycle_ids)
     if reported_execution_cyles.empty?
@@ -52,18 +53,20 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     project.execution_cycles.where(conditions).order(:started_at).all
   end
 
-  def self.client_comparison_graph(execution_cycles, width: 640, height: 600, builder: nil)
-    grapher = ClientComparisonGraphBuilder.new(execution_cycles, builder: builder)
+  def self.client_comparison_graph(execution_cycles, width: 640, height: 600, builder: nil, working_path:)
+    grapher = ClientComparisonGraphBuilder.new(execution_cycles, builder: builder, working_path: working_path)
     grapher.build(width: width, height: height)
   end
 
-  def self.cpu_comparison_graph(execution_cycles, width: 640, height: 300, builder: nil)
-    grapher = TargetComparisonGraphBuilder.new(execution_cycles, metric: :cpu, builder: builder)
+  def self.cpu_comparison_graph(execution_cycles, width: 640, height: 300, builder: nil, working_path:)
+    grapher = TargetComparisonGraphBuilder.new(execution_cycles, metric: :cpu, builder: builder,
+                                                                 working_path: working_path)
     grapher.build(width: width, height: height, &:average_cpu_usage)
   end
 
-  def self.memory_comparison_graph(execution_cycles, width: 640, height: 300, builder: nil)
-    grapher = TargetComparisonGraphBuilder.new(execution_cycles, metric: :memory, builder: builder)
+  def self.memory_comparison_graph(execution_cycles, width: 640, height: 300, builder: nil, working_path:)
+    grapher = TargetComparisonGraphBuilder.new(execution_cycles, metric: :memory, builder: builder,
+                                                                 working_path: working_path)
     grapher.build(width: width, height: height, &:average_memory_usage)
   end
 
@@ -162,13 +165,10 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     self.update_column(:status, States::EXCLUDED)
   end
 
-  # Exports the results as one or more JTL files
-  # @@return [Array] path to the files
-  def export_results
-    export_dir = File.join(Hailstorm.root, Hailstorm.reports_dir, "SEQUENCE-#{self.id}")
-    FileUtils.rm_rf(export_dir)
-    FileUtils.mkpath(export_dir)
-    self.client_stats.map { |client_stat| client_stat.write_jtl(export_dir) }
+  # Exports the results as one or more JTL files.
+  # @return [Array<String>] Array of absolute path of exported files
+  def export_results(export_dir_path)
+    self.client_stats.map { |client_stat| client_stat.write_jtl(export_dir_path) }
   end
 
   # Import results from a JMeter results file (JTL)
@@ -193,7 +193,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   module ExecutionCycleAnalysis
 
     # Generates a hits per second graph
-    def hits_per_second_graph(width: 640, height: 300, builder: nil)
+    def hits_per_second_graph(width: 640, height: 300, builder: nil, working_path:)
       sax_document = ResponseTimeFreqDist.new
       summarize_client_stats!(sax_document)
 
@@ -205,11 +205,11 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
         grapher.addDataPoint(key, value)
       end
 
-      output_path = File.join(Hailstorm.root, Hailstorm.reports_dir, "hits_per_second_graph_#{self.id}")
+      output_path = File.join(working_path, "hits_per_second_graph_#{self.id}")
       grapher.build(output_path, width, height)
     end
 
-    def active_threads_over_time_graph(width: 640, height: 300, builder: nil)
+    def active_threads_over_time_graph(width: 640, height: 300, builder: nil, working_path:)
       sax_document = VirtualUserTimeDist.new
       summarize_client_stats!(sax_document)
 
@@ -220,11 +220,11 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
       sax_document.each_ts_vusers_count { |ts, threads_count| grapher.addDataPoint(ts, threads_count) }
 
-      output_path = File.join(Hailstorm.root, Hailstorm.reports_dir, "vusers_per_second_graph_#{self.id}")
+      output_path = File.join(working_path, "vusers_per_second_graph_#{self.id}")
       grapher.build(output_path, width, height)
     end
 
-    def throughput_over_time_graph(width: 640, height: 300, builder: nil)
+    def throughput_over_time_graph(width: 640, height: 300, builder: nil, working_path:)
       sax_document = ThroughputTimeDist.new
       summarize_client_stats!(sax_document)
 
@@ -236,7 +236,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
         grapher.addDataPoint(key, value)
       end
 
-      output_path = File.join(Hailstorm.root, Hailstorm.reports_dir, "throughput_per_second_graph_#{self.id}")
+      output_path = File.join(working_path, "throughput_per_second_graph_#{self.id}")
       grapher.build(output_path, width, height)
     end
 
@@ -253,7 +253,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
   # Generates the report from the builder and contextual objects
   class ReportGenerator
-    attr_reader :builder, :project, :execution_cycles
+    attr_reader :builder, :project, :execution_cycles, :working_path
 
     # @param [Hailstorm::Support::ReportBuilder] new_builder
     # @param [Hailstorm::Model::Project] new_project
@@ -262,6 +262,8 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
       @builder = new_builder
       @project = new_project
       @execution_cycles = new_execution_cycles
+      @working_path = Hailstorm.workspace(@project.project_code)
+                               .make_tmp_dir("#{@execution_cycles.first.id}-#{@execution_cycles.last.id}")
     end
 
     def create
@@ -272,11 +274,10 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
       # adding aggregate graphs over all execution_cycles
       add_comparision_graphs unless execution_cycles.size == 1
 
-      reports_path = File.join(Hailstorm.root, Hailstorm.reports_dir)
       timestamp = Time.now.strftime('%Y%m%d%H%M%S')
       report_file_name = "#{project.project_code}-#{timestamp}" # minus extn
 
-      self.builder.build(reports_path, report_file_name) # returns path to generated file
+      self.builder.build(self.working_path, report_file_name) # returns path to generated file
     end
 
     private
@@ -324,7 +325,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
           client_stat_item.threads_count = client_stat.threads_count
           client_stat_item.aggregate_stats = client_stat.aggregate_stats
           client_stat_item.aggregate_graph do |g|
-            g.chart_model = client_stat.aggregate_graph
+            g.chart_model = client_stat.aggregate_graph(working_path: self.working_path)
           end
         end
       end
@@ -332,13 +333,13 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
     def add_time_series(execution_cycle, execution_item)
       execution_item.hits_per_second_graph do |g|
-        g.chart_model = execution_cycle.hits_per_second_graph
+        g.chart_model = execution_cycle.hits_per_second_graph(working_path: self.working_path)
       end
       execution_item.active_threads_over_time_graph do |g|
-        g.chart_model = execution_cycle.active_threads_over_time_graph
+        g.chart_model = execution_cycle.active_threads_over_time_graph(working_path: self.working_path)
       end
       execution_item.throughput_over_time_graph do |g|
-        g.chart_model = execution_cycle.throughput_over_time_graph
+        g.chart_model = execution_cycle.throughput_over_time_graph(working_path: self.working_path)
       end
     end
 
@@ -348,7 +349,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
           target_stat_item.role_name = target_stat.target_host.role_name
           target_stat_item.host_name = target_stat.target_host.host_name
           target_stat_item.utilization_graph do |g|
-            g.chart_model = target_stat.utilization_graph
+            g.chart_model = target_stat.utilization_graph(working_path: self.working_path)
           end
         end
       end
@@ -356,14 +357,17 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
     def add_comparision_graphs
       self.builder.client_comparison_graph do |graph|
-        graph.chart_model = Hailstorm::Model::ExecutionCycle.client_comparison_graph(execution_cycles)
+        graph.chart_model = Hailstorm::Model::ExecutionCycle.client_comparison_graph(execution_cycles,
+                                                                                     working_path: self.working_path)
       end
 
       self.builder.target_cpu_comparison_graph do |graph|
-        graph.chart_model = Hailstorm::Model::ExecutionCycle.cpu_comparison_graph(execution_cycles)
+        graph.chart_model = Hailstorm::Model::ExecutionCycle.cpu_comparison_graph(execution_cycles,
+                                                                                  working_path: self.working_path)
       end
       self.builder.target_memory_comparison_graph do |graph|
-        graph.chart_model = Hailstorm::Model::ExecutionCycle.memory_comparison_graph(execution_cycles)
+        graph.chart_model = Hailstorm::Model::ExecutionCycle.memory_comparison_graph(execution_cycles,
+                                                                                     working_path: self.working_path)
       end
     end
   end
@@ -373,9 +377,10 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
     attr_reader :execution_cycles, :grapher
 
-    def initialize(execution_cycles, builder: nil)
+    def initialize(execution_cycles, builder: nil, working_path:)
       @execution_cycles = execution_cycles
-      @grapher = GraphBuilderFactory.client_comparison_graph(output_path, other_builder: builder)
+      @grapher = GraphBuilderFactory.client_comparison_graph(File.join(working_path, output_path),
+                                                             other_builder: builder)
     end
 
     def build(width:, height:)
@@ -414,10 +419,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
       if @output_path.nil?
         start_id = execution_cycles.first.id
         end_id = execution_cycles.last.id
-        @output_path = File.join(Hailstorm.root,
-                                 Hailstorm.reports_dir,
-                                 "client_execution_comparison_graph_#{start_id}-#{end_id}")
-
+        @output_path = "client_execution_comparison_graph_#{start_id}-#{end_id}"
       end
 
       @output_path
@@ -429,10 +431,11 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
     attr_reader :execution_cycles, :metric, :grapher
 
-    def initialize(execution_cycles, metric:, builder: nil)
+    def initialize(execution_cycles, metric:, builder: nil, working_path:)
       @execution_cycles = execution_cycles
       @metric = metric
-      @grapher = GraphBuilderFactory.target_comparison_graph(output_path, metric: metric, other_builder: builder)
+      @grapher = GraphBuilderFactory.target_comparison_graph(File.join(working_path, output_path),
+                                                             metric: metric, other_builder: builder)
     end
 
     def build(width:, height:)
@@ -452,10 +455,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     private
 
     def output_path
-      @output_path ||=
-        File.join(Hailstorm.root,
-                  Hailstorm.reports_dir,
-                  "#{metric}_comparison_graph_#{execution_cycles.first.id}-#{execution_cycles.last.id}")
+      @output_path ||= "#{metric}_comparison_graph_#{execution_cycles.first.id}-#{execution_cycles.last.id}"
     end
   end
 
@@ -626,7 +626,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   def summarize_client_stats!(sax_document)
     sax_parser = Nokogiri::XML::SAX::Parser.new(sax_document)
     self.client_stats.each do |client_stat|
-      export_file = client_stat.write_jtl(Hailstorm.tmp_path, true)
+      export_file = client_stat.write_jtl(Hailstorm.workspace(self.project.project_code).tmp_path, true)
       File.open(export_file, 'r') do |file|
         sax_parser.parse(file)
       end

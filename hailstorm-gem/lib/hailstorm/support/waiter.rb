@@ -1,4 +1,5 @@
 require 'hailstorm/support'
+require 'hailstorm/exceptions'
 
 # Wait methods
 module Hailstorm::Support::Waiter

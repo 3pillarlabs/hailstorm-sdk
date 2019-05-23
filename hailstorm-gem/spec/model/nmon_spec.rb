@@ -7,7 +7,8 @@ describe Hailstorm::Model::Nmon do
   before(:each) do
     @nmon = Hailstorm::Model::Nmon.new(active: true, ssh_identity: 'papi',
                                        user_name: 'ubuntu', host_name: 's01', role_name: 'db')
-    @nmon.stub!(:identity_file_ok?).and_return(true)
+    @nmon.project = Hailstorm::Model::Project.new(project_code: 'nmon_spec')
+    @nmon.stub!(:transfer_identity_file)
     expect(@nmon).to be_valid
     @mock_ssh = mock(Net::SSH)
     Hailstorm::Support::SSH.stub!(:start).and_yield(@mock_ssh)
@@ -211,6 +212,30 @@ describe Hailstorm::Model::Nmon do
         end
       end
       expect(ok_yield).to be_true
+    end
+  end
+  
+  context ':ssh_identity file not present' do
+    it 'should add a validation message' do
+      @nmon.unstub!(:transfer_identity_file)
+      @nmon.stub!(:transfer_identity_file).and_raise(Errno::ENOENT, 'mock error')
+      expect(@nmon).to_not be_valid
+      expect(@nmon.errors).to include(:ssh_identity)
+    end
+  end
+
+  context ':ssh_identity is absolute path' do
+    it 'should transfer this file to Hailstorm FS' do
+      @nmon.unstub!(:transfer_identity_file)
+      @nmon.ssh_identity = '/path/to/identity.pem'
+      Hailstorm.fs = mock(Hailstorm::Behavior::FileStore)
+      Hailstorm.fs.should_receive(:read_identity_file).with('/path/to/identity.pem', 'nmon_spec')
+      workspace = mock(Hailstorm::Support::Workspace)
+      workspace.stub!(:write_identity_file)
+      workspace.stub!(:identity_file_path).and_return('/path/to/identity.pem')
+      Hailstorm.stub!(:workspace).and_return(workspace)
+      @nmon.stub!(:secure_identity_file)
+      @nmon.transfer_identity_file
     end
   end
 end

@@ -9,6 +9,7 @@ describe Hailstorm::Model::TargetStat do
   context '.create_target_stat' do
     it 'should calculate averages' do
       project = Hailstorm::Model::Project.create!(project_code: 'target_stat_spec')
+      Hailstorm::Model::Nmon.any_instance.stub(:transfer_identity_file)
       target_host = Hailstorm::Model::Nmon.create!(host_name: 'a',
                                                    project: project,
                                                    role_name: 'server',
@@ -33,6 +34,7 @@ describe Hailstorm::Model::TargetStat do
   context '#utilization_graph' do
     it 'should build the graph' do
       project = Hailstorm::Model::Project.create!(project_code: 'target_stat_spec')
+      Hailstorm::Model::Nmon.any_instance.stub(:transfer_identity_file)
       target_host = Hailstorm::Model::Nmon.create!(host_name: 'a',
                                                    project: project,
                                                    role_name: 'server',
@@ -66,7 +68,7 @@ describe Hailstorm::Model::TargetStat do
                                                          swap_usage_trend: gz_blob)
       grapher = double('ResourceUtilizationGraph').as_null_object
       grapher.should_receive(:finish)
-      target_stat.utilization_graph(builder: grapher)
+      target_stat.utilization_graph(builder: grapher, working_path: RSpec.configuration.build_path)
     end
   end
 

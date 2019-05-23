@@ -7,7 +7,6 @@ require 'hailstorm/model/master_agent'
 require 'hailstorm/support/configuration'
 
 describe Hailstorm::Model::Project do
-
   context '.create' do
     context 'with defaults' do
       it 'should have JMeter version as 3.2' do
@@ -16,11 +15,19 @@ describe Hailstorm::Model::Project do
         expect(project.jmeter_version).to eq '3.2'
       end
     end
+
+    context 'with :project_code' do
+      it 'should replace non-alphanumeric characters with underscore' do
+        project = Hailstorm::Model::Project.create!(project_code: 'z/x/a  0b-c.txt')
+        expect(project.project_code).to be == 'z_x_a_0b_c_txt'
+      end
+    end
   end
 
   context '#setup' do
     before(:each) do
       @project = Hailstorm::Model::Project.new(project_code: 'project_spec')
+      @mock_config = Hailstorm::Support::Configuration.new
     end
 
     context 'success paths' do
@@ -31,7 +38,11 @@ describe Hailstorm::Model::Project do
             .stub!(:config_attributes)
             .and_return({ serial_version: 'A', master_slave_mode: false, jmeter_version: '3.2' })
 
-        Hailstorm::Model::JmeterPlan.stub!(:load_all_test_plans).and_return(%w[a])
+        Hailstorm::Model::JmeterPlan.stub!(:load_all_test_plans)
+        Hailstorm.fs = mock(Hailstorm::Behavior::FileStore)
+        Hailstorm.fs.stub!(:fetch_jmeter_plans).and_return(%w[a])
+        Hailstorm.fs.stub!(:app_dir_tree).and_return({app: nil}.stringify_keys)
+        Hailstorm.fs.stub!(:transfer_jmeter_artifacts)
 
         jmeter_plan = Hailstorm::Model::JmeterPlan.new(project: @project,
                                                        test_plan_name: 'A',
@@ -43,7 +54,7 @@ describe Hailstorm::Model::Project do
           jmeter_plan.update_column(:active, true)
         end
 
-        @project.setup
+        @project.setup(config: Hailstorm::Support::Configuration.new)
 
         expect(@project.jmeter_plans.active.first).to eql(jmeter_plan)
         expect(@project.jmeter_plans.first).to eql(jmeter_plan)
@@ -51,33 +62,29 @@ describe Hailstorm::Model::Project do
 
       context 'properties' do
         before(:each) do
-          Hailstorm.application.stub!(:load_config)
           @project.serial_version = 'B'
+          @project.settings_modified = true
           Hailstorm::Model::JmeterPlan.stub!(:setup)
           Hailstorm::Model::Cluster.stub!(:configure_all)
           Hailstorm::Model::TargetHost.stub!(:configure_all)
-          @mock_config = Hailstorm::Support::Configuration.new
-          @mock_config.stub!(:serial_version).and_return('A')
-          @project.stub!(:config).and_return(@mock_config)
         end
 
         context 'with custom JMeter URL' do
           it 'should be invalid if ends with something other than .tgz or .tar.gz' do
             @mock_config.jmeter.custom_installer_url = 'http://whodunit.org/my-jmeter-3.2_rhode.tar'
-            expect { @project.setup }.to raise_exception
+            expect { @project.setup(config: @mock_config) }.to raise_exception
             expect(@project.errors).to have_key(:custom_jmeter_installer_url)
           end
           it 'should have custom JMeter version' do
             @mock_config.jmeter.version = '2.6'
             @mock_config.jmeter.custom_installer_url = 'http://whodunit.org/my-jmeter-3.2_rhode.tgz'
-            @project.setup
+            @project.setup(config: @mock_config)
             expect(@project.jmeter_version).to eq('3.2_rhode')
           end
           it 'should have file name without extension as version as a fallback' do
             @mock_config.jmeter.custom_installer_url = 'http://whodunit.org/rhode.tgz'
-            @project.setup
+            @project.setup(config: @mock_config)
             expect(@project.jmeter_version).to eq('rhode')
-            expect(Hailstorm.application).to respond_to(:config)
           end
         end
 
@@ -85,7 +92,7 @@ describe Hailstorm::Model::Project do
           context '< 2.6' do
             it 'should raise error' do
               @mock_config.jmeter.version = '2.5.1'
-              expect { @project.setup }.to raise_exception
+              expect { @project.setup(config: @mock_config) }.to raise_exception
               expect(@project.errors).to have_key(:jmeter_version)
             end
           end
@@ -93,7 +100,7 @@ describe Hailstorm::Model::Project do
           context 'not matching x.y.z format' do
             it 'should raise error' do
               @mock_config.jmeter.version = '-1'
-              expect { @project.setup }.to raise_exception
+              expect { @project.setup(config: @mock_config) }.to raise_exception
               expect(@project.errors).to have_key(:jmeter_version)
             end
           end
@@ -104,7 +111,7 @@ describe Hailstorm::Model::Project do
     context 'settings_modified? == false' do
       it 'should raise error' do
         @project.stub!(:settings_modified?).and_return(false)
-        expect { @project.setup }.to raise_error(Hailstorm::Exception)
+        expect { @project.setup(config: @mock_config) }.to raise_error(Hailstorm::Exception)
       end
     end
 
@@ -117,17 +124,21 @@ describe Hailstorm::Model::Project do
         @project.stub!(:update_attributes!)
         @project.stub!(:config_attributes)
         @project.should_receive(:update_column).with(:serial_version, nil)
-        expect { @project.setup }.to raise_error(Hailstorm::Exception)
+        expect { @project.setup(config: @mock_config) }.to raise_error(Hailstorm::Exception)
       end
     end
   end
 
   context '#start' do
+    before(:each) do
+      @mock_config = Hailstorm::Support::Configuration.new
+    end
+
     context 'current_execution_cycle exists' do
       it 'should raise error' do
         project = Hailstorm::Model::Project.new(project_code: 'project_spec')
         project.stub!(:current_execution_cycle).and_return(Hailstorm::Model::ExecutionCycle.new)
-        expect { project.start }
+        expect { project.start(config: @mock_config) }
           .to(
             raise_error(Hailstorm::ExecutionCycleExistsException) { |error| expect(error.diagnostics).to_not be_blank }
           )
@@ -141,7 +152,7 @@ describe Hailstorm::Model::Project do
         project.should_receive(:setup)
         Hailstorm::Model::TargetHost.should_receive(:monitor_all)
         Hailstorm::Model::Cluster.should_receive(:generate_all_load)
-        project.start
+        project.start(config: @mock_config)
         expect(project.current_execution_cycle.status.to_sym).to be == :started
       end
 
@@ -149,7 +160,7 @@ describe Hailstorm::Model::Project do
         project = Hailstorm::Model::Project.create!(project_code: 'project_spec')
         project.stub!(:settings_modified?).and_return(true)
         project.stub!(:setup).and_raise(Hailstorm::Exception)
-        expect { project.start }.to raise_error(Hailstorm::Exception)
+        expect { project.start(config: @mock_config) }.to raise_error(Hailstorm::Exception)
         expect(project.current_execution_cycle.status.to_sym).to be == :aborted
       end
 
@@ -158,7 +169,7 @@ describe Hailstorm::Model::Project do
         project.stub!(:settings_modified?).and_return(false)
         Hailstorm::Model::TargetHost.stub!(:monitor_all).and_raise(Hailstorm::Exception)
         Hailstorm::Model::Cluster.stub!(:generate_all_load).and_raise(Hailstorm::Exception)
-        expect { project.start }.to raise_error(Hailstorm::Exception)
+        expect { project.start(config: @mock_config) }.to raise_error(Hailstorm::Exception)
         expect(project.current_execution_cycle.status.to_sym).to be == :aborted
       end
     end
@@ -238,12 +249,15 @@ describe Hailstorm::Model::Project do
   end
 
   context '#results' do
+    before(:each) do
+      @mock_config = Hailstorm::Support::Configuration.new
+    end
 
     context 'show' do
       it 'should show selected execution cycles' do
         project = Hailstorm::Model::Project.new
         Hailstorm::Model::ExecutionCycle.stub!(:execution_cycles_for_report).and_return([])
-        expect(project.results(:show, [1, 2, 3])).to be_empty
+        expect(project.results(:show, cycle_ids: [1, 2, 3], config: @mock_config)).to be_empty
       end
     end
 
@@ -255,7 +269,7 @@ describe Hailstorm::Model::Project do
         Hailstorm::Model::ExecutionCycle
           .stub!(:execution_cycles_for_report)
           .and_return([selected_execution_cycle])
-        project.results(:exclude, [1])
+        project.results(:exclude, cycle_ids: [1], config: @mock_config)
       end
     end
 
@@ -267,19 +281,22 @@ describe Hailstorm::Model::Project do
         Hailstorm::Model::ExecutionCycle
             .stub!(:execution_cycles_for_report)
             .and_return([selected_execution_cycle])
-        project.results(:include, [1])
+        project.results(:include, cycle_ids: [1], config: @mock_config)
       end
     end
 
     context 'export' do
       context 'zip format' do
         it 'should create zip file' do
+          project = Hailstorm::Model::Project.new(project_code: 'spec')
+
           selected = Hailstorm::Model::ExecutionCycle.new
           selected.id = 1
-          seq_path = File.join(Hailstorm.root, Hailstorm.reports_dir, "SEQUENCE-#{selected.id}")
-          FileUtils.mkdir_p(seq_path)
-          jtl_path = FileUtils.touch(File.join(seq_path, 'a.jtl'))
-          selected.should_receive(:export_results).and_return(jtl_path)
+          selected.should_receive(:export_results) do
+            seq_dir_path = File.join(Hailstorm.workspace(project.project_code).tmp_path, "SEQUENCE-#{selected.id}")
+            FileUtils.mkdir_p(seq_dir_path)
+            FileUtils.touch(File.join(seq_dir_path, 'a.jtl'))
+          end
 
           zip_fs = double('fake_zip_file', mkdir: nil)
           zip_fs.should_receive(:add)
@@ -287,18 +304,23 @@ describe Hailstorm::Model::Project do
             block.call(zip_fs)
           end
 
+          Hailstorm.fs = mock(Hailstorm::Behavior::FileStore)
+          Hailstorm.fs.stub!(:export_jtl)
           Hailstorm::Model::ExecutionCycle.stub!(:execution_cycles_for_report).and_return([selected])
-          project = Hailstorm::Model::Project.new
-          project.results(:export, [1], :zip)
+
+          project.results(:export, cycle_ids: [selected.id], format: :zip, config: @mock_config)
         end
       end
     end
 
     context 'import' do
+      before(:each) do
+        Hailstorm.fs = mock(Hailstorm::Behavior::FileStore)
+      end
       it 'should import with selected jmeter, cluster and execution cycle' do
         project = Hailstorm::Model::Project.create!(project_code: 'product_spec')
         project.stub!(:setup)
-        project.stub!(:settings_modified?).and_return(false)
+        project.settings_modified = false
         Hailstorm::Model::ExecutionCycle.stub!(:execution_cycles_for_report).and_return([])
         exec_cycle = mock(Hailstorm::Model::ExecutionCycle)
         project.execution_cycles.stub(:where).and_return([exec_cycle])
@@ -309,6 +331,7 @@ describe Hailstorm::Model::Project do
 
         project.clusters.create!(cluster_type: 'Hailstorm::Model::AmazonCloud')
         cluster = project.clusters.create!(cluster_type: 'Hailstorm::Model::DataCenter')
+        Hailstorm::Model::DataCenter.any_instance.stub(:transfer_identity_file)
         data_center = cluster.cluster_klass.create!(user_name: 'zed',
                                                     ssh_identity: 'zed',
                                                     machines: ['172.16.80.25'],
@@ -319,15 +342,16 @@ describe Hailstorm::Model::Project do
 
         import_opts = { jmeter: jmeter_plan.test_plan_name, cluster: cluster.cluster_code, exec: '3' }
         exec_cycle.should_receive(:import_results).with(jmeter_plan, data_center, 'foo.jtl')
-        project.results(:import, ['foo.jtl', import_opts.stringify_keys])
+        Hailstorm.fs.stub!(:copy_jtl).and_return('foo.jtl')
+        project.results(:import, cycle_ids: [['foo.jtl'], import_opts.stringify_keys], config: @mock_config)
       end
 
       it 'should import from results_import_dir' do
         Hailstorm::Model::ExecutionCycle.stub!(:execution_cycles_for_report)
-        FileUtils.mkdir_p(File.join(Hailstorm.root, Hailstorm.results_import_dir))
-        FileUtils.touch(File.join(Hailstorm.root, Hailstorm.results_import_dir, 'a.jtl'))
-        project = Hailstorm::Model::Project.new
-        project.stub!(:settings_modified?).and_return(false)
+        jtl_path = File.join(RSpec.configuration.build_path, 'a.jtl')
+        FileUtils.touch(jtl_path)
+        project = Hailstorm::Model::Project.new(project_code: 'project_spec')
+        project.settings_modified = false
         expect(project).to respond_to(:jmeter_plans)
         project.stub_chain(:jmeter_plans, :all).and_return([Hailstorm::Model::JmeterPlan.new])
         cluster = Hailstorm::Model::Cluster.new
@@ -338,16 +362,19 @@ describe Hailstorm::Model::Project do
         execution_cycle = Hailstorm::Model::ExecutionCycle.new
         project.stub_chain(:execution_cycles, :create!).and_return(execution_cycle)
         execution_cycle.should_receive(:import_results)
-        project.results(:import)
+        Hailstorm.fs = mock(Hailstorm::Behavior::FileStore)
+        Hailstorm.fs.stub!(:copy_jtl).and_return(jtl_path)
+        project.results(:import, config: @mock_config, cycle_ids: [['a.jtl']])
       end
     end
 
     it 'should generate report by default' do
       Hailstorm::Model::ExecutionCycle
         .should_receive(:create_report)
-        .and_return(File.join(Hailstorm.root, Hailstorm.reports_dir, 'a.docx'))
-      project = Hailstorm::Model::Project.new
-      project.results(:anything, [1, 2])
+        .and_return('a.docx')
+      Hailstorm.fs = mock(Hailstorm::Behavior::FileStore, export_report: nil)
+      project = Hailstorm::Model::Project.new(project_code: 'some_code')
+      project.results(:anything, cycle_ids: [1, 2], config: @mock_config)
     end
   end
 

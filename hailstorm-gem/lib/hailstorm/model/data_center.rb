@@ -16,9 +16,9 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   before_validation :set_defaults
 
-  validate :identity_file_exists, if: proc { |r| r.active? }
-
   validates_presence_of :user_name, :machines, :ssh_identity
+
+  validate :identity_file_ok, if: proc { |r| r.active? }
 
   # Seconds between successive Data Center status checks
   DOZE_TIME = 5
@@ -47,14 +47,6 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   ######################### PRIVATE METHODS ####################################
   private
 
-  def identity_file_exists
-    unless File.exist?(identity_file_path)
-      errors.add(:ssh_identity, "not found at #{identity_file_path}")
-      return
-    end
-    errors.add(:ssh_identity, "at #{identity_file_path} must be a regular file") unless identity_file_ok?
-  end
-
   def identity_file_name
     self.ssh_identity.gsub(/\.pem$/, '').concat('.pem')
   end
@@ -62,7 +54,6 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   def set_defaults
     self.user_name = Defaults::SSH_USER if self.user_name.blank?
     self.title = Defaults::TITLE if self.title.blank?
-    self.ssh_identity = [Defaults::SSH_IDENTITY, Hailstorm.app_name].join('_') if self.ssh_identity.nil?
   end
 
   def connection_ok?(load_agent)
@@ -178,7 +169,6 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   # Data center default settings
   class Defaults
     SSH_USER            = 'ubuntu'.freeze
-    SSH_IDENTITY        = 'server.pem'.freeze
     TITLE               = 'Hailstorm'.freeze
     JAVA_VERSION        = '1.8'.freeze
     SSH_PORT            = 22

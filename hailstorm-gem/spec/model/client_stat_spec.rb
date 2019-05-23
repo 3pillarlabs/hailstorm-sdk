@@ -5,6 +5,7 @@ require 'hailstorm/model/client_stat'
 require 'hailstorm/model/amazon_cloud'
 require 'hailstorm/model/master_agent'
 require 'hailstorm/model/page_stat'
+require 'hailstorm/model/project'
 require 'client_stats_helper'
 
 describe Hailstorm::Model::ClientStat do
@@ -14,6 +15,7 @@ describe Hailstorm::Model::ClientStat do
   context '.collect_client_stats' do
     it 'should collect create_client_stats' do
       cluster_instance = Hailstorm::Model::AmazonCloud.new
+      cluster_instance.project = Hailstorm::Model::Project.new(project_code: 'client_stat_spec')
       expect(cluster_instance).to respond_to(:master_agents)
       agent_generator = Proc.new do |jmeter_plan_id, result_file|
         agent = Hailstorm::Model::MasterAgent.new
@@ -59,6 +61,7 @@ describe Hailstorm::Model::ClientStat do
       template.create
       stat_file_paths.each { |sfp| sfp.unlink }
     end
+
     it 'should combine_stats for multiple files' do
       stat_file_paths = [ Tempfile.new, Tempfile.new ]
       template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(nil, nil, nil, stat_file_paths)
@@ -68,6 +71,7 @@ describe Hailstorm::Model::ClientStat do
       template.create
       stat_file_paths.each { |sfp| sfp.unlink }
     end
+
     it 'should delete stat_file_paths' do
       stat_file_paths = [ Tempfile.new, Tempfile.new ]
       combined_path = Tempfile.new
@@ -78,6 +82,7 @@ describe Hailstorm::Model::ClientStat do
       template.create
       stat_file_paths.each { |sfp| sfp.unlink }
     end
+
     it 'should create a client_stat' do
       clusterable, execution_cycle, jmeter_plan = create_client_stat_refs
       Hailstorm::Model::JtlFile.stub!(:persist_file)
@@ -108,9 +113,10 @@ describe Hailstorm::Model::ClientStat do
         end
       end
 
+      project = Hailstorm::Model::Project.new(project_code: 'client_stat_spec')
       template = Hailstorm::Model::ClientStat::ClientStatTemplate
                    .new(mock(Hailstorm::Model::JmeterPlan, id: 1),
-                        mock(Hailstorm::Model::ExecutionCycle, id: 1),
+                        mock(Hailstorm::Model::ExecutionCycle, id: 1, project: project),
                         mock(Hailstorm::Model::AmazonCloud, id: 1),
                         stat_file_paths)
 
@@ -164,7 +170,7 @@ describe Hailstorm::Model::ClientStat do
         end
         # :nocov:
       end
-      client_stat.aggregate_graph(builder: builder)
+      client_stat.aggregate_graph(builder: builder, working_path: RSpec.configuration.build_path)
     end
   end
 
@@ -185,7 +191,8 @@ describe Hailstorm::Model::ClientStat do
 
   context Hailstorm::Model::ClientStat::GraphBuilderFactory do
     it 'should create aggregate_graph builder' do
-      expect(Hailstorm::Model::ClientStat::GraphBuilderFactory.aggregate_graph(identifier: 1)).to_not be_nil
+      expect(Hailstorm::Model::ClientStat::GraphBuilderFactory
+               .aggregate_graph(identifier: 1, working_path: RSpec.configuration.build_path)).to_not be_nil
     end
   end
 end
