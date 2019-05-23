@@ -1,8 +1,5 @@
 # Introduction
-``hailstorm-gem`` is the core Hailstorm library and CLI of the Hailstorm application suite.
-
-# User Guide
-Refer to the [Hailstorm Wiki](https://github.com/3pillarlabs/hailstorm-sdk/wiki) for the user guide.
+``hailstorm-gem`` is the core Hailstorm library.
 
 # Developer Guide
 Use the User Guide to setup your own Hailstorm virtual machine. Once this is done, create a development environment
@@ -111,16 +108,4 @@ cucumber
 ```bash
 HAILSTORM_COVERAGE=1 JRUBY_OPTS="--debug" rspec
 ```
-Coverage report is generated in ``coverage`` directory. 
-
-# Version 5
-```ruby
-middleware = Hailstorm::Support::Initializer.create_middleware('hailstorm_spec', '/path/to/project/config/boot.rb')
-expect(middleware).to respond_to(:interpretor)
-
-cli = Hailstorm::Controller::Cli.new(middleware)
-cli.process_commands
-
-webs = Hailstorm::Controller::WebServer.new(middleware)
-webs.start_server
-```
+Coverage report is generated in ``coverage`` directory.
