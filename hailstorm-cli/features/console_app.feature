@@ -25,3 +25,4 @@ Feature: Console Application
     When I create a new project "console_app" from the cli
     And the "console_app" project is active
     Then the application should execute command "help"
+    And the application should execute command "results"

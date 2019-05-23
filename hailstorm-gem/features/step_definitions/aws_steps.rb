@@ -1,19 +1,4 @@
-require 'hailstorm/support/jmeter_installer'
-
-include DbHelper
-include CliStepHelper
-
-Given(/^Hailstorm is initialized with a project '(.+?)'$/) do |project_code|
-  require 'hailstorm/initializer'
-  require 'hailstorm/support/configuration'
-  Hailstorm::Initializer.create_project!(tmp_path, project_code, true, '/vagrant/hailstorm-gem')
-  Hailstorm::Initializer.create_middleware(project_code, "#{tmp_path}/#{project_code}/config/boot.rb",
-                                           db_props,
-                                           Hailstorm::Support::Configuration.new)
-  require 'hailstorm/model/project'
-  @project = Hailstorm::Model::Project.new
-  @project.project_code = project_code
-end
+include AwsHelper
 
 Given(/^Amazon is chosen as the cluster$/) do
   require 'hailstorm/model/amazon_cloud'
@@ -39,13 +24,9 @@ When(/^(?:I |)create the AMI$/) do
   @aws.send(:create_agent_ami)
 end
 
-When(/^the JMeter version for the project is '(.+?)'$/) do |jmeter_version|
-  @project.jmeter_version = jmeter_version
-end
-
 Then(/^an AMI with name '(.+?)' (?:should |)exists?$/) do |ami_name|
   ec2 = @aws.send(:ec2, true)
-  avail_amis = ec2.images().with_owner(:self).select { |e| e.state == :available }
+  avail_amis = ec2.images.with_owner(:self).select {|e| e.state == :available}
   ami_names = avail_amis.collect(&:name)
   expect(ami_names).to include(ami_name)
   @aws.agent_ami = avail_amis.find {|e| e.name == ami_name}.id
@@ -94,21 +75,15 @@ After do |scenario|
   end
 end
 
-When(/^(?:the |)[jJ][mM]eter installer URL for the project is '(.+?)'$/) do |jmeter_installer_url|
-  @project.custom_jmeter_installer_url = jmeter_installer_url
-  @project.send(:set_defaults)
-end
-
 Then(/^the AMI to be created would be named '(.+?)'$/) do |expected_ami_name|
   actual_ami_name = @aws.send(:ami_id)
   expect(actual_ami_name).to eq(expected_ami_name)
 end
 
-
 And(/^a public VPC subnet is available$/) do
   ec2 = @aws.send(:ec2)
   public_subnet = ec2.vpcs.collect(&:subnets).flatten.collect(&:to_a).flatten.find do |sn|
-    sn.route_table.routes.find { |r| r.internet_gateway && r.internet_gateway.id != 'local' }
+    sn.route_table.routes.find {|r| r.internet_gateway && r.internet_gateway.id != 'local'}
   end
   expect(public_subnet).to_not be_nil
   @aws.vpc_subnet_id = public_subnet.id
@@ -119,11 +94,9 @@ And(/^instance type is '(.+?)'$/) do |instance_type|
   @aws.instance_type = instance_type
 end
 
-
 And(/^SSH port is (\d+)$/) do |ssh_port|
   @aws.ssh_port = ssh_port.to_i
 end
-
 
 And(/^security group is '(.+)'$/) do |sg_name|
   @aws.security_group = sg_name
@@ -133,7 +106,7 @@ end
 And(/^an agent AMI '(.+?)' exists$/) do |agent_ami|
   aws_config = @aws.send(:aws_config)
   ec2 = AWS::EC2.new(aws_config).regions[@aws.region]
-  avail_amis = ec2.images.with_owner(:self).select { |e| e.state == :available }
+  avail_amis = ec2.images.with_owner(:self).select {|e| e.state == :available}
   ami_ids = avail_amis.collect(&:id)
   expect(ami_ids).to include(agent_ami)
   @aws.agent_ami = agent_ami

@@ -131,7 +131,6 @@ Then /^a report file should be created$/ do
   Dir[File.join(tmp_path, current_project, Hailstorm.reports_dir, '*.docx')].count.should == 1
 end
 
-
 And(/^results import '(.+?)'$/) do |file_path|
   Hailstorm.application.interpret_command('purge')
   expect(Hailstorm::Model::ExecutionCycle.count).to eql(0)
@@ -139,7 +138,6 @@ And(/^results import '(.+?)'$/) do |file_path|
   Hailstorm.application.interpret_command("results import #{abs_path}")
   expect(Hailstorm::Model::ExecutionCycle.count).to eql(1)
 end
-
 
 And(/^(?:disable |)target monitoring(?:| is disabled)$/) do
   @monitor_active = false

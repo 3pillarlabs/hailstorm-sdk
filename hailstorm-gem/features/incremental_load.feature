@@ -5,21 +5,8 @@ Feature: Generate report
 
   @smoke
   @end-to-end
-  Scenario: Create a new project
-    Given I have hailstorm installed
-    When I create the project "cucumber_test"
-    Then the project structure for "cucumber_test" should be created
-
-  @smoke
-  @end-to-end
-  Scenario: Start hailstorm
-    When I launch the hailstorm console within "cucumber_test" project
-    Then the application should be ready to accept commands
-
-  @smoke
-  @end-to-end
   Scenario: Setup project with 10 threads
-    Given the "cucumber_test" project
+    Given the 'cucumber_test' project
     When I configure JMeter with following properties
       | property       | value |
       | NumUsers       |    10 |
@@ -29,21 +16,21 @@ Feature: Generate report
       | region    | max_threads_per_agent |
       | us-east-1 |                       |
     And configure target monitoring
-    And execute "setup" command
+    And setup the project
     Then 1 active load agent should exist
 
   @smoke
   @end-to-end
   Scenario: Start the test with 10 threads
     Given the "cucumber_test" project
-    When I execute "start" command
+    When I start load generation
     Then 1 Jmeter instance should be running
 
   @smoke
   @end-to-end
   Scenario: Stop the test with 10 threads
     Given the "cucumber_test" project
-    When I execute "stop wait" command
+    When I stop load generation with 'wait'
     Then 1 active load agent should exist
     And 0 Jmeter instances should be running
 
@@ -58,7 +45,7 @@ Feature: Generate report
     And configure following amazon clusters
       | region    | max_threads_per_agent |
       | us-east-1 |                       |
-    And execute "start" command
+    And start load generation
     Then 1 active load agent should exist
     And 1 Jmeter instance should be running
 
@@ -66,7 +53,7 @@ Feature: Generate report
   Scenario: Stop the test with 20 threads
     Given the "cucumber_test" project
     When I wait for 200 seconds
-    And execute "stop wait" command
+    And stop load generation with 'wait'
     Then 1 active load agent should exist
     And 0 Jmeter instances should be running
 
@@ -81,7 +68,7 @@ Feature: Generate report
     And configure following amazon clusters
       | region    | max_threads_per_agent |
       | us-east-1 | 25                    |
-    And execute "start" command
+    And start load generation
     Then 2 active load agents should exist
     And 2 Jmeter instances should be running
 
@@ -89,7 +76,7 @@ Feature: Generate report
   Scenario: Stop the test with 30 threads
     Given the "cucumber_test" project
     When I wait for 200 seconds
-    And execute "stop wait" command
+    And stop load generation with 'wait'
     Then 2 active load agents should exist
     And 0 Jmeter instances should be running
 
@@ -103,14 +90,14 @@ Feature: Generate report
     And configure following amazon clusters
       | region    | max_threads_per_agent |
       | us-east-1 | 25                    |
-    And execute "start" command
+    And start load generation
     Then 1 active load agent should exist
     And 1 Jmeter instance should be running
 
   Scenario: Stop the new test with 20 threads
     Given the "cucumber_test" project
     When I wait for 200 seconds
-    And execute "stop wait" command
+    And stop load generation with 'wait'
     Then 1 active load agent should exist
     And 0 Jmeter instances should be running
 
@@ -124,9 +111,9 @@ Feature: Generate report
     And configure following amazon clusters
       | region    | max_threads_per_agent |
       | us-east-1 | 25                    |
-    And execute "start" command
+    And start load generation
     And wait for 10 seconds
-    And execute "abort" command
+    And abort the load generation
     Then 0 Jmeter instances should be running
     And 5 total execution cycles should exist
     And 4 reportable execution cycles should exist
@@ -135,12 +122,12 @@ Feature: Generate report
   @end-to-end
   Scenario: Terminate tests
     Given the "cucumber_test" project
-    When I execute "terminate" command
+    When I terminate the setup
     Then 0 load agents should exist
 
   @smoke
   @end-to-end
   Scenario: Generate a report
     Given the "cucumber_test" project
-    When I execute "results report" command
+    When I generate a report
     Then a report file should be created

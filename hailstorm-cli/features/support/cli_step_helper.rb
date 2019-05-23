@@ -1,6 +1,6 @@
 module CliStepHelper
   def tmp_path
-    File.expand_path('../../../tmp', __FILE__)
+    File.expand_path('../../../build', __FILE__)
   end
 
   def data_path
