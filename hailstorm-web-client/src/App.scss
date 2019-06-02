@@ -1,33 +1,90 @@
-.App {
-  text-align: center;
-}
+@import "~bulma-3pillar/src/default/default";
+@import "~@fortawesome/fontawesome-free/css/all.css";
 
-.App-logo {
-  animation: App-logo-spin infinite 20s linear;
-  height: 40vmin;
-  pointer-events: none;
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+nav {
+  .app-logo {
+    margin-right: 0.3rem;
   }
-  to {
-    transform: rotate(360deg);
+
+  img.app-logo {
+    height: 3.0rem;
+    max-height: 100% !important;
+  }
+}
+
+main {
+  padding: 2.0rem 0 2.0rem 0;
+  .container {
+    .title {
+      color: map-get($map: $shades, $key: "grey-dark");
+    }
+
+    .workspace-header {
+      border-bottom: 1px solid map-get($map: $shades,  $key: "grey-lighter");
+
+      .is-status {
+        color: $warning !important;
+        text-align: right;
+      }
+    }
+
+    .workspace-main {
+      .level-item, .panel-heading {
+        i {
+          margin-right: 0.3rem;
+        }
+      }
+
+      .panel-block {
+        div.level {
+          width: 100%;
+        }
+      }
+
+      @include until($widescreen) {
+        table {
+          font-size: 0.90rem;
+          th.is-gtk, td.is-gtk {
+            display: none;
+          }
+          th, td {
+            padding: 0.25em 0.30em;
+          }
+        }
+
+        div.is-gtk {
+          display: none;
+        }
+      }
+    }
+
+    .workspace-log {
+      div.panel-block {
+        font-family: $family-monospace;
+        font-size: $size-7;
+        min-height: 10vh;
+        max-height: 40vh;
+        align-items: flex-start;
+        overflow-x: auto;
+        overflow-y: scroll;
+      }
+    }
+
+    .workspace-danger {
+      padding-top: 3.0rem;
+
+      article.boundary {
+        text-align: center;
+      }
+
+      article.message {
+        margin-top: 1.0rem;
+
+        ul {
+          list-style: circle;
+          padding-left: 2.0rem;
+        }
+      }
+    }
   }
 }
