@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import logo from '../AppLogo.png';
 import { ProjectBar } from '../ProjectBar';
+import { NavLink, Link } from 'react-router-dom';
 
 // Top Navigation Component
 export const TopNav: React.FC = () => {
@@ -14,11 +15,11 @@ export const TopNav: React.FC = () => {
     <nav className="navbar is-light" role="navigation">
       <div className="container">
         <div className="navbar-brand">
-          <a className="navbar-item" href="/projects">
+          <Link className="navbar-item" to="/projects">
             <span className="app-logo">
               <img src={logo} className="app-logo" alt="HAILSTORM" />
             </span>
-          </a>
+          </Link>
 
           <a
             role="button"
@@ -36,15 +37,15 @@ export const TopNav: React.FC = () => {
 
         <div className={`navbar-menu${isBurgerActive ? ' is-active': ''}`}>
           <div className="navbar-start">
-            <a className="navbar-item">
+            <NavLink to="/projects" className="navbar-item" activeClassName="is-active" exact={true}>
               <h2>All Projects</h2>
-            </a>
+            </NavLink>
             <ProjectBar maxColumns={5}></ProjectBar>
           </div>
 
           <div className="navbar-end">
             <div className="navbar-item">
-              <a className="button is-link"> New Project </a>
+              <Link className="button is-info" to="/wizard/projects/new"> New Project </Link>
             </div>
           </div>
         </div>

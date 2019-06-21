@@ -1,5 +1,6 @@
 @import "~bulma-3pillar/src/default/default";
 @import "~@fortawesome/fontawesome-free/css/all.css";
+@import "sass/variables";
 
 nav {
   .app-logo {
@@ -20,7 +21,7 @@ main {
     }
 
     .workspace-header {
-      border-bottom: 1px solid map-get($map: $shades,  $key: "grey-lighter");
+      border-bottom: $header-line;
 
       .is-status {
         color: $warning !important;

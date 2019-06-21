@@ -9,6 +9,7 @@
     "@types/react-dom": "^16.8.4",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
+    "react-router-dom": "^5.0.1",
     "react-scripts": "3.0.1",
     "typescript": "^3.5.1"
   },
@@ -35,6 +36,8 @@
   },
   "devDependencies": {
     "@fortawesome/fontawesome-free": "^5.8.2",
+    "@types/react-router": "^5.0.2",
+    "@types/react-router-dom": "^4.3.4",
     "bulma-3pillar": "git+ssh://git@github.com/3pillarlabs/bulma-3pillar.git",
     "node-sass": "^4.12.0"
   }

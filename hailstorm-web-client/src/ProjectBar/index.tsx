@@ -33,7 +33,6 @@ export class ProjectBar extends React.Component<ProjectBarProps, ProjectBarState
       <>
         <ProjectBarItem
           key={this.state.activeProject.code}
-          isActive={true}
           code={this.state.activeProject.code}
           title={this.state.activeProject.title}
           clickHandler={this.handleNavigation.bind(this)}
