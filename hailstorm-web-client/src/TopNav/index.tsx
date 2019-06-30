@@ -15,7 +15,7 @@ export const TopNav: React.FC = () => {
     <nav className="navbar is-light" role="navigation">
       <div className="container">
         <div className="navbar-brand">
-          <Link className="navbar-item" to="/projects">
+          <Link className="navbar-item" to="/">
             <span className="app-logo">
               <img src={logo} className="app-logo" alt="HAILSTORM" />
             </span>

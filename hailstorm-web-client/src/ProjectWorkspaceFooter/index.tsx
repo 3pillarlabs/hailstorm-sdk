@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ToggleButton } from './ToggleButton';
+import { Link } from 'react-router-dom';
 
 export const ProjectWorkspaceFooter: React.FC = () => {
   const [isPressed, dispatch] = useState(false);
@@ -7,7 +8,7 @@ export const ProjectWorkspaceFooter: React.FC = () => {
   return (
     <>
       <div className="tile notification">
-        <a className="button">Back to Projects</a>
+        <Link to="/projects" className="button">Back to Projects</Link>
       </div>
       <div className="workspace-danger">
         <article className="boundary">

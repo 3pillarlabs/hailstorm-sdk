@@ -12,5 +12,5 @@ export const ProjectWorkspace: React.FC = () => {
       <ProjectWorkspaceLog></ProjectWorkspaceLog>
       <ProjectWorkspaceFooter></ProjectWorkspaceFooter>
     </div>
-);
+  );
 }

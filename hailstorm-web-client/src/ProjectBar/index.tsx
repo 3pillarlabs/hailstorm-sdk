@@ -1,108 +1,98 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Project } from '../domain';
 import { ProjectBarItem } from "../ProjectBarItem";
+import { RunningProjectsContext } from '../RunningProjectsProvider';
 
-interface ProjectBarProps {
+export interface ProjectBarProps {
   maxColumns: number;
 }
 
+export const ProjectBar: React.FC<ProjectBarProps> = (props) => {
+  const {runningProjects} = useContext(RunningProjectsContext);
+  const key:string = runningProjects.reduce((acc, project) => acc += project.id, '');
+  return (<ProjectBarHolder {...props} {...{runningProjects, key}} />);
+}
+
+interface ProjectBarHolderProps extends ProjectBarProps {
+  runningProjects: Project[];
+}
+
 interface ProjectBarState {
-  activeProject: Project,
+  runningProjects: Project[];
+  activeProject: Project | undefined,
   shownProjects: Project[];
   dropdownProjects: Project[];
 }
 
-/**
- * Displays projects with running tests.
- *
- */
-export class ProjectBar extends React.Component<ProjectBarProps, ProjectBarState> {
+class ProjectBarHolder extends React.Component<ProjectBarHolderProps, ProjectBarState> {
 
-  constructor(props: ProjectBarProps) {
+  constructor(props: ProjectBarHolderProps) {
     super(props);
-
     this.state = {
-      activeProject: { code: "hailstorm_ocean", title: "Hailstorm Basic Priming test with Digital Ocean droplets and custom JMeter" },
-      shownProjects: [],
-      dropdownProjects: []
-    };
+      runningProjects: this.props.runningProjects,
+      activeProject: this.props.runningProjects.length > 0 ? this.props.runningProjects[0] : undefined,
+      shownProjects: this.props.runningProjects.slice(1, this.props.maxColumns),
+      dropdownProjects: this.props.runningProjects.slice(this.props.maxColumns)
+    }
   }
 
   render() {
+    console.debug(this.props);
     return (
       <>
-        <ProjectBarItem
-          key={this.state.activeProject.code}
-          code={this.state.activeProject.code}
-          title={this.state.activeProject.title}
-          clickHandler={this.handleNavigation.bind(this)}
-        />
+      {this.state.activeProject &&
+      <ProjectBarItem
+        key={this.state.activeProject.code}
+        code={this.state.activeProject.id.toString()}
+        title={this.state.activeProject.title}
+        clickHandler={this.handleNavigation.bind(this)}
+      />}
 
-        {this.state.shownProjects.map(project => (
-        <ProjectBarItem
-          key={project.code}
-          code={project.code}
-          title={project.title}
-          clickHandler={this.handleNavigation.bind(this)}
-        />
+      {this.state.shownProjects.map(project => (
+      <ProjectBarItem
+        key={project.code}
+        code={project.id.toString()}
+        title={project.title}
+        clickHandler={this.handleNavigation.bind(this)}
+      />
+      ))}
+
+      {this.state.dropdownProjects.length > 0 &&
+      <div className="navbar-item has-dropdown is-hoverable">
+        <a className="navbar-link">More</a>
+        <div className="navbar-dropdown">
+        {this.state.dropdownProjects.map(project => (
+          <ProjectBarItem
+            key={project.code}
+            code={project.id.toString()}
+            title={project.title}
+            clickHandler={this.handleNavigation.bind(this)}
+          />
         ))}
-        <div className="navbar-item has-dropdown is-hoverable">
-          <a className="navbar-link">More</a>
-          <div className="navbar-dropdown">
-          {this.state.dropdownProjects.map(project => (
-            <ProjectBarItem
-              key={project.code}
-              code={project.code}
-              title={project.title}
-              clickHandler={this.handleNavigation.bind(this)}
-            />
-          ))}
-          </div>
         </div>
+      </div>}
       </>
     );
   }
 
-  componentDidMount() {
-    const allRunning = this.fetchAllRunningProjects();
-    this.setState(() => {
-      return {
-        shownProjects: allRunning.slice(1, this.props.maxColumns),
-        dropdownProjects: allRunning.slice(this.props.maxColumns)
-      }
-    });
-  }
-
   handleNavigation(event: React.SyntheticEvent) {
-    const allRunning = this.fetchAllRunningProjects();
     const navCode = event.currentTarget.getAttribute("data-code");
     if (!navCode) throw new Error(`${event.currentTarget.nodeName} has no "data-code" attribute`);
 
     const sortedRunning: Project[] = [];
-    const nextActiveProject = allRunning.find((project) => project.code === navCode);
+    const nextActiveProject = this.state.runningProjects.find((project) => project.id.toString() === navCode);
     if (!nextActiveProject) throw new Error(`No project matches code: ${navCode}`);
 
     sortedRunning.push(nextActiveProject);
-    sortedRunning.push(...allRunning.filter((project) => project.code !== navCode));
+    sortedRunning.push(...this.state.runningProjects.filter((project) => project.id.toString() !== navCode));
 
-    this.setState(() => {
+    this.setState((prevState) => {
       return {
+        ...prevState,
         activeProject: nextActiveProject,
         shownProjects: sortedRunning.slice(1, this.props.maxColumns),
         dropdownProjects: sortedRunning.slice(this.props.maxColumns)
       }
     });
-  }
-
-  private fetchAllRunningProjects(): Project[] {
-    return [
-      { code: "hailstorm_ocean", title: "Hailstorm Basic Priming test with Digital Ocean droplets and custom JMeter" },
-      { code: "acme_endurance", title: "Acme Endurance" },
-      { code: "acme_30_burst", title: "Acme 30 Burst" },
-      { code: "acme_60_burst", title: "Acme 60 Burst" },
-      { code: "acme_90_burst", title: "Acme 90 Burst" },
-      { code: "hailstorm_basic", title: "Hailstorm Basic" },
-      { code: "cadent_capacity", title: "Cadent Capacity" },
-    ];
   }
 }
