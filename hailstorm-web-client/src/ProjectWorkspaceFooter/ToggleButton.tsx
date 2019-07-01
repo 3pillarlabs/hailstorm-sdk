@@ -13,8 +13,8 @@ export const ToggleButton: React.FC<ToggleButtonProps> = (props) => {
   }
 
   return (
-    <a className={`button ${styles.button} is-light`} onClick={clickHandler}>
+    <button className={`button ${styles.button} is-light`} onClick={clickHandler}>
       {props.children} <i className={props.isPressed ? "fa fa-angle-up" : "fa fa-angle-down"} />
-    </a>
+    </button>
   );
 }

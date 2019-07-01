@@ -7,6 +7,7 @@ import { JMeterConfiguration } from '../JMeterConfiguration';
 import { ClusterConfiguration } from '../ClusterConfiguration';
 import { SummaryView } from './SummaryView';
 import { History } from 'history';
+import { RunningProjects } from '../RunningProjects';
 
 interface NewProjectWizardState {
   activeTab: string;
@@ -79,6 +80,7 @@ export const NewProjectWizard: React.FC = () => {
             render={(routeProps) => <SummaryView transition={() => routeProps.history.push(`/projects/${state.projectId}`)} />} />
         </div>
       </div>
+      <RunningProjects />
     </div>
   );
 }

@@ -9,7 +9,7 @@ export interface ProjectBarProps {
 
 export const ProjectBar: React.FC<ProjectBarProps> = (props) => {
   const {runningProjects} = useContext(RunningProjectsContext);
-  const key:string = runningProjects.reduce((acc, project) => acc += project.id, '');
+  const key:string = runningProjects.reduce((acc, project) => acc += project.title, '');
   return (<ProjectBarHolder {...props} {...{runningProjects, key}} />);
 }
 
@@ -37,22 +37,19 @@ class ProjectBarHolder extends React.Component<ProjectBarHolderProps, ProjectBar
   }
 
   render() {
-    console.debug(this.props);
     return (
       <>
       {this.state.activeProject &&
       <ProjectBarItem
         key={this.state.activeProject.code}
-        code={this.state.activeProject.id.toString()}
-        title={this.state.activeProject.title}
+        project={this.state.activeProject}
         clickHandler={this.handleNavigation.bind(this)}
       />}
 
       {this.state.shownProjects.map(project => (
       <ProjectBarItem
         key={project.code}
-        code={project.id.toString()}
-        title={project.title}
+        project={project}
         clickHandler={this.handleNavigation.bind(this)}
       />
       ))}
@@ -64,8 +61,7 @@ class ProjectBarHolder extends React.Component<ProjectBarHolderProps, ProjectBar
         {this.state.dropdownProjects.map(project => (
           <ProjectBarItem
             key={project.code}
-            code={project.id.toString()}
-            title={project.title}
+            project={project}
             clickHandler={this.handleNavigation.bind(this)}
           />
         ))}

@@ -6,12 +6,11 @@ import { ProjectList } from './ProjectList';
 import { Route, HashRouter, Redirect } from 'react-router-dom';
 import { NewProjectWizard } from './NewProjectWizard';
 import { RunningProjectsProvider } from './RunningProjectsProvider';
-import { RunningProjects } from './RunningProjects';
 
 const App: React.FC = () => {
   return (
-    <HashRouter>
-      <RunningProjectsProvider>
+    <RunningProjectsProvider>
+      <HashRouter>
         <TopNav />
         <main>
           <Route exact path="/" render={() => (<Redirect to="/projects" />)} />
@@ -19,9 +18,8 @@ const App: React.FC = () => {
           <Route path="/projects/:id" component={ProjectWorkspace} />
           <Route path="/wizard/projects/:id" component={NewProjectWizard} />
         </main>
-        <RunningProjects />
-      </RunningProjectsProvider>
-    </HashRouter>
+      </HashRouter>
+    </RunningProjectsProvider>
   );
 };
 

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { ProjectServiceFactory } from '../ProjectService';
 import { Loader, LoaderSize } from '../Loader';
 import { Project, ExecutionCycleStatus } from '../domain';
 import { RunningProjectsContext } from '../RunningProjectsProvider';
 import styles from './ProjectList.module.scss';
+import { Link } from 'react-router-dom';
+import { fetchRunningProjects } from '../RunningProjects';
 
 function projectItem(project: Project): JSX.Element {
   let notificationQualifier = 'is-light';
@@ -16,17 +17,25 @@ function projectItem(project: Project): JSX.Element {
 
       case ExecutionCycleStatus.ABORTED:
         notificationQualifier = 'is-warning';
+        break;
 
       case ExecutionCycleStatus.FAILED:
         notificationQualifier = 'is-danger';
+        break;
+
       default:
         break;
     }
   }
+
   return (
     <div className="tile is-3 is-parent" key={project.id}>
-      <article className={`tile is-child notification ${notificationQualifier}`}>
-        <p className="title is-4">{project.title}</p>
+      <article className={`tile is-child notification ${notificationQualifier} ${styles.tileCard}`}>
+        <p className="title is-4">
+          <Link to={{pathname: `/projects/${project.id}`, state: { project }}}>
+            {project.title}
+          </Link>
+        </p>
       </article>
     </div>
   );
@@ -35,19 +44,15 @@ function projectItem(project: Project): JSX.Element {
 export const ProjectList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
-  const {runningProjects, setRunningProjects, fetchAttempted, setFetchAttempted} = useContext(RunningProjectsContext);
+  const context = useContext(RunningProjectsContext);
   useEffect(() => {
     if (loading) {
-      if (!fetchAttempted && setFetchAttempted) setFetchAttempted(true);
-      ProjectServiceFactory()
-        .list()
-        .then((fetchedProjects) => {
-          setProjects(fetchedProjects);
-          if (!fetchAttempted && setRunningProjects) setRunningProjects(fetchedProjects.filter((project) => project.running));
-        })
+      console.debug('ProjectList#useEffect');
+      fetchRunningProjects(context)
+        .then((fetchedProjects) => setProjects(fetchedProjects))
         .then(() => setLoading(false));
     }
-  });
+  }, []);
 
   return (
     loading ?
@@ -55,7 +60,7 @@ export const ProjectList: React.FC = () => {
     <div className="container">
       <h2 className="title is-2 workspace-header">Running now</h2>
       <div className={`tile is-ancestor ${styles.wrap}`}>
-        {runningProjects.map((project) => projectItem(project))}
+        {context.runningProjects.map((project) => projectItem(project))}
       </div>
 
       <h2 className="title is-2 workspace-header">Just completed</h2>

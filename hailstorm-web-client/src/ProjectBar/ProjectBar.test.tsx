@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { ProjectBar } from './index';
+import { ProjectBar } from './ProjectBar';
 
 it('renders without crashing', () => {
   const div = document.createElement('div');
