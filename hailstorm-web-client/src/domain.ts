@@ -7,16 +7,34 @@ export interface Project {
   running: boolean;
   currenExecutionCycle?: ExecutionCycle;
   recentExecutionCycle?: ExecutionCycle;
+  autoStop: boolean;
 }
 
 export interface ExecutionCycle {
+  id: number;
+  projectId: number;
   startedAt: Date;
-  stoppedAt: Date | undefined;
-  status: ExecutionCycleStatus;
+  stoppedAt?: Date | undefined;
+  status?: ExecutionCycleStatus;
+  threadsCount?: number;
+  responseTime?: number;
+  throughput?: number;
 }
 
 export enum ExecutionCycleStatus {
-  STOPPED,
-  ABORTED,
-  FAILED
+  STOPPED = "stopped",
+  ABORTED = "aborted",
+  FAILED = "failed",
+  EXCLUDED = "excluded",
+}
+
+export interface Report {
+  id: number;
+  projectId: number;
+  title: string;
+}
+
+export interface JtlFile {
+  title: string;
+  url: string;
 }

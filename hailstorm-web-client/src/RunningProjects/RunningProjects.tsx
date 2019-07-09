@@ -1,24 +1,13 @@
 import React, { useContext, useEffect } from 'react';
-import { RunningProjectsContext, RunningProjectsCtxProps } from '../RunningProjectsProvider'
-import { ApiFactory } from '../api';
+import { RunningProjectsContext } from '../RunningProjectsProvider'
 
 export const RunningProjects: React.FC = () => {
-  const context = useContext(RunningProjectsContext);
+  const {reloadRunningProjects} = useContext(RunningProjectsContext);
 
   useEffect(() => {
     console.debug('RunningProjects#useEffect');
-    fetchRunningProjects(context);
+    reloadRunningProjects();
   }, []);
 
   return null;
-}
-
-export async function fetchRunningProjects(context: RunningProjectsCtxProps) {
-  return ApiFactory()
-    .projects()
-    .list()
-    .then((fetchedProjects) => {
-        if (context.setRunningProjects) context.setRunningProjects(fetchedProjects.filter((project) => project.running));
-        return fetchedProjects;
-    });
 }

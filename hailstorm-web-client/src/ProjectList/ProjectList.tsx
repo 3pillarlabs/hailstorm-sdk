@@ -4,7 +4,6 @@ import { Project, ExecutionCycleStatus } from '../domain';
 import { RunningProjectsContext } from '../RunningProjectsProvider';
 import styles from './ProjectList.module.scss';
 import { Link } from 'react-router-dom';
-import { fetchRunningProjects } from '../RunningProjects';
 
 function projectItem(project: Project): JSX.Element {
   let notificationQualifier = 'is-light';
@@ -44,11 +43,11 @@ function projectItem(project: Project): JSX.Element {
 export const ProjectList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
-  const context = useContext(RunningProjectsContext);
+  const {reloadRunningProjects, runningProjects} = useContext(RunningProjectsContext);
   useEffect(() => {
     if (loading) {
       console.debug('ProjectList#useEffect');
-      fetchRunningProjects(context)
+      reloadRunningProjects()
         .then((fetchedProjects) => setProjects(fetchedProjects))
         .then(() => setLoading(false));
     }
@@ -60,7 +59,7 @@ export const ProjectList: React.FC = () => {
     <div className="container">
       <h2 className="title is-2 workspace-header">Running now</h2>
       <div className={`tile is-ancestor ${styles.wrap}`}>
-        {context.runningProjects.map((project) => projectItem(project))}
+        {runningProjects.map((project) => projectItem(project))}
       </div>
 
       <h2 className="title is-2 workspace-header">Just completed</h2>

@@ -2,16 +2,17 @@ import React from 'react';
 import styles from './Loader.module.scss';
 
 export enum LoaderSize {
-  APP = 'app'
+  APP = 'app',
+  COMPONENT = 'component'
 }
 
 export interface LoaderProps {
-  size: LoaderSize
+  size?: LoaderSize
 }
 
-export const Loader: React.FC<LoaderProps> = (props) => {
+export const Loader: React.FC<LoaderProps> = ({size = LoaderSize.COMPONENT, ...restProps}) => {
   let loaderCssClass: string | undefined = undefined;
-  switch (props.size) {
+  switch (size) {
     case LoaderSize.APP:
       loaderCssClass = styles.appLoader;
       break;

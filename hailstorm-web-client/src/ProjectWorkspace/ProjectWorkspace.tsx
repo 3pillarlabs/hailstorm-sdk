@@ -17,15 +17,27 @@ interface TProps {
   id: string;
 }
 
+export interface ActiveProjectContextProps {
+  project: Project;
+  setRunning: (endState: boolean) => void;
+}
+
+export const ActiveProjectContext = React.createContext<ActiveProjectContextProps>({
+  project: {} as Project,
+  setRunning: () => {}
+});
+
 export const ProjectWorkspace: React.FC<RouteComponentProps<TProps>> = (props) => {
   const projectProp: Project = props.location && props.location.state && props.location.state.project;
   const [project, setProject] = useState<Project>({...projectProp});
+  const setRunning = (endState: boolean) => setProject({...project, running: endState});
+
   useEffect(() => {
     console.debug('ProjectWorkspace#useEffect');
     if (project && project.id === parseInt(props.match.params.id)) return;
     ApiFactory()
       .projects()
-      .get(props.match.params.id)
+      .get(parseInt(props.match.params.id))
       .then((fetchedProject) => setProject(fetchedProject));
   });
 
@@ -34,13 +46,13 @@ export const ProjectWorkspace: React.FC<RouteComponentProps<TProps>> = (props) =
     <>
     {
       project && project.id === parseInt(props.match.params.id) ?
-      <>
-      <ProjectWorkspaceHeader project={project} />
-      <ProjectWorkspaceMain></ProjectWorkspaceMain>
-      <ProjectWorkspaceLog></ProjectWorkspaceLog>
-      <ProjectWorkspaceFooter></ProjectWorkspaceFooter>
-      </> : <Loader size={LoaderSize.APP} />
-    }
+      <ActiveProjectContext.Provider value={{project, setRunning}}>
+        <ProjectWorkspaceHeader project={project} />
+        <ProjectWorkspaceMain />
+        <ProjectWorkspaceLog></ProjectWorkspaceLog>
+        <ProjectWorkspaceFooter></ProjectWorkspaceFooter>
+      </ActiveProjectContext.Provider> :
+      <Loader size={LoaderSize.APP} />}
       <RunningProjects />
     </>
     </div>

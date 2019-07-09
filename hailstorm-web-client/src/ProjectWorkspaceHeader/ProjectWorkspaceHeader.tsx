@@ -3,7 +3,6 @@ import { ProjectWorkspaceBasicProps } from '../ProjectWorkspace';
 import styles from './ProjectWorkspaceHeader.module.scss';
 import { ApiFactory } from '../api';
 import { RunningProjectsContext } from '../RunningProjectsProvider';
-import { fetchRunningProjects } from '../RunningProjects';
 
 export const ProjectWorkspaceHeader: React.FC<ProjectWorkspaceBasicProps> = (props) => {
   const [isEditable, setEditable] = useState(false);
@@ -11,10 +10,10 @@ export const ProjectWorkspaceHeader: React.FC<ProjectWorkspaceBasicProps> = (pro
   const [errorMessage, setErrorMessage] = useState<string>('');
   const toggleEditable = () => setEditable(!isEditable);
   let inputRef = React.createRef<any>();
-  const runningProjectContext = useContext(RunningProjectsContext);
+  const {reloadRunningProjects} = useContext(RunningProjectsContext);
   const onSubmitHandler = () => {
     const inputValue = inputRef.current.value as string;
-    if (inputValue.trim().length == 0) {
+    if (inputValue.trim().length === 0) {
       setErrorMessage("Title can't be blank");
       return;
     }
@@ -25,7 +24,7 @@ export const ProjectWorkspaceHeader: React.FC<ProjectWorkspaceBasicProps> = (pro
       .projects()
       .update(props.project.id, {title: inputRef.current.value})
       .then(() => {
-        if (props.project.running) fetchRunningProjects(runningProjectContext);
+        if (props.project.running) reloadRunningProjects();
       });
   };
 
