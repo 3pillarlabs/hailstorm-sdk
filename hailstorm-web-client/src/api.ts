@@ -3,6 +3,8 @@ import { Project, ExecutionCycleStatus, ExecutionCycle, Report, JtlFile } from "
 export type ProjectActions = 'stop' | 'abort' | 'start';
 export type ResultActions = 'report' | 'export' | 'trash';
 
+const minutesAgo = (minutes: number): Date => new Date(new Date().getTime() - (minutes * 60 * 1000));
+
 const DB: {
   projects: Project[],
   executionCycles: ExecutionCycle[],
@@ -19,11 +21,11 @@ const DB: {
   ],
 
   executionCycles: [
-    { id: 11, startedAt: new Date(2019, 5, 27, 17, 1, 23), threadsCount: 100, projectId: 1 },
-    { id: 101, startedAt: new Date(2019, 5, 27, 17, 1, 23), threadsCount: 10, projectId: 2 },
-    { id: 201, startedAt: new Date(2019, 5, 27, 17, 1, 23), threadsCount: 30, projectId: 7 },
-    { id: 10, startedAt: new Date(2019, 5, 27, 17, 1, 23), stoppedAt: new Date(2019, 5, 27, 17, 35, 12), status: ExecutionCycleStatus.STOPPED, threadsCount: 80, responseTime: 674.78, throughput: 12.34, projectId: 1 },
-    { id: 1, startedAt: new Date(2018, 11, 3, 10, 30, 49), stoppedAt: new Date(2018, 11, 3, 10, 35, 57), status: ExecutionCycleStatus.STOPPED, threadsCount: 25, responseTime: 74.78, throughput: 5.47, projectId: 1 },
+    { id: 1, projectId: 1, startedAt: new Date(2018, 11, 3, 10, 30, 49), stoppedAt: new Date(2018, 11, 3, 10, 35, 57), status: ExecutionCycleStatus.STOPPED, threadsCount: 25, responseTime: 74.78, throughput: 5.47 },
+    { id: 201, projectId: 7, startedAt: minutesAgo(60), threadsCount: 30 },
+    { id: 202, projectId: 1, startedAt: minutesAgo(30), stoppedAt: new Date(), status: ExecutionCycleStatus.STOPPED, threadsCount: 80, responseTime: 674.78, throughput: 12.34 },
+    { id: 203, projectId: 2, startedAt: minutesAgo(15), threadsCount: 10 },
+    { id: 204, projectId: 1, startedAt: minutesAgo(5), threadsCount: 100 },
   ],
 
   reports: [
@@ -65,7 +67,14 @@ class ProjectService {
   list(): Promise<Project[]> {
     console.log(`ProjectService#list()`);
     return new Promise((resolve, reject) => {
-      setTimeout(() => resolve(DB.projects.map((x) => ({...x}))), 300);
+      setTimeout(() => resolve(DB.projects.map((x) => {
+        const currentExecutionCycle:
+          | ExecutionCycle
+          | undefined = DB.executionCycles.find(
+          exCycle => !exCycle.stoppedAt && exCycle.projectId === x.id
+        );
+        return {...x, currenExecutionCycle: currentExecutionCycle};
+      })), 300);
     });
   }
 
@@ -92,24 +101,35 @@ class ProjectService {
       switch (attributes.action) {
         case 'start':
           processingTime = 30000;
-          dbOp = () => DB.executionCycles.unshift({id: DB.executionCycles[0].id + 1, startedAt: new Date(2019, 5, 27, 17, 1, 23), threadsCount: 100, projectId: id })
+          dbOp = () => DB.executionCycles.push({
+            id: DB.executionCycles[DB.executionCycles.length - 1].id + 1,
+            startedAt: new Date(),
+            threadsCount: 100,
+            projectId: id
+          });
           break;
 
         case 'stop':
           processingTime = 30000;
           dbOp = () => {
-            DB.executionCycles[0].stoppedAt = new Date(DB.executionCycles[0].startedAt.getTime() + (30 * 60 * 1000));
-            DB.executionCycles[0].responseTime = 234.56;
-            DB.executionCycles[0].status = ExecutionCycleStatus.STOPPED;
-            DB.executionCycles[0].throughput = 10.24;
+            const index = DB.executionCycles.findIndex((x) => x.projectId === id && !x.stoppedAt);
+            if (index < 0) return;
+
+            DB.executionCycles[index].stoppedAt = new Date();
+            DB.executionCycles[index].responseTime = 234.56;
+            DB.executionCycles[index].status = ExecutionCycleStatus.STOPPED;
+            DB.executionCycles[index].throughput = 10.24;
           }
           break;
 
         case 'abort':
           processingTime = 15000;
           dbOp = () => {
-            DB.executionCycles[0].stoppedAt = new Date(DB.executionCycles[0].startedAt.getTime() + (30 * 60 * 1000));
-            DB.executionCycles[0].status = ExecutionCycleStatus.ABORTED;
+            const index = DB.executionCycles.findIndex((x) => x.projectId === id && !x.stoppedAt);
+            if (index < 0) return;
+
+            DB.executionCycles[index].stoppedAt = new Date();
+            DB.executionCycles[index].status = ExecutionCycleStatus.ABORTED;
           }
           break;
 

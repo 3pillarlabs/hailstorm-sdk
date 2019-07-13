@@ -1,94 +1,57 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { Project } from '../domain';
 import { ProjectBarItem } from "../ProjectBarItem";
 import { RunningProjectsContext } from '../RunningProjectsProvider';
 
 export interface ProjectBarProps {
-  maxColumns: number;
+  maxItems?: number;
 }
 
-export const ProjectBar: React.FC<ProjectBarProps> = (props) => {
+export const ProjectBar: React.FC<ProjectBarProps> = (props = {maxItems: 10}) => {
   const {runningProjects} = useContext(RunningProjectsContext);
-  const key:string = runningProjects.reduce((acc, project) => acc += project.title, '');
-  return (<ProjectBarHolder {...props} {...{runningProjects, key}} />);
-}
+  const [projectItems, setProjectItems] = useState<Project[]>([]);
+  const projectCompareFn = (a: Project, b: Project) =>
+    a.currenExecutionCycle && b.currenExecutionCycle
+      ? b.currenExecutionCycle.startedAt.getTime() - a.currenExecutionCycle.startedAt.getTime()
+      : b.id - a.id
 
-interface ProjectBarHolderProps extends ProjectBarProps {
-  runningProjects: Project[];
-}
+  useEffect(() => {
+    console.debug('ProjectBar#useEffect(runningProjects)');
+    const sortedByStartedAt = [...runningProjects].sort(projectCompareFn);
+    setProjectItems(sortedByStartedAt);
+  }, [runningProjects]);
 
-interface ProjectBarState {
-  runningProjects: Project[];
-  activeProject: Project | undefined,
-  shownProjects: Project[];
-  dropdownProjects: Project[];
-}
+  const activeProject: Project | null = projectItems.length > 0 ? projectItems[0] : null;
+  const otherRunningProjects: Project[] = projectItems.slice(1, props.maxItems);
+  const dropdownProjects: Project[] = projectItems.slice(props.maxItems);
 
-class ProjectBarHolder extends React.Component<ProjectBarHolderProps, ProjectBarState> {
+  return (
+    <>
+    {activeProject &&
+    <ProjectBarItem
+      key={projectItems[0].code}
+      project={projectItems[0]}
+    />}
 
-  constructor(props: ProjectBarHolderProps) {
-    super(props);
-    this.state = {
-      runningProjects: this.props.runningProjects,
-      activeProject: this.props.runningProjects.length > 0 ? this.props.runningProjects[0] : undefined,
-      shownProjects: this.props.runningProjects.slice(1, this.props.maxColumns),
-      dropdownProjects: this.props.runningProjects.slice(this.props.maxColumns)
-    }
-  }
+    {otherRunningProjects.map(project => (
+    <ProjectBarItem
+      key={project.code}
+      project={project}
+    />
+    ))}
 
-  render() {
-    return (
-      <>
-      {this.state.activeProject &&
-      <ProjectBarItem
-        key={this.state.activeProject.code}
-        project={this.state.activeProject}
-        clickHandler={this.handleNavigation.bind(this)}
-      />}
-
-      {this.state.shownProjects.map(project => (
-      <ProjectBarItem
-        key={project.code}
-        project={project}
-        clickHandler={this.handleNavigation.bind(this)}
-      />
+    {dropdownProjects.length > 0 &&
+    <div className="navbar-item has-dropdown is-hoverable">
+      <a className="navbar-link">More</a>
+      <div className="navbar-dropdown">
+      {dropdownProjects.map(project => (
+        <ProjectBarItem
+          key={project.code}
+          project={project}
+        />
       ))}
-
-      {this.state.dropdownProjects.length > 0 &&
-      <div className="navbar-item has-dropdown is-hoverable">
-        <a className="navbar-link">More</a>
-        <div className="navbar-dropdown">
-        {this.state.dropdownProjects.map(project => (
-          <ProjectBarItem
-            key={project.code}
-            project={project}
-            clickHandler={this.handleNavigation.bind(this)}
-          />
-        ))}
-        </div>
-      </div>}
-      </>
-    );
-  }
-
-  handleNavigation(event: React.SyntheticEvent) {
-    const navCode = event.currentTarget.getAttribute("data-code");
-    if (!navCode) throw new Error(`${event.currentTarget.nodeName} has no "data-code" attribute`);
-
-    const sortedRunning: Project[] = [];
-    const nextActiveProject = this.state.runningProjects.find((project) => project.id.toString() === navCode);
-    if (!nextActiveProject) throw new Error(`No project matches code: ${navCode}`);
-
-    sortedRunning.push(nextActiveProject);
-    sortedRunning.push(...this.state.runningProjects.filter((project) => project.id.toString() !== navCode));
-
-    this.setState((prevState) => {
-      return {
-        ...prevState,
-        activeProject: nextActiveProject,
-        shownProjects: sortedRunning.slice(1, this.props.maxColumns),
-        dropdownProjects: sortedRunning.slice(this.props.maxColumns)
-      }
-    });
-  }
+      </div>
+    </div>}
+    </>
+  );
 }

@@ -6,7 +6,6 @@ import { Project } from '../domain';
 interface ProjectBarItemProps {
   isActive?: boolean;
   project: Project;
-  clickHandler: (event: React.SyntheticEvent) => void
 }
 
 export const ProjectBarItem: React.FC<ProjectBarItemProps> = (props) => {
@@ -18,7 +17,6 @@ export const ProjectBarItem: React.FC<ProjectBarItemProps> = (props) => {
       className={className}
       title={isTruncated ? props.project.title : undefined}
       data-code={props.project.id}
-      onClick={props.clickHandler}
       activeClassName="is-active"
     >
       <h2>{displayTitle}</h2>

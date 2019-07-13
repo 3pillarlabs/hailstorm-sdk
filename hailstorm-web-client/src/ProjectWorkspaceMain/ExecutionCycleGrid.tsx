@@ -38,10 +38,12 @@ export const ExecutionCycleGrid: React.FC<ExecutionCycleGridProps> = (props) => 
       .list(project.id)
       .then((fetchedCycles) => {
         setExecutionCycles(
-          fetchedCycles.map<CheckedExecutionCycle>(exCycle => ({
-            ...exCycle,
-            checked: exCycle.stoppedAt ? false : null
-          }))
+          fetchedCycles
+            .map<CheckedExecutionCycle>(exCycle => ({
+              ...exCycle,
+              checked: exCycle.stoppedAt ? false : null
+            }))
+            .sort((a, b) => (b.startedAt.getTime() - a.startedAt.getTime()))
         );
 
         setSelectAll(false);

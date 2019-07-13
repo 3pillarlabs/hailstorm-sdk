@@ -36,9 +36,14 @@
   },
   "devDependencies": {
     "@fortawesome/fontawesome-free": "^5.8.2",
+    "@types/enzyme": "^3.10.2",
+    "@types/enzyme-adapter-react-16": "^1.0.5",
     "@types/react-router": "^5.0.2",
     "@types/react-router-dom": "^4.3.4",
     "bulma-3pillar": "git+ssh://git@github.com/3pillarlabs/bulma-3pillar.git",
+    "enzyme": "^3.10.0",
+    "enzyme-adapter-react-16": "^1.14.0",
+    "jest-enzyme": "^7.0.2",
     "node-sass": "^4.12.0"
   }
 }

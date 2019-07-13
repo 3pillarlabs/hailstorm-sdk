@@ -40,7 +40,7 @@ export const TopNav: React.FC = () => {
             <NavLink to="/projects" className="navbar-item" activeClassName="is-active" exact={true}>
               <h2>All Projects</h2>
             </NavLink>
-            <ProjectBar maxColumns={5}></ProjectBar>
+            <ProjectBar maxItems={5}></ProjectBar>
           </div>
 
           <div className="navbar-end">
