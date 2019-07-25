@@ -28,18 +28,22 @@ export const ActiveProjectContext = React.createContext<ActiveProjectContextProp
 });
 
 export const ProjectWorkspace: React.FC<RouteComponentProps<TProps>> = (props) => {
-  const projectProp: Project = props.location && props.location.state && props.location.state.project;
-  const [project, setProject] = useState<Project>({...projectProp});
-  const setRunning = (endState: boolean) => setProject({...project, running: endState});
+  const [project, setProject] = useState<Project | undefined>(undefined);
+  const setRunning = (endState: boolean) => {
+    if (project) setProject({...project, running: endState});
+  };
 
   useEffect(() => {
-    console.debug('ProjectWorkspace#useEffect');
-    if (project && project.id === parseInt(props.match.params.id)) return;
-    ApiFactory()
-      .projects()
-      .get(parseInt(props.match.params.id))
-      .then((fetchedProject) => setProject(fetchedProject));
-  });
+    console.debug('ProjectWorkspace#useEffect(props)');
+    if (props.location.state) {
+      setProject(props.location.state.project);
+    } else {
+      ApiFactory()
+        .projects()
+        .get(parseInt(props.match.params.id))
+        .then((fetchedProject) => setProject(fetchedProject));
+    }
+  }, [props]);
 
   return (
     <div className="container">

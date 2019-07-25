@@ -3,15 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@types/jest": "^24.0.13",
-    "@types/node": "^12.0.4",
-    "@types/react": "^16.8.19",
-    "@types/react-dom": "^16.8.4",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
-    "react-router-dom": "^5.0.1",
-    "react-scripts": "3.0.1",
-    "typescript": "^3.5.1"
+    "react-router-dom": "^5.0.1"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -35,7 +29,14 @@
     ]
   },
   "devDependencies": {
+    "react-scripts": "3.0.1",
+    "typescript": "^3.5.1",
     "@fortawesome/fontawesome-free": "^5.8.2",
+    "@types/jest": "^24.0.13",
+    "@types/node": "^12.0.4",
+    "@types/react": "^16.8.19",
+    "@types/react-dom": "^16.8.4",
+    "@testing-library/react": "^8.0.5",
     "@types/enzyme": "^3.10.2",
     "@types/enzyme-adapter-react-16": "^1.0.5",
     "@types/react-router": "^5.0.2",

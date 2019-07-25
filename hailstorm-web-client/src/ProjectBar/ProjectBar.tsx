@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { Project } from '../domain';
-import { ProjectBarItem } from "../ProjectBarItem";
+import { ProjectBarItem } from './ProjectBarItem';
 import { RunningProjectsContext } from '../RunningProjectsProvider';
 
 export interface ProjectBarProps {

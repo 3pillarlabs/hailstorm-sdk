@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
-import ReactDOM from 'react-dom';
+import React from 'react';
 import { ProjectBar } from './ProjectBar';
-import { shallow, mount, render } from 'enzyme';
+import { shallow, mount } from 'enzyme';
 import { RunningProjectsCtxProps, RunningProjectsContext } from '../RunningProjectsProvider';
-import { ProjectBarItem } from '../ProjectBarItem';
+import { ProjectBarItem } from './ProjectBarItem';
 import { Project, ExecutionCycle } from '../domain';
 import { HashRouter } from 'react-router-dom';
 
-describe(ProjectBar.name, () => {
+describe('<ProjectBar />', () => {
   it('renders without crashing', () => {
     shallow(<ProjectBar />);
   });
@@ -101,7 +100,6 @@ describe(ProjectBar.name, () => {
         reloadRunningProjects: () => new Promise((_, reject) => reject(new Error('unexpected')))
       };
 
-      console.debug(context.runningProjects);
       const projectBar = mount(
         <RunningProjectsContext.Provider value={context}>
           <HashRouter>

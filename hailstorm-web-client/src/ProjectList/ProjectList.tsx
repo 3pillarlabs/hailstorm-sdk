@@ -7,8 +7,10 @@ import { Link } from 'react-router-dom';
 
 function projectItem(project: Project): JSX.Element {
   let notificationQualifier = 'is-light';
-  if (project.running) notificationQualifier = 'is-warning';
-  if (project.recentExecutionCycle) {
+  if (project.running) {
+    notificationQualifier = 'is-warning';
+
+  } else if (project.recentExecutionCycle) {
     switch (project.recentExecutionCycle.status) {
       case ExecutionCycleStatus.STOPPED:
         notificationQualifier = 'is-success';
@@ -49,7 +51,8 @@ export const ProjectList: React.FC = () => {
       console.debug('ProjectList#useEffect');
       reloadRunningProjects()
         .then((fetchedProjects) => setProjects(fetchedProjects))
-        .then(() => setLoading(false));
+        .then(() => setLoading(false))
+        .catch((reason) => console.error(reason));
     }
   }, []);
 
@@ -58,18 +61,18 @@ export const ProjectList: React.FC = () => {
     <Loader size={LoaderSize.APP} /> :
     <div className="container">
       <h2 className="title is-2 workspace-header">Running now</h2>
-      <div className={`tile is-ancestor ${styles.wrap}`}>
-        {runningProjects.map((project) => projectItem(project))}
+      <div className={`tile is-ancestor ${styles.wrap} ${styles.nowRunning}`}>
+        {runningProjects.map(projectItem)}
       </div>
 
       <h2 className="title is-2 workspace-header">Just completed</h2>
-      <div className={`tile is-ancestor ${styles.wrap}`}>
-        {projects.filter((project) => project.recentExecutionCycle).map((project) => projectItem(project)) }
+      <div className={`tile is-ancestor ${styles.wrap} ${styles.justCompleted}`}>
+        {projects.filter((project) => !project.running && project.recentExecutionCycle).map(projectItem)}
       </div>
 
       <h2 className="title is-2 workspace-header">All</h2>
-      <div className={`tile is-ancestor ${styles.wrap}`}>
-        {projects.map((project) => projectItem(project)) }
+      <div className={`tile is-ancestor ${styles.wrap} ${styles.allProjects}`}>
+        {projects.map(projectItem)}
       </div>
     </div>
   );

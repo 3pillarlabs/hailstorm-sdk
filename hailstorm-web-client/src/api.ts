@@ -36,7 +36,7 @@ const DB: {
 }
 
 // API
-class ApiService {
+export class ApiService {
 
   singletonContext: {[K: string]: any} = {
     projects: new ProjectService(),
@@ -62,7 +62,7 @@ class ApiService {
   }
 }
 
-class ProjectService {
+export class ProjectService {
 
   list(): Promise<Project[]> {
     console.log(`ProjectService#list()`);
@@ -151,7 +151,7 @@ class ProjectService {
   }
 }
 
-class ExecutionCycleService {
+export class ExecutionCycleService {
 
   list(projectId: number): Promise<ExecutionCycle[]> {
     console.log(`ExecutionCycle#list(${projectId})`);
@@ -176,7 +176,7 @@ class ExecutionCycleService {
   }
 }
 
-class ReportService {
+export class ReportService {
 
   list(projectId: number) {
     return new Promise<Report[]>((resolve, reject) =>
@@ -203,7 +203,7 @@ class ReportService {
   }
 }
 
-class JtlExportService {
+export class JtlExportService {
   create(projectId: number, executionCycleIds: number[]): Promise<JtlFile> {
     console.log(`JtlExportService#create(${projectId}, ${executionCycleIds})`);
     return new Promise((resolve, reject) => setTimeout(() => {
