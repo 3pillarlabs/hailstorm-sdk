@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { ProjectWorkspaceBasicProps } from '../ProjectWorkspace';
 import styles from './ProjectWorkspaceHeader.module.scss';
 import { ApiFactory } from '../api';
@@ -6,13 +6,14 @@ import { RunningProjectsContext } from '../RunningProjectsProvider';
 
 export const ProjectWorkspaceHeader: React.FC<ProjectWorkspaceBasicProps> = (props) => {
   const [isEditable, setEditable] = useState(false);
-  const [title, setTitle] = useState<string>(props.project.title);
+  const [title, setTitle] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const toggleEditable = () => setEditable(!isEditable);
   let inputRef = React.createRef<any>();
   const {reloadRunningProjects} = useContext(RunningProjectsContext);
   const onSubmitHandler = () => {
     const inputValue = inputRef.current.value as string;
+    console.debug(inputValue);
     if (inputValue.trim().length === 0) {
       setErrorMessage("Title can't be blank");
       return;
@@ -27,6 +28,10 @@ export const ProjectWorkspaceHeader: React.FC<ProjectWorkspaceBasicProps> = (pro
         if (props.project.running) reloadRunningProjects();
       });
   };
+
+  useEffect(() => {
+    setTitle(props.project.title);
+  }, [props]);
 
   return (
     <div className="columns workspace-header">
@@ -76,7 +81,7 @@ function header(value: string, toggleEditable: () => void) {
   return (
     <h2 className="title is-2">
       {value}
-      <sup><i title="Edit" className={`fas fa-pen ${styles.editTrigger}`} onClick={toggleEditable}></i></sup>
+      <sup><a onClick={toggleEditable}><i title="Edit" className={`fas fa-pen ${styles.editTrigger}`}></i></a></sup>
     </h2>
   );
 }
