@@ -109,29 +109,44 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
       <div className="level">
         <div className="level-left">
           <div className="level-item">
-            <button className="button is-small is-light" onClick={toggleRunning(false, "stop")} disabled={gridButtonStates.stop}>
+            <button
+              name="stop"
+              className="button is-small is-light"
+              onClick={toggleRunning(false, "stop")}
+              disabled={gridButtonStates.stop}
+            >
               <i className="fas fa-stop-circle"></i> Stop
             </button>
           </div>
           <div className="level-item">
-            <button className="button is-small is-danger" onClick={toggleRunning(false, "abort")} disabled={gridButtonStates.abort}>
+            <button
+              name="abort"
+              className="button is-small is-danger"
+              onClick={toggleRunning(false, "abort")}
+              disabled={gridButtonStates.abort}
+            >
               <i className="fa fa-ban"></i> Abort
             </button>
           </div>
         </div>
         <div className="level-right">
           <div className="level-item">
-            <button className="button is-small" onClick={resultsHandler("report")} disabled={gridButtonStates.report}>
+            <button name="report" className="button is-small" onClick={resultsHandler("report")} disabled={gridButtonStates.report}>
               <i className="fas fa-chart-line"></i> Report
             </button>
           </div>
           <div className="level-item">
-            <button className="button is-small" onClick={resultsHandler("export")} disabled={gridButtonStates.export}>
+            <button name="export" className="button is-small" onClick={resultsHandler("export")} disabled={gridButtonStates.export}>
               <i className="fas fa-download"></i> Export
             </button>
           </div>
           <div className="level-item">
-            <button className="button is-small is-primary" disabled={gridButtonStates.start} onClick={toggleRunning(true, "start")}>
+            <button
+              name="start"
+              className="button is-small is-primary"
+              disabled={gridButtonStates.start}
+              onClick={toggleRunning(true, "start")}
+            >
               <i className="fas fa-play-circle"></i> Start
             </button>
           </div>
@@ -145,7 +160,7 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
         </div>
         <div className="level-right">
           <div className="level-item">
-            <button className="button is-small" disabled={gridButtonStates.trash} onClick={toggleTrash}>
+            <button name="trash" className="button is-small" disabled={gridButtonStates.trash} onClick={toggleTrash}>
             {viewTrash ?
               <span><i className="fas fa-trash-restore"></i> Close Trash</span> :
               <span><i className="fas fa-trash"></i> Open Trash</span>}

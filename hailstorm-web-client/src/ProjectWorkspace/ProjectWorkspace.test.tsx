@@ -1,10 +1,11 @@
 import React from 'react';
-import { shallow, mount } from 'enzyme';
+import { shallow, mount, ReactWrapper } from 'enzyme';
 import { ProjectWorkspace } from './ProjectWorkspace';
 import { createHashHistory } from 'history';
 import { Project } from '../domain';
 import { Link, Route, MemoryRouter } from 'react-router-dom';
 import { ProjectService } from '../api';
+import { act } from '@testing-library/react';
 
 jest.mock('../RunningProjects', () => {
   return {
@@ -44,6 +45,10 @@ jest.mock('../ProjectWorkspaceFooter', () => {
 });
 
 describe('<ProjectWorkspace />', () => {
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
   it('should show the loader initially', () => {
     const component = shallow(
       <ProjectWorkspace
@@ -118,19 +123,22 @@ describe('<ProjectWorkspace />', () => {
           } as Project)
         );
 
-      const component = mount(
-        <ProjectWorkspace
-          location={{hash: '', pathname: '', search: '', state: null}}
-          history={createHashHistory()}
-          match={{isExact: true, params: {id: "1"}, path: '', url: ''}} />
-      );
+      let component: ReactWrapper | null = null;
+      act(() => {
+        component = mount(
+          <ProjectWorkspace
+            location={{hash: '', pathname: '', search: '', state: null}}
+            history={createHashHistory()}
+            match={{isExact: true, params: {id: "1"}, path: '', url: ''}} />
+        );
+      });
 
       expect(spy).toHaveBeenCalled();
       setTimeout(() => {
         done();
-        component.update();
-        console.debug(component.html());
-        expect(component.find('div#projectWorkspaceHeader')).toHaveText('a');
+        component!.update();
+        console.debug(component!.html());
+        expect(component!.find('div#projectWorkspaceHeader')).toHaveText('a');
       }, 100);
     });
   });

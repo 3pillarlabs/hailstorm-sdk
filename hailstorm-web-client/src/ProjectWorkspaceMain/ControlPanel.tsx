@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { ToolBar } from './ToolBar';
 import { ExecutionCycleGrid } from './ExecutionCycleGrid';
-import { ActiveProjectContext } from '../ProjectWorkspace/ProjectWorkspace';
+import { ActiveProjectContext } from '../ProjectWorkspace';
 import { ExecutionCycle } from '../domain';
 
 export interface CheckedExecutionCycle extends ExecutionCycle {
