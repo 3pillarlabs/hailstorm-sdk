@@ -60,7 +60,7 @@ export const ExecutionCycleGrid: React.FC<ExecutionCycleGridProps> = (props) => 
       setGridButtonStates({ ...gridButtonStates, report: true, export: true });
     }
 
-    if (executionCycles.every((exCycle) => !exCycle.stoppedAt || exCycle.checked)) {
+    if (executionCycles.length && executionCycles.every((exCycle) => !exCycle.stoppedAt || exCycle.checked)) {
       setSelectAll(true);
     } else {
       setSelectAll(false);
@@ -134,7 +134,7 @@ export const ExecutionCycleGrid: React.FC<ExecutionCycleGridProps> = (props) => 
         (<tr>
           <td colSpan={7}>
             <div className="notification is-info">
-              {viewTrash ? "No items in trash." : "No tests yet."}
+              {viewTrash ? "No items in trash." : "No tests to show."}
             </div>
           </td>
         </tr>)}
