@@ -9,7 +9,7 @@ export interface RunningProjectsCtxProps {
 
 export const RunningProjectsContext = React.createContext<RunningProjectsCtxProps>({
   runningProjects: [],
-  reloadRunningProjects: async () => new Promise<Project[]>((resolve, _) => resolve([])),
+  reloadRunningProjects: async () => new Promise<Project[]>((_, reject) => reject()),
 });
 
 export const RunningProjectsProvider: React.FC = (props) => {
