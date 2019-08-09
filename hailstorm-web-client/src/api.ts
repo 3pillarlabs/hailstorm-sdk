@@ -65,7 +65,7 @@ export class ApiService {
 export class ProjectService {
 
   list(): Promise<Project[]> {
-    console.log(`ProjectService#list()`);
+    console.log(`api ---- ProjectService#list()`);
     return new Promise((resolve, reject) => {
       setTimeout(() => resolve(DB.projects.map((x) => {
         const currentExecutionCycle:
@@ -79,7 +79,7 @@ export class ProjectService {
   }
 
   get(id: number): Promise<Project> {
-    console.log(`ProjectService#get(${id})`);
+    console.log(`api ---- ProjectService#get(${id})`);
     let matchedProject: Project | undefined = DB.projects.find((project) => project.id === id);
     return new Promise((resolve, reject) => {
       if (matchedProject) {
@@ -91,7 +91,7 @@ export class ProjectService {
   }
 
   update(id: number, attributes: {title?: string, running?: boolean, action?: ProjectActions}): Promise<void> {
-    console.log(`ProjectService#update(${id}, ${Object.keys(attributes)}, ${Object.values(attributes)})`);
+    console.log(`api ---- ProjectService#update(${id}, ${Object.keys(attributes)}, ${Object.values(attributes)})`);
     const matchedProject: Project | undefined = DB.projects.find((project) => id === project.id);
     let processingTime = 100;
     let dbOp: (() => any) | undefined = undefined;
@@ -154,7 +154,7 @@ export class ProjectService {
 export class ExecutionCycleService {
 
   list(projectId: number): Promise<ExecutionCycle[]> {
-    console.log(`ExecutionCycle#list(${projectId})`);
+    console.log(`api ---- ExecutionCycle#list(${projectId})`);
     return new Promise(
       (resolve, reject) => setTimeout(
         () => resolve(DB.executionCycles
@@ -163,7 +163,7 @@ export class ExecutionCycleService {
   }
 
   update(executionCycleId: number, projectId: number, attributes: {status?: ExecutionCycleStatus}): Promise<ExecutionCycle> {
-    console.log(`ExecutionCycleService#update(${executionCycleId}, ${projectId}, ${attributes})`);
+    console.log(`api ---- ExecutionCycleService#update(${executionCycleId}, ${projectId}, ${attributes})`);
     const matchedCycle = DB.executionCycles.find((value) => value.id === executionCycleId && value.projectId === projectId);
     return new Promise((resolve, reject) => setTimeout(() => {
       if (matchedCycle) {
@@ -184,7 +184,7 @@ export class ReportService {
   }
 
   create(projectId: number, executionCycleIds: number[]): Promise<void> {
-    console.log(`ExecutionCycles#report(${projectId}, ${executionCycleIds})`);
+    console.log(`api ---- ExecutionCycles#report(${projectId}, ${executionCycleIds})`);
     return new Promise((resolve, reject) => setTimeout(() => {
       const project = DB.projects.find((value) => value.id === projectId);
       if (project) {
@@ -205,7 +205,7 @@ export class ReportService {
 
 export class JtlExportService {
   create(projectId: number, executionCycleIds: number[]): Promise<JtlFile> {
-    console.log(`JtlExportService#create(${projectId}, ${executionCycleIds})`);
+    console.log(`api ---- JtlExportService#create(${projectId}, ${executionCycleIds})`);
     return new Promise((resolve, reject) => setTimeout(() => {
       const project = DB.projects.find((value) => value.id === projectId);
       if (project) {

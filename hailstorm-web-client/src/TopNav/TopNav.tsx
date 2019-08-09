@@ -1,15 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import logo from '../AppLogo.png';
 import { ProjectBar } from '../ProjectBar';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, withRouter } from 'react-router-dom';
+import { RunningProjectsContext } from '../RunningProjectsProvider';
+import { RouteComponentProps } from 'react-router';
 
 // Top Navigation Component
-export const TopNav: React.FC = () => {
+const TopNavWithouRouter: React.FC<RouteComponentProps> = ({location}) => {
   const [isBurgerActive, dispatchBurgerActive] = useState(false);
   const handleBurgerClick = (event: React.SyntheticEvent) => {
     event.currentTarget.classList.toggle("is-active");
     dispatchBurgerActive(!isBurgerActive);
   };
+
+  const {reloadRunningProjects} = useContext(RunningProjectsContext);
+
+  useEffect(() => {
+    if (location.pathname === '/' || location.pathname === '/projects') return;
+    console.debug('TopNav#useEffect');
+    reloadRunningProjects();
+  }, []);
 
   return (
     <nav className="navbar is-light" role="navigation">
@@ -53,3 +63,5 @@ export const TopNav: React.FC = () => {
     </nav>
   );
 }
+
+export const TopNav = withRouter(TopNavWithouRouter);

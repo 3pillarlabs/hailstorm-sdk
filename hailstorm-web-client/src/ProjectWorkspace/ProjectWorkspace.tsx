@@ -6,7 +6,6 @@ import { ProjectWorkspaceFooter } from '../ProjectWorkspaceFooter';
 import { Project } from '../domain';
 import { ApiFactory } from '../api';
 import { Loader, LoaderSize } from '../Loader';
-import { RunningProjects } from '../RunningProjects';
 import { RouteComponentProps } from 'react-router';
 
 export interface ProjectWorkspaceBasicProps {
@@ -57,7 +56,6 @@ export const ProjectWorkspace: React.FC<RouteComponentProps<TProps>> = (props) =
         <ProjectWorkspaceFooter></ProjectWorkspaceFooter>
       </ActiveProjectContext.Provider> :
       <Loader size={LoaderSize.APP} />}
-      <RunningProjects />
     </>
     </div>
   );

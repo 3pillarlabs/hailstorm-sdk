@@ -7,13 +7,6 @@ import { Link, Route, MemoryRouter } from 'react-router-dom';
 import { ProjectService } from '../api';
 import { act } from '@testing-library/react';
 
-jest.mock('../RunningProjects', () => {
-  return {
-    RunningProjects: () => 'MockRunningProjects ',
-    __esModule: true
-  }
-});
-
 jest.mock('../ProjectWorkspaceHeader', () => {
   return {
     ProjectWorkspaceHeader: (props: {project: Project}) => (
