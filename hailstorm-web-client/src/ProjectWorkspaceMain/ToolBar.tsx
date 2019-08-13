@@ -5,6 +5,7 @@ import { ProjectActions, ResultActions, ApiFactory } from '../api';
 import { JtlDownloadContentProps, JtlDownloadModal } from './JtlDownloadModal';
 import { Modal } from '../Modal';
 import { RunningProjectsContext } from '../RunningProjectsProvider';
+import { InterimProjectState } from '../domain';
 
 export interface ToolBarProps {
   gridButtonStates: ButtonStateLookup;
@@ -29,7 +30,7 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
     reloadReports
   } = props;
 
-  const {project, setRunning} = useContext(ActiveProjectContext);
+  const {project, setRunning, setInterimState} = useContext(ActiveProjectContext);
   const {reloadRunningProjects} = useContext(RunningProjectsContext);
   const [showJtlModal, setShowJtlModal] = useState(false);
   const [jtlModalProps, setJtlModalProps] = useState<JtlDownloadContentProps>({});
@@ -51,9 +52,27 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
   const toggleRunning = (endState: boolean, action?: ProjectActions) => {
     return () => {
       setGridButtonStates({ ...gridButtonStates, stop: true, abort: true, start: true });
+      switch (action) {
+        case "start":
+          setInterimState(InterimProjectState.STARTING);
+          break;
+
+        case "stop":
+          setInterimState(InterimProjectState.STOPPING);
+          break;
+
+        case "abort":
+          setInterimState(InterimProjectState.ABORTING);
+          break;
+
+        default:
+          break;
+      }
+
       ApiFactory()
         .projects()
         .update(project.id, { running: endState, action })
+        .then(() => setInterimState(null))
         .then(() => setRunning(endState))
         .then(() => setGridButtonStates({
           ...gridButtonStates,

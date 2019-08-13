@@ -4,6 +4,7 @@ import { ProjectBar } from '../ProjectBar';
 import { NavLink, Link, withRouter } from 'react-router-dom';
 import { RunningProjectsContext } from '../RunningProjectsProvider';
 import { RouteComponentProps } from 'react-router';
+import styles from './TopNav.module.scss';
 
 // Top Navigation Component
 const TopNavWithouRouter: React.FC<RouteComponentProps> = ({location}) => {
@@ -26,8 +27,8 @@ const TopNavWithouRouter: React.FC<RouteComponentProps> = ({location}) => {
       <div className="container">
         <div className="navbar-brand">
           <Link className="navbar-item" to="/">
-            <span className="app-logo">
-              <img src={logo} className="app-logo" alt="HAILSTORM" />
+            <span className={`${styles.appLogo}`}>
+              <img src={logo} className={`${styles.appLogo}`} alt="HAILSTORM" />
             </span>
           </Link>
 

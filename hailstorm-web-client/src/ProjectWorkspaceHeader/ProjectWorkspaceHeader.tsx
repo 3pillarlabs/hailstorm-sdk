@@ -3,6 +3,7 @@ import { ProjectWorkspaceBasicProps } from '../ProjectWorkspace';
 import styles from './ProjectWorkspaceHeader.module.scss';
 import { ApiFactory } from '../api';
 import { RunningProjectsContext } from '../RunningProjectsProvider';
+import { titleCase } from '../helpers';
 
 export const ProjectWorkspaceHeader: React.FC<ProjectWorkspaceBasicProps> = (props) => {
   const [isEditable, setEditable] = useState(false);
@@ -34,12 +35,17 @@ export const ProjectWorkspaceHeader: React.FC<ProjectWorkspaceBasicProps> = (pro
   }, [props]);
 
   return (
-    <div className="columns workspace-header">
+    <div className={`columns ${styles.workspaceHeader}`}>
       <div className="column is-four-fifths">
         {isEditable ? textBox({title, onSubmitHandler, inputRef, toggleEditable, errorMessage}) : header(title, toggleEditable)}
       </div>
       <div className="column">
-        {props.project.running && <h2 className="title is-2 is-status">Running</h2>}
+        {props.project.running && !props.project.interimState && <h2 className={`title is-2 ${styles.isStatus}`}>Running</h2>}
+        {props.project.interimState &&
+        <h2 className={`title is-2 ${styles.isStatus}`}>
+          <i className={`fas fa-cog fa-spin ${styles.spinnerIcon}`}></i>
+          {titleCase(props.project.interimState)}...
+        </h2>}
       </div>
     </div>
   );

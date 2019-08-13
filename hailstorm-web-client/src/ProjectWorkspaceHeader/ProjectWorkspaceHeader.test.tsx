@@ -1,9 +1,10 @@
 import React from 'react';
-import { mount, ReactWrapper } from 'enzyme';
+import { mount, ReactWrapper, shallow } from 'enzyme';
 import { ProjectWorkspaceHeader } from './ProjectWorkspaceHeader';
 import { act } from '@testing-library/react';
 import { ProjectService } from '../api';
 import { RunningProjectsContext } from '../RunningProjectsProvider/RunningProjectsProvider';
+import { InterimProjectState } from '../domain';
 
 describe('<ProjectWorkspaceHeader />', () => {
   const project = { id: 1, code: 'a', title: 'Project Title', autoStop: true, running: false };
@@ -79,6 +80,31 @@ describe('<ProjectWorkspaceHeader />', () => {
       component!.find('form').simulate('submit');
       expect(component).toContainExactlyOneMatchingElement('p.help');
       expect(updateFnSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('when transitioning project state', () => {
+    it('should show no status text when project is not running', () => {
+      const component = shallow(<ProjectWorkspaceHeader project={{id: 1, code: 'a', title: 'A', running: false, autoStop: true}} />);
+      expect(component.find('.isStatus')).not.toExist();
+    });
+
+    [
+      { match: "Starting", state: InterimProjectState.STARTING, verb: 'starting' },
+      { match: "Stopping", state: InterimProjectState.STOPPING, verb: 'stopping' },
+      { match: "Aborting", state: InterimProjectState.ABORTING, verb: 'aborting' },
+    ].forEach(({match, state, verb}) => it(`should match "${match}..." status text when project is ${verb}`, () => {
+      const component = shallow(
+        <ProjectWorkspaceHeader
+          project={{id: 1, code: 'a', title: 'A', running: false, autoStop: true, interimState: state}}
+        />
+      );
+      expect(component.find('.isStatus').text()).toMatch(new RegExp(state, 'i'));
+    }));
+
+    it('should show "Running" status text when project is running', () => {
+      const component = shallow(<ProjectWorkspaceHeader project={{id: 1, code: 'a', title: 'A', running: true, autoStop: true}} />);
+      expect(component.find('.isStatus').text()).toMatch(new RegExp('running', 'i'));
     });
   });
 });

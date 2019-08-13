@@ -3,10 +3,11 @@ import { ProjectWorkspaceHeader } from '../ProjectWorkspaceHeader';
 import { ProjectWorkspaceMain } from '../ProjectWorkspaceMain';
 import { ProjectWorkspaceLog } from '../ProjectWorkspaceLog';
 import { ProjectWorkspaceFooter } from '../ProjectWorkspaceFooter';
-import { Project } from '../domain';
+import { Project, InterimProjectState } from '../domain';
 import { ApiFactory } from '../api';
 import { Loader, LoaderSize } from '../Loader';
 import { RouteComponentProps } from 'react-router';
+import { interimStateReducer } from './reducers';
 
 export interface ProjectWorkspaceBasicProps {
   project: Project;
@@ -19,11 +20,13 @@ interface TProps {
 export interface ActiveProjectContextProps {
   project: Project;
   setRunning: (endState: boolean) => void;
+  setInterimState: (state: InterimProjectState | null) => void;
 }
 
 export const ActiveProjectContext = React.createContext<ActiveProjectContextProps>({
   project: {} as Project,
-  setRunning: () => {}
+  setRunning: () => {},
+  setInterimState: () => {}
 });
 
 export const ProjectWorkspace: React.FC<RouteComponentProps<TProps>> = (props) => {
@@ -31,6 +34,20 @@ export const ProjectWorkspace: React.FC<RouteComponentProps<TProps>> = (props) =
   const setRunning = (endState: boolean) => {
     if (project) setProject({...project, running: endState});
   };
+
+  const dispatch = (action: any) => {
+    if (project) {
+      return interimStateReducer(project, action);
+    }
+  };
+
+  const setInterimState = (state: InterimProjectState | null) => {
+    if (state) {
+      setProject(dispatch({type: 'set', payload: state}));
+    } else {
+      setProject(dispatch({type: 'unset'}));
+    }
+  }
 
   useEffect(() => {
     console.debug('ProjectWorkspace#useEffect(props)');
@@ -49,11 +66,12 @@ export const ProjectWorkspace: React.FC<RouteComponentProps<TProps>> = (props) =
     <>
     {
       project && project.id === parseInt(props.match.params.id) ?
-      <ActiveProjectContext.Provider value={{project, setRunning}}>
+      <ActiveProjectContext.Provider value={{project, setRunning, setInterimState}}>
         <ProjectWorkspaceHeader project={project} />
         <ProjectWorkspaceMain />
-        <ProjectWorkspaceLog></ProjectWorkspaceLog>
+        <ProjectWorkspaceLog />
         <ProjectWorkspaceFooter></ProjectWorkspaceFooter>
+        {props.children}
       </ActiveProjectContext.Provider> :
       <Loader size={LoaderSize.APP} />}
     </>

@@ -19,7 +19,7 @@ export const ReportsList: React.FC<ReportListProps> = (props) => {
     ApiFactory()
       .reports()
       .list(project.id)
-      .then((fetchedReports) => setReports(fetchedReports))
+      .then(setReports)
       .then(() => setLoadReports(false))
   }, [loadReports]);
 

@@ -64,7 +64,7 @@ describe('<ToolBar />', () => {
     executionCycles?: ExecutionCycle[]
   }) => JSX.Element = ({project, buttonStates, viewTrash}) => (
     <RunningProjectsContext.Provider value={{runningProjects: [], reloadRunningProjects}}>
-      <ActiveProjectContext.Provider value={{project, setRunning: jest.fn()}}>
+      <ActiveProjectContext.Provider value={{project, setRunning: jest.fn(), setInterimState: jest.fn()}}>
         {createToolBar({
           executionCycles: [],
           buttonStates: {

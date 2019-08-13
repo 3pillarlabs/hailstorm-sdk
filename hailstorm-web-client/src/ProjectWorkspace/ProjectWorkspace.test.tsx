@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { shallow, mount, ReactWrapper } from 'enzyme';
-import { ProjectWorkspace } from './ProjectWorkspace';
+import { ProjectWorkspace, ActiveProjectContext } from './ProjectWorkspace';
 import { createHashHistory } from 'history';
-import { Project } from '../domain';
+import { Project, InterimProjectState } from '../domain';
 import { Link, Route, MemoryRouter } from 'react-router-dom';
 import { ProjectService } from '../api';
 import { act } from '@testing-library/react';
@@ -10,7 +10,10 @@ import { act } from '@testing-library/react';
 jest.mock('../ProjectWorkspaceHeader', () => {
   return {
     ProjectWorkspaceHeader: (props: {project: Project}) => (
-      <div id="projectWorkspaceHeader">{props.project.code}</div>
+      <div id="projectWorkspaceHeader">
+        <span id="code">{props.project.code}</span>
+        <span id="running">{props.project.running ? 'true' : 'false'}</span>
+      </div>
     ),
     __esModule: true
   };
@@ -64,7 +67,7 @@ describe('<ProjectWorkspace />', () => {
             match={{isExact: true, params: {id: "1"}, path: '', url: ''}} />
         );
 
-        expect(component.find('div#projectWorkspaceHeader')).toHaveText(project.code);
+        expect(component.find('div#projectWorkspaceHeader span#code')).toHaveText(project.code);
       });
     });
 
@@ -95,9 +98,9 @@ describe('<ProjectWorkspace />', () => {
         );
 
         component.find(`a.project-${projects[0].id}`).simulate('click', {button: 0});
-        expect(component.find('div#projectWorkspaceHeader')).toHaveText(projects[0].code);
+        expect(component.find('div#projectWorkspaceHeader span#code')).toHaveText(projects[0].code);
         component.find(`a.project-${projects[1].id}`).simulate('click', {button: 0});
-        expect(component.find('div#projectWorkspaceHeader')).toHaveText(projects[1].code);
+        expect(component.find('div#projectWorkspaceHeader span#code')).toHaveText(projects[1].code);
       });
     });
   });
@@ -131,8 +134,39 @@ describe('<ProjectWorkspace />', () => {
         done();
         component!.update();
         console.debug(component!.html());
-        expect(component!.find('div#projectWorkspaceHeader')).toHaveText('a');
+        expect(component!.find('div#projectWorkspaceHeader span#code')).toHaveText('a');
       }, 100);
+    });
+  });
+
+  describe('setRunning', () => {
+    it('should change project state', () => {
+      const project: Project = { id: 1, code: 'a4', title: 'A4', running: false, autoStop: true };
+      const Wrapper: React.FC = () => {
+        const {setRunning} = useContext(ActiveProjectContext);
+        return (
+          <button id="setRunning" onClick={() => setRunning(true)}></button>
+        );
+      };
+
+      const component = mount(
+        <ProjectWorkspace
+          location={{hash: '', pathname: '', search: '', state: {project}}}
+          history={createHashHistory()}
+          match={{isExact: true, params: {id: "1"}, path: '', url: ''}}
+        >
+          <Wrapper />
+        </ProjectWorkspace>
+      );
+
+      expect(component.find('div#projectWorkspaceHeader span#running').text()).toEqual('false');
+      act(() => {
+        component.find('button#setRunning').simulate('click');
+      });
+
+      component.update();
+      console.debug(component.html());
+      expect(component.find('div#projectWorkspaceHeader span#running').text()).toEqual('true');
     });
   });
 });

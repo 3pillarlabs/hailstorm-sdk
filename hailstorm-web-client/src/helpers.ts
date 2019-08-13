@@ -7,3 +7,8 @@
 export function ellipsis({ longText, maxLength = 16 }: { longText: string; maxLength?: number; }): [string, boolean] {
   return longText.length < maxLength ? [longText, false] : [`${longText.slice(0, maxLength).trimEnd()}...`, true];
 }
+
+// "this world" -> "This World"
+export function titleCase(value: string): string {
+  return value.split(/\s/).map((word) => `${word[0].toUpperCase()}${word.slice(1)}`).join(" ");
+}

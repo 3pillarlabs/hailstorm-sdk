@@ -8,6 +8,7 @@ export interface Project {
   currenExecutionCycle?: ExecutionCycle;
   recentExecutionCycle?: ExecutionCycle;
   autoStop: boolean;
+  interimState?: InterimProjectState;
 }
 
 export interface ExecutionCycle {
@@ -37,4 +38,10 @@ export interface Report {
 export interface JtlFile {
   title: string;
   url: string;
+}
+
+export enum InterimProjectState {
+  STARTING = "starting",
+  STOPPING = "stopping",
+  ABORTING = "aborting"
 }

@@ -2,31 +2,11 @@
 @import "~@fortawesome/fontawesome-free/css/all.css";
 @import "sass/variables";
 
-nav {
-  .app-logo {
-    margin-right: 0.3rem;
-  }
-
-  img.app-logo {
-    height: 3.0rem;
-    max-height: 100% !important;
-  }
-}
-
 main {
   padding: 2.0rem 0 2.0rem 0;
   .container {
     .title {
       color: map-get($map: $shades, $key: "grey-dark");
-    }
-
-    .workspace-header {
-      border-bottom: $header-line;
-
-      .is-status {
-        color: $warning !important;
-        text-align: right;
-      }
     }
 
     .workspace-main {
@@ -56,18 +36,6 @@ main {
         div.is-gtk {
           display: none;
         }
-      }
-    }
-
-    .workspace-log {
-      div.panel-block {
-        font-family: $family-monospace;
-        font-size: $size-7;
-        min-height: 10vh;
-        max-height: 40vh;
-        align-items: flex-start;
-        overflow-x: auto;
-        overflow-y: scroll;
       }
     }
 

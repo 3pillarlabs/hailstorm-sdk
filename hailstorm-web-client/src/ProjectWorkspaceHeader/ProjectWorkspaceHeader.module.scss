@@ -1,3 +1,19 @@
-.editTrigger {
-  margin-left: 2rem;
+@import "~bulma/sass/utilities/_all.sass";
+@import "../sass/variables";
+
+.workspaceHeader {
+  border-bottom: $header-line;
+
+  .isStatus {
+    color: $warning !important;
+    text-align: right;
+  }
+
+  .editTrigger {
+    margin-left: 2rem;
+  }
+
+  .spinnerIcon {
+    margin-right: 0.5rem;
+  }
 }
