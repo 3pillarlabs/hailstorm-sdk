@@ -1,0 +1,11 @@
+@import "~bulma/sass/utilities/_all.sass";
+
+.logBox {
+  font-family: $family-monospace;
+  font-size: $size-7;
+  min-height: 10vh;
+  max-height: 40vh;
+  align-items: flex-start;
+  overflow-x: auto;
+  overflow-y: scroll;
+}

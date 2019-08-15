@@ -45,3 +45,11 @@ export enum InterimProjectState {
   STOPPING = "stopping",
   ABORTING = "aborting"
 }
+
+export interface LogEvent {
+  projectCode: string;
+  timestamp: number;
+  priority: number;
+  level: string;
+  message: string;
+}

@@ -40,7 +40,11 @@ export const ProjectWorkspaceHeader: React.FC<ProjectWorkspaceBasicProps> = (pro
         {isEditable ? textBox({title, onSubmitHandler, inputRef, toggleEditable, errorMessage}) : header(title, toggleEditable)}
       </div>
       <div className="column">
-        {props.project.running && !props.project.interimState && <h2 className={`title is-2 ${styles.isStatus}`}>Running</h2>}
+        {props.project.running && !props.project.interimState &&
+        <h2 className={`title is-2 ${styles.isStatus}`}>
+          <i className={`fas fa-running ${styles.spinnerIcon}`}></i>
+          Running
+        </h2>}
         {props.project.interimState &&
         <h2 className={`title is-2 ${styles.isStatus}`}>
           <i className={`fas fa-cog fa-spin ${styles.spinnerIcon}`}></i>
