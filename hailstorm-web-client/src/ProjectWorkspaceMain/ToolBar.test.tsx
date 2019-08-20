@@ -2,13 +2,13 @@ import React, { PropsWithChildren } from 'react';
 import { shallow, mount } from 'enzyme';
 import { ToolBar } from './ToolBar';
 import { ButtonStateLookup, CheckedExecutionCycle } from './ControlPanel';
-import { JtlDownloadModalProps } from './JtlDownloadModal';
 import { RunningProjectsContext } from '../RunningProjectsProvider';
 import { ActiveProjectContext } from '../ProjectWorkspace';
 import { Project, ExecutionCycle } from '../domain';
 import { ProjectService, ReportService, JtlExportService } from '../api';
 import { ModalProps } from '../Modal';
 import { act } from '@testing-library/react';
+import { SetRunningAction } from '../ProjectWorkspace/actions';
 
 jest.mock('../Modal', () => {
   return {
@@ -35,6 +35,7 @@ describe('<ToolBar />', () => {
   const setViewTrash = jest.fn();
   const reloadReports = jest.fn();
   const reloadRunningProjects = jest.fn();
+  const dispatch = jest.fn();
 
   const createToolBar: (attrs: {
     executionCycles: CheckedExecutionCycle[],
@@ -64,7 +65,7 @@ describe('<ToolBar />', () => {
     executionCycles?: ExecutionCycle[]
   }) => JSX.Element = ({project, buttonStates, viewTrash}) => (
     <RunningProjectsContext.Provider value={{runningProjects: [], reloadRunningProjects}}>
-      <ActiveProjectContext.Provider value={{project, setRunning: jest.fn(), setInterimState: jest.fn()}}>
+      <ActiveProjectContext.Provider value={{project, dispatch}}>
         {createToolBar({
           executionCycles: [],
           buttonStates: {
@@ -127,6 +128,9 @@ describe('<ToolBar />', () => {
     setTimeout(() => {
       done();
       expect(reloadRunningProjects).toBeCalled();
+      expect(dispatch).toBeCalled();
+      expect(dispatch.mock.calls[2][0]).toBeInstanceOf(SetRunningAction);
+      expect((dispatch.mock.calls[2][0] as SetRunningAction).payload).toBeTruthy();
     }, 0);
   });
 
@@ -139,6 +143,9 @@ describe('<ToolBar />', () => {
     setTimeout(() => {
       done();
       expect(reloadRunningProjects).toBeCalled();
+      expect(dispatch).toBeCalled();
+      expect(dispatch.mock.calls[2][0]).toBeInstanceOf(SetRunningAction);
+      expect((dispatch.mock.calls[2][0] as SetRunningAction).payload).toBeFalsy();
     }, 0);
   });
 
@@ -151,6 +158,9 @@ describe('<ToolBar />', () => {
     setTimeout(() => {
       done();
       expect(reloadRunningProjects).toBeCalled();
+      expect(dispatch).toBeCalled();
+      expect(dispatch.mock.calls[2][0]).toBeInstanceOf(SetRunningAction);
+      expect((dispatch.mock.calls[2][0] as SetRunningAction).payload).toBeFalsy();
     }, 0);
   });
 

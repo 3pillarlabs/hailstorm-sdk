@@ -66,7 +66,7 @@ describe('<ControlPanel />', () => {
 
   const componentFixture: (project: Project) => ReactWrapper = (project) => {
     return mount(
-      <ActiveProjectContext.Provider value={{project, setRunning: jest.fn()}}>
+      <ActiveProjectContext.Provider value={{project, dispatch: jest.fn()}}>
         <ControlPanel reloadReports={jest.fn()} />
       </ActiveProjectContext.Provider>
     );

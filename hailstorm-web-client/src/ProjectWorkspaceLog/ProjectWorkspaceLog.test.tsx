@@ -23,7 +23,7 @@ describe('<ProjectWorkspaceLog />', () => {
       {projectCode: project.code, timestamp: 1565780014, priority: 2, level: 'info', message: `Creating Cluster in us-west-1...`},
     ));
     const component = mount(
-      <ActiveProjectContext.Provider value={{project, setRunning: jest.fn(), setInterimState: jest.fn()}}>
+      <ActiveProjectContext.Provider value={{project, dispatch: jest.fn()}}>
         <ProjectWorkspaceLog />
       </ActiveProjectContext.Provider>
     );
@@ -38,7 +38,7 @@ describe('<ProjectWorkspaceLog />', () => {
     const logStreamSpy = jest.spyOn(LogStream, '_logSource').mockImplementation(() => empty());
     const project: Project = {id: 1, code: 'a', title: 'A', running: false, autoStop: false};
     mount(
-      <ActiveProjectContext.Provider value={{project, setRunning: jest.fn(), setInterimState: jest.fn()}}>
+      <ActiveProjectContext.Provider value={{project, dispatch: jest.fn()}}>
         <ProjectWorkspaceLog />
       </ActiveProjectContext.Provider>
     );

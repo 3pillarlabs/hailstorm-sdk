@@ -1,7 +1,8 @@
 import { Project, InterimProjectState } from "../domain";
-import { interimStateReducer } from "./reducers";
+import { reducer } from "./reducers";
+import { SetInterimStateAction, UnsetInterimStateAction } from "./actions";
 
-describe("interimStateReducer", () => {
+describe("ProjectWorkspace reducer", () => {
   it("should set the interim state", () => {
     const initialProject: Project = {
       id: 1,
@@ -10,11 +11,8 @@ describe("interimStateReducer", () => {
       running: false,
       autoStop: true
     };
-    const nextProject = interimStateReducer(initialProject, {
-      type: "set",
-      payload: InterimProjectState.STARTING
-    });
-    expect(nextProject.interimState).toEqual(InterimProjectState.STARTING);
+    const nextProject = reducer(initialProject, new SetInterimStateAction(InterimProjectState.STARTING));
+    expect(nextProject!.interimState).toEqual(InterimProjectState.STARTING);
   });
 
   it("should unset the interim state", () => {
@@ -26,7 +24,7 @@ describe("interimStateReducer", () => {
       autoStop: true,
       interimState: InterimProjectState.STARTING
     };
-    const nextProject = interimStateReducer(initialProject, { type: "unset" });
-    expect(Object.keys(nextProject)).not.toContain("interimState");
+    const nextProject = reducer(initialProject, new UnsetInterimStateAction());
+    expect(Object.keys(nextProject!)).not.toContain("interimState");
   });
 });

@@ -6,6 +6,7 @@ import { Project, InterimProjectState } from '../domain';
 import { Link, Route, MemoryRouter } from 'react-router-dom';
 import { ProjectService } from '../api';
 import { act } from '@testing-library/react';
+import { SetRunningAction } from './actions';
 
 jest.mock('../ProjectWorkspaceHeader', () => {
   return {
@@ -143,9 +144,9 @@ describe('<ProjectWorkspace />', () => {
     it('should change project state', () => {
       const project: Project = { id: 1, code: 'a4', title: 'A4', running: false, autoStop: true };
       const Wrapper: React.FC = () => {
-        const {setRunning} = useContext(ActiveProjectContext);
+        const {dispatch} = useContext(ActiveProjectContext);
         return (
-          <button id="setRunning" onClick={() => setRunning(true)}></button>
+          <button id="setRunning" onClick={() => dispatch(new SetRunningAction(true))}></button>
         );
       };
 

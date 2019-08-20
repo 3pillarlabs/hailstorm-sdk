@@ -1,6 +1,6 @@
 import React, { useEffect, useContext, useState } from 'react';
 import { ButtonStateLookup, CheckedExecutionCycle } from './ControlPanel';
-import { Loader } from '../Loader/Loader';
+import { Loader } from '../Loader';
 import { ExecutionCycleStatus } from '../domain';
 import { ApiFactory } from '../api';
 import { ActiveProjectContext } from '../ProjectWorkspace';
@@ -32,7 +32,6 @@ export const ExecutionCycleGrid: React.FC<ExecutionCycleGridProps> = (props) => 
 
   useEffect(() => {
     console.debug('ExecutionCycleGrid#useEffect(loading, reloadGrid, project)');
-    if (!reloadGrid && !loading) return;
     ApiFactory()
       .executionCycles()
       .list(project.id)

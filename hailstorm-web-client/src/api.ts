@@ -1,7 +1,7 @@
 import { Project, ExecutionCycleStatus, ExecutionCycle, Report, JtlFile } from "./domain";
 import { DB } from "./db";
 
-export type ProjectActions = 'stop' | 'abort' | 'start';
+export type ProjectActions = 'stop' | 'abort' | 'start' | 'terminate';
 export type ResultActions = 'report' | 'export' | 'trash';
 
 // API
@@ -99,6 +99,18 @@ export class ProjectService {
 
             DB.executionCycles[index].stoppedAt = new Date();
             DB.executionCycles[index].status = ExecutionCycleStatus.ABORTED;
+          }
+          break;
+
+        case 'terminate':
+          processingTime = 30000;
+          dbOp = () => {
+            const index = DB.executionCycles.findIndex((x) => x.projectId === id && !x.stoppedAt);
+            if (index < 0) return;
+
+            DB.executionCycles[index].stoppedAt = new Date();
+            DB.executionCycles[index].status = ExecutionCycleStatus.ABORTED;
+            matchedProject.running = false;
           }
           break;
 

@@ -43,7 +43,8 @@ export interface JtlFile {
 export enum InterimProjectState {
   STARTING = "starting",
   STOPPING = "stopping",
-  ABORTING = "aborting"
+  ABORTING = "aborting",
+  TERMINATING = "terminating",
 }
 
 export interface LogEvent {

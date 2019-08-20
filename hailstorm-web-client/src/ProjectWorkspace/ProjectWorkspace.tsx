@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useReducer } from 'react';
 import { ProjectWorkspaceHeader } from '../ProjectWorkspaceHeader';
 import { ProjectWorkspaceMain } from '../ProjectWorkspaceMain';
 import { ProjectWorkspaceLog } from '../ProjectWorkspaceLog';
@@ -7,7 +7,8 @@ import { Project, InterimProjectState } from '../domain';
 import { ApiFactory } from '../api';
 import { Loader, LoaderSize } from '../Loader';
 import { RouteComponentProps } from 'react-router';
-import { interimStateReducer } from './reducers';
+import { reducer } from './reducers';
+import { SetProjectAction, ProjectWorkspaceActions } from './actions';
 
 export interface ProjectWorkspaceBasicProps {
   project: Project;
@@ -19,45 +20,26 @@ interface TProps {
 
 export interface ActiveProjectContextProps {
   project: Project;
-  setRunning: (endState: boolean) => void;
-  setInterimState: (state: InterimProjectState | null) => void;
+  dispatch: React.Dispatch<ProjectWorkspaceActions>
 }
 
 export const ActiveProjectContext = React.createContext<ActiveProjectContextProps>({
   project: {} as Project,
-  setRunning: () => {},
-  setInterimState: () => {}
+  dispatch: (_value) => {},
 });
 
 export const ProjectWorkspace: React.FC<RouteComponentProps<TProps>> = (props) => {
-  const [project, setProject] = useState<Project | undefined>(undefined);
-  const setRunning = (endState: boolean) => {
-    if (project) setProject({...project, running: endState});
-  };
-
-  const dispatch = (action: any) => {
-    if (project) {
-      return interimStateReducer(project, action);
-    }
-  };
-
-  const setInterimState = (state: InterimProjectState | null) => {
-    if (state) {
-      setProject(dispatch({type: 'set', payload: state}));
-    } else {
-      setProject(dispatch({type: 'unset'}));
-    }
-  }
+  const [project, dispatch] = useReducer(reducer, undefined);
 
   useEffect(() => {
     console.debug('ProjectWorkspace#useEffect(props)');
     if (props.location.state) {
-      setProject(props.location.state.project);
+      dispatch(new SetProjectAction(props.location.state.project));
     } else {
       ApiFactory()
         .projects()
         .get(parseInt(props.match.params.id))
-        .then((fetchedProject) => setProject(fetchedProject));
+        .then((fetchedProject) => dispatch(new SetProjectAction(fetchedProject)));
     }
   }, [props]);
 
@@ -66,11 +48,11 @@ export const ProjectWorkspace: React.FC<RouteComponentProps<TProps>> = (props) =
     <>
     {
       project && project.id === parseInt(props.match.params.id) ?
-      <ActiveProjectContext.Provider value={{project, setRunning, setInterimState}}>
+      <ActiveProjectContext.Provider value={{project, dispatch}}>
         <ProjectWorkspaceHeader project={project} />
         <ProjectWorkspaceMain />
         <ProjectWorkspaceLog />
-        <ProjectWorkspaceFooter></ProjectWorkspaceFooter>
+        <ProjectWorkspaceFooter />
         {props.children}
       </ActiveProjectContext.Provider> :
       <Loader size={LoaderSize.APP} />}

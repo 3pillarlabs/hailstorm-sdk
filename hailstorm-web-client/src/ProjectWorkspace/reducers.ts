@@ -1,22 +1,29 @@
-import { Project, InterimProjectState } from "../domain";
+import { Project } from "../domain";
+import { ProjectWorkspaceActions, ProjectWorkspaceActionTypes } from "./actions";
 
-export const interimStateReducer: (
-  state: Project,
-  action: { type: 'set' | 'unset', payload?: InterimProjectState }
-) => Project = (
+export const reducer: (
+  state: Project | undefined,
+  action: ProjectWorkspaceActions
+) => Project | undefined = (
   state,
   action
 ) => {
   switch (action.type) {
-    case 'set':
-      return {...state, interimState: action.payload};
+    case ProjectWorkspaceActionTypes.SetProject:
+      return action.payload;
 
-    case 'unset':
-      const next = {...state};
+    case ProjectWorkspaceActionTypes.SetRunning:
+      return {...state!, running: action.payload};
+
+    case ProjectWorkspaceActionTypes.SetInterimState:
+      return {...state!, interimState: action.payload};
+
+    case ProjectWorkspaceActionTypes.UnsetInterimState:
+      const next = {...state!};
       delete next.interimState;
       return next;
 
     default:
-      throw new Error();
+      return state;
   }
 };

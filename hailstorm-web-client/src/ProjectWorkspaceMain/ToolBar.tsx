@@ -6,6 +6,7 @@ import { JtlDownloadContentProps, JtlDownloadModal } from './JtlDownloadModal';
 import { Modal } from '../Modal';
 import { RunningProjectsContext } from '../RunningProjectsProvider';
 import { InterimProjectState } from '../domain';
+import { SetInterimStateAction, UnsetInterimStateAction, SetRunningAction } from '../ProjectWorkspace/actions';
 
 export interface ToolBarProps {
   gridButtonStates: ButtonStateLookup;
@@ -30,7 +31,7 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
     reloadReports
   } = props;
 
-  const {project, setRunning, setInterimState} = useContext(ActiveProjectContext);
+  const {project, dispatch} = useContext(ActiveProjectContext);
   const {reloadRunningProjects} = useContext(RunningProjectsContext);
   const [showJtlModal, setShowJtlModal] = useState(false);
   const [jtlModalProps, setJtlModalProps] = useState<JtlDownloadContentProps>({});
@@ -54,15 +55,15 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
       setGridButtonStates({ ...gridButtonStates, stop: true, abort: true, start: true });
       switch (action) {
         case "start":
-          setInterimState(InterimProjectState.STARTING);
+          dispatch(new SetInterimStateAction(InterimProjectState.STARTING));
           break;
 
         case "stop":
-          setInterimState(InterimProjectState.STOPPING);
+          dispatch(new SetInterimStateAction(InterimProjectState.STOPPING));
           break;
 
         case "abort":
-          setInterimState(InterimProjectState.ABORTING);
+          dispatch(new SetInterimStateAction(InterimProjectState.ABORTING));
           break;
 
         default:
@@ -72,8 +73,8 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
       ApiFactory()
         .projects()
         .update(project.id, { running: endState, action })
-        .then(() => setInterimState(null))
-        .then(() => setRunning(endState))
+        .then(() => dispatch(new UnsetInterimStateAction()))
+        .then(() => dispatch(new SetRunningAction(endState)))
         .then(() => setGridButtonStates({
           ...gridButtonStates,
           stop: !endState || project.autoStop,

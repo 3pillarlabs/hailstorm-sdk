@@ -3,18 +3,18 @@ import styles from './ToggleButton.module.scss';
 
 export interface ToggleButtonProps {
   isPressed: boolean;
-  dispatch: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsPressed: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export const ToggleButton: React.FC<ToggleButtonProps> = (props) => {
+export const ToggleButton: React.FC<ToggleButtonProps> = ({isPressed, setIsPressed, children}) => {
   const clickHandler = (event: React.SyntheticEvent) => {
-    event.currentTarget.classList.toggle("is-hovered");
-    props.dispatch(!props.isPressed);
+    event.currentTarget.classList.toggle(styles.pressedState);
+    setIsPressed(!isPressed);
   }
 
   return (
     <button className={`button ${styles.button} is-light`} onClick={clickHandler}>
-      {props.children} <i className={props.isPressed ? "fa fa-angle-up" : "fa fa-angle-down"} />
+      {children} <i className={isPressed ? "fa fa-angle-up" : "fa fa-angle-down"} />
     </button>
   );
 }

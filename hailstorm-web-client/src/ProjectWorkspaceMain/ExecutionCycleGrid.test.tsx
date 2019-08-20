@@ -53,7 +53,7 @@ describe('<ExecutionCycleGrid />', () => {
     let component: ReactWrapper | null = null;
     act(() => {
       component = mount(
-        <ActiveProjectContext.Provider value={{project, setRunning: jest.fn()}}>
+        <ActiveProjectContext.Provider value={{project, dispatch: jest.fn()}}>
           <Wrapper />
         </ActiveProjectContext.Provider>
       );
@@ -80,7 +80,7 @@ describe('<ExecutionCycleGrid />', () => {
     let component: ReactWrapper | null = null;
     act(() => {
       component = mount(
-        <ActiveProjectContext.Provider value={{project, setRunning: jest.fn()}}>
+        <ActiveProjectContext.Provider value={{project, dispatch: jest.fn()}}>
           <Wrapper />
         </ActiveProjectContext.Provider>
       );
@@ -113,7 +113,7 @@ describe('<ExecutionCycleGrid />', () => {
     let component: ReactWrapper | null = null;
     act(() => {
       component = mount(
-        <ActiveProjectContext.Provider value={{project, setRunning: jest.fn()}}>
+        <ActiveProjectContext.Provider value={{project, dispatch: jest.fn()}}>
           <Wrapper />
         </ActiveProjectContext.Provider>
       );
@@ -148,7 +148,7 @@ describe('<ExecutionCycleGrid />', () => {
     let component: ReactWrapper | null = null;
     act(() => {
       component = mount(
-        <ActiveProjectContext.Provider value={{project, setRunning: jest.fn()}}>
+        <ActiveProjectContext.Provider value={{project, dispatch: jest.fn()}}>
           <Wrapper />
         </ActiveProjectContext.Provider>
       );
@@ -180,7 +180,7 @@ describe('<ExecutionCycleGrid />', () => {
     let component: ReactWrapper | null = null;
     act(() => {
       component = mount(
-        <ActiveProjectContext.Provider value={{project, setRunning: jest.fn()}}>
+        <ActiveProjectContext.Provider value={{project, dispatch: jest.fn()}}>
           <Wrapper />
         </ActiveProjectContext.Provider>
       );
@@ -211,7 +211,7 @@ describe('<ExecutionCycleGrid />', () => {
     let component: ReactWrapper | null = null;
     act(() => {
       component = mount(
-        <ActiveProjectContext.Provider value={{project, setRunning: jest.fn()}}>
+        <ActiveProjectContext.Provider value={{project, dispatch: jest.fn()}}>
           <Wrapper viewTrash={true} />
         </ActiveProjectContext.Provider>
       );
@@ -235,7 +235,7 @@ describe('<ExecutionCycleGrid />', () => {
     let component: ReactWrapper | null = null;
     act(() => {
       component = mount(
-        <ActiveProjectContext.Provider value={{project, setRunning: jest.fn()}}>
+        <ActiveProjectContext.Provider value={{project, dispatch: jest.fn()}}>
           <Wrapper viewTrash={true} />
         </ActiveProjectContext.Provider>
       );
@@ -259,7 +259,7 @@ describe('<ExecutionCycleGrid />', () => {
     let component: ReactWrapper | null = null;
     act(() => {
       component = mount(
-        <ActiveProjectContext.Provider value={{project, setRunning: jest.fn()}}>
+        <ActiveProjectContext.Provider value={{project, dispatch: jest.fn()}}>
           <Wrapper />
         </ActiveProjectContext.Provider>
       );

@@ -36,7 +36,7 @@ export const ProjectWorkspaceHeader: React.FC<ProjectWorkspaceBasicProps> = (pro
 
   return (
     <div className={`columns ${styles.workspaceHeader}`}>
-      <div className="column is-four-fifths">
+      <div className="column is-three-quarters">
         {isEditable ? textBox({title, onSubmitHandler, inputRef, toggleEditable, errorMessage}) : header(title, toggleEditable)}
       </div>
       <div className="column">

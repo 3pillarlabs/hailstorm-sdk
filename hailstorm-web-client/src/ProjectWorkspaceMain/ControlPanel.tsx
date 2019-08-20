@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { ToolBar } from './ToolBar';
 import { ExecutionCycleGrid } from './ExecutionCycleGrid';
 import { ActiveProjectContext } from '../ProjectWorkspace';
@@ -30,13 +30,20 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
     report: true,
     export: true,
     trash: false,
-    stop: !project.running || project.autoStop,
-    abort: !project.running,
-    start: project.running,
+    stop: true,
+    abort: true,
+    start: false,
   });
   const [executionCycles, setExecutionCycles] = useState<CheckedExecutionCycle[]>([]);
   const [reloadGrid, setReloadGrid] = useState(false);
   const [viewTrash, setViewTrash] = useState(false);
+
+  useEffect(() => setGridButtonStates({
+    ...gridButtonStates,
+    stop: !project.running || project.autoStop,
+    abort: !project.running,
+    start: project.running,
+  }), [project]);
 
   return (
     <>
