@@ -10,6 +10,7 @@ export const ToggleButton: React.FC<ToggleButtonProps> = ({isPressed, setIsPress
   const clickHandler = (event: React.SyntheticEvent) => {
     event.currentTarget.classList.toggle(styles.pressedState);
     setIsPressed(!isPressed);
+    setTimeout(() => window.scrollBy(0, window.scrollY), 0);
   }
 
   return (

@@ -18,7 +18,7 @@ export const ProjectWorkspaceFooter: React.FC = () => {
             <i className="fas fa-exclamation-triangle"></i> Dangerous Settings
           </h4>
           <p className="subtitle">Settings and actions below may result in data loss!</p>
-          <p><ToggleButton {...{isPressed, setIsPressed}}>Show them</ToggleButton></p>
+          <p><ToggleButton {...{isPressed, setIsPressed}}>{!isPressed ? 'Show them' : 'Hide them'}</ToggleButton></p>
         </article>
 
         <article className={isPressed ? "message is-warning" : "message is-warning is-hidden"}>
