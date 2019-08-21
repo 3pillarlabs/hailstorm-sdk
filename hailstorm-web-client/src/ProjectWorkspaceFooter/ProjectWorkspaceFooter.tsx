@@ -24,7 +24,9 @@ export const ProjectWorkspaceFooter: React.FC = () => {
         <article className={isPressed ? "message is-warning" : "message is-warning is-hidden"}>
           <TerminateProject />
         </article>
-        <DeleteProject {...{isPressed}} />
+        <article className={isPressed ? "message is-danger" : "message is-danger is-hidden"}>
+          <DeleteProject />
+        </article>
       </div>
     </>
   );

@@ -130,6 +130,20 @@ export class ProjectService {
       }
     });
   }
+
+  delete(id: number) {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        const matchedProject: Project | undefined = DB.projects.find((project) => id === project.id);
+        if (matchedProject) {
+          DB.projects = DB.projects.filter((project) => project.id !== matchedProject.id);
+          resolve();
+        } else {
+          reject(new Error(`No project with ID ${id}`))
+        }
+      }, 300);
+    });
+  }
 }
 
 export class ExecutionCycleService {

@@ -45,6 +45,7 @@ export enum InterimProjectState {
   STOPPING = "stopping",
   ABORTING = "aborting",
   TERMINATING = "terminating",
+  DELETING = "deleting",
 }
 
 export interface LogEvent {
