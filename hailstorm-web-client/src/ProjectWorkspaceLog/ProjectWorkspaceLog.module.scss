@@ -3,8 +3,7 @@
 .logBox {
   font-family: $family-monospace;
   font-size: $size-7;
-  min-height: 10vh;
-  max-height: 40vh;
+  height: 30vh;
   align-items: flex-start;
   overflow-x: auto;
   overflow-y: scroll;
