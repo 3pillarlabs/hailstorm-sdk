@@ -75,12 +75,6 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
         .update(project.id, { running: endState, action })
         .then(() => dispatch(new UnsetInterimStateAction()))
         .then(() => dispatch(new SetRunningAction(endState)))
-        .then(() => setGridButtonStates({
-          ...gridButtonStates,
-          stop: !endState || project.autoStop,
-          abort: !endState,
-          start: endState
-        }))
         .then(() => setReloadGrid(true))
         .then(() => reloadRunningProjects());
     };

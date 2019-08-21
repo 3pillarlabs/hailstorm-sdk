@@ -40,9 +40,9 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
 
   useEffect(() => setGridButtonStates({
     ...gridButtonStates,
-    stop: !project.running || project.autoStop,
-    abort: !project.running,
-    start: project.running,
+    stop: !project.running || project.autoStop || project.interimState !== undefined,
+    abort: !project.running || project.interimState !== undefined,
+    start: project.running || project.interimState !== undefined,
   }), [project]);
 
   return (

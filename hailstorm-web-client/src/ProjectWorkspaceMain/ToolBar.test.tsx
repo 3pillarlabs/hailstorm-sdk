@@ -4,11 +4,11 @@ import { ToolBar } from './ToolBar';
 import { ButtonStateLookup, CheckedExecutionCycle } from './ControlPanel';
 import { RunningProjectsContext } from '../RunningProjectsProvider';
 import { ActiveProjectContext } from '../ProjectWorkspace';
-import { Project, ExecutionCycle } from '../domain';
+import { Project, ExecutionCycle, InterimProjectState } from '../domain';
 import { ProjectService, ReportService, JtlExportService } from '../api';
 import { ModalProps } from '../Modal';
 import { act } from '@testing-library/react';
-import { SetRunningAction } from '../ProjectWorkspace/actions';
+import { SetRunningAction, SetInterimStateAction } from '../ProjectWorkspace/actions';
 
 jest.mock('../Modal', () => {
   return {
@@ -104,7 +104,7 @@ describe('<ToolBar />', () => {
     );
   });
 
-  it('should enable stop and abort on start', (done) => {
+  it('should set interim state on start', (done) => {
     const project: Project = createProject();
     const component = mount(createToolBarHierarchy({project}));
     const apiSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(undefined);
@@ -112,10 +112,12 @@ describe('<ToolBar />', () => {
     expect(apiSpy).toBeCalled();
     setTimeout(() => {
       done();
-      expect(setGridButtonStates).toBeCalledTimes(2);
-      const nextButtonStates = setGridButtonStates.mock.calls[1][0] as ButtonStateLookup;
-      expect(nextButtonStates.stop).toBeFalsy();
-      expect(nextButtonStates.abort).toBeFalsy();
+      expect(setGridButtonStates).toBeCalled();
+      expect(dispatch).toBeCalledTimes(3);
+      expect(dispatch.mock.calls[0][0]).toBeInstanceOf(SetInterimStateAction);
+      expect((dispatch.mock.calls[0][0] as SetInterimStateAction).payload).toEqual(InterimProjectState.STARTING);
+      expect(dispatch.mock.calls[2][0]).toBeInstanceOf(SetRunningAction);
+      expect((dispatch.mock.calls[2][0] as SetRunningAction).payload).toBeTruthy();
     }, 0);
   });
 
