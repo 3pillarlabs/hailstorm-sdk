@@ -1,14 +1,13 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Project } from '../domain';
 import { ProjectBarItem } from './ProjectBarItem';
-import { RunningProjectsContext } from '../RunningProjectsProvider';
 
 export interface ProjectBarProps {
+  runningProjects: Project[];
   maxItems?: number;
 }
 
-export const ProjectBar: React.FC<ProjectBarProps> = (props = {maxItems: 10}) => {
-  const {runningProjects} = useContext(RunningProjectsContext);
+export const ProjectBar: React.FC<ProjectBarProps> = ({maxItems, runningProjects} = {maxItems: 10, runningProjects: []}) => {
   const [projectItems, setProjectItems] = useState<Project[]>([]);
   const projectCompareFn = (a: Project, b: Project) =>
     a.currenExecutionCycle && b.currenExecutionCycle
@@ -22,8 +21,8 @@ export const ProjectBar: React.FC<ProjectBarProps> = (props = {maxItems: 10}) =>
   }, [runningProjects]);
 
   const activeProject: Project | null = projectItems.length > 0 ? projectItems[0] : null;
-  const otherRunningProjects: Project[] = projectItems.slice(1, props.maxItems);
-  const dropdownProjects: Project[] = projectItems.slice(props.maxItems);
+  const otherRunningProjects: Project[] = projectItems.slice(1, maxItems);
+  const dropdownProjects: Project[] = projectItems.slice(maxItems);
 
   return (
     <>

@@ -1,5 +1,5 @@
 import { Project, InterimProjectState } from "../domain";
-import { reducer } from "./reducers";
+import { reducer } from "./reducer";
 import { SetInterimStateAction, UnsetInterimStateAction } from "./actions";
 
 describe("ProjectWorkspace reducer", () => {

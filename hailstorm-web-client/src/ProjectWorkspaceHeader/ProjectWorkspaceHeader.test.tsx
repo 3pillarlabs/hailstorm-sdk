@@ -3,8 +3,8 @@ import { mount, ReactWrapper, shallow } from 'enzyme';
 import { ProjectWorkspaceHeader } from './ProjectWorkspaceHeader';
 import { act } from '@testing-library/react';
 import { ProjectService } from '../api';
-import { RunningProjectsContext } from '../RunningProjectsProvider/RunningProjectsProvider';
 import { InterimProjectState } from '../domain';
+import { AppStateContext } from '../appStateContext';
 
 describe('<ProjectWorkspaceHeader />', () => {
   const project = { id: 1, code: 'a', title: 'Project Title', autoStop: true, running: false };
@@ -22,8 +22,11 @@ describe('<ProjectWorkspaceHeader />', () => {
     jest.clearAllMocks();
   });
 
-  it('should show project title by default', () => {
-    expect(component!.find('h2')).toHaveText(project.title);
+  it('should show project title by default', (done) => {
+    setTimeout(() => {
+      done();
+      expect(component!.find('h2')).toHaveText(project.title);
+    }, 0);
   });
 
   describe('when inline editing', () => {
@@ -40,15 +43,14 @@ describe('<ProjectWorkspaceHeader />', () => {
       expect(component!.find('h2')).toHaveText(project.title);
     });
 
-    it('should update title on submit', (done) => {
+    it('should update title on submit', () => {
       project.running = true;
       const updateFnSpy = jest.spyOn(ProjectService.prototype, 'update').mockImplementation(jest.fn().mockResolvedValue(null));
-      const reloadRunningProjects = jest.fn();
       act(() => {
         component = mount(
-          <RunningProjectsContext.Provider value={{runningProjects: [], reloadRunningProjects}}>
+          <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: undefined}, dispatch: jest.fn()}}>
             <ProjectWorkspaceHeader {...{project}} />
-          </RunningProjectsContext.Provider>
+          </AppStateContext.Provider>
         );
       });
 
@@ -58,19 +60,15 @@ describe('<ProjectWorkspaceHeader />', () => {
       textInput.value = updatedProjectTitle;
       component!.find('form').simulate('submit');
       expect(updateFnSpy).toHaveBeenCalledWith(project.id, {title: updatedProjectTitle});
-      setTimeout(() => {
-        done();
-        expect(reloadRunningProjects).toHaveBeenCalled();
-      }, 0);
     });
 
     it('should not update if title is blank', () => {
       const updateFnSpy = jest.spyOn(ProjectService.prototype, 'update').mockImplementation(jest.fn().mockResolvedValue(null));
       act(() => {
         component = mount(
-          <RunningProjectsContext.Provider value={{runningProjects: [], reloadRunningProjects: jest.fn()}}>
+          <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: undefined}, dispatch: jest.fn()}}>
             <ProjectWorkspaceHeader {...{project}} />
-          </RunningProjectsContext.Provider>
+          </AppStateContext.Provider>
         );
       });
 

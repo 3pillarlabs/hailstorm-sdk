@@ -1,8 +1,8 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { ToolBar } from './ToolBar';
 import { ExecutionCycleGrid } from './ExecutionCycleGrid';
-import { ActiveProjectContext } from '../ProjectWorkspace';
 import { ExecutionCycle } from '../domain';
+import { AppStateContext } from '../appStateContext';
 
 export interface CheckedExecutionCycle extends ExecutionCycle {
   checked: boolean | null;
@@ -23,8 +23,8 @@ export interface ControlPanelProps {
 
 export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
   const {reloadReports} = props;
-
-  const {project} = useContext(ActiveProjectContext);
+  const {appState} = useContext(AppStateContext);
+  const project = appState.activeProject!;
 
   const [gridButtonStates, setGridButtonStates] = useState<ButtonStateLookup>({
     report: true,
@@ -34,6 +34,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
     abort: true,
     start: false,
   });
+
   const [executionCycles, setExecutionCycles] = useState<CheckedExecutionCycle[]>([]);
   const [reloadGrid, setReloadGrid] = useState(false);
   const [viewTrash, setViewTrash] = useState(false);

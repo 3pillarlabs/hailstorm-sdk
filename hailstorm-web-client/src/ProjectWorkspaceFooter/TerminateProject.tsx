@@ -1,15 +1,14 @@
 import React, { useContext, useState } from 'react';
-import { ActiveProjectContext } from '../ProjectWorkspace';
 import { InterimProjectState } from '../domain';
 import { SetInterimStateAction, UnsetInterimStateAction, SetRunningAction } from '../ProjectWorkspace/actions';
 import { ApiFactory } from '../api';
 import { Modal } from '../Modal/Modal';
-import { RunningProjectsContext } from '../RunningProjectsProvider';
 import styles from './ProjectWorkspaceFooter.module.scss';
+import { AppStateContext } from '../appStateContext';
 
 export const TerminateProject: React.FC = () => {
-  const {project, dispatch} = useContext(ActiveProjectContext);
-  const {reloadRunningProjects} = useContext(RunningProjectsContext);
+  const {appState, dispatch} = useContext(AppStateContext);
+  const project = appState.activeProject!;
   const [showModal, setShowModal] = useState(false);
   const [isUnderstood, setIsUnderstood] = useState(false);
   const handleTerminate = () => {
@@ -19,8 +18,7 @@ export const TerminateProject: React.FC = () => {
       .projects()
       .update(project.id, {action: 'terminate'})
       .then(() => dispatch(new UnsetInterimStateAction()))
-      .then(() => dispatch(new SetRunningAction(false)))
-      .then(reloadRunningProjects);
+      .then(() => dispatch(new SetRunningAction(false)));
   }
 
   return (

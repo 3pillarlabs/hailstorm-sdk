@@ -2,13 +2,12 @@ import React, { PropsWithChildren } from 'react';
 import { shallow, mount } from 'enzyme';
 import { ToolBar } from './ToolBar';
 import { ButtonStateLookup, CheckedExecutionCycle } from './ControlPanel';
-import { RunningProjectsContext } from '../RunningProjectsProvider';
-import { ActiveProjectContext } from '../ProjectWorkspace';
 import { Project, ExecutionCycle, InterimProjectState } from '../domain';
 import { ProjectService, ReportService, JtlExportService } from '../api';
 import { ModalProps } from '../Modal';
 import { act } from '@testing-library/react';
 import { SetRunningAction, SetInterimStateAction } from '../ProjectWorkspace/actions';
+import { AppStateContext } from '../appStateContext';
 
 jest.mock('../Modal', () => {
   return {
@@ -34,7 +33,6 @@ describe('<ToolBar />', () => {
   const setReloadGrid = jest.fn();
   const setViewTrash = jest.fn();
   const reloadReports = jest.fn();
-  const reloadRunningProjects = jest.fn();
   const dispatch = jest.fn();
 
   const createToolBar: (attrs: {
@@ -64,23 +62,22 @@ describe('<ToolBar />', () => {
     viewTrash?: boolean,
     executionCycles?: ExecutionCycle[]
   }) => JSX.Element = ({project, buttonStates, viewTrash}) => (
-    <RunningProjectsContext.Provider value={{runningProjects: [], reloadRunningProjects}}>
-      <ActiveProjectContext.Provider value={{project, dispatch}}>
-        {createToolBar({
-          executionCycles: [],
-          buttonStates: {
-            abort: true,
-            stop: true,
-            start: false,
-            trash: false,
-            export: true,
-            report: true,
-            ...buttonStates
-          },
-          viewTrash: viewTrash ? viewTrash : false
-        })}
-      </ActiveProjectContext.Provider>
-    </RunningProjectsContext.Provider>
+
+    <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: project}, dispatch}}>
+      {createToolBar({
+        executionCycles: [],
+        buttonStates: {
+          abort: true,
+          stop: true,
+          start: false,
+          trash: false,
+          export: true,
+          report: true,
+          ...buttonStates
+        },
+        viewTrash: viewTrash ? viewTrash : false
+      })}
+    </AppStateContext.Provider>
   );
 
   afterEach(() => {
@@ -129,7 +126,6 @@ describe('<ToolBar />', () => {
     expect(apiSpy).toBeCalled();
     setTimeout(() => {
       done();
-      expect(reloadRunningProjects).toBeCalled();
       expect(dispatch).toBeCalled();
       expect(dispatch.mock.calls[2][0]).toBeInstanceOf(SetRunningAction);
       expect((dispatch.mock.calls[2][0] as SetRunningAction).payload).toBeTruthy();
@@ -144,7 +140,6 @@ describe('<ToolBar />', () => {
     expect(apiSpy).toBeCalled();
     setTimeout(() => {
       done();
-      expect(reloadRunningProjects).toBeCalled();
       expect(dispatch).toBeCalled();
       expect(dispatch.mock.calls[2][0]).toBeInstanceOf(SetRunningAction);
       expect((dispatch.mock.calls[2][0] as SetRunningAction).payload).toBeFalsy();
@@ -159,7 +154,6 @@ describe('<ToolBar />', () => {
     expect(apiSpy).toBeCalled();
     setTimeout(() => {
       done();
-      expect(reloadRunningProjects).toBeCalled();
       expect(dispatch).toBeCalled();
       expect(dispatch.mock.calls[2][0]).toBeInstanceOf(SetRunningAction);
       expect((dispatch.mock.calls[2][0] as SetRunningAction).payload).toBeFalsy();

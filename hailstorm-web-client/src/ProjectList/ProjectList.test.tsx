@@ -1,24 +1,25 @@
 import React from 'react';
 import { Project, ExecutionCycleStatus } from '../domain';
-import { mount } from 'enzyme';
-import { RunningProjectsContext } from '../RunningProjectsProvider/RunningProjectsProvider';
+import { mount, ReactWrapper } from 'enzyme';
 import { HashRouter } from 'react-router-dom';
 import { act } from '@testing-library/react';
 import { ProjectList } from './ProjectList';
+import { AppStateContext } from '../appStateContext';
+import { ProjectService } from '../api';
 
 describe('<ProjectList />', () => {
-  it('should show the loader when projects are being fetched', (done) => {
-    const runningProjects: Project[] = [];
-    const reloadRunningProjects = () => new Promise<Project[]>((resolve, _) => resolve([]));
+  it('should show the loader when projects are being fetched', () => {
+    jest.spyOn(ProjectService.prototype, "list").mockResolvedValue([]);
+    let component: ReactWrapper;
     act(() => {
-      done();
-      const component = mount(
-        <RunningProjectsContext.Provider value={{runningProjects, reloadRunningProjects}}>
+      component = mount(
+        <AppStateContext.Provider value={{appState: {activeProject: undefined, runningProjects: []}, dispatch: jest.fn()}}>
           <ProjectList />
-        </RunningProjectsContext.Provider>
+        </AppStateContext.Provider>
       );
-      expect(component).toContainExactlyOneMatchingElement('Loader');
     });
+
+    expect(component!).toContainExactlyOneMatchingElement('Loader');
   });
 
   it('should show the projects when available', (done) => {
@@ -41,33 +42,29 @@ describe('<ProjectList />', () => {
         id: 4, code: 'd', title: 'D', autoStop: true, running: false
       },
     ];
-    const runningProjects: Project[] = [];
-    const reloadRunningProjects = () => {
-      return new Promise<Project[]>((resolve, _) => {
-        runningProjects.pop();
-        runningProjects.push(...eventualData.filter((project) => project.running));
-        resolve(eventualData);
-      });
-    };
 
+    const apiSpy = jest.spyOn(ProjectService.prototype, 'list').mockResolvedValue(eventualData);
+
+    let component: ReactWrapper;
     act(() => {
-      const component = mount(
-        <RunningProjectsContext.Provider value={{runningProjects, reloadRunningProjects}}>
+      component = mount(
+        <AppStateContext.Provider value={{appState: {activeProject: undefined, runningProjects: []}, dispatch: jest.fn()}}>
           <HashRouter>
             <ProjectList />
           </HashRouter>
-        </RunningProjectsContext.Provider>
+        </AppStateContext.Provider>
       );
-
-      setTimeout(() => {
-        done();
-        component.update();
-        expect(component.find('div.nowRunning')).toContainMatchingElements(1, 'article.is-warning');
-        expect(component.find('div.justCompleted')).toContainMatchingElements(1, 'article.is-success');
-        expect(component.find('div.justCompleted')).toContainMatchingElements(1, 'article.is-warning');
-        expect(component.find('div.allProjects')).toContainMatchingElements(2, 'article.is-warning');
-        expect(component.find('div.allProjects')).toContainMatchingElements(1, 'article.is-success');
-      }, 0);
     });
+
+    expect(apiSpy).toBeCalled();
+    setTimeout(() => {
+      done();
+      component.update();
+      expect(component.find('div.nowRunning')).toContainMatchingElements(1, 'article.is-warning');
+      expect(component.find('div.justCompleted')).toContainMatchingElements(1, 'article.is-success');
+      expect(component.find('div.justCompleted')).toContainMatchingElements(1, 'article.is-warning');
+      expect(component.find('div.allProjects')).toContainMatchingElements(2, 'article.is-warning');
+      expect(component.find('div.allProjects')).toContainMatchingElements(1, 'article.is-success');
+    }, 0);
   });
 });

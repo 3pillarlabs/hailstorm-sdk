@@ -3,6 +3,7 @@ import { shallow, mount, ReactWrapper } from 'enzyme';
 import { ReportsList } from './ReportsList';
 import { ReportService } from '../api';
 import { act } from '@testing-library/react';
+import { AppStateContext } from '../appStateContext';
 
 describe('<ReportsList />', () => {
   it('should render without crashing', () => {
@@ -17,19 +18,27 @@ describe('<ReportsList />', () => {
     const Wrapper: React.FC = () => {
       const [loadReports, setLoadReports] = useState(true);
       return (
-        <ReportsList {...{loadReports, setLoadReports}} />
+        <AppStateContext.Provider
+          value={{appState: {
+            activeProject: {id: 1, code: 'a', title: 'A', running: false, autoStop: false},
+            runningProjects: []
+          }, dispatch: jest.fn()}}
+        >
+          <ReportsList {...{loadReports, setLoadReports}} />
+        </AppStateContext.Provider>
       );
     };
 
-    let component: ReactWrapper | null = null;
+    let component: ReactWrapper;
     act(() => {
       component = mount(<Wrapper />);
     });
-    expect(apiSpy).toBeCalled();
+
     setTimeout(() => {
       done();
-      component!.update();
-      expect(component!.find('a').text()).toMatch(new RegExp('a\.docx'));
+      expect(apiSpy).toBeCalled();
+      component.update();
+      expect(component.find('a').text()).toMatch(new RegExp('a\.docx'));
     }, 0);
   });
 });

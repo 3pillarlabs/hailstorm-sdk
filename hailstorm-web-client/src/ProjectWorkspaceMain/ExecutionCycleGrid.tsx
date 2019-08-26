@@ -3,7 +3,7 @@ import { ButtonStateLookup, CheckedExecutionCycle } from './ControlPanel';
 import { Loader } from '../Loader';
 import { ExecutionCycleStatus } from '../domain';
 import { ApiFactory } from '../api';
-import { ActiveProjectContext } from '../ProjectWorkspace';
+import { AppStateContext } from '../appStateContext';
 
 export interface ExecutionCycleGridProps {
   executionCycles: CheckedExecutionCycle[];
@@ -26,7 +26,8 @@ export const ExecutionCycleGrid: React.FC<ExecutionCycleGridProps> = (props) => 
     gridButtonStates
   } = props;
 
-  const {project} = useContext(ActiveProjectContext);
+  const {appState} = useContext(AppStateContext);
+  const project = appState.activeProject!;
   const [selectAll, setSelectAll] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -59,7 +60,11 @@ export const ExecutionCycleGrid: React.FC<ExecutionCycleGridProps> = (props) => 
       setGridButtonStates({ ...gridButtonStates, report: true, export: true });
     }
 
-    if (executionCycles.length && executionCycles.every((exCycle) => !exCycle.stoppedAt || exCycle.checked)) {
+    if (
+      executionCycles.length &&
+      executionCycles.every((exCycle) => !exCycle.stoppedAt || exCycle.checked) &&
+      (executionCycles.length > 1 || executionCycles[0].stoppedAt)
+    ) {
       setSelectAll(true);
     } else {
       setSelectAll(false);

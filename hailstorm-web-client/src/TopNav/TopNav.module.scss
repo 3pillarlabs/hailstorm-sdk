@@ -6,3 +6,11 @@ img.appLogo {
   height: 3.0rem;
   max-height: 100% !important;
 }
+
+.projectBar {
+  margin-left: 1.0rem;
+  justify-content: flex-start;
+  align-items: stretch;
+  display: flex;
+  flex-grow: 2;
+}

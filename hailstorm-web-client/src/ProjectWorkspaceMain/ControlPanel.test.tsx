@@ -4,7 +4,7 @@ import { ControlPanel, ButtonStateLookup } from './ControlPanel';
 import { Project } from '../domain';
 import { ToolBarProps } from './ToolBar';
 import { ExecutionCycleGridProps } from './ExecutionCycleGrid';
-import { ActiveProjectContext } from '../ProjectWorkspace';
+import { AppStateContext } from '../appStateContext';
 
 jest.mock('./ToolBar', () => {
   return {
@@ -66,9 +66,9 @@ describe('<ControlPanel />', () => {
 
   const componentFixture: (project: Project) => ReactWrapper = (project) => {
     return mount(
-      <ActiveProjectContext.Provider value={{project, dispatch: jest.fn()}}>
+      <AppStateContext.Provider value={{appState: {activeProject: project, runningProjects: []}, dispatch: jest.fn()}}>
         <ControlPanel reloadReports={jest.fn()} />
-      </ActiveProjectContext.Provider>
+      </AppStateContext.Provider>
     );
   }
 

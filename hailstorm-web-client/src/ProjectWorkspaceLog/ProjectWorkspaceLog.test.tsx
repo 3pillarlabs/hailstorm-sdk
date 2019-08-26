@@ -2,9 +2,9 @@ import React from 'react';
 import { shallow, mount } from 'enzyme';
 import { ProjectWorkspaceLog } from './ProjectWorkspaceLog';
 import { Project } from '../domain';
-import { ActiveProjectContext } from '../ProjectWorkspace/ProjectWorkspace';
 import { LogStream } from '../stream';
 import { of, empty } from 'rxjs';
+import { AppStateContext } from '../appStateContext';
 
 describe('<ProjectWorkspaceLog />', () => {
   afterEach(() => {
@@ -23,9 +23,9 @@ describe('<ProjectWorkspaceLog />', () => {
       {projectCode: project.code, timestamp: 1565780014, priority: 2, level: 'info', message: `Creating Cluster in us-west-1...`},
     ));
     const component = mount(
-      <ActiveProjectContext.Provider value={{project, dispatch: jest.fn()}}>
+      <AppStateContext.Provider value={{appState: {activeProject: project, runningProjects: []}, dispatch: jest.fn()}}>
         <ProjectWorkspaceLog />
-      </ActiveProjectContext.Provider>
+      </AppStateContext.Provider>
     );
 
     expect(logStreamSpy).toHaveBeenCalled();
@@ -38,9 +38,9 @@ describe('<ProjectWorkspaceLog />', () => {
     const logStreamSpy = jest.spyOn(LogStream, '_logSource').mockImplementation(() => empty());
     const project: Project = {id: 1, code: 'a', title: 'A', running: false, autoStop: false};
     mount(
-      <ActiveProjectContext.Provider value={{project, dispatch: jest.fn()}}>
+      <AppStateContext.Provider value={{appState: {activeProject: project, runningProjects: []}, dispatch: jest.fn()}}>
         <ProjectWorkspaceLog />
-      </ActiveProjectContext.Provider>
+      </AppStateContext.Provider>
     );
 
     expect(logStreamSpy).not.toHaveBeenCalled();

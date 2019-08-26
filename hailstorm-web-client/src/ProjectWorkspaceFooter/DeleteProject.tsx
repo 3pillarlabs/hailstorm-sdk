@@ -1,18 +1,17 @@
 import React, { useContext, useState } from 'react';
-import { ActiveProjectContext } from '../ProjectWorkspace';
 import { Modal } from '../Modal';
 import { SetInterimStateAction, UnsetInterimStateAction } from '../ProjectWorkspace/actions';
 import { InterimProjectState } from '../domain';
 import { ApiFactory } from '../api';
-import { RunningProjectsContext } from '../RunningProjectsProvider';
 import styles from './ProjectWorkspaceFooter.module.scss';
 import { Redirect } from 'react-router';
+import { AppStateContext } from '../appStateContext';
 
 const REDIRECT_DELAY_MS: number = 3000;
 
 export const DeleteProject: React.FC = () => {
-  const {project, dispatch} = useContext(ActiveProjectContext);
-  const {reloadRunningProjects} = useContext(RunningProjectsContext);
+  const {appState, dispatch} = useContext(AppStateContext);
+  const project = appState.activeProject!;
   const [showModal, setShowModal] = useState(false);
   const [showRedirectNotice, setShowRedirectNotice] = useState(false);
   const [doRedirect, setDoRedirect] = useState(false);
@@ -24,7 +23,6 @@ export const DeleteProject: React.FC = () => {
       .update(project.id, {action: 'terminate'})
       .then(() => dispatch(new UnsetInterimStateAction()))
       .then(() => ApiFactory().projects().delete(project.id))
-      .then(reloadRunningProjects)
       .then(() => {
         setShowRedirectNotice(true);
         setShowModal(true);

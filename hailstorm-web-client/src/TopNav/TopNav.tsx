@@ -1,26 +1,47 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, SetStateAction, useContext } from 'react';
 import logo from '../AppLogo.png';
 import { ProjectBar } from '../ProjectBar';
 import { NavLink, Link, withRouter } from 'react-router-dom';
-import { RunningProjectsContext } from '../RunningProjectsProvider';
 import { RouteComponentProps } from 'react-router';
 import styles from './TopNav.module.scss';
+import { Project } from '../domain';
+import { AppStateContext } from '../appStateContext';
+import { ApiFactory } from '../api';
+import { SetRunningProjectsAction, AddRunningProjectAction, RemoveNotRunningProjectAction } from './actions';
 
 // Top Navigation Component
-const TopNavWithouRouter: React.FC<RouteComponentProps> = ({location}) => {
-  const [isBurgerActive, dispatchBurgerActive] = useState(false);
+const TopNavWithoutRouter: React.FC<RouteComponentProps> = ({location}) => {
+  const [isBurgerActive, setBurgerActive] = useState(false);
+  const {appState, dispatch} = useContext(AppStateContext);
   const handleBurgerClick = (event: React.SyntheticEvent) => {
     event.currentTarget.classList.toggle("is-active");
-    dispatchBurgerActive(!isBurgerActive);
+    setBurgerActive(!isBurgerActive);
   };
 
-  const {reloadRunningProjects} = useContext(RunningProjectsContext);
+  const isLocationProjectList = location.pathname === '/' || location.pathname === '/projects';
 
   useEffect(() => {
-    if (location.pathname === '/' || location.pathname === '/projects') return;
+    if (isLocationProjectList || appState.runningProjects.length > 0) return;
+
     console.debug('TopNav#useEffect');
-    reloadRunningProjects();
+    ApiFactory()
+      .projects()
+      .list()
+      .then((fetchedProjects) => dispatch(new SetRunningProjectsAction(fetchedProjects.filter((p) => p.running))));
   }, []);
+
+  useEffect(() => {
+    if (!appState.activeProject) return;
+
+    console.debug('TopNav#useEffect(appState.activeProject)');
+    if (appState.activeProject!.running && appState.runningProjects.find((p) => p.id === appState.activeProject!.id) === undefined) {
+      dispatch(new AddRunningProjectAction(appState.activeProject!));
+    }
+
+    if (!appState.activeProject!.running && appState.runningProjects.find((p) => p.id === appState.activeProject!.id)) {
+      dispatch(new RemoveNotRunningProjectAction(appState.activeProject!));
+    }
+  }, [appState.activeProject]);
 
   return (
     <nav className="navbar is-light" role="navigation">
@@ -51,8 +72,14 @@ const TopNavWithouRouter: React.FC<RouteComponentProps> = ({location}) => {
             <NavLink to="/projects" className="navbar-item" activeClassName="is-active" exact={true}>
               <h2>All Projects</h2>
             </NavLink>
-            <ProjectBar maxItems={5}></ProjectBar>
           </div>
+
+          {!isLocationProjectList ? (
+          <div className={`navbar-start ${styles.projectBar}`}>
+            <div className="has-text-info navbar-item">Running now</div>
+            <ProjectBar maxItems={5} runningProjects={appState.runningProjects} />
+          </div>
+          ) : null}
 
           <div className="navbar-end">
             <div className="navbar-item">
@@ -65,4 +92,4 @@ const TopNavWithouRouter: React.FC<RouteComponentProps> = ({location}) => {
   );
 }
 
-export const TopNav = withRouter(TopNavWithouRouter);
+export const TopNav = withRouter(TopNavWithoutRouter);

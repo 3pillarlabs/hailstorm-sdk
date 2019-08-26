@@ -1,26 +1,19 @@
 import React from 'react';
 import { ProjectBar } from './ProjectBar';
 import { shallow, mount } from 'enzyme';
-import { RunningProjectsCtxProps, RunningProjectsContext } from '../RunningProjectsProvider';
 import { ProjectBarItem } from './ProjectBarItem';
 import { Project, ExecutionCycle } from '../domain';
 import { HashRouter } from 'react-router-dom';
 
 describe('<ProjectBar />', () => {
   it('renders without crashing', () => {
-    shallow(<ProjectBar />);
+    shallow(<ProjectBar runningProjects={[]} />);
   });
 
   describe('with no running projects', () => {
     it ('displays no items', () => {
-      const context: RunningProjectsCtxProps = {
-        runningProjects: [],
-        reloadRunningProjects: () => new Promise((resolve, _) => resolve([]))
-      };
       const projectBar = mount(
-        <RunningProjectsContext.Provider value={context}>
-          <ProjectBar maxItems={2} />
-        </RunningProjectsContext.Provider>
+        <ProjectBar maxItems={2} runningProjects={[]} />
       );
       expect(projectBar.exists(ProjectBarItem)).toBeFalsy();
     });
@@ -29,18 +22,13 @@ describe('<ProjectBar />', () => {
   describe('with running projects', () => {
     it('displays project items', () => {
       const runningProject: Project = {id: 1, title: 'test', code: 'test', autoStop: false, running: true};
-      const context: RunningProjectsCtxProps = {
-        runningProjects: [runningProject, {...runningProject, id: 2, code: 'test2', title: 'test2'}],
-        reloadRunningProjects: () => new Promise((resolve, _) => resolve([]))
-      };
+      const runningProjects = [runningProject, {...runningProject, id: 2, code: 'test2', title: 'test2'}];
       const projectBar = mount(
-        <RunningProjectsContext.Provider value={context}>
-          <HashRouter>
-            <ProjectBar maxItems={2} />
-          </HashRouter>
-        </RunningProjectsContext.Provider>
+        <HashRouter>
+          <ProjectBar maxItems={2} {...{runningProjects}} />
+        </HashRouter>
       );
-      expect(projectBar).toContainMatchingElements(context.runningProjects.length, ProjectBarItem.name);
+      expect(projectBar).toContainMatchingElements(runningProjects.length, ProjectBarItem.name);
     });
 
     it('displays changes in running projects', () => {
@@ -57,15 +45,9 @@ describe('<ProjectBar />', () => {
         render() {
           const { runningProjects } = this.state;
           return (
-            <RunningProjectsContext.Provider value={{
-              runningProjects,
-              reloadRunningProjects: () => new Promise((_, reject) => reject(new Error('unexpected')))
-              }}
-            >
-              <HashRouter>
-                <ProjectBar maxItems={2} />
-              </HashRouter>
-            </RunningProjectsContext.Provider>
+            <HashRouter>
+              <ProjectBar maxItems={2} runningProjects={runningProjects} />
+            </HashRouter>
           );
         }
       }
@@ -89,23 +71,22 @@ describe('<ProjectBar />', () => {
 
       const runningProject: Project = {id: 1, title: 'test', code: 'test', autoStop: false, running: true};
       runningProject.currenExecutionCycle = executionCycle(runningProject.id, 30);
-      const context: RunningProjectsCtxProps = {
-        runningProjects: [runningProject, {
-          ...runningProject,
-          id: 2,
-          code: 'test2',
-          title: 'test2',
-          currenExecutionCycle: executionCycle(2, 15)
-        }],
-        reloadRunningProjects: () => new Promise((_, reject) => reject(new Error('unexpected')))
-      };
 
       const projectBar = mount(
-        <RunningProjectsContext.Provider value={context}>
-          <HashRouter>
-            <ProjectBar maxItems={2} />
-          </HashRouter>
-        </RunningProjectsContext.Provider>
+        <HashRouter>
+          <ProjectBar
+            maxItems={2}
+            runningProjects={[
+              runningProject,
+              {
+                ...runningProject,
+                id: 2,
+                code: 'test2',
+                title: 'test2',
+                currenExecutionCycle: executionCycle(2, 15)
+              }
+            ]} />
+        </HashRouter>
       );
 
       expect(projectBar.find(ProjectBarItem).at(0).key()).toBe('test2');
@@ -120,17 +101,11 @@ describe('<ProjectBar />', () => {
         running: true,
         autoStop: false
       }));
-      const context: RunningProjectsCtxProps = {
-        runningProjects,
-        reloadRunningProjects: () => new Promise((_, reject) => reject(new Error('unexpected')))
-      };
 
       const projectBar = mount(
-        <RunningProjectsContext.Provider value={context}>
-          <HashRouter>
-            <ProjectBar maxItems={2} />
-          </HashRouter>
-        </RunningProjectsContext.Provider>
+        <HashRouter>
+          <ProjectBar maxItems={2} {...{runningProjects}} />
+        </HashRouter>
       );
 
       expect(projectBar.find('.navbar-link')).toHaveText('More');

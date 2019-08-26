@@ -1,8 +1,7 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ProjectWorkspaceBasicProps } from '../ProjectWorkspace';
 import styles from './ProjectWorkspaceHeader.module.scss';
 import { ApiFactory } from '../api';
-import { RunningProjectsContext } from '../RunningProjectsProvider';
 import { titleCase } from '../helpers';
 
 export const ProjectWorkspaceHeader: React.FC<ProjectWorkspaceBasicProps> = (props) => {
@@ -11,7 +10,6 @@ export const ProjectWorkspaceHeader: React.FC<ProjectWorkspaceBasicProps> = (pro
   const [errorMessage, setErrorMessage] = useState<string>('');
   const toggleEditable = () => setEditable(!isEditable);
   let inputRef = React.createRef<any>();
-  const {reloadRunningProjects} = useContext(RunningProjectsContext);
   const onSubmitHandler = () => {
     const inputValue = inputRef.current.value as string;
     console.debug(inputValue);
@@ -24,15 +22,13 @@ export const ProjectWorkspaceHeader: React.FC<ProjectWorkspaceBasicProps> = (pro
     setEditable(false);
     ApiFactory()
       .projects()
-      .update(props.project.id, {title: inputRef.current.value})
-      .then(() => {
-        if (props.project.running) reloadRunningProjects();
-      });
+      .update(props.project.id, {title: inputRef.current.value});
   };
 
   useEffect(() => {
+    console.debug('ProjectWorkspaceHeader#useEffect(props.project)');
     setTitle(props.project.title);
-  }, [props]);
+  }, [props.project]);
 
   return (
     <div className={`columns ${styles.workspaceHeader}`}>

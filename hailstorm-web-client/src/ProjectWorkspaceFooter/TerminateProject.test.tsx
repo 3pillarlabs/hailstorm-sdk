@@ -1,11 +1,10 @@
 import React from 'react';
 import { shallow, mount, ReactWrapper } from 'enzyme';
 import { TerminateProject } from './TerminateProject';
-import { ActiveProjectContext } from '../ProjectWorkspace';
 import { Project, InterimProjectState } from '../domain';
 import { ProjectService } from '../api';
-import { RunningProjectsContext } from '../RunningProjectsProvider/RunningProjectsProvider';
 import { act } from '@testing-library/react';
+import { AppStateContext } from '../appStateContext';
 
 jest.mock('../Modal', () => ({
   __esModule: true,
@@ -32,18 +31,16 @@ describe('<TerminateProject />', () => {
     };
 
     return (
-      <RunningProjectsContext.Provider value={{runningProjects: [], reloadRunningProjects: jest.fn()}}>
-        <ActiveProjectContext.Provider value={{project, dispatch: (dispatch || jest.fn())}}>
-          <TerminateProject />
-        </ActiveProjectContext.Provider>
-      </RunningProjectsContext.Provider>
+      <AppStateContext.Provider value={{appState: {activeProject: project, runningProjects: []}, dispatch: (dispatch || jest.fn())}}>
+        <TerminateProject />
+      </AppStateContext.Provider>
     );
   };
 
   afterEach(() => jest.resetAllMocks());
 
   it('should render without crashing', () => {
-    shallow(<TerminateProject />);
+    shallow(buildComponent());
   });
 
   it('should be disabled when the project is already terminating', () => {
@@ -109,7 +106,6 @@ describe('<TerminateProject />', () => {
       });
 
       component.update();
-      console.debug(component.html());
       component.find('button.is-danger').simulate('click');
       expect(dispatch).toBeCalled();
       expect(apiSpy).toBeCalled();

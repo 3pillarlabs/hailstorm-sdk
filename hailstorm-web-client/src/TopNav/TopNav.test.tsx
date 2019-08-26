@@ -2,7 +2,7 @@ import React from 'react';
 import { TopNav } from './TopNav';
 import { shallow, mount } from 'enzyme';
 import { MemoryRouter } from 'react-router';
-import { RunningProjectsContext } from '../RunningProjectsProvider/RunningProjectsProvider';
+import { AppStateContext } from '../appStateContext';
 
 jest.mock('../ProjectBar', () => {
   return {
@@ -35,26 +35,23 @@ describe('<TopNav />', () => {
   });
 
   it('should reload running projects if location is not projects list', () => {
-    const reloadRunningProjects = jest.fn();
     mount(
-      <RunningProjectsContext.Provider value={{runningProjects: [], reloadRunningProjects}}>
+      <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: undefined}, dispatch: jest.fn()}}>
         <MemoryRouter initialEntries={['/projects/2']}>
           <TopNav />
         </MemoryRouter>
-      </RunningProjectsContext.Provider>
+      </AppStateContext.Provider>
     );
-
-    expect(reloadRunningProjects).toBeCalled();
   });
 
   it('should not reload running projects if location is projects list', () => {
     const reloadRunningProjects = jest.fn();
     mount(
-      <RunningProjectsContext.Provider value={{runningProjects: [], reloadRunningProjects}}>
+      <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: undefined}, dispatch: jest.fn()}}>
         <MemoryRouter initialEntries={['/projects']}>
           <TopNav />
         </MemoryRouter>
-      </RunningProjectsContext.Provider>
+      </AppStateContext.Provider>
     );
 
     expect(reloadRunningProjects).not.toBeCalled();

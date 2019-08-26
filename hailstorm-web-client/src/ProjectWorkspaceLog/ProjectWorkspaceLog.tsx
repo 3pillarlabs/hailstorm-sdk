@@ -1,11 +1,12 @@
 import React, { useContext, useState, useEffect, useRef } from 'react';
-import { ActiveProjectContext } from '../ProjectWorkspace';
 import styles from './ProjectWorkspaceLog.module.scss';
 import { LogEvent } from '../domain';
 import { LogStream } from '../stream';
+import { AppStateContext } from '../appStateContext';
 
 export const ProjectWorkspaceLog: React.FC = () => {
-  const {project} = useContext(ActiveProjectContext);
+  const {appState} = useContext(AppStateContext);
+  const project = appState.activeProject!;
   const [logs, setLogs] = useState<LogEvent[]>([]);
   const appendLog = (log: LogEvent) => {
     setLogs((logs) => [...logs, log]);

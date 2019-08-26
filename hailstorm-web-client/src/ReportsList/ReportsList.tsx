@@ -1,8 +1,8 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { ActiveProjectContext } from '../ProjectWorkspace/ProjectWorkspace';
 import { Report } from '../domain';
 import { Loader } from '../Loader/Loader';
 import { ApiFactory } from '../api';
+import { AppStateContext } from '../appStateContext';
 
 export interface ReportListProps {
   loadReports: boolean;
@@ -11,7 +11,8 @@ export interface ReportListProps {
 
 export const ReportsList: React.FC<ReportListProps> = (props) => {
   const {loadReports, setLoadReports} = props;
-  const {project} = useContext(ActiveProjectContext);
+  const {appState} = useContext(AppStateContext);
+  const project = appState.activeProject!;
   const [reports, setReports] = useState<Report[]>([]);
 
   useEffect(() => {
@@ -19,7 +20,7 @@ export const ReportsList: React.FC<ReportListProps> = (props) => {
     ApiFactory()
       .reports()
       .list(project.id)
-      .then(setReports)
+      .then((fetched) => setReports(fetched))
       .then(() => setLoadReports(false))
   }, [loadReports]);
 

@@ -1,12 +1,11 @@
 import React, { useState, useContext } from 'react';
-import { ActiveProjectContext } from '../ProjectWorkspace';
 import { ButtonStateLookup, CheckedExecutionCycle } from './ControlPanel';
 import { ProjectActions, ResultActions, ApiFactory } from '../api';
 import { JtlDownloadContentProps, JtlDownloadModal } from './JtlDownloadModal';
 import { Modal } from '../Modal';
-import { RunningProjectsContext } from '../RunningProjectsProvider';
 import { InterimProjectState } from '../domain';
 import { SetInterimStateAction, UnsetInterimStateAction, SetRunningAction } from '../ProjectWorkspace/actions';
+import { AppStateContext } from '../appStateContext';
 
 export interface ToolBarProps {
   gridButtonStates: ButtonStateLookup;
@@ -31,8 +30,8 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
     reloadReports
   } = props;
 
-  const {project, dispatch} = useContext(ActiveProjectContext);
-  const {reloadRunningProjects} = useContext(RunningProjectsContext);
+  const {appState, dispatch} = useContext(AppStateContext);
+  const project = appState.activeProject!;
   const [showJtlModal, setShowJtlModal] = useState(false);
   const [jtlModalProps, setJtlModalProps] = useState<JtlDownloadContentProps>({});
 
@@ -75,8 +74,7 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
         .update(project.id, { running: endState, action })
         .then(() => dispatch(new UnsetInterimStateAction()))
         .then(() => dispatch(new SetRunningAction(endState)))
-        .then(() => setReloadGrid(true))
-        .then(() => reloadRunningProjects());
+        .then(() => setReloadGrid(true));
     };
   }
 
