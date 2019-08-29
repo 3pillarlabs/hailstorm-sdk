@@ -20,7 +20,7 @@ export const JtlDownloadModal: React.FC<JtlDownloadModalProps> = (props) => {
       <div className="modal-background"></div>
       <div className="modal-content">
         <article className="message is-success">
-          <div className={`message-body ${styles.jtlModal}`}>
+          <div className={`message-body ${styles.modal}`}>
             <p>
               Your exported results are ready for download.
               This link will <strong>not</strong> be available after you close this window.

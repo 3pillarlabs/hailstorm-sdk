@@ -4,6 +4,8 @@ import { DB } from "./db";
 export type ProjectActions = 'stop' | 'abort' | 'start' | 'terminate';
 export type ResultActions = 'report' | 'export' | 'trash';
 
+const SLOW_FACTOR = 5;
+
 // API
 export class ApiService {
 
@@ -43,7 +45,7 @@ export class ProjectService {
           exCycle => !exCycle.stoppedAt && exCycle.projectId === x.id
         );
         return {...x, currenExecutionCycle: currentExecutionCycle};
-      })), 300);
+      })), 300 * SLOW_FACTOR);
     });
   }
 
@@ -52,9 +54,9 @@ export class ProjectService {
     let matchedProject: Project | undefined = DB.projects.find((project) => project.id === id);
     return new Promise((resolve, reject) => {
       if (matchedProject) {
-        setTimeout(() => resolve({...matchedProject} as Project), 100);
+        setTimeout(() => resolve({...matchedProject} as Project), 100 * SLOW_FACTOR);
       } else {
-        setTimeout(() => reject(new Error(`No Project found with id - ${id}`)), 500);
+        setTimeout(() => reject(new Error(`No Project found with id - ${id}`)), 500 * SLOW_FACTOR);
       }
     });
   }
@@ -69,7 +71,7 @@ export class ProjectService {
       if (attributes.running !== undefined) matchedProject.running = attributes.running;
       switch (attributes.action) {
         case 'start':
-          processingTime = 30000;
+          processingTime = 3000;
           dbOp = () => DB.executionCycles.push({
             id: DB.executionCycles[DB.executionCycles.length - 1].id + 1,
             startedAt: new Date(),
@@ -79,7 +81,7 @@ export class ProjectService {
           break;
 
         case 'stop':
-          processingTime = 30000;
+          processingTime = 3000;
           dbOp = () => {
             const index = DB.executionCycles.findIndex((x) => x.projectId === id && !x.stoppedAt);
             if (index < 0) return;
@@ -92,7 +94,7 @@ export class ProjectService {
           break;
 
         case 'abort':
-          processingTime = 15000;
+          processingTime = 1500;
           dbOp = () => {
             const index = DB.executionCycles.findIndex((x) => x.projectId === id && !x.stoppedAt);
             if (index < 0) return;
@@ -103,7 +105,7 @@ export class ProjectService {
           break;
 
         case 'terminate':
-          processingTime = 30000;
+          processingTime = 3000;
           dbOp = () => {
             const index = DB.executionCycles.findIndex((x) => x.projectId === id && !x.stoppedAt);
             if (index < 0) return;
@@ -124,9 +126,9 @@ export class ProjectService {
         setTimeout(() => {
           if (dbOp) dbOp();
           resolve();
-        }, processingTime / 10);
+        }, processingTime * SLOW_FACTOR);
       } else {
-        setTimeout(() => reject(new Error(`No Project found with id - ${id}`)), 500);
+        setTimeout(() => reject(new Error(`No Project found with id - ${id}`)), 500 * SLOW_FACTOR);
       }
     });
   }
@@ -141,7 +143,7 @@ export class ProjectService {
         } else {
           reject(new Error(`No project with ID ${id}`))
         }
-      }, 300);
+      }, 300 * SLOW_FACTOR);
     });
   }
 }
@@ -154,7 +156,7 @@ export class ExecutionCycleService {
       (resolve, reject) => setTimeout(
         () => resolve(DB.executionCycles
           .filter((x) => x.projectId === projectId && x.status !== ExecutionCycleStatus.ABORTED)
-          .map((x) => ({...x}))), 300));
+          .map((x) => ({...x}))), 300 * SLOW_FACTOR));
   }
 
   update(executionCycleId: number, projectId: number, attributes: {status?: ExecutionCycleStatus}): Promise<ExecutionCycle> {
@@ -167,7 +169,7 @@ export class ExecutionCycleService {
       } else {
         reject(new Error(`No execution cycle with id: ${executionCycleId}, projectId: ${projectId}`));
       }
-    }, 100));
+    }, 100 * SLOW_FACTOR));
   }
 }
 
@@ -194,7 +196,7 @@ export class ReportService {
       } else {
         reject(new Error(`No project with id ${projectId}`));
       }
-    }, 3000));
+    }, 3000 * SLOW_FACTOR));
   }
 }
 
@@ -215,7 +217,7 @@ export class JtlExportService {
       } else {
         reject(new Error(`No project with id ${projectId}`));
       }
-    }, 3000));
+    }, 3000 * SLOW_FACTOR));
   }
 }
 
