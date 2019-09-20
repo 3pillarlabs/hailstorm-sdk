@@ -1,7 +1,7 @@
 import React from 'react';
 import { mount, ReactWrapper, shallow } from 'enzyme';
 import { ProjectWorkspaceHeader } from './ProjectWorkspaceHeader';
-import { act } from '@testing-library/react';
+import { act, render, fireEvent } from '@testing-library/react';
 import { ProjectService } from '../api';
 import { InterimProjectState } from '../domain';
 import { AppStateContext } from '../appStateContext';
@@ -43,41 +43,45 @@ describe('<ProjectWorkspaceHeader />', () => {
       expect(component!.find('h2')).toHaveText(project.title);
     });
 
-    it('should update title on submit', () => {
+    it('should update title on submit', async () => {
       project.running = true;
       const updateFnSpy = jest.spyOn(ProjectService.prototype, 'update').mockImplementation(jest.fn().mockResolvedValue(null));
-      act(() => {
-        component = mount(
-          <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: undefined}, dispatch: jest.fn()}}>
-            <ProjectWorkspaceHeader {...{project}} />
-          </AppStateContext.Provider>
-        );
-      });
+      const {findByText, findByTitle, findByDisplayValue} = render(
+        <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: undefined}, dispatch: jest.fn()}}>
+          <ProjectWorkspaceHeader {...{project}} />
+        </AppStateContext.Provider>
+      );
 
-      component!.find('i[title="Edit"]').simulate('click');
+      const editLink = await findByTitle('Edit');
+      fireEvent.click(editLink);
+
       const updatedProjectTitle = `Updated ${project.title}`;
-      const textInput: any = component!.find('input[type="text"]').instance(); // https://github.com/airbnb/enzyme/issues/76
-      textInput.value = updatedProjectTitle;
-      component!.find('form').simulate('submit');
+      const textBox = await findByDisplayValue(project.title);
+      fireEvent.change(textBox, {target: {value: updatedProjectTitle}});
+
+      const button = await findByText('Update');
+      fireEvent.click(button);
+
+      await findByText(updatedProjectTitle);
       expect(updateFnSpy).toHaveBeenCalledWith(project.id, {title: updatedProjectTitle});
     });
 
-    it('should not update if title is blank', () => {
-      const updateFnSpy = jest.spyOn(ProjectService.prototype, 'update').mockImplementation(jest.fn().mockResolvedValue(null));
-      act(() => {
-        component = mount(
-          <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: undefined}, dispatch: jest.fn()}}>
-            <ProjectWorkspaceHeader {...{project}} />
-          </AppStateContext.Provider>
-        );
-      });
+    it('should not update if title is blank', async () => {
+      const {findByText, findByTitle, findByDisplayValue} = render(
+        <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: undefined}, dispatch: jest.fn()}}>
+          <ProjectWorkspaceHeader {...{project}} />
+        </AppStateContext.Provider>
+      );
 
-      component!.find('i[title="Edit"]').simulate('click');
-      const textInput: any = component!.find('input[type="text"]').instance(); // https://github.com/airbnb/enzyme/issues/76
-      textInput.value = '';
-      component!.find('form').simulate('submit');
-      expect(component).toContainExactlyOneMatchingElement('p.help');
-      expect(updateFnSpy).not.toHaveBeenCalled();
+      const editLink = await findByTitle('Edit');
+      fireEvent.click(editLink);
+
+      const textBox = await findByDisplayValue(project.title);
+      fireEvent.change(textBox, {target: {value: ''}});
+      fireEvent.blur(textBox);
+
+      const button = await findByText('Update');
+      expect(button.hasAttribute('disabled')).toBeTruthy();
     });
   });
 

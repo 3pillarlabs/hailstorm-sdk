@@ -1,133 +1,176 @@
-import React, { useState } from 'react';
-import { WizardStep } from './WizardStep';
+import React, { useContext, useEffect, useState } from 'react';
+import { WizardStepTitle, WizardStepTitleProps } from './WizardStepTitle';
 import styles from './NewProjectWizard.module.scss';
-import { Route, RouteComponentProps } from 'react-router';
-import { ProjectForm } from '../ProjectForm';
+import { Route, RouteComponentProps, withRouter } from 'react-router';
+import { ProjectConfiguration } from '../ProjectConfiguration';
 import { JMeterConfiguration } from '../JMeterConfiguration';
 import { ClusterConfiguration } from '../ClusterConfiguration';
 import { SummaryView } from './SummaryView';
-import { History } from 'history';
+import { AppStateContext } from '../appStateContext';
+import { WizardTabTypes, NewProjectWizardProgress } from '../store';
+import { ActivateTabAction, StayInProjectSetupAction, ProjectSetupCancelAction } from './actions';
+import { Loader, LoaderSize } from '../Loader/Loader';
+import { UnsavedChangesPrompt } from '../Modal/UnsavedChangesPrompt';
 
-interface NewProjectWizardState {
-  activeTab: string;
-  done?: {[key: string]: boolean },
-  projectId?: string | number;
+interface LabeledWizardStepTitleProps extends WizardStepTitleProps {
+  label: string;
 }
 
-export const NewProjectWizard: React.FC = () => {
-  const [state, dispatch] = useState<NewProjectWizardState>({
-    activeTab: 'project',
-    done: {}
-  });
+const RouterlessNewProjectWizard: React.FC<RouteComponentProps> = ({history}) => {
+  const {appState, dispatch} = useContext(AppStateContext);
+  const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    console.debug('NewProjectWizard#useEffect(appState.wizardState)');
+    if (!appState.wizardState) return;
+    switch (appState.wizardState.activeTab) {
+      case WizardTabTypes.Project:
+        if (appState.activeProject) {
+          history.push(`/wizard/projects/${appState.activeProject.id}`);
+        }
+
+        break;
+
+      case WizardTabTypes.JMeter:
+        history.push(`/wizard/projects/${appState.activeProject!.id}/jmeter_plans`);
+        break;
+
+      case WizardTabTypes.Cluster:
+        history.push(`/wizard/projects/${appState.activeProject!.id}/clusters`);
+        break;
+
+      case WizardTabTypes.Review:
+        history.push(`/wizard/projects/${appState.activeProject!.id}/review`);
+        break;
+
+      default:
+        break;
+    }
+
+    if (appState.wizardState.confirmCancel) {
+      setShowModal(true);
+    }
+  }, [appState.wizardState]);
+
+  useEffect(() => {
+    console.debug('NewProjectWizard#useEffect(appState)');
+    if (!appState.wizardState) {
+      if (appState.activeProject) {
+        history.push(`/projects/${appState.activeProject.id}`);
+      } else {
+        history.push('/projects');
+      }
+    }
+  }, [appState]);
+
+  if (!appState.wizardState) {
+    console.debug('!appState.wizardState return');
+    return <Loader size={LoaderSize.APP} />;
+  }
+
+  const state = appState.wizardState!;
+  const projectKey = appState.activeProject ? appState.activeProject.id : 'new';
+  const wizardSteps: Array<LabeledWizardStepTitleProps> = [
+    {
+      tab: WizardTabTypes.Project,
+      linkTo: `/wizard/projects/${projectKey}`,
+      reachable: state.activeTab !== WizardTabTypes.Project,
+      label: 'Project'
+    },
+    {
+      tab: WizardTabTypes.JMeter,
+      linkTo: `/wizard/projects/${projectKey}/jmeter_plans`,
+      reachable: state.done[WizardTabTypes.Project] !== undefined,
+      label: 'JMeter'
+    },
+    {
+      tab: WizardTabTypes.Cluster,
+      linkTo: `/wizard/projects/${projectKey}/clusters`,
+      reachable: state.done[WizardTabTypes.JMeter] !== undefined,
+      label: 'Cluster'
+    },
+    {
+      tab: WizardTabTypes.Review,
+      linkTo: `/wizard/projects/${projectKey}/review`,
+      reachable: state.done[WizardTabTypes.Cluster] !== undefined,
+      label: 'Review'
+    },
+  ]
+  .map((partialStep) => ({
+    ...makePartialStep({...partialStep, dispatch, state}),
+    linkTo: partialStep.linkTo,
+    reachable: partialStep.reachable,
+    label: partialStep.label
+  }))
+  .map<LabeledWizardStepTitleProps>((step, index) => ({
+    ...step,
+    title: (index + 1).toString(),
+    first: index === 0,
+    last: index === 3
+  }));
 
   return (
     <div className="container">
       <div className="columns">
         <div className="column is-3">
           <div className={styles.stepList}>
-            <WizardStep
-              title="1"
-              linkTo={`/wizard/projects/${state.projectId ? state.projectId : "new"}`}
-              first={true}
-              isActive={isActive(state, 'project')}
-              done={state.done && state.done['project']}
-              onClick={() => dispatch({...state, activeTab: 'project'})}
-            >
-              Project
-            </WizardStep>
-            <WizardStep
-              title="2"
-              linkTo={`/wizard/projects/${state.projectId}/jmeter_plans`}
-              isActive={isActive(state, 'jmeter_plans')}
-              done={state.done && state.done['jmeter_plans']}
-              onClick={() => dispatch({...state, activeTab: 'jmeter_plans'})}
-            >
-              JMeter
-            </WizardStep>
-            <WizardStep
-              title="3"
-              linkTo={`/wizard/projects/${state.projectId}/clusters`}
-              isActive={isActive(state, 'clusters')}
-              done={state.done && state.done['clusters']}
-              onClick={() => dispatch({...state, activeTab: 'clusters'})}
-            >
-              Cluster
-            </WizardStep>
-            <WizardStep
-              title="4"
-              linkTo={`/wizard/projects/${state.projectId}/review`}
-              last={true}
-              isActive={isActive(state, 'review')}
-              done={state.done && state.done['review']}
-              onClick={() => dispatch({...state, activeTab: 'review'})}
-            >
-              Review
-            </WizardStep>
+          {wizardSteps.map((step) => (
+            <WizardStepTitle key={step.title} {...{...step}}>{step.label}</WizardStepTitle>
+          ))}
           </div>
         </div>
         <div className="column is-9">
           <Route
             exact={true}
             path="/wizard/projects/:id"
-            render={(routeProps) => projectForm(routeProps, dispatch, state)} />
+            component={ProjectConfiguration} />
           <Route
             path="/wizard/projects/:id/jmeter_plans"
-            render={(routeProps) => jMeterForm(routeProps, dispatch, state)} />
-          <Route path="/wizard/projects/:id/clusters"
-            render={(routeProps) => clusterForm(routeProps, dispatch, state)} />
-          <Route path="/wizard/projects/:id/review"
-            render={(routeProps) => <SummaryView transition={() => routeProps.history.push(`/projects/${state.projectId}`)} />} />
+            component={JMeterConfiguration} />
+          <Route
+            path="/wizard/projects/:id/clusters"
+            component={ClusterConfiguration} />
+          <Route
+            path="/wizard/projects/:id/review"
+            component={SummaryView} />
         </div>
       </div>
+      <UnsavedChangesPrompt
+        {...{showModal, setShowModal}}
+        hasUnsavedChanges={
+          appState.activeProject !== undefined &&
+          appState.wizardState &&
+          !appState.wizardState.done[WizardTabTypes.Review]
+        }
+        shouldUpdateNavChange={(location) => (location.pathname.match(/^\/wizard/) === null)}
+        handleCancel={() => dispatch(new StayInProjectSetupAction())}
+        handleConfirm={() => dispatch(new ProjectSetupCancelAction())}
+      >
+        <p>The project set up is not complete. Are you sure you want to exit the wizard now?</p>
+      </UnsavedChangesPrompt>
     </div>
   );
 }
 
-function isActive(state: NewProjectWizardState, tabCode: string) {
-  return state.activeTab === tabCode;
-}
+function makePartialStep({
+  tab,
+  state,
+  dispatch
+}: {
+  tab: WizardTabTypes;
+  state: NewProjectWizardProgress;
+  dispatch: React.Dispatch<any>;
+}): {
+  isActive: boolean;
+  done: boolean;
+  onClick: () => void;
+}  {
 
-function projectForm(routeProps: RouteComponentProps,
-                     dispatch: React.Dispatch<React.SetStateAction<NewProjectWizardState>>,
-                     state: NewProjectWizardState): JSX.Element {
-  return <ProjectForm {...routeProps} transition={generateProjectTransition(dispatch, routeProps.history, state)} />;
-}
-
-function generateProjectTransition(dispatch: React.Dispatch<React.SetStateAction<NewProjectWizardState>>,
-                                   history: History,
-                                   state: NewProjectWizardState) {
-  return (projectId: string | number) => {
-    history.push(`/wizard/projects/${projectId}/jmeter_plans`);
-    dispatch({...state, activeTab: 'jmeter_plans', done: {...state.done, project: true}, projectId});
+  return {
+    isActive: state.activeTab === tab,
+    done: state.done[tab] !== undefined,
+    onClick: () => dispatch(new ActivateTabAction(tab)),
   };
 }
 
-function jMeterForm(routeProps: RouteComponentProps,
-                    dispatch: React.Dispatch<React.SetStateAction<NewProjectWizardState>>,
-                    state: NewProjectWizardState): JSX.Element {
-  return <JMeterConfiguration {...routeProps} transition={generateJMeterTransition(dispatch, routeProps.history, state)} />;
-}
-
-function generateJMeterTransition(dispatch: React.Dispatch<React.SetStateAction<NewProjectWizardState>>,
-                                  history: History,
-                                  state: NewProjectWizardState) {
-  return () => {
-    history.push(`/wizard/projects/${state.projectId}/clusters`);
-    dispatch({...state, activeTab: 'clusters', done: {...state.done, jmeter_plans: true}});
-  };
-}
-
-function clusterForm(routeProps: RouteComponentProps,
-                     dispatch: React.Dispatch<React.SetStateAction<NewProjectWizardState>>,
-                     state: NewProjectWizardState): JSX.Element {
-  return <ClusterConfiguration {...routeProps} transition={generateClusterTransition(dispatch, routeProps.history, state)} />;
-}
-
-function generateClusterTransition(dispatch: React.Dispatch<React.SetStateAction<NewProjectWizardState>>,
-                history: History,
-                state: NewProjectWizardState) {
-  return () => {
-    history.push(`/wizard/projects/${state.projectId}/review`);
-    dispatch({...state, activeTab: 'review', done: {...state.done, clusters: true}});
-  };
-}
+export const NewProjectWizard = withRouter(RouterlessNewProjectWizard);

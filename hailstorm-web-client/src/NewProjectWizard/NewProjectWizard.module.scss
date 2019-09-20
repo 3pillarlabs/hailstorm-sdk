@@ -1,5 +1,6 @@
 @import "~bulma/sass/utilities/_all.sass";
 @import "~bulma-3pillar/src/default/_variables.scss";
+@import "../sass/variables";
 
 .stepList {
   display: flex;
@@ -72,3 +73,15 @@
   margin-bottom: 0 !important;
 }
 
+.stepHeader {
+  padding-bottom: 0.5rem;
+  border-bottom: $header-line;
+}
+
+.stepBody {
+  padding: 0 2rem;
+}
+
+.stepContent {
+  min-height: 20vh;
+}

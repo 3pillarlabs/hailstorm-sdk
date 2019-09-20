@@ -1,13 +1,13 @@
-import React, { useState, useEffect, SetStateAction, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import logo from '../AppLogo.png';
 import { ProjectBar } from '../ProjectBar';
 import { NavLink, Link, withRouter } from 'react-router-dom';
 import { RouteComponentProps } from 'react-router';
 import styles from './TopNav.module.scss';
-import { Project } from '../domain';
 import { AppStateContext } from '../appStateContext';
 import { ApiFactory } from '../api';
 import { SetRunningProjectsAction, AddRunningProjectAction, RemoveNotRunningProjectAction } from './actions';
+import { ProjectSetupAction } from '../NewProjectWizard/actions';
 
 // Top Navigation Component
 const TopNavWithoutRouter: React.FC<RouteComponentProps> = ({location}) => {
@@ -83,7 +83,17 @@ const TopNavWithoutRouter: React.FC<RouteComponentProps> = ({location}) => {
 
           <div className="navbar-end">
             <div className="navbar-item">
-              <Link className="button is-info" to="/wizard/projects/new"> New Project </Link>
+            {appState.wizardState !== undefined ? (
+              <button className="button is-info" disabled={true}>New Project</button>
+            ) : (
+              <Link
+                className="button is-info"
+                to="/wizard/projects/new"
+                onClick={() => dispatch(new ProjectSetupAction())}
+              >
+                New Project
+              </Link>
+            )}
             </div>
           </div>
         </div>

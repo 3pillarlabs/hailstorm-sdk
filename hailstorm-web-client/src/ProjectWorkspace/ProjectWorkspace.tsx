@@ -7,10 +7,11 @@ import { Project } from '../domain';
 import { ApiFactory } from '../api';
 import { Loader, LoaderSize } from '../Loader';
 import { RouteComponentProps, Prompt, Redirect } from 'react-router';
-import { SetProjectAction } from './actions';
+import { SetProjectAction, UnsetProjectAction } from './actions';
 import { AppStateContext } from '../appStateContext';
 import { Modal } from '../Modal';
 import { Location } from 'history';
+import { UnsavedChangesPrompt } from '../Modal/UnsavedChangesPrompt';
 
 export interface ProjectWorkspaceBasicProps {
   project: Project;
@@ -22,32 +23,32 @@ export const ProjectWorkspace: React.FC<RouteComponentProps<{ id: string }>> = (
   const {appState, dispatch} = useContext(AppStateContext);
   const project = appState.activeProject;
   const [showModal, setShowModal] = useState(false);
-  const [nextLocation, setNextLocation] = useState<Location>();
-  const [shouldRedirect, setShouldRedirect] = useState(false);
-  const [confirmDisabled, setConfirmDisabled] = useState(true);
+  // const [nextLocation, setNextLocation] = useState<Location>();
+  // const [shouldRedirect, setShouldRedirect] = useState(false);
+  // const [confirmDisabled, setConfirmDisabled] = useState(true);
 
-  const navAwayHandler = (location: Location<any>) => {
-    if (!shouldRedirect) {
-      setShowModal(true);
-      setTimeout(() => setConfirmDisabled(!confirmDisabled), CONFIRM_DELAY_MS);
-    }
+  // const navAwayHandler = (location: Location<any>) => {
+  //   if (!shouldRedirect) {
+  //     setShowModal(true);
+  //     setTimeout(() => setConfirmDisabled(!confirmDisabled), CONFIRM_DELAY_MS);
+  //   }
 
-    setNextLocation(location);
-    return shouldRedirect;
-  };
+  //   setNextLocation(location);
+  //   return shouldRedirect;
+  // };
 
-  const modalConfirmHandler = () => {
-    setShowModal(false);
-    setShouldRedirect(true);
-  }
+  // const modalConfirmHandler = () => {
+  //   setShowModal(false);
+  //   setShouldRedirect(true);
+  // }
 
-  const modalCancelHandler = () => {
-    setShowModal(false);
-    setConfirmDisabled(!confirmDisabled);
-  }
+  // const modalCancelHandler = () => {
+  //   setShowModal(false);
+  //   setConfirmDisabled(!confirmDisabled);
+  // }
 
   useEffect(() => {
-    console.debug('ProjectWorkspace#useEffect(props)');
+    console.debug('ProjectWorkspace#useEffect(props.match.params.id)');
     if (props.location.state) {
       dispatch(new SetProjectAction(props.location.state.project));
     } else {
@@ -58,28 +59,36 @@ export const ProjectWorkspace: React.FC<RouteComponentProps<{ id: string }>> = (
     }
   }, [props.match.params.id]);
 
+  // useEffect(() => {
+  //   console.debug('ProjectWorkspace#useEffect(project)');
+  //   const listener = function(ev: BeforeUnloadEvent) {
+  //     if (project && project.interimState !== undefined) {
+  //       ev.preventDefault();
+  //       ev.returnValue = false;
+  //     } else {
+  //       delete ev['returnValue'];
+  //     }
+  //   };
+
+  //   window.addEventListener('beforeunload', listener);
+
+  //   return () => {
+  //     window.removeEventListener('beforeunload', listener);
+  //   };
+  // }, [project]);
+
   useEffect(() => {
-    const listener = function(ev: BeforeUnloadEvent) {
-      if (project && project.interimState !== undefined) {
-        ev.preventDefault();
-        ev.returnValue = false;
-      } else {
-        delete ev['returnValue'];
-      }
-    };
-
-    window.addEventListener('beforeunload', listener);
-
+    console.debug('ProjectWorkspace#useEffect()');
     return () => {
-      window.removeEventListener('beforeunload', listener);
+      dispatch(new UnsetProjectAction());
     };
-  }, [project]);
+  }, []);
 
   return (
     <div className="container">
     {project && project.id === parseInt(props.match.params.id) ?
       <>
-      <Prompt when={project.interimState !== undefined} message={(nextLocation) => navAwayHandler(nextLocation)} />
+      {/* <Prompt when={project.interimState !== undefined} message={(nextLocation) => navAwayHandler(nextLocation)} />
       <Modal isActive={showModal}>
         <div className={`modal${showModal ? " is-active" : ""}`}>
           <div className="modal-background"></div>
@@ -110,7 +119,21 @@ export const ProjectWorkspace: React.FC<RouteComponentProps<{ id: string }>> = (
         </div>
       </Modal>
       {shouldRedirect &&
-        <Redirect to={nextLocation!} />}
+        <Redirect to={nextLocation!} />} */}
+      <UnsavedChangesPrompt
+        {...{showModal, setShowModal}}
+        hasUnsavedChanges={project && project.interimState !== undefined}
+        unSavedChangesDeps={[project]}
+      >
+        <p>
+          You have operations in progress. If you navigate away from this page now, the operations will
+          terminate, leaving the system in an ambigious state. You will most likely have to terminate
+          the setup and start over again.
+        </p>
+        <p>
+          <strong>Are you sure you want to navigate away from the page?</strong>
+        </p>
+      </UnsavedChangesPrompt>
       <ProjectWorkspaceHeader project={project} />
       <ProjectWorkspaceMain />
       <ProjectWorkspaceLog />

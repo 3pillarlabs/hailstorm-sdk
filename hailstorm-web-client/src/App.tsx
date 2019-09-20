@@ -5,8 +5,7 @@ import { ProjectWorkspace } from './ProjectWorkspace';
 import { ProjectList } from './ProjectList';
 import { Route, HashRouter, Redirect } from 'react-router-dom';
 import { NewProjectWizard } from './NewProjectWizard';
-import { initialState } from "./initialState";
-import { rootReducer } from './rootReducer';
+import { rootReducer, initialState } from './store';
 import { AppStateContext } from './appStateContext';
 
 const App: React.FC = () => {

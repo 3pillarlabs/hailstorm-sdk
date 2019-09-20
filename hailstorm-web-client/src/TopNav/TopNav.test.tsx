@@ -3,6 +3,7 @@ import { TopNav } from './TopNav';
 import { shallow, mount } from 'enzyme';
 import { MemoryRouter } from 'react-router';
 import { AppStateContext } from '../appStateContext';
+import { AppState, WizardTabTypes } from '../store';
 
 jest.mock('../ProjectBar', () => {
   return {
@@ -56,4 +57,28 @@ describe('<TopNav />', () => {
 
     expect(reloadRunningProjects).not.toBeCalled();
   });
+
+  it('should disable new project button in new project wizard', () => {
+    const appState: AppState = {
+      runningProjects: [],
+      activeProject: undefined,
+      wizardState: {
+        activeTab: WizardTabTypes.Project,
+        done: {}
+      }
+    };
+
+    const component = mount(
+      <AppStateContext.Provider value={{appState, dispatch: jest.fn()}}>
+        <MemoryRouter initialEntries={['/wizard/project/new']}>
+          <TopNav />
+        </MemoryRouter>
+      </AppStateContext.Provider>
+    );
+
+    expect(component.find('button')).toExist();
+    expect(component.find('button')).toBeDisabled();
+  });
+
+  test.todo('change in active project title should reflect in project bar');
 });

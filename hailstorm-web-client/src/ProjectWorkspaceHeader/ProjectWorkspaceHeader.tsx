@@ -3,27 +3,13 @@ import { ProjectWorkspaceBasicProps } from '../ProjectWorkspace';
 import styles from './ProjectWorkspaceHeader.module.scss';
 import { ApiFactory } from '../api';
 import { titleCase } from '../helpers';
+import { ProjectForm } from '../ProjectConfiguration/ProjectForm';
+import { Field, ErrorMessage } from 'formik';
 
 export const ProjectWorkspaceHeader: React.FC<ProjectWorkspaceBasicProps> = (props) => {
   const [isEditable, setEditable] = useState(false);
   const [title, setTitle] = useState<string>('');
-  const [errorMessage, setErrorMessage] = useState<string>('');
   const toggleEditable = () => setEditable(!isEditable);
-  let inputRef = React.createRef<any>();
-  const onSubmitHandler = () => {
-    const inputValue = inputRef.current.value as string;
-    console.debug(inputValue);
-    if (inputValue.trim().length === 0) {
-      setErrorMessage("Title can't be blank");
-      return;
-    }
-
-    setTitle(inputValue);
-    setEditable(false);
-    ApiFactory()
-      .projects()
-      .update(props.project.id, {title: inputRef.current.value});
-  };
 
   useEffect(() => {
     console.debug('ProjectWorkspaceHeader#useEffect(props.project)');
@@ -33,7 +19,7 @@ export const ProjectWorkspaceHeader: React.FC<ProjectWorkspaceBasicProps> = (pro
   return (
     <div className={`columns ${styles.workspaceHeader}`}>
       <div className="column is-three-quarters">
-        {isEditable ? textBox({title, onSubmitHandler, inputRef, toggleEditable, errorMessage}) : header(title, toggleEditable)}
+        {isEditable ? textBox(title, setTitle, setEditable, props, toggleEditable) : header(title, toggleEditable)}
       </div>
       <div className="column">
         {props.project.running && !props.project.interimState &&
@@ -51,35 +37,50 @@ export const ProjectWorkspaceHeader: React.FC<ProjectWorkspaceBasicProps> = (pro
   );
 };
 
-function textBox({
-    title,
-    onSubmitHandler,
-    inputRef,
-    toggleEditable,
-    errorMessage
-  }: {
-        title: string,
-        onSubmitHandler: () => void,
-        inputRef: React.RefObject<any>,
-        toggleEditable: () => void,
-        errorMessage: string
-      }
-  ) {
+function textBox(
+  title: string,
+  setTitle: React.Dispatch<React.SetStateAction<string>>,
+  setEditable: React.Dispatch<React.SetStateAction<boolean>>,
+  props: React.PropsWithChildren<ProjectWorkspaceBasicProps>,
+  toggleEditable: () => void
+): React.ReactNode {
   return (
-    <form onSubmit={onSubmitHandler}>
-      <div className="field is-grouped">
-        <div className="control is-expanded">
-          <input defaultValue={title} type="text" className="input" ref={inputRef} />
-        </div>
-        <div className="control">
-          <button className="button is-primary">Update</button>
-        </div>
-        <div className="control">
-          <a className="button" onClick={toggleEditable}><i className="fas fa-times-circle"></i></a>
-        </div>
-      </div>
-      {errorMessage && <p className="help is-danger">{errorMessage}</p>}
-    </form>
+    <ProjectForm
+      title={title}
+      handleSubmit={(values, _actions) => {
+        setTitle(values.title!);
+        setEditable(false);
+        ApiFactory()
+          .projects()
+          .update(props.project.id, { title: values.title });
+      }}
+      render={({ isSubmitting, isValid }) => (
+        <>
+          <div className="field is-grouped">
+            <div className="control is-expanded">
+              <Field name="title" type="text" className="input" />
+            </div>
+            <div className="control">
+              <button
+                className="button is-primary"
+                disabled={isSubmitting || !isValid}
+              >
+                Update
+              </button>
+            </div>
+            <div className="control">
+              <a className="button" onClick={toggleEditable}>
+                <i className="fas fa-times-circle"></i>
+              </a>
+            </div>
+          </div>
+          <ErrorMessage
+            name="title"
+            render={message => <p className="help is-danger">{message}</p>}
+          />
+        </>
+      )}
+    />
   );
 }
 

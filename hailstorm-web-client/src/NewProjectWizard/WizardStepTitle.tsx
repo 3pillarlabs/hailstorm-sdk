@@ -2,32 +2,33 @@ import React from 'react';
 import styles from './NewProjectWizard.module.scss';
 import { Link } from 'react-router-dom';
 
-export interface WizardStepProps {
+export interface WizardStepTitleProps {
   title: string;
   linkTo: string;
   first?: boolean;
   last?: boolean;
   isActive?: boolean;
   done?: boolean;
-  onClick: () => void;
+  reachable?: boolean;
+  onClick?: () => void;
 }
 
-export const WizardStep: React.FC<WizardStepProps> = (props) => {
+export const WizardStepTitle: React.FC<WizardStepTitleProps> = (props) => {
   let statusClassName = undefined;
   if (props.done) statusClassName = styles.success;
   if (props.isActive) statusClassName = styles.active;
 
   let stepElement = undefined;
-  if (props.done) {
+  if (props.reachable) {
     stepElement = (
       <Link to={props.linkTo} className={`${styles.step} ${statusClassName}`} onClick={props.onClick}>
-        {step(props)}
+        <Step {...props} />
       </Link>
     );
   } else {
     stepElement = (
       <div className={`${styles.step} ${statusClassName}`}>
-        {step(props)}
+        <Step {...props} />
       </div>
     );
   }
@@ -35,7 +36,7 @@ export const WizardStep: React.FC<WizardStepProps> = (props) => {
   return stepElement;
 }
 
-function step(props: React.PropsWithChildren<WizardStepProps>) {
+function Step(props: React.PropsWithChildren<WizardStepTitleProps>) {
   return (
     <svg>
       {props.first ? <></> : <line x1="42" y1="0" x2="42" y2="32" strokeWidth="10"></line>}

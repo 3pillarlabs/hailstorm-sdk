@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useContext } from 'react';
+import { AppStateContext } from '../appStateContext';
+import { JMeterSetupCompletedAction } from '../NewProjectWizard/actions';
+import { CancelLink, BackLink } from '../NewProjectWizard/WizardControls';
+import { WizardTabTypes } from '../store';
 
-export interface JMeterConfigurationProps {
-  transition: () => void;
-}
+export const JMeterConfiguration: React.FC = () => {
+  const {dispatch} = useContext(AppStateContext);
 
-export const JMeterConfiguration: React.FC<JMeterConfigurationProps> = (props) => {
   return (
     <>
     <h3 className="title is-3">Setup JMeter</h3>
-    <button className="button is-primary" onClick={props.transition}>Next</button>
+    <CancelLink {...{dispatch}} />
+    <BackLink {...{dispatch, tab: WizardTabTypes.Project}} />
+    <button className="button is-primary" onClick={() => dispatch(new JMeterSetupCompletedAction())}>Next</button>
     </>
   );
 }

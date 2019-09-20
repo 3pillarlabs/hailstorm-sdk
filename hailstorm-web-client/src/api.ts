@@ -4,7 +4,7 @@ import { DB } from "./db";
 export type ProjectActions = 'stop' | 'abort' | 'start' | 'terminate';
 export type ResultActions = 'report' | 'export' | 'trash';
 
-const SLOW_FACTOR = 5;
+const SLOW_FACTOR = 1;
 
 // API
 export class ApiService {
@@ -134,6 +134,7 @@ export class ProjectService {
   }
 
   delete(id: number) {
+    console.log(`api ---- ProjectService#delete(${id})`);
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         const matchedProject: Project | undefined = DB.projects.find((project) => id === project.id);
@@ -144,6 +145,30 @@ export class ProjectService {
           reject(new Error(`No project with ID ${id}`))
         }
       }, 300 * SLOW_FACTOR);
+    });
+  }
+
+  create({title}: {[K in keyof Project]?: Project[K]}): Promise<Project> {
+    console.log(`api ---- ProjectService#create(${title})`);
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        if (title) {
+          const maxId = DB.projects.map((p) => p.id).reduce((s, e) => (s < e ? e : s), 0);
+          const newProject = {
+            id: maxId + 1,
+            autoStop: false,
+            code: title.toLowerCase().replace(/\s+/, '-'),
+            title,
+            running: false
+          };
+
+          DB.projects.push(newProject);
+          resolve(newProject);
+
+        } else {
+          reject(new Error('Missing attributes: title'));
+        }
+      }, 100);
     });
   }
 }

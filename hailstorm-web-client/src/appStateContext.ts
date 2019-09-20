@@ -1,6 +1,5 @@
 import React from 'react';
-import { AppState } from "./redux";
-import { initialState } from './initialState';
+import { AppState, initialState } from "./store";
 
 export interface AppStateContextProps {
   appState: AppState;

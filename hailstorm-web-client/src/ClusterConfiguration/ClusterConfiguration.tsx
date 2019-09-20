@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useContext } from 'react';
+import { AppStateContext } from '../appStateContext';
+import { ClusterSetupCompletedAction } from '../NewProjectWizard/actions';
+import { CancelLink, BackLink } from '../NewProjectWizard/WizardControls';
+import { WizardTabTypes } from '../store';
 
-export interface ClusterConfigurationProps {
-  transition: () => void;
-}
+export const ClusterConfiguration: React.FC = () => {
+  const {dispatch} = useContext(AppStateContext);
 
-export const ClusterConfiguration: React.FC<ClusterConfigurationProps> = (props) => {
   return (
     <>
     <h3 className="title is-3">Setup Clusters</h3>
-    <button className="button is-primary" onClick={props.transition}>Next</button>
+    <CancelLink {...{dispatch}} />
+    <BackLink {...{dispatch, tab: WizardTabTypes.JMeter}} />
+    <button className="button is-primary" onClick={() => dispatch(new ClusterSetupCompletedAction())}>Next</button>
     </>
   );
 }

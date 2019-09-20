@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useContext } from 'react';
+import { AppStateContext } from '../appStateContext';
+import { ReviewCompletedAction } from './actions';
+import { CancelLink, BackLink } from './WizardControls';
+import { WizardTabTypes } from '../store';
 
-export interface SummaryViewProps {
-  transition: () => void;
-}
+export const SummaryView: React.FC = () => {
+  const {dispatch} = useContext(AppStateContext);
 
-export const SummaryView: React.FC<SummaryViewProps> = (props) => {
   return (
     <>
     <h3 className="title is-3">Review</h3>
-    <button className="button is-success" onClick={props.transition}>Done</button>
+    <CancelLink {...{dispatch}} />
+    <BackLink {...{dispatch, tab: WizardTabTypes.Cluster}} />
+    <button className="button is-success" onClick={() => dispatch(new ReviewCompletedAction())}>Done</button>
     </>
   )
 }

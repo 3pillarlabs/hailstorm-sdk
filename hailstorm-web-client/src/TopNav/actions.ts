@@ -1,4 +1,4 @@
-import { Action } from "../redux";
+import { Action } from "../store";
 import { Project } from "../domain";
 
 /**

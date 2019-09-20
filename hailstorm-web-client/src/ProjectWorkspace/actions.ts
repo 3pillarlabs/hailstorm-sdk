@@ -1,11 +1,12 @@
 import { InterimProjectState, Project } from "../domain";
-import { Action } from "../redux";
+import { Action } from "../store";
 
 export enum ProjectWorkspaceActionTypes {
   SetProject = '[ProjectWorkspace] SetProject',
   SetRunning = '[ProjectWorkspace] SetRunning',
   SetInterimState = '[ProjectWorkspace] SetInterimState',
   UnsetInterimState = '[ProjectWorkspace] UnsetInterimState',
+  UnsetProject = '[ProjectWorkspace] UnsetProject',
 }
 
 export class SetProjectAction implements Action {
@@ -27,8 +28,13 @@ export class UnsetInterimStateAction implements Action {
   readonly type = ProjectWorkspaceActionTypes.UnsetInterimState;
 }
 
+export class UnsetProjectAction implements Action {
+  readonly type = ProjectWorkspaceActionTypes.UnsetProject;
+}
+
 export type ProjectWorkspaceActions =
   | SetProjectAction
   | SetRunningAction
   | SetInterimStateAction
-  | UnsetInterimStateAction;
+  | UnsetInterimStateAction
+  | UnsetProjectAction;
