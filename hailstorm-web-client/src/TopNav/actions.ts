@@ -8,6 +8,7 @@ export enum ProjectBarActionTypes {
   SetRunningProjects = '[ProjectBar] SetRunningProjects',
   AddRunningProject = '[ProjectBar] AddRunningProject',
   RemoveNotRunningProject = '[ProjectBar] RemoveNotRunningProject',
+  ModifyRunningProject = '[ProjectBar] ModifyRunningProject',
 }
 
 export class SetRunningProjectsAction implements Action {
@@ -25,7 +26,13 @@ export class RemoveNotRunningProjectAction implements Action {
   constructor(public payload: Project) {}
 }
 
+export class ModifyRunningProjectAction implements Action {
+  readonly type = ProjectBarActionTypes.ModifyRunningProject;
+  constructor(public payload: {projectId: number, attrs: {[K in keyof Project]?: Project[K]}}) {}
+}
+
 export type ProjectBarActions =
   | SetRunningProjectsAction
   | AddRunningProjectAction
-  | RemoveNotRunningProjectAction;
+  | RemoveNotRunningProjectAction
+  | ModifyRunningProjectAction;

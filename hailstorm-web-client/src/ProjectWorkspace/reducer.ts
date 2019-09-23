@@ -26,6 +26,9 @@ export const reducer: (
     case ProjectWorkspaceActionTypes.UnsetProject:
       return undefined;
 
+    case ProjectWorkspaceActionTypes.UpdateProject:
+      return {...state!, ...action.payload};
+
     default:
       return state;
   }

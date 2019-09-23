@@ -4,12 +4,22 @@ import { shallow, mount } from 'enzyme';
 import { MemoryRouter } from 'react-router';
 import { AppStateContext } from '../appStateContext';
 import { AppState, WizardTabTypes } from '../store';
+import { Project } from '../domain';
+import { ProjectBarProps } from '../ProjectBar/ProjectBar';
+import { ModifyRunningProjectAction } from './actions';
 
 jest.mock('../ProjectBar', () => {
   return {
     __esModule: true,
-    ProjectBar: () => (
-      <div id="projectBar"></div>
+    ProjectBar: ({runningProjects}: ProjectBarProps) => (
+      <div id="projectBar">
+      {runningProjects.map(({id, code, title}) => (
+        <div key={id}>
+          <span className="code">{code}</span>
+          <span className="title">{title}</span>
+        </div>
+      ))}
+      </div>
     )
   }
 });
@@ -80,5 +90,26 @@ describe('<TopNav />', () => {
     expect(component.find('button')).toBeDisabled();
   });
 
-  test.todo('change in active project title should reflect in project bar');
+  it('change in active project title should reflect in project bar', () => {
+    const project: Project = {id: 1, code: 'a', title: 'A', running: true, autoStop: true};
+    const appState: AppState = {
+      runningProjects: [ project ],
+      activeProject: {...project, title: 'B'}
+    };
+
+    const dispatch = jest.fn();
+    const component = mount(
+      <AppStateContext.Provider value={{appState, dispatch}}>
+        <MemoryRouter initialEntries={['/projects/2']}>
+          <TopNav />
+        </MemoryRouter>
+      </AppStateContext.Provider>
+    );
+
+    component.update();
+    expect(dispatch).toBeCalled();
+    const callAction = dispatch.mock.calls[0][0];
+    expect(callAction).toBeInstanceOf(ModifyRunningProjectAction);
+    expect((callAction as ModifyRunningProjectAction).payload.attrs).toEqual({title: 'B'});
+  });
 });

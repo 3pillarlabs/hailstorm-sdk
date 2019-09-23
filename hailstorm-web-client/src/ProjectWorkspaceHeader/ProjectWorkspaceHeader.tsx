@@ -1,36 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { ProjectWorkspaceBasicProps } from '../ProjectWorkspace';
+import React, { useState, useContext } from 'react';
 import styles from './ProjectWorkspaceHeader.module.scss';
 import { ApiFactory } from '../api';
 import { titleCase } from '../helpers';
 import { ProjectForm } from '../ProjectConfiguration/ProjectForm';
 import { Field, ErrorMessage } from 'formik';
+import { AppStateContext } from '../appStateContext';
+import { UpdateProjectAction } from '../ProjectWorkspace/actions';
 
-export const ProjectWorkspaceHeader: React.FC<ProjectWorkspaceBasicProps> = (props) => {
+export const ProjectWorkspaceHeader: React.FC = () => {
+  const {appState, dispatch} = useContext(AppStateContext);
   const [isEditable, setEditable] = useState(false);
-  const [title, setTitle] = useState<string>('');
-  const toggleEditable = () => setEditable(!isEditable);
 
-  useEffect(() => {
-    console.debug('ProjectWorkspaceHeader#useEffect(props.project)');
-    setTitle(props.project.title);
-  }, [props.project]);
+  if (!appState.activeProject) return null;
+  const project = appState.activeProject;
+
+  const toggleEditable = () => setEditable(!isEditable);
 
   return (
     <div className={`columns ${styles.workspaceHeader}`}>
       <div className="column is-three-quarters">
-        {isEditable ? textBox(title, setTitle, setEditable, props, toggleEditable) : header(title, toggleEditable)}
+        {isEditable ?
+          textBox(project.id, project.title, dispatch, setEditable, toggleEditable) :
+          header(project.title, toggleEditable)}
       </div>
       <div className="column">
-        {props.project.running && !props.project.interimState &&
+        {project.running && !project.interimState &&
         <h2 className={`title is-2 ${styles.isStatus}`}>
           <i className={`fas fa-running ${styles.spinnerIcon}`}></i>
           Running
         </h2>}
-        {props.project.interimState &&
+        {project.interimState &&
         <h2 className={`title is-2 ${styles.isStatus}`}>
           <i className={`fas fa-cog fa-spin ${styles.spinnerIcon}`}></i>
-          {titleCase(props.project.interimState)}...
+          {titleCase(project.interimState)}...
         </h2>}
       </div>
     </div>
@@ -38,21 +40,21 @@ export const ProjectWorkspaceHeader: React.FC<ProjectWorkspaceBasicProps> = (pro
 };
 
 function textBox(
+  projectId: number,
   title: string,
-  setTitle: React.Dispatch<React.SetStateAction<string>>,
+  dispatch: React.Dispatch<any>,
   setEditable: React.Dispatch<React.SetStateAction<boolean>>,
-  props: React.PropsWithChildren<ProjectWorkspaceBasicProps>,
   toggleEditable: () => void
 ): React.ReactNode {
   return (
     <ProjectForm
       title={title}
       handleSubmit={(values, _actions) => {
-        setTitle(values.title!);
+        dispatch(new UpdateProjectAction({title: values.title}));
         setEditable(false);
         ApiFactory()
           .projects()
-          .update(props.project.id, { title: values.title });
+          .update(projectId, { title: values.title });
       }}
       render={({ isSubmitting, isValid }) => (
         <>

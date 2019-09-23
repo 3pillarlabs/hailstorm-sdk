@@ -7,6 +7,7 @@ export enum ProjectWorkspaceActionTypes {
   SetInterimState = '[ProjectWorkspace] SetInterimState',
   UnsetInterimState = '[ProjectWorkspace] UnsetInterimState',
   UnsetProject = '[ProjectWorkspace] UnsetProject',
+  UpdateProject = '[ProjectWorkspace] UpdateProject',
 }
 
 export class SetProjectAction implements Action {
@@ -32,9 +33,15 @@ export class UnsetProjectAction implements Action {
   readonly type = ProjectWorkspaceActionTypes.UnsetProject;
 }
 
+export class UpdateProjectAction implements Action {
+  readonly type = ProjectWorkspaceActionTypes.UpdateProject;
+  constructor(public payload: {[K in keyof Project]?: Project[K]}) {}
+}
+
 export type ProjectWorkspaceActions =
   | SetProjectAction
   | SetRunningAction
   | SetInterimStateAction
   | UnsetInterimStateAction
-  | UnsetProjectAction;
+  | UnsetProjectAction
+  | UpdateProjectAction;

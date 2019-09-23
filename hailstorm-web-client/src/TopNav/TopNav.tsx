@@ -6,7 +6,7 @@ import { RouteComponentProps } from 'react-router';
 import styles from './TopNav.module.scss';
 import { AppStateContext } from '../appStateContext';
 import { ApiFactory } from '../api';
-import { SetRunningProjectsAction, AddRunningProjectAction, RemoveNotRunningProjectAction } from './actions';
+import { SetRunningProjectsAction, AddRunningProjectAction, RemoveNotRunningProjectAction, ModifyRunningProjectAction } from './actions';
 import { ProjectSetupAction } from '../NewProjectWizard/actions';
 
 // Top Navigation Component
@@ -34,8 +34,13 @@ const TopNavWithoutRouter: React.FC<RouteComponentProps> = ({location}) => {
     if (!appState.activeProject) return;
 
     console.debug('TopNav#useEffect(appState.activeProject)');
-    if (appState.activeProject!.running && appState.runningProjects.find((p) => p.id === appState.activeProject!.id) === undefined) {
-      dispatch(new AddRunningProjectAction(appState.activeProject!));
+    if (appState.activeProject!.running) {
+      const match = appState.runningProjects.find((p) => p.id === appState.activeProject!.id);
+      if (match === undefined) {
+        dispatch(new AddRunningProjectAction(appState.activeProject!));
+      } else if (match.title !== appState.activeProject.title) {
+        dispatch(new ModifyRunningProjectAction({projectId: match.id, attrs: {title: appState.activeProject.title}}));
+      }
     }
 
     if (!appState.activeProject!.running && appState.runningProjects.find((p) => p.id === appState.activeProject!.id)) {

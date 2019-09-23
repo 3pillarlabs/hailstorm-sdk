@@ -1,5 +1,5 @@
 import { reducer } from "./reducer";
-import { SetRunningProjectsAction, AddRunningProjectAction, RemoveNotRunningProjectAction } from "./actions";
+import { SetRunningProjectsAction, AddRunningProjectAction, RemoveNotRunningProjectAction, ModifyRunningProjectAction } from "./actions";
 import { Project } from "../domain";
 
 describe('reducer', () => {
@@ -24,5 +24,12 @@ describe('reducer', () => {
     const payload: Project = {id: 1, code: 'a', title: 'A', running: true, autoStop: true};
     const nextState = reducer([payload], new RemoveNotRunningProjectAction(payload));
     expect(nextState.length).toEqual(0);
+  });
+
+  it('should modify a running project', () => {
+    const project: Project = {id: 1, code: 'a', title: 'A', running: true, autoStop: true};
+    const payload = {projectId: project.id, attrs: {title: 'B'}};
+    const nextState = reducer([project], new ModifyRunningProjectAction(payload));
+    expect(nextState[0].title).toEqual(payload.attrs.title);
   });
 });

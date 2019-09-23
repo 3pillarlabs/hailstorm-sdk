@@ -5,7 +5,7 @@ import { render, fireEvent, wait } from '@testing-library/react';
 import { ProjectService } from '../api';
 import { WizardTabTypes, AppState } from '../store';
 import { AppStateContext } from '../appStateContext';
-import { CreateProjectAction, ConfirmProjectSetupCancelAction } from '../NewProjectWizard/actions';
+import { CreateProjectAction, ConfirmProjectSetupCancelAction, UpdateProjectTitleAction } from '../NewProjectWizard/actions';
 
 describe('<ProjectConfiguration />', () => {
   it('should render without crashing', () => {
@@ -82,5 +82,64 @@ describe('<ProjectConfiguration />', () => {
     fireEvent.click(cancel);
     await wait(() => expect(dispatch).toBeCalled());
     expect(dispatch.mock.calls[0][0]).toBeInstanceOf(ConfirmProjectSetupCancelAction);
+  });
+
+  describe('in edit mode', () => {
+    it('should display project title', async () => {
+      const appState: AppState = {
+        runningProjects: [],
+        activeProject: {id: 1, code: 'a', title: 'Yamamoto', running: false, autoStop: true},
+        wizardState: {
+          activeTab: WizardTabTypes.Project,
+          done: {
+            [WizardTabTypes.Project]: true
+          }
+        }
+      };
+
+      const dispatch = jest.fn();
+      const {findByDisplayValue} = render(
+        <AppStateContext.Provider value={{appState, dispatch}}>
+          <ProjectConfiguration />
+        </AppStateContext.Provider>
+      );
+
+      const editField = await findByDisplayValue('Yamamoto');
+      expect(editField).toBeDefined();
+    });
+
+    it('should update project title', async () => {
+      const updateSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(undefined);
+      const appState: AppState = {
+        runningProjects: [],
+        activeProject: {id: 1, code: 'a', title: 'Yamamoto', running: false, autoStop: true},
+        wizardState: {
+          activeTab: WizardTabTypes.Project,
+          done: {
+            [WizardTabTypes.Project]: true
+          }
+        }
+      };
+
+      const dispatch = jest.fn();
+      const {findByDisplayValue, findByText} = render(
+        <AppStateContext.Provider value={{appState, dispatch}}>
+          <ProjectConfiguration />
+        </AppStateContext.Provider>
+      );
+
+      const editField = await findByDisplayValue('Yamamoto');
+      fireEvent.change(editField, {target: {value: 'Yamagoto'}});
+      const submit = await findByText('Save & Next');
+      fireEvent.click(submit);
+      await wait(() => {
+        expect(updateSpy).toBeCalledWith(appState.activeProject!.id, {title: 'Yamagoto'});
+      });
+
+      await wait(() => {
+        expect(dispatch).toBeCalled();
+        expect(dispatch.mock.calls[0][0]).toBeInstanceOf(UpdateProjectTitleAction);
+      });
+    });
   });
 });

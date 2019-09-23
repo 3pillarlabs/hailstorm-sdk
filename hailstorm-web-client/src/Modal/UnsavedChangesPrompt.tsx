@@ -59,22 +59,7 @@ export const UnsavedChangesPrompt: React.FC<UnsavedChangesPromptProps> = ({
     handleCancel && handleCancel();
   }
 
-  useEffect(() => {
-    console.debug('UnsavedChangesPrompt#useEffect()');
-    const listener = function(ev: BeforeUnloadEvent) {
-      if (hasUnsavedChanges) {
-        ev.preventDefault();
-        ev.returnValue = false;
-      } else {
-        delete ev['returnValue'];
-      }
-    };
-
-    window.addEventListener('beforeunload', listener);
-    return () => {
-      window.removeEventListener('beforeunload', listener);
-    };
-  }, unSavedChangesDeps);
+  useEffect(windowUnloadEffect(hasUnsavedChanges), unSavedChangesDeps);
 
   useEffect(() => {
     console.debug('UnsavedChangesPrompt#useEffect(showModal)');
@@ -116,4 +101,23 @@ export const UnsavedChangesPrompt: React.FC<UnsavedChangesPromptProps> = ({
     {okConfirmed && nextLocation && <Redirect to={nextLocation} />}
     </>
   );
+}
+
+export function windowUnloadEffect(hasUnsavedChanges: boolean): React.EffectCallback {
+  return () => {
+    console.debug('UnsavedChangesPrompt#useEffect()');
+    const listener = function (ev: BeforeUnloadEvent) {
+      if (hasUnsavedChanges) {
+        ev.preventDefault();
+        ev.returnValue = false;
+      }
+      else {
+        delete ev['returnValue'];
+      }
+    };
+    window.addEventListener('beforeunload', listener);
+    return () => {
+      window.removeEventListener('beforeunload', listener);
+    };
+  };
 }

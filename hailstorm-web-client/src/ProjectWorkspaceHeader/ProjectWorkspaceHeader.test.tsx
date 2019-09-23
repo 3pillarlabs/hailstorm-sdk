@@ -1,19 +1,23 @@
 import React from 'react';
 import { mount, ReactWrapper, shallow } from 'enzyme';
 import { ProjectWorkspaceHeader } from './ProjectWorkspaceHeader';
-import { act, render, fireEvent } from '@testing-library/react';
+import { act, render, fireEvent, wait } from '@testing-library/react';
 import { ProjectService } from '../api';
 import { InterimProjectState } from '../domain';
 import { AppStateContext } from '../appStateContext';
+import { UpdateProjectAction } from '../ProjectWorkspace/actions';
 
 describe('<ProjectWorkspaceHeader />', () => {
   const project = { id: 1, code: 'a', title: 'Project Title', autoStop: true, running: false };
   let component: ReactWrapper | undefined = undefined;
+  const dispatch = jest.fn();
 
   beforeEach(() => {
     act(() => {
       component = mount(
-        <ProjectWorkspaceHeader {...{project}} />
+        <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: project}, dispatch}}>
+          <ProjectWorkspaceHeader />
+        </AppStateContext.Provider>
       );
     });
   });
@@ -44,11 +48,10 @@ describe('<ProjectWorkspaceHeader />', () => {
     });
 
     it('should update title on submit', async () => {
-      project.running = true;
       const updateFnSpy = jest.spyOn(ProjectService.prototype, 'update').mockImplementation(jest.fn().mockResolvedValue(null));
       const {findByText, findByTitle, findByDisplayValue} = render(
-        <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: undefined}, dispatch: jest.fn()}}>
-          <ProjectWorkspaceHeader {...{project}} />
+        <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: project}, dispatch}}>
+          <ProjectWorkspaceHeader />
         </AppStateContext.Provider>
       );
 
@@ -62,14 +65,17 @@ describe('<ProjectWorkspaceHeader />', () => {
       const button = await findByText('Update');
       fireEvent.click(button);
 
-      await findByText(updatedProjectTitle);
-      expect(updateFnSpy).toHaveBeenCalledWith(project.id, {title: updatedProjectTitle});
+      await wait(() => {
+        expect(updateFnSpy).toHaveBeenCalledWith(project.id, {title: updatedProjectTitle});
+        expect(dispatch).toBeCalled();
+        expect(dispatch.mock.calls[0][0]).toBeInstanceOf(UpdateProjectAction);
+      });
     });
 
     it('should not update if title is blank', async () => {
       const {findByText, findByTitle, findByDisplayValue} = render(
-        <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: undefined}, dispatch: jest.fn()}}>
-          <ProjectWorkspaceHeader {...{project}} />
+        <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: project}, dispatch}}>
+          <ProjectWorkspaceHeader />
         </AppStateContext.Provider>
       );
 
@@ -87,7 +93,7 @@ describe('<ProjectWorkspaceHeader />', () => {
 
   describe('when transitioning project state', () => {
     it('should show no status text when project is not running', () => {
-      const component = shallow(<ProjectWorkspaceHeader project={{id: 1, code: 'a', title: 'A', running: false, autoStop: true}} />);
+      const component = shallow(<ProjectWorkspaceHeader />);
       expect(component.find('.isStatus')).not.toExist();
     });
 
@@ -96,16 +102,22 @@ describe('<ProjectWorkspaceHeader />', () => {
       { match: "Stopping", state: InterimProjectState.STOPPING, verb: 'stopping' },
       { match: "Aborting", state: InterimProjectState.ABORTING, verb: 'aborting' },
     ].forEach(({match, state, verb}) => it(`should match "${match}..." status text when project is ${verb}`, () => {
-      const component = shallow(
-        <ProjectWorkspaceHeader
-          project={{id: 1, code: 'a', title: 'A', running: false, autoStop: true, interimState: state}}
-        />
+      const component = mount(
+        <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: {...project, interimState: state}}, dispatch}}>
+          <ProjectWorkspaceHeader />
+        </AppStateContext.Provider>
       );
+
       expect(component.find('.isStatus').text()).toMatch(new RegExp(state, 'i'));
     }));
 
     it('should show "Running" status text when project is running', () => {
-      const component = shallow(<ProjectWorkspaceHeader project={{id: 1, code: 'a', title: 'A', running: true, autoStop: true}} />);
+      const component = mount(
+        <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: {...project, running: true}}, dispatch}}>
+          <ProjectWorkspaceHeader />
+        </AppStateContext.Provider>
+      );
+
       expect(component.find('.isStatus').text()).toMatch(new RegExp('running', 'i'));
     });
   });

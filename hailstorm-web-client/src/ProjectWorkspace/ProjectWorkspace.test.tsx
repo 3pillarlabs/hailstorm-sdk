@@ -11,10 +11,10 @@ import { AppStateContext } from '../appStateContext';
 
 jest.mock('../ProjectWorkspaceHeader', () => {
   return {
-    ProjectWorkspaceHeader: (props: {project: Project}) => (
+    ProjectWorkspaceHeader: () => (
       <div id="projectWorkspaceHeader">
-        <span id="code">{props.project.code}</span>
-        <span id="running">{props.project.running ? 'true' : 'false'}</span>
+        <span id="code"></span>
+        <span id="running"></span>
       </div>
     ),
     __esModule: true
