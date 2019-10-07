@@ -40,7 +40,7 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
     setViewTrash(nextState);
     setGridButtonStates({
       ...gridButtonStates,
-      stop: nextState ? true : (!project.running || project.autoStop),
+      stop: nextState ? true : (!project.running || project.autoStop || false),
       abort: nextState ? true : !project.running,
       start: nextState ? true : project.running
     });

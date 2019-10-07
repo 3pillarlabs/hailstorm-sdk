@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { AppStateContext } from '../appStateContext';
 import { ReviewCompletedAction } from './actions';
 import { CancelLink, BackLink } from './WizardControls';
-import { WizardTabTypes } from '../store';
+import { WizardTabTypes } from "./domain";
 
 export const SummaryView: React.FC = () => {
   const {dispatch} = useContext(AppStateContext);

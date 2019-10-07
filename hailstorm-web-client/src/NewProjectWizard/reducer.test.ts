@@ -1,6 +1,6 @@
 import { reducer } from "./reducer";
 import { ProjectSetupAction, ProjectSetupCancelAction, ConfirmProjectSetupCancelAction, StayInProjectSetupAction, CreateProjectAction, ClusterSetupCompletedAction, JMeterSetupCompletedAction, ActivateTabAction, ReviewCompletedAction } from "./actions";
-import { WizardTabTypes } from "../store";
+import { WizardTabTypes } from "./domain";
 import { Project } from "../domain";
 
 describe('reducer', () => {
@@ -10,7 +10,6 @@ describe('reducer', () => {
 
   it('should initiate the wizard', () => {
     const nextState = reducer({
-      runningProjects: [],
       activeProject: {id: 1, code: 'a', title: 'A', running: true, autoStop: true}
     }, new ProjectSetupAction());
 
@@ -22,7 +21,6 @@ describe('reducer', () => {
 
   it('should exit the wizard', () => {
     const nextState = reducer({
-      runningProjects: [],
       activeProject: undefined,
       wizardState: {
         activeTab: WizardTabTypes.Project,
@@ -35,7 +33,6 @@ describe('reducer', () => {
 
   it('should activate a tab', () => {
     const nextState = reducer({
-      runningProjects: [],
       wizardState: {
         activeTab: WizardTabTypes.Cluster,
         done: {
@@ -53,7 +50,6 @@ describe('reducer', () => {
   it('should update the active project', () => {
     const payload: Project = {id: 1, code: 'a', title: 'A', autoStop: false, running: true};
     const nextState = reducer({
-      runningProjects: [],
       activeProject: undefined,
       wizardState: {
         activeTab: WizardTabTypes.Project,
@@ -69,7 +65,6 @@ describe('reducer', () => {
 
   it('should update JMeter setup', () => {
     const nextState = reducer({
-      runningProjects: [],
       activeProject: {id: 1, code: 'a', title: 'A', autoStop: false, running: true},
       wizardState: {
         activeTab: WizardTabTypes.JMeter,
@@ -85,7 +80,6 @@ describe('reducer', () => {
 
   it('should update Cluster setup', () => {
     const nextState = reducer({
-      runningProjects: [],
       activeProject: {id: 1, code: 'a', title: 'A', autoStop: false, running: true},
       wizardState: {
         activeTab: WizardTabTypes.Cluster,
@@ -102,7 +96,6 @@ describe('reducer', () => {
 
   it('should complete review', () => {
     const nextState = reducer({
-      runningProjects: [],
       activeProject: {id: 1, code: 'a', title: 'A', autoStop: false, running: true},
       wizardState: {
         activeTab: WizardTabTypes.Review,
@@ -119,7 +112,6 @@ describe('reducer', () => {
 
   it('should set up a cancel to be confirmed if there is an active project', () => {
     const nextState = reducer({
-      runningProjects: [],
       activeProject: {id: 1, code: 'a', title: 'A', running: false, autoStop: true},
       wizardState: {
         activeTab: WizardTabTypes.JMeter,
@@ -135,7 +127,6 @@ describe('reducer', () => {
 
   it('should exit the wizard on cancel if there is no active project', () => {
     const nextState = reducer({
-      runningProjects: [],
       activeProject: undefined,
       wizardState: {
         activeTab: WizardTabTypes.Project,
@@ -148,7 +139,6 @@ describe('reducer', () => {
 
   it('should remove confirmation of a cancel', () => {
     const nextState = reducer({
-      runningProjects: [],
       wizardState: {
         activeTab: WizardTabTypes.Cluster,
         done: {

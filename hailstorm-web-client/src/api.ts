@@ -1,5 +1,6 @@
-import { Project, ExecutionCycleStatus, ExecutionCycle, Report, JtlFile } from "./domain";
+import { Project, ExecutionCycleStatus, ExecutionCycle, Report, JtlFile, JMeter, JMeterFile } from "./domain";
 import { DB } from "./db";
+import { JMeterFileUploadState } from "./NewProjectWizard/domain";
 
 export type ProjectActions = 'stop' | 'abort' | 'start' | 'terminate';
 export type ResultActions = 'report' | 'export' | 'trash';
@@ -14,6 +15,8 @@ export class ApiService {
     executionCycles: new ExecutionCycleService(),
     reports: new ReportService(),
     jtlExports: new JtlExportService(),
+    jmeter: new JMeterService(),
+    jmeterValidation: new JMeterValidationService(),
   };
 
   projects() {
@@ -30,6 +33,14 @@ export class ApiService {
 
   jtlExports() {
     return this.singletonContext['jtlExports'] as JtlExportService;
+  }
+
+  jmeter() {
+    return this.singletonContext['jmeter'] as JMeterService;
+  }
+
+  jmeterValidation() {
+    return this.singletonContext['jmeterValidation'] as JMeterValidationService;
   }
 }
 
@@ -243,6 +254,86 @@ export class JtlExportService {
         reject(new Error(`No project with id ${projectId}`));
       }
     }, 3000 * SLOW_FACTOR));
+  }
+}
+
+export class JMeterService {
+  list(projectId: number): Promise<JMeter> {
+    console.log(`api ---- JMeterService#list(${projectId})`);
+    return new Promise<JMeter>((resolve, reject) => {
+      setTimeout(() => {
+        resolve({
+          files: [
+            {id: 1, name: 'prime.jmx', properties: new Map([["foo", "1"]]) },
+            {id: 1, name: 'data.csv', dataFile: true },
+          ]
+        });
+      }, 300 * SLOW_FACTOR)
+    });
+  }
+
+  create(projectId: number, attrs: JMeterFile): Promise<JMeterFile> {
+    console.log(`api ---- JMeterService#create(${projectId}, ${attrs})`);
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        const matchedProject = DB.projects.find((value) => value.id === projectId);
+        if (matchedProject) {
+          if (!matchedProject.jmeter) {
+            matchedProject.jmeter = {
+              files: []
+            }
+          }
+
+          const savedAttrs: JMeterFile = {...attrs, id: matchedProject.jmeter.files.length + 1}
+          matchedProject.jmeter.files.push(savedAttrs);
+          resolve(savedAttrs);
+        } else {
+          reject(new Error(`Did not find project with id: ${projectId}`));
+        }
+      }, 300 * SLOW_FACTOR);
+    });
+  }
+
+  update(projectId: number, jmeterFileId: number, attrs: {[K in keyof JMeterFile]?: JMeterFile[K]}): Promise<JMeterFile> {
+    console.log(`api ---- JMeterService#update(${projectId}, ${attrs})`);
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        const matchedProject = DB.projects.find((value) => value.id === projectId);
+        if (matchedProject) {
+          if (!matchedProject.jmeter) {
+            reject(new Error('Did not find any JMeter plans to update'));
+            return;
+          }
+
+          const matchedFile = matchedProject.jmeter!.files.find((value) => value.id === jmeterFileId);
+          if (!matchedFile) {
+            reject(new Error(`Did not find JMeter file with id: ${jmeterFileId} in project with id: ${projectId}`));
+            return;
+          }
+
+          matchedFile.properties = attrs.properties;
+          resolve(matchedFile);
+        } else {
+          reject(new Error(`Did not find project with id: ${projectId}`));
+        }
+      }, 300 * SLOW_FACTOR);
+    });
+  }
+}
+
+export class JMeterValidationService {
+  create(attrs: JMeterFileUploadState): Promise<JMeterFileUploadState> {
+    console.log(`api ---- JMeterValidationService#create(${attrs})`);
+    return new Promise<JMeterFileUploadState>((resolve, reject) => setTimeout(() => {
+      resolve({
+        name: attrs.name,
+        properties: new Map([
+          ["ThreadGroup.Admin.NumThreads", "1"],
+          ["ThreadGroup.Users.NumThreads", "10"],
+          ["Users.RampupTime", undefined]
+        ]),
+      });
+    }, 500 * SLOW_FACTOR));
   }
 }
 

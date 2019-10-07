@@ -1,15 +1,16 @@
-import { WizardTabTypes, NewProjectWizardProgress, AppState } from "../store";
-import { NewProjectWizardActions, NewProjectWizardActionTypes, ConfirmProjectSetupCancelAction } from "./actions";
+import { NewProjectWizardActions, NewProjectWizardActionTypes } from "./actions";
+import { NewProjectWizardState, WizardTabTypes, NewProjectWizardProgress } from "./domain";
+import { AppState } from "../store";
 
-export function reducer(state: AppState, action: NewProjectWizardActions): AppState {
+export function reducer(state: NewProjectWizardState, action: NewProjectWizardActions): NewProjectWizardState {
   switch (action.type) {
     case NewProjectWizardActionTypes.ProjectSetup: {
-      const nextState: AppState = {...state, activeProject: undefined};
+      const nextState: NewProjectWizardState = {...state, activeProject: undefined};
       return {...nextState, wizardState: {activeTab: WizardTabTypes.Project, done: {}}};
     }
 
     case NewProjectWizardActionTypes.ProjectSetupCancel: {
-      const nextState: AppState = {...state, activeProject: undefined};
+      const nextState: NewProjectWizardState = {...state, activeProject: undefined};
       delete nextState.wizardState;
       return nextState;
     }
@@ -97,4 +98,8 @@ export function reducer(state: AppState, action: NewProjectWizardActions): AppSt
     default:
       return state;
   }
+}
+
+export function selector(appState: AppState): NewProjectWizardState {
+  return {activeProject: appState.activeProject, wizardState: appState.wizardState};
 }

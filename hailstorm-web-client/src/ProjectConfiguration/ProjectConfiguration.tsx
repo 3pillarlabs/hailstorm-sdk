@@ -6,7 +6,7 @@ import { ApiFactory } from '../api';
 import { AppStateContext } from '../appStateContext';
 import { CreateProjectAction, UpdateProjectTitleAction } from '../NewProjectWizard/actions';
 import { CancelLink, NextLink } from '../NewProjectWizard/WizardControls';
-import { WizardTabTypes } from '../store';
+import { WizardTabTypes } from "../NewProjectWizard/domain";
 
 export const ProjectConfiguration: React.FC = () => {
   const {dispatch, appState} = useContext(AppStateContext);
@@ -42,7 +42,7 @@ export const ProjectConfiguration: React.FC = () => {
             <div className={styles.stepContent}>
               <div className="field">
                 <div className="control is-expanded">
-                  <Field type="text" className="input is-large" name="title" placeholder="Project Title..." autoComplete="off" />
+                  <Field type="text" className="input is-large" name="title" placeholder="Project Title..." />
                 </div>
               </div>
               <ErrorMessage name="title" render={(message) => (

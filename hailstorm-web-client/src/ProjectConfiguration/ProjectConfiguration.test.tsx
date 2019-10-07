@@ -3,7 +3,8 @@ import { shallow } from 'enzyme';
 import { ProjectConfiguration } from './ProjectConfiguration';
 import { render, fireEvent, wait } from '@testing-library/react';
 import { ProjectService } from '../api';
-import { WizardTabTypes, AppState } from '../store';
+import { AppState } from '../store';
+import { WizardTabTypes } from "../NewProjectWizard/domain";
 import { AppStateContext } from '../appStateContext';
 import { CreateProjectAction, ConfirmProjectSetupCancelAction, UpdateProjectTitleAction } from '../NewProjectWizard/actions';
 

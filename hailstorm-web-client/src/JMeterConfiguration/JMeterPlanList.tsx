@@ -1,6 +1,19 @@
 import React from 'react';
+import { JMeter } from '../domain';
+import { Loader } from '../Loader';
 
-export const JMeterPlanList: React.FC = () => {
+export interface JMeterPlanListProps {
+  showEdit?: boolean;
+  jmeter: JMeter;
+  dispatch?: React.Dispatch<any>;
+}
+
+export const JMeterPlanList: React.FC<JMeterPlanListProps> = ({
+  showEdit,
+  jmeter,
+  dispatch
+}) => {
+  const defaultVersion = jmeter ? jmeter.version : undefined;
   return (
     <div className="panel">
       <div className="panel-heading">
@@ -12,22 +25,23 @@ export const JMeterPlanList: React.FC = () => {
           </div>
           <div className="level-right">
             <div className="level-item">
-              <a className="button is-small"><i className="far fa-edit"></i> Edit</a>
+              {showEdit ? <a className="button is-small"><i className="far fa-edit"></i> Edit</a> : null}
             </div>
           </div>
         </div>
       </div>
-      {[
-        "hailstorm-site-basic",
-        "hailstorm-site-admin"
-      ].map(planName => (
-        <a className="panel-block" key={planName}>
-          <span className="panel-icon">
-            <i className="far fa-file-code" aria-hidden="true"></i>
-          </span>
-          {planName}
-        </a>
-      ))}
+      {renderPlanList(jmeter)}
     </div>
   );
+}
+
+function renderPlanList(jmeter: JMeter): React.ReactNode {
+  return jmeter.files.map((plan) => (
+    <a className="panel-block" key={plan.id}>
+      <span className="panel-icon">
+        <i className="far fa-file-code" aria-hidden="true"></i>
+      </span>
+      {plan.name}
+    </a>
+  ));
 }

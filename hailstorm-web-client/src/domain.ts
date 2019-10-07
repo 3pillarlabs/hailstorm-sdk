@@ -7,8 +7,9 @@ export interface Project {
   running: boolean;
   currenExecutionCycle?: ExecutionCycle;
   recentExecutionCycle?: ExecutionCycle;
-  autoStop: boolean;
+  autoStop?: boolean;
   interimState?: InterimProjectState;
+  jmeter?: JMeter;
 }
 
 export interface ExecutionCycle {
@@ -53,5 +54,22 @@ export interface LogEvent {
   timestamp: number;
   priority: number;
   level: string;
+  message: string;
+}
+
+export interface JMeter {
+  version?: string;
+  files: JMeterFile[];
+}
+
+export interface JMeterFile {
+  id?: number;
+  name: string;
+  properties?: Map<string, string | undefined>;
+  dataFile?: boolean;
+}
+
+export interface ValidationNotice {
+  type: 'warning' | 'error';
   message: string;
 }

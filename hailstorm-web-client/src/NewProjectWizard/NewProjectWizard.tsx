@@ -7,7 +7,7 @@ import { JMeterConfiguration } from '../JMeterConfiguration';
 import { ClusterConfiguration } from '../ClusterConfiguration';
 import { SummaryView } from './SummaryView';
 import { AppStateContext } from '../appStateContext';
-import { WizardTabTypes, NewProjectWizardProgress } from '../store';
+import { WizardTabTypes, NewProjectWizardProgress } from './domain';
 import { ActivateTabAction, StayInProjectSetupAction, ProjectSetupCancelAction } from './actions';
 import { Loader, LoaderSize } from '../Loader/Loader';
 import { UnsavedChangesPrompt } from '../Modal/UnsavedChangesPrompt';

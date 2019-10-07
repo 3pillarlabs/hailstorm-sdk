@@ -1,6 +1,7 @@
 import { rootReducer, Injector } from "./store";
 import { Project } from "./domain";
-import { NewProjectWizardProgress, WizardTabTypes, initialState } from "./store";
+import { initialState } from "./store";
+import { NewProjectWizardProgress, WizardTabTypes } from "./NewProjectWizard/domain";
 
 describe('store', () => {
   describe('rootReduder', () => {

@@ -1,5 +1,6 @@
-import { Action, WizardTabTypes } from "../store";
+import { Action } from "../store";
 import { Project } from "../domain";
+import { WizardTabTypes } from "./domain";
 
 export enum NewProjectWizardActionTypes {
   ProjectSetup = '[NewProjectWizard] ProjectSetup',

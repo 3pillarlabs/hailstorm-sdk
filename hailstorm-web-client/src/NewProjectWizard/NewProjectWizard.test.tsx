@@ -3,9 +3,10 @@ import { shallow, mount } from 'enzyme';
 import { NewProjectWizard } from './NewProjectWizard';
 import { MemoryRouter, Route } from 'react-router';
 import { AppStateContext } from '../appStateContext';
-import { WizardTabTypes, AppState } from '../store';
+import { AppState } from '../store';
 import { ActivateTabAction, ProjectSetupCancelAction, StayInProjectSetupAction } from './actions';
 import { reducer } from './reducer';
+import { WizardTabTypes } from "./domain";
 import { Link } from 'react-router-dom';
 
 jest.mock('../ProjectConfiguration', () => ({
@@ -161,7 +162,7 @@ describe('<NewProjectWizard />', () => {
     };
 
     const dispatch = jest.fn().mockImplementation((action: any) => {
-      appState = reducer(appState, action);
+      appState = {...appState,  ...reducer(appState, action)};
     });
 
     const component = mount(
@@ -217,7 +218,7 @@ describe('<NewProjectWizard />', () => {
     };
 
     const dispatch = jest.fn().mockImplementation((action: any) => {
-      appState = reducer(appState, action);
+      appState = {...appState,  ...reducer(appState, action)};
     });
 
     const component = mount(

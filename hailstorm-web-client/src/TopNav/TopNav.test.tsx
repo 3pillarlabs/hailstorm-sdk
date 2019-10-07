@@ -3,10 +3,11 @@ import { TopNav } from './TopNav';
 import { shallow, mount } from 'enzyme';
 import { MemoryRouter } from 'react-router';
 import { AppStateContext } from '../appStateContext';
-import { AppState, WizardTabTypes } from '../store';
+import { AppState } from '../store';
 import { Project } from '../domain';
 import { ProjectBarProps } from '../ProjectBar/ProjectBar';
 import { ModifyRunningProjectAction } from './actions';
+import { WizardTabTypes } from "../NewProjectWizard/domain";
 
 jest.mock('../ProjectBar', () => {
   return {

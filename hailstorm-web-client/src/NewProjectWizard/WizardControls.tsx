@@ -1,6 +1,6 @@
 import React from 'react';
 import { ConfirmProjectSetupCancelAction, ActivateTabAction } from './actions';
-import { WizardTabTypes } from '../store';
+import { WizardTabTypes } from "./domain";
 
 export function CancelLink({ dispatch }: {
   dispatch: React.Dispatch<any>;

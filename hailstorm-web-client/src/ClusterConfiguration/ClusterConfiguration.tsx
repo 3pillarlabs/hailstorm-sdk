@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { AppStateContext } from '../appStateContext';
 import { ClusterSetupCompletedAction } from '../NewProjectWizard/actions';
 import { CancelLink, BackLink } from '../NewProjectWizard/WizardControls';
-import { WizardTabTypes } from '../store';
+import { WizardTabTypes } from "../NewProjectWizard/domain";
 
 export const ClusterConfiguration: React.FC = () => {
   const {dispatch} = useContext(AppStateContext);
