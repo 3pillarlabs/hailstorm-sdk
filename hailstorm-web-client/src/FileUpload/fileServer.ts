@@ -1,6 +1,12 @@
-export const FileServer = {
+export const FileServer: {
+  uploadURL: string;
+  sendFile: (file: File, callback: (progress: number) => void) => Promise<any>;
+  removeFile: (file: {name: string}) => Promise<any>;
+} = {
+
   uploadURL: "https://slash-web-null.herokuapp.com/upload",
-  sendFile: function (file: File, callback: (progress: number) => void) {
+
+  sendFile: function (file, callback) {
     return new Promise((resolve, reject) => {
       const req = new XMLHttpRequest();
       req.upload.addEventListener("load", () => {
@@ -22,6 +28,15 @@ export const FileServer = {
       formData.append("file", file, file.name);
       req.open("POST", this.uploadURL);
       req.send(formData);
+    });
+  },
+
+  removeFile: (file) => {
+    console.log(`FileServer ---- .removeFile(${file})`);
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        resolve();
+      }, 300);
     });
   }
 };

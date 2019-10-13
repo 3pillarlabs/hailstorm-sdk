@@ -23,11 +23,43 @@ export const initialState: AppState = {
 
 // export const initialState: AppState = {
 //   runningProjects: [],
-//   activeProject: {id: 8, code: 'sphynx', title: 'Sphynx', autoStop: false, running: false},
+//   activeProject: {
+//     id: 8,
+//     code: 'sphynx',
+//     title: 'Sphynx',
+//     running: false,
+//     jmeter: {
+//       files: [
+//         {
+//           name: 'testdroid_simple.jmx',
+//           id: 4,
+//           properties: new Map([
+//             ["ThreadGroup.Admin.NumThreads", "1"],
+//             ["ThreadGroup.Users.NumThreads", "10"],
+//             ["Users.RampupTime", "0"]
+//           ])
+//         },
+//         {
+//           id: 5,
+//           name: 'testdroid_accounts.csv',
+//           dataFile: true
+//         }
+//       ]
+//     }
+//   },
 //   wizardState: {
 //     activeTab: WizardTabTypes.JMeter,
 //     done: {
 //       [WizardTabTypes.Project]: true
+//     },
+//     activeJMeterFile: {
+//       name: 'testdroid_simple.jmx',
+//       id: 4,
+//       properties: new Map([
+//         ["ThreadGroup.Admin.NumThreads", "1"],
+//         ["ThreadGroup.Users.NumThreads", "10"],
+//         ["Users.RampupTime", "0"]
+//       ])
 //     }
 //   }
 // };

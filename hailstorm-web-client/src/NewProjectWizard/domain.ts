@@ -7,6 +7,13 @@ export enum WizardTabTypes {
   Review = 'Review'
 }
 
+export interface JMeterFileUploadState extends JMeterFile {
+  uploadProgress?: number;
+  uploadError?: any;
+  validationErrors?: ValidationNotice[];
+  removeInProgress?: string;
+}
+
 type WizardTabTypesStrings = keyof typeof WizardTabTypes;
 
 export interface NewProjectWizardProgress {
@@ -18,13 +25,8 @@ export interface NewProjectWizardProgress {
   activeJMeterFile?: JMeterFileUploadState;
 }
 
+
 export interface NewProjectWizardState {
   activeProject: Project | undefined;
   wizardState?: NewProjectWizardProgress;
-}
-
-export interface JMeterFileUploadState extends JMeterFile {
-  uploadProgress?: number;
-  uploadError?: any;
-  validationErrors?: ValidationNotice[];
 }

@@ -9,6 +9,9 @@ export enum JMeterConfigurationActionTypes {
   CommitJMeterFile = '[JMeterConfiguration] CommitJMeterFile',
   AbortJMeterFileUpload = '[JMeterConfiguration] AbortJMeterFileUpload',
   MergeJMeterFileUpload = '[JMeterConfiguration] MergeJMeterFileUpload',
+  SelectJMeterFile = '[JMeterConfiguration] SelectJMeterFile',
+  RemoveJMeterFile = '[JMeterConfiguration] RemoveJMeterFile',
+  FileRemoveInProgress = '[JMeterConfiguration] FileRemoveInProgress',
 }
 
 export class SetDefaultJMeterVersionAction implements Action {
@@ -28,7 +31,7 @@ export class AddJMeterFileAction implements Action {
 
 export class CommitJMeterFileAction implements Action {
   readonly type = JMeterConfigurationActionTypes.CommitJMeterFile;
-  constructor(public payload: JMeterFileUploadState) {}
+  constructor(public payload: JMeterFileUploadState & {autoStop?: boolean}) {}
 }
 
 export class AbortJMeterFileUploadAction implements Action {
@@ -41,10 +44,28 @@ export class MergeJMeterFileAction implements Action {
   constructor(public payload: JMeterFile) {}
 }
 
+export class SelectJMeterFileAction implements Action {
+  readonly type = JMeterConfigurationActionTypes.SelectJMeterFile;
+  constructor(public payload: JMeterFile) {}
+}
+
+export class RemoveJMeterFileAction implements Action {
+  readonly type = JMeterConfigurationActionTypes.RemoveJMeterFile;
+  constructor(public payload: JMeterFile) {}
+}
+
+export class FileRemoveInProgressAction implements Action {
+  readonly type = JMeterConfigurationActionTypes.FileRemoveInProgress;
+  constructor(public payload: string) {}
+}
+
 export type JMeterConfigurationActions =
   | SetDefaultJMeterVersionAction
   | SetJMeterConfigurationAction
   | AddJMeterFileAction
   | CommitJMeterFileAction
   | AbortJMeterFileUploadAction
-  | MergeJMeterFileAction;
+  | MergeJMeterFileAction
+  | SelectJMeterFileAction
+  | RemoveJMeterFileAction
+  | FileRemoveInProgressAction;

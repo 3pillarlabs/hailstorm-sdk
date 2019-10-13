@@ -67,6 +67,7 @@ export interface JMeterFile {
   name: string;
   properties?: Map<string, string | undefined>;
   dataFile?: boolean;
+  disabled?: boolean;
 }
 
 export interface ValidationNotice {

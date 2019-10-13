@@ -65,7 +65,7 @@ export class ProjectService {
     let matchedProject: Project | undefined = DB.projects.find((project) => project.id === id);
     return new Promise((resolve, reject) => {
       if (matchedProject) {
-        setTimeout(() => resolve({...matchedProject} as Project), 100 * SLOW_FACTOR);
+        setTimeout(() => resolve({...matchedProject, jmeter: undefined} as Project), 100 * SLOW_FACTOR);
       } else {
         setTimeout(() => reject(new Error(`No Project found with id - ${id}`)), 500 * SLOW_FACTOR);
       }
@@ -164,9 +164,8 @@ export class ProjectService {
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         if (title) {
-          const maxId = DB.projects.map((p) => p.id).reduce((s, e) => (s < e ? e : s), 0);
           const newProject = {
-            id: maxId + 1,
+            id: DB.sys.projectIndex.nextId(),
             autoStop: false,
             code: title.toLowerCase().replace(/\s+/, '-'),
             title,
@@ -174,8 +173,7 @@ export class ProjectService {
           };
 
           DB.projects.push(newProject);
-          resolve(newProject);
-
+          resolve({...newProject});
         } else {
           reject(new Error('Missing attributes: title'));
         }
@@ -265,7 +263,7 @@ export class JMeterService {
         resolve({
           files: [
             {id: 1, name: 'prime.jmx', properties: new Map([["foo", "1"]]) },
-            {id: 1, name: 'data.csv', dataFile: true },
+            {id: 2, name: 'data.csv', dataFile: true },
           ]
         });
       }, 300 * SLOW_FACTOR)
@@ -284,8 +282,8 @@ export class JMeterService {
             }
           }
 
-          const savedAttrs: JMeterFile = {...attrs, id: matchedProject.jmeter.files.length + 1}
-          matchedProject.jmeter.files.push(savedAttrs);
+          const savedAttrs: JMeterFile = {...attrs, id: DB.sys.jmeterIndex.nextId()}
+          matchedProject.jmeter.files = [...matchedProject.jmeter.files, savedAttrs];
           resolve(savedAttrs);
         } else {
           reject(new Error(`Did not find project with id: ${projectId}`));
@@ -295,7 +293,7 @@ export class JMeterService {
   }
 
   update(projectId: number, jmeterFileId: number, attrs: {[K in keyof JMeterFile]?: JMeterFile[K]}): Promise<JMeterFile> {
-    console.log(`api ---- JMeterService#update(${projectId}, ${attrs})`);
+    console.log(`api ---- JMeterService#update(${projectId}, ${jmeterFileId}), ${attrs}`);
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         const matchedProject = DB.projects.find((value) => value.id === projectId);
@@ -319,12 +317,38 @@ export class JMeterService {
       }, 300 * SLOW_FACTOR);
     });
   }
+
+  destroy(projectId: number, jmeterFileId: number) {
+    console.log(`api ---- JMeterService#destroy(${projectId}, ${jmeterFileId})`);
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        const matchedProject = DB.projects.find((value) => value.id === projectId);
+        if (matchedProject) {
+          if (!matchedProject.jmeter) {
+            reject(new Error('Did not find any JMeter plans to update'));
+            return;
+          }
+
+          const matchedFile = matchedProject.jmeter!.files.find((value) => value.id === jmeterFileId);
+          if (!matchedFile) {
+            reject(new Error(`Did not find JMeter file with id: ${jmeterFileId} in project with id: ${projectId}`));
+            return;
+          }
+
+          matchedProject.jmeter.files = matchedProject.jmeter.files.filter((value) => value.id !== matchedFile.id);
+          resolve();
+        } else {
+          reject(new Error(`Did not find project with id: ${projectId}`));
+        }
+      }, 300 * SLOW_FACTOR);
+    });
+  }
 }
 
 export class JMeterValidationService {
-  create(attrs: JMeterFileUploadState): Promise<JMeterFileUploadState> {
+  create(attrs: JMeterFileUploadState): Promise<JMeterFileUploadState & {autoStop: boolean}> {
     console.log(`api ---- JMeterValidationService#create(${attrs})`);
-    return new Promise<JMeterFileUploadState>((resolve, reject) => setTimeout(() => {
+    return new Promise<JMeterFileUploadState & {autoStop: boolean}>((resolve, reject) => setTimeout(() => {
       resolve({
         name: attrs.name,
         properties: new Map([
@@ -332,6 +356,7 @@ export class JMeterValidationService {
           ["ThreadGroup.Users.NumThreads", "10"],
           ["Users.RampupTime", undefined]
         ]),
+        autoStop: Date.now() % 2 === 0
       });
     }, 500 * SLOW_FACTOR));
   }

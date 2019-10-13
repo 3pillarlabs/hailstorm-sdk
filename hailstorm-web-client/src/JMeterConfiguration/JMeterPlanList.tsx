@@ -1,17 +1,18 @@
 import React from 'react';
-import { JMeter } from '../domain';
-import { Loader } from '../Loader';
+import { JMeter, JMeterFile } from '../domain';
 
 export interface JMeterPlanListProps {
   showEdit?: boolean;
-  jmeter: JMeter;
-  dispatch?: React.Dispatch<any>;
+  jmeter?: JMeter;
+  onSelect?: (file: JMeterFile) => void;
+  activeFile?: JMeterFile;
 }
 
 export const JMeterPlanList: React.FC<JMeterPlanListProps> = ({
   showEdit,
   jmeter,
-  dispatch
+  onSelect,
+  activeFile
 }) => {
   const defaultVersion = jmeter ? jmeter.version : undefined;
   return (
@@ -30,18 +31,52 @@ export const JMeterPlanList: React.FC<JMeterPlanListProps> = ({
           </div>
         </div>
       </div>
-      {renderPlanList(jmeter)}
+      {jmeter && jmeter.files.length > 0 ? renderPlanList(jmeter, onSelect, activeFile) : renderEmptyList()}
     </div>
   );
 }
 
-function renderPlanList(jmeter: JMeter): React.ReactNode {
-  return jmeter.files.map((plan) => (
-    <a className="panel-block" key={plan.id}>
-      <span className="panel-icon">
-        <i className="far fa-file-code" aria-hidden="true"></i>
-      </span>
-      {plan.name}
-    </a>
-  ));
+function renderPlanList(
+  jmeter: JMeter,
+  handleSelect?: (file: JMeterFile) => void,
+  activeFile?: JMeterFile
+): React.ReactNode {
+  return jmeter.files.map((plan) => {
+    const item = (
+      <>
+        <span className="panel-icon">
+        {plan.dataFile ? (
+          <i className="far fa-file" aria-hidden="true" role="Data File"></i>
+        ) : (
+          <i className="far fa-file-code" aria-hidden="true" role="JMeter Plan"></i>
+        )}
+        </span>
+        {plan.name}
+      </>
+    );
+
+    return handleSelect ? (
+      <a
+        className={`panel-block${activeFile && activeFile.id === plan.id ? ' is-active' : ''}`}
+        key={plan.id}
+        onClick={() => handleSelect(plan)}
+      >
+        {item}
+      </a>
+    ) : (
+      <div className="panel-block" key={plan.id}>
+        {item}
+      </div>
+    )
+  });
+}
+
+function renderEmptyList(): React.ReactNode {
+  return (
+    <>
+    <div className="panel-block"></div>
+    <div className="panel-block"></div>
+    <div className="panel-block"></div>
+    </>
+  )
 }

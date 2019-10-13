@@ -8,10 +8,25 @@ import {
 const minutesAgo = (minutes: number): Date =>
   new Date(new Date().getTime() - minutes * 60 * 1000);
 
+function counter(begin: number) {
+  return function() {
+    return ++begin;
+  }
+}
+
 export const DB: {
   projects: Project[];
   executionCycles: ExecutionCycle[];
   reports: Report[];
+  sys: {
+    projectIndex: {
+      nextId: () => number;
+    },
+
+    jmeterIndex: {
+      nextId: () => number;
+    }
+  }
 } = {
   projects: [
     {
@@ -117,5 +132,15 @@ export const DB: {
     { id: 1, projectId: 1, title: "hailstorm-site-basic-1-2" },
     { id: 2, projectId: 1, title: "hailstorm-site-basic-2-5" },
     { id: 3, projectId: 1, title: "hailstorm-site-basic-1-5" }
-  ]
+  ],
+
+  sys: {
+    projectIndex: {
+      nextId: counter(7)
+    },
+
+    jmeterIndex: {
+      nextId: counter(10)
+    }
+  }
 };

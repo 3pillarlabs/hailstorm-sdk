@@ -1,5 +1,5 @@
 import React from 'react';
-import { shallow } from 'enzyme';
+import { shallow, mount } from 'enzyme';
 import { FileUpload } from './FileUpload';
 import { render, fireEvent, wait } from '@testing-library/react';
 import { FileServer } from './fileServer';
@@ -74,4 +74,19 @@ describe('<FileUpload />', () => {
     await wait(() => expect(onUploadError).toBeCalled());
     expect(sendFileSpy).toBeCalled();
   });
+
+  it('should disable the input if fileUpload is disabled', () => {
+    const component = mount(
+      <FileUpload
+        onAccept={jest.fn()}
+        onFileUpload={jest.fn()}
+        onUploadError={jest.fn()}
+        disabled={true}
+      />
+    );
+
+    expect(component.find('input')).toBeDisabled();
+  });
+
+  test.todo('should cancel an upload in progress');
 });

@@ -8,6 +8,7 @@ export interface FileUploadProps {
   onFileUpload: (file: LocalFile) => void;
   onUploadError: (file: LocalFile, error: any) => void;
   onUploadProgress?: (file: LocalFile, progress: number) => void;
+  disabled?: boolean;
 }
 
 export function FileUpload({
@@ -15,7 +16,8 @@ export function FileUpload({
   onFileUpload,
   onUploadError,
   onUploadProgress,
-  children
+  children,
+  disabled
 }: React.PropsWithChildren<FileUploadProps>) {
 
   const onDrop = (acceptedFiles: File[]) => {
@@ -36,7 +38,7 @@ export function FileUpload({
   return (
     <div {...getRootProps()}>
       {children}
-      <input role="File Upload" {...getInputProps()} />
+      <input role="File Upload" {...getInputProps()} {...{disabled}} />
     </div>
   );
 }

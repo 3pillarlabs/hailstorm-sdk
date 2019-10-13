@@ -8,11 +8,15 @@ export function CancelLink({ dispatch }: {
   return <a className="button" onClick={() => dispatch(new ConfirmProjectSetupCancelAction())}>Cancel</a>;
 }
 
-export function BackLink({ dispatch, tab }: {
+export function BackLink({ dispatch, tab, disabled }: {
   dispatch: React.Dispatch<any>;
   tab: WizardTabTypes;
+  disabled?: boolean;
 }): JSX.Element {
-  return <a className="button" onClick={() => dispatch(new ActivateTabAction(tab))}>Back</a>
+  const enabled = !disabled;
+  return enabled ?
+    (<a className="button" onClick={() => dispatch(new ActivateTabAction(tab))}>Back</a>) :
+    (<span className="button is-static">Back</span>)
 }
 
 export function NextLink({ dispatch, tab }: {

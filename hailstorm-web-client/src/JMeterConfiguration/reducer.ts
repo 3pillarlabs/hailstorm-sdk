@@ -1,12 +1,12 @@
 import { JMeterConfigurationActions, JMeterConfigurationActionTypes } from "./actions";
 import { NewProjectWizardState, NewProjectWizardProgress, JMeterFileUploadState } from "../NewProjectWizard/domain";
-import { Project } from "../domain";
+import { Project, JMeterFile } from "../domain";
 
 export function reducer(state: NewProjectWizardState, action: JMeterConfigurationActions): NewProjectWizardState {
   switch (action.type) {
     case JMeterConfigurationActionTypes.AddJMeterFile: {
       const wizardProgress: NewProjectWizardProgress =  {...state.wizardState!};
-      wizardProgress.activeJMeterFile = {...action.payload};
+      wizardProgress.activeJMeterFile = {...action.payload, uploadProgress: 0, uploadError: undefined};
       const nextState: NewProjectWizardState = {...state};
       nextState.wizardState = wizardProgress;
       return nextState;
@@ -20,6 +20,7 @@ export function reducer(state: NewProjectWizardState, action: JMeterConfiguratio
         activeJMeterFile.uploadProgress = undefined;
       } else if (action.payload.validationErrors) {
         activeJMeterFile.validationErrors = action.payload.validationErrors;
+        activeJMeterFile.uploadProgress = 100;
       }
 
       const wizardState: NewProjectWizardProgress =  {
@@ -42,7 +43,14 @@ export function reducer(state: NewProjectWizardState, action: JMeterConfiguratio
         activeJMeterFile
       };
 
-      return {...state, wizardState};
+      const activeProject = {...state.activeProject!};
+      if (action.payload.autoStop !== undefined) {
+        if (activeProject.autoStop === undefined || activeProject.autoStop) {
+          activeProject.autoStop = action.payload.autoStop;
+        }
+      }
+
+      return {...state, wizardState, activeProject};
     }
 
     case JMeterConfigurationActionTypes.MergeJMeterFileUpload: {
@@ -54,7 +62,7 @@ export function reducer(state: NewProjectWizardState, action: JMeterConfiguratio
       }
 
       if (state.wizardState!.activeJMeterFile!.id === undefined) {
-        activeProject.jmeter.files = [...activeProject.jmeter.files, action.payload];
+        activeProject.jmeter.files = [...activeProject.jmeter.files, action.payload].sort(jmeterFileCompare);
       } else {
         activeProject.jmeter.files = [...activeProject.jmeter.files];
         const jmeterFile = activeProject.jmeter.files.find((value) => value.id === action.payload.id);
@@ -80,8 +88,39 @@ export function reducer(state: NewProjectWizardState, action: JMeterConfiguratio
     case JMeterConfigurationActionTypes.SetJMeterConfiguration: {
       const activeProject: Project = {...state.activeProject!};
       activeProject.jmeter = {...action.payload};
+      activeProject.jmeter.files = action.payload.files.sort(jmeterFileCompare);
 
       return {...state, activeProject};
+    }
+
+    case JMeterConfigurationActionTypes.SelectJMeterFile: {
+      const wizardState: NewProjectWizardProgress = {...state.wizardState!, activeJMeterFile: action.payload};
+      return {...state, wizardState};
+    }
+
+    case JMeterConfigurationActionTypes.RemoveJMeterFile: {
+      const activeProject = {...state.activeProject!};
+      if (activeProject.jmeter) {
+        activeProject.jmeter.files = activeProject.jmeter.files.filter((value) => value.id !== action.payload.id);
+      }
+
+      const wizardState = {...state.wizardState!};
+      if (activeProject.jmeter && activeProject.jmeter.files.length > 0) {
+        wizardState.activeJMeterFile = activeProject.jmeter!.files[0];
+      } else {
+        wizardState.activeJMeterFile = undefined;
+      }
+
+      return {...state, activeProject, wizardState};
+    }
+
+    case JMeterConfigurationActionTypes.FileRemoveInProgress: {
+      const wizardState = {...state.wizardState!};
+      if (wizardState.activeJMeterFile) {
+        wizardState.activeJMeterFile = {...wizardState.activeJMeterFile, removeInProgress: action.payload};
+      }
+
+      return {...state, wizardState};
     }
 
     default:
@@ -89,4 +128,19 @@ export function reducer(state: NewProjectWizardState, action: JMeterConfiguratio
   }
 
   return state;
+}
+
+function jmeterFileCompare(a: JMeterFile, b: JMeterFile): number {
+  let scoreA = 0, scoreB = 0;
+
+  if (a.disabled)
+    ++scoreA;
+  if (a.dataFile)
+    ++scoreA;
+  if (b.disabled)
+    ++scoreB;
+  if (b.dataFile)
+    ++scoreB;
+
+  return (scoreA - scoreB);
 }
