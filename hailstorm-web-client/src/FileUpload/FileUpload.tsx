@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { LocalFile } from './domain';
 import { FileServer } from './fileServer';
@@ -9,6 +9,7 @@ export interface FileUploadProps {
   onUploadError: (file: LocalFile, error: any) => void;
   onUploadProgress?: (file: LocalFile, progress: number) => void;
   disabled?: boolean;
+  abort?: boolean;
 }
 
 export function FileUpload({
@@ -17,17 +18,31 @@ export function FileUpload({
   onUploadError,
   onUploadProgress,
   children,
-  disabled
+  disabled,
+  abort
 }: React.PropsWithChildren<FileUploadProps>) {
+
+  const [httpReq, setHttpReq] = useState<XMLHttpRequest | undefined>();
+  useEffect(() => {
+    if (!(abort && httpReq)) return;
+
+    console.debug('FileUpload#useEffect(abort)');
+    httpReq.abort();
+  }, [abort]);
 
   const onDrop = (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     onAccept(file);
-    FileServer.sendFile(file, (progress) => {
+    const handleProgress = (progress: number) => {
       if (onUploadProgress) onUploadProgress(file, progress);
-    })
-    .then(() => onFileUpload(file))
-    .catch((reason) => onUploadError(file, reason));
+    };
+
+    const _httpReq = new XMLHttpRequest();
+    setHttpReq(_httpReq);
+    FileServer
+      .sendFile(file, handleProgress, _httpReq)
+      .then(() => onFileUpload(file))
+      .catch((reason) => onUploadError(file, reason));
   };
 
   const {getRootProps, getInputProps} = useDropzone({

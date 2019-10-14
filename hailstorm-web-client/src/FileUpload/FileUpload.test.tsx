@@ -3,7 +3,6 @@ import { shallow, mount } from 'enzyme';
 import { FileUpload } from './FileUpload';
 import { render, fireEvent, wait } from '@testing-library/react';
 import { FileServer } from './fileServer';
-import { LocalFile } from './domain';
 
 describe('<FileUpload />', () => {
   it('should render without crashing', () => {
@@ -87,6 +86,4 @@ describe('<FileUpload />', () => {
 
     expect(component.find('input')).toBeDisabled();
   });
-
-  test.todo('should cancel an upload in progress');
 });

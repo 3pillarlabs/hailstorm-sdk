@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState } from 'react';
 import { AppStateContext } from '../appStateContext';
 import { JMeterSetupCompletedAction } from '../NewProjectWizard/actions';
 import { CancelLink, BackLink } from '../NewProjectWizard/WizardControls';
@@ -15,10 +15,14 @@ import { JMeterPropertiesMap } from './JMeterPropertiesMap';
 import { Modal } from '../Modal';
 import { FileServer } from '../FileUpload/fileServer';
 
+const UPLOAD_ABORT_ENABLE_DELAY_MS = 5000;
+
 export const JMeterConfiguration: React.FC = () => {
   const {appState, dispatch} = useContext(AppStateContext);
   const state = selector(appState);
   const [showModal, setShowModal] = useState(false);
+  const [uploadAborted, setUploadAborted] = useState(false);
+  const [disableAbort, setDisableAbort] = useState(true);
 
   const handleFileUpload = (file: LocalFile) => {
     const jmeterPlan = file.name.match(/\.jmx$/);
@@ -43,9 +47,7 @@ export const JMeterConfiguration: React.FC = () => {
           name: file.name,
           dataFile: true
         })
-        .then((data) => {
-          dispatch(new MergeJMeterFileAction(data));
-        })
+        .then((data) => dispatch(new MergeJMeterFileAction(data)))
         .catch((reason) => console.error(reason));
     }
   };
@@ -81,12 +83,21 @@ export const JMeterConfiguration: React.FC = () => {
         <div className="level-item">
           <FileUpload
             onAccept={(file) => {
+              setDisableAbort(true);
               const dataFile: boolean = !file.name.match(/\.jmx$/);
               dispatch(new AddJMeterFileAction({ name: file.name, dataFile }));
+              setTimeout(() => {
+                setDisableAbort(false);
+              }, UPLOAD_ABORT_ENABLE_DELAY_MS);
             }}
             onFileUpload={handleFileUpload}
-            onUploadError={(file, error) => dispatch(new AbortJMeterFileUploadAction({name: file.name, uploadError: error}))}
+            onUploadError={(file, error) => {
+              dispatch(new AbortJMeterFileUploadAction({name: file.name, uploadError: error}));
+              setUploadAborted(false);
+              setDisableAbort(true);
+            }}
             disabled={isUploadInProgress(state.wizardState!.activeJMeterFile)}
+            abort={uploadAborted}
           >
             <button
               className="button is-link is-medium"
@@ -110,7 +121,7 @@ export const JMeterConfiguration: React.FC = () => {
         </div>
 
         <div className="column is-three-fifths">
-          <ActiveFileDetail {...{state, dispatch, setShowModal}} />
+          <ActiveFileDetail {...{state, dispatch, setShowModal, setUploadAborted, disableAbort}} />
         </div>
       </div>
       <div className="level">
@@ -130,19 +141,21 @@ export const JMeterConfiguration: React.FC = () => {
           </div>
         </div>
         <div className="level-right">
-          <button
-            className="button is-primary"
-            onClick={() => dispatch(new JMeterSetupCompletedAction())}
-            disabled={
-              !state.activeProject!.jmeter ||
-              state.activeProject!.jmeter.files.filter((value) => !value.dataFile).length === 0 ||
-              (state.wizardState!.activeJMeterFile && isUploadInProgress(state.wizardState!.activeJMeterFile)) ||
-              (state.wizardState!.activeJMeterFile && hasUnsavedProperties(state.wizardState!.activeJMeterFile) ||
-              (state.wizardState!.activeJMeterFile && state.wizardState!.activeJMeterFile.removeInProgress !== undefined))
-            }
-          >
-            Next
-          </button>
+          <div className="level-item">
+            <button
+              className="button is-primary"
+              onClick={() => dispatch(new JMeterSetupCompletedAction())}
+              disabled={
+                !state.activeProject!.jmeter ||
+                state.activeProject!.jmeter.files.filter((value) => !value.dataFile).length === 0 ||
+                (state.wizardState!.activeJMeterFile && isUploadInProgress(state.wizardState!.activeJMeterFile)) ||
+                (state.wizardState!.activeJMeterFile && hasUnsavedProperties(state.wizardState!.activeJMeterFile) ||
+                (state.wizardState!.activeJMeterFile && state.wizardState!.activeJMeterFile.removeInProgress !== undefined))
+              }
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -177,11 +190,15 @@ export const JMeterConfiguration: React.FC = () => {
 function ActiveFileDetail({
   state,
   dispatch,
-  setShowModal
+  setShowModal,
+  setUploadAborted,
+  disableAbort
 }: {
   state: NewProjectWizardState;
   dispatch: React.Dispatch<any>;
   setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
+  setUploadAborted: React.Dispatch<React.SetStateAction<boolean>>;
+  disableAbort:boolean;
 }) {
   return (
     <>
@@ -192,7 +209,7 @@ function ActiveFileDetail({
     )}
 
     {state.wizardState!.activeJMeterFile &&
-      <ActiveJMeterFile file={state.wizardState!.activeJMeterFile} />}
+      <ActiveJMeterFile file={state.wizardState!.activeJMeterFile} {...{setUploadAborted, disableAbort}} />}
 
     {
       state.wizardState!.activeJMeterFile &&
@@ -235,6 +252,7 @@ function ActiveFileDetail({
     {
       state.wizardState!.activeJMeterFile &&
       state.wizardState!.activeJMeterFile.removeInProgress === undefined &&
+      state.wizardState!.activeJMeterFile.uploadError === undefined &&
       state.wizardState!.activeJMeterFile.dataFile &&
       !isUploadInProgress(state.wizardState!.activeJMeterFile) && (
         <div className="card">
@@ -255,11 +273,43 @@ function ActiveFileDetail({
   );
 }
 
-function ActiveJMeterFile({file}: {file: JMeterFileUploadState}) {
+function ActiveJMeterFile({
+  file,
+  setUploadAborted,
+  disableAbort
+}: {
+  file: JMeterFileUploadState;
+  setUploadAborted: React.Dispatch<React.SetStateAction<boolean>>;
+  disableAbort:boolean;
+}) {
   if (isUploadInProgress(file)) {
     return (
       <div className="notification is-warning">
-        Uploading {file.name}... <i className="fas fa-circle-notch fa-spin"></i>
+        <div className="level">
+          <div className="level-left">
+            <div className="level-item">
+              Uploading {file.name}... &nbsp; <i className="fas fa-circle-notch fa-spin"></i>
+            </div>
+          </div>
+          <div className="level-right">
+            <div className="level-item">
+              <button
+                disabled={disableAbort}
+                className="button is-danger"
+                role="Abort Upload"
+                onClick={() => {
+                  if (window.confirm && window.confirm("Are you sure you want to abort the upload?")) {
+                    setUploadAborted(true);
+                  } else {
+                    setUploadAborted(true);
+                  }
+                }}
+              >
+                Abort
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   } else if (file.removeInProgress) {
@@ -267,11 +317,16 @@ function ActiveJMeterFile({file}: {file: JMeterFileUploadState}) {
       <div className="notification is-warning">
         Removing {file.name}... <i className="fas fa-circle-notch fa-spin"></i>
       </div>
-    );
+    )
   } else if (file.uploadError) {
     return (
       <div className="notification is-danger">
-        Error uploading {file.name}. You should check your set up and try again.
+        Error uploading {file.name}. You should check your set up and try again. The error message was &mdash; <br/>
+        <code>
+        {typeof(file.uploadError) === 'object' && 'message' in file.uploadError ?
+          file.uploadError.message :
+          file.uploadError}
+        </code>
       </div>
     )
   } else if (file.validationErrors) {

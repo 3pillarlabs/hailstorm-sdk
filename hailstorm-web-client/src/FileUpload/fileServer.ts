@@ -1,14 +1,14 @@
 export const FileServer: {
   uploadURL: string;
-  sendFile: (file: File, callback: (progress: number) => void) => Promise<any>;
+  sendFile: (file: File, callback: (progress: number) => void, httpReq?: XMLHttpRequest) => Promise<any>;
   removeFile: (file: {name: string}) => Promise<any>;
 } = {
 
   uploadURL: "https://slash-web-null.herokuapp.com/upload",
 
-  sendFile: function (file, callback) {
+  sendFile: function (file, callback, httpReq) {
     return new Promise((resolve, reject) => {
-      const req = new XMLHttpRequest();
+      const req = httpReq || new XMLHttpRequest();
       req.upload.addEventListener("load", () => {
         callback(100);
         resolve(req.response);
@@ -19,9 +19,14 @@ export const FileServer: {
         reject(req.response);
       });
 
-      req.upload.addEventListener("progress", event => {
+      req.upload.addEventListener("progress", (event) => {
         if (!event.lengthComputable) return;
         callback((event.loaded / event.total) * 100);
+      });
+
+      req.upload.addEventListener("abort", () => {
+        callback(0);
+        reject('User aborted upload');
       });
 
       const formData = new FormData();

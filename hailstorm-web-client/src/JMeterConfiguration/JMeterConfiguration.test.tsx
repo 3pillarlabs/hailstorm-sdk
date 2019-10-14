@@ -141,7 +141,24 @@ describe('<JMeterConfiguration />', () => {
     expect(fileUpload.find('button')).toBeDisabled();
   });
 
-  test.todo('should cancel an upload based on user action');
+  it('should cancel an upload based on user action', () => {
+    jest.useFakeTimers();
+    appState.wizardState!.activeJMeterFile = {
+      name: 'a.jmx',
+      uploadProgress: 0
+    };
+
+    const component = mount(createComponent());
+    expect(component.find('FileUpload')).toHaveProp('abort', false);
+    const onAccept = component.find('FileUpload').prop('onAccept') as ((file: {name: string}) => void);
+    onAccept({name: 'a.jmx'});
+    jest.runAllTimers();
+    component.update();
+    console.debug(component.find('ActiveJMeterFile').find('button[role="Abort Upload"]').html());
+    component.find('ActiveJMeterFile').find('button[role="Abort Upload"]').simulate('click');
+    component.update();
+    expect(component.find('FileUpload')).toHaveProp('abort', true);
+  });
 
   it('should indicate that a file upload failed', () => {
     const component = mount(createComponent());
