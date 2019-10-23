@@ -14,7 +14,6 @@ export const JMeterPlanList: React.FC<JMeterPlanListProps> = ({
   onSelect,
   activeFile
 }) => {
-  const defaultVersion = jmeter ? jmeter.version : undefined;
   return (
     <div className="panel">
       <div className="panel-heading">
@@ -58,13 +57,13 @@ function renderPlanList(
     return handleSelect ? (
       <a
         className={`panel-block${activeFile && activeFile.id === plan.id ? ' is-active' : ''}`}
-        key={plan.id}
+        key={plan.name}
         onClick={() => handleSelect(plan)}
       >
         {item}
       </a>
     ) : (
-      <div className="panel-block" key={plan.id}>
+      <div className="panel-block" key={plan.name}>
         {item}
       </div>
     )

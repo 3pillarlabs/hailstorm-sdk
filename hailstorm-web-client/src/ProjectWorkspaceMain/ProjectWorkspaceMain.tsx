@@ -6,6 +6,7 @@ import { ControlPanel } from './ControlPanel';
 import { AppStateContext } from '../appStateContext';
 import { ApiFactory } from '../api';
 import { SetJMeterConfigurationAction } from '../JMeterConfiguration/actions';
+import { SetClusterConfigurationAction } from '../ClusterConfiguration/actions';
 
 export const ProjectWorkspaceMain: React.FC = () => {
   const [loadReports, setLoadReports] = useState<boolean>(true);
@@ -20,6 +21,13 @@ export const ProjectWorkspaceMain: React.FC = () => {
         .list(appState.activeProject.id)
         .then((data) => dispatch(new SetJMeterConfigurationAction(data)));
     }
+
+    if (appState.activeProject && appState.activeProject.clusters === undefined) {
+      ApiFactory()
+        .clusters()
+        .list(appState.activeProject.id)
+        .then((clusters) => dispatch(new SetClusterConfigurationAction(clusters)));
+    }
   }, []);
 
   return (
@@ -33,7 +41,7 @@ export const ProjectWorkspaceMain: React.FC = () => {
             {files: []}
           }
         />
-        <ClusterList />
+        <ClusterList clusters={appState.activeProject ? appState.activeProject.clusters : undefined} />
       </div>
       <div className="column is-6">
         <ControlPanel {...{reloadReports}} />

@@ -1,6 +1,10 @@
 import React from 'react';
+import { Cluster } from '../domain';
 
-export const ClusterList: React.FC = (props) => {
+export const ClusterList: React.FC<{
+  clusters?: Cluster[];
+  hideEdit?: boolean;
+}> = ({clusters, hideEdit}) => {
   return (
     <div className="panel">
       <div className="panel-heading">
@@ -12,23 +16,29 @@ export const ClusterList: React.FC = (props) => {
           </div>
           <div className="level-right">
             <div className="level-item">
+              {!hideEdit && (
               <a className="button is-small"><i className="far fa-edit"></i> Edit</a>
+              )}
             </div>
           </div>
         </div>
       </div>
-      {[
-        "AWS us-east-1",
-        "AWS us-west-1",
-        "Bob's Datacenter"
-      ].map(clusterTitle => (
-        <a className="panel-block" key={clusterTitle}>
+      {clusters !== undefined ? (
+      clusters.map(cluster => (
+        <a className="panel-block" key={cluster.id}>
           <span className="panel-icon">
             <i className="fas fa-server" aria-hidden="true"></i>
           </span>
-          {clusterTitle}
+          {cluster.title}
         </a>
-      ))}
+      ))
+      ) : (
+      <>
+      <div className="panel-block"></div>
+      <div className="panel-block"></div>
+      <div className="panel-block"></div>
+      </>
+      )}
     </div>
   );
 }

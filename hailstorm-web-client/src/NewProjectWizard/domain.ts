@@ -1,4 +1,4 @@
-import { Project, ValidationNotice, JMeterFile } from "../domain";
+import { Project, ValidationNotice, JMeterFile, Cluster } from "../domain";
 
 export enum WizardTabTypes {
   Project = 'Project',
@@ -23,6 +23,7 @@ export interface NewProjectWizardProgress {
   };
   confirmCancel?: boolean;
   activeJMeterFile?: JMeterFileUploadState;
+  activeCluster?: Cluster;
 }
 
 

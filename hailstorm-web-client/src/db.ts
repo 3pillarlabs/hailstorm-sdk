@@ -25,6 +25,10 @@ export const DB: {
 
     jmeterIndex: {
       nextId: () => number;
+    },
+
+    clusterIndex: {
+      nextId: () => number;
     }
   }
 } = {
@@ -99,6 +103,12 @@ export const DB: {
       title: "Cadent Capacity",
       running: true,
       autoStop: false
+    },
+    {
+      id: 8,
+      code: 'sphynx',
+      title: 'Sphynx',
+      running: false
     }
   ],
 
@@ -141,6 +151,10 @@ export const DB: {
 
     jmeterIndex: {
       nextId: counter(10)
+    },
+
+    clusterIndex: {
+      nextId: counter(23)
     }
   }
 };

@@ -10,6 +10,7 @@ export interface Project {
   autoStop?: boolean;
   interimState?: InterimProjectState;
   jmeter?: JMeter;
+  clusters?: Cluster[];
 }
 
 export interface ExecutionCycle {
@@ -73,4 +74,28 @@ export interface JMeterFile {
 export interface ValidationNotice {
   type: 'warning' | 'error';
   message: string;
+}
+
+export interface Cluster {
+  title: string;
+  type: 'AWS' | 'DataCenter';
+  id?: number;
+  code?: string;
+  disabled?: boolean;
+}
+
+export interface AmazonCluster extends Cluster {
+  accessKey: string;
+  secretKey: string;
+  region: string;
+  instanceType: string;
+  vpcSubnetId?: string;
+  maxThreadsByInstance: number;
+}
+
+export interface DataCenterCluster extends Cluster {
+  userName: string;
+  sshIdentity: {name: string};
+  machinesIPs: string[];
+  sshPort?: number;
 }
