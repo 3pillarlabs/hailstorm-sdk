@@ -1,11 +1,18 @@
 import { NewProjectWizardState, NewProjectWizardProgress } from "../NewProjectWizard/domain";
 import { ClusterConfigurationActions, ClusterConfigurationActionTypes } from "./actions";
-import { Project } from "../domain";
+import { Project, Cluster } from "../domain";
 
 export function reducer(state: NewProjectWizardState, action: ClusterConfigurationActions): NewProjectWizardState {
   switch (action.type) {
-    case ClusterConfigurationActionTypes.NewCluster: {
-      const wizardState: NewProjectWizardProgress = {...state.wizardState!, activeCluster: action.payload};
+    case ClusterConfigurationActionTypes.ActivateCluster: {
+      let activeCluster: Cluster;
+      if (!action.payload && state.activeProject!.clusters && state.activeProject!.clusters.length > 0) {
+        activeCluster = state.activeProject!.clusters[0];
+      } else {
+        activeCluster = action.payload!;
+      }
+
+      const wizardState: NewProjectWizardProgress = {...state.wizardState!, activeCluster};
       return {...state, wizardState};
     }
 
@@ -36,6 +43,11 @@ export function reducer(state: NewProjectWizardState, action: ClusterConfigurati
     case ClusterConfigurationActionTypes.SetClusterConfiguration: {
       const activeProject: Project = {...state.activeProject!, clusters: action.payload};
       return {...state, activeProject};
+    }
+
+    case ClusterConfigurationActionTypes.ChooseClusterOption: {
+      const wizardState: NewProjectWizardProgress = {...state.wizardState!, activeCluster: undefined};
+      return {...state, wizardState};
     }
 
     default:

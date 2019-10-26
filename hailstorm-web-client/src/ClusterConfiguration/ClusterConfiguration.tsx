@@ -5,12 +5,13 @@ import { CancelLink, BackLink } from '../NewProjectWizard/WizardControls';
 import { WizardTabTypes, NewProjectWizardProgress } from "../NewProjectWizard/domain";
 import styles from '../NewProjectWizard/NewProjectWizard.module.scss';
 import { selector } from '../NewProjectWizard/reducer';
-import { Project, Cluster, AmazonCluster } from '../domain';
+import { Project, Cluster, AmazonCluster, DataCenterCluster } from '../domain';
 import clusterStyles from './ClusterConfiguration.module.scss';
 import { ClusterList } from './ClusterList';
-import { NewClusterAction, RemoveClusterAction } from './actions';
+import { ActivateClusterAction, ChooseClusterOptionAction } from './actions';
 import { AWSForm } from './AWSForm';
 import { AWSView } from './AWSView';
+import { DataCenterForm, DataCenterView } from './DataCenterForm';
 
 export const ClusterConfiguration: React.FC = () => {
   const {appState, dispatch} = useContext(AppStateContext);
@@ -18,7 +19,7 @@ export const ClusterConfiguration: React.FC = () => {
 
   return (
     <>
-    <StepHeader activeProject={state.activeProject!} wizardState={state.wizardState!} />
+    <StepHeader activeProject={state.activeProject!} wizardState={state.wizardState!} {...{dispatch}} />
     <div className={styles.stepBody}>
       <StepContent wizardState={state.wizardState!} activeProject={state.activeProject!} {...{dispatch}} />
       <StepFooter {...{dispatch}} activeProject={state.activeProject!} />
@@ -29,10 +30,12 @@ export const ClusterConfiguration: React.FC = () => {
 
 function StepHeader({
   activeProject,
-  wizardState
+  wizardState,
+  dispatch
 }: {
   activeProject: Project;
   wizardState: NewProjectWizardProgress;
+  dispatch: React.Dispatch<any>;
 }) {
   return (
     <div className={`level ${styles.stepHeader}`}>
@@ -47,6 +50,7 @@ function StepHeader({
             role="Add Cluster"
             className="button is-link is-medium"
             disabled={wizardState.activeCluster === undefined || wizardState.activeCluster.id === undefined}
+            onClick={() => dispatch(new ChooseClusterOptionAction())}
           >
             Add Cluster
           </button>
@@ -68,24 +72,39 @@ function StepContent({
   return (
     <div className={`columns ${styles.stepContent}`}>
       <div className="column is-two-fifths">
-        <ClusterList clusters={activeProject.clusters} hideEdit={true} />
+        <ClusterList
+          clusters={activeProject.clusters}
+          hideEdit={true}
+          onSelectCluster={(cluster) => dispatch(new ActivateClusterAction(cluster))}
+          activeCluster={wizardState.activeCluster}
+        />
       </div>
       <div className="column is-three-fifths">
         {!wizardState.activeCluster && (
         <>
+        {!activeProject.clusters && (
         <div className="notification is-info">
           There are no clusters yet. A cluster is used for load generation. <br/>
           <strong>You need to have at least one cluster.</strong>
-        </div>
+        </div>)}
         <ClusterChoice clusters={activeProject.clusters} {...{dispatch}} />
-        </>
-        )}
+        </>)}
         {wizardState.activeCluster && wizardState.activeCluster.type === 'AWS' && (
         (wizardState.activeCluster.id === undefined ? (
         <AWSForm {...{dispatch, activeProject}} />
         ): (
         <AWSView
           cluster={wizardState.activeCluster! as AmazonCluster}
+          {...{dispatch, activeProject}}
+        />
+        ))
+        )}
+        {wizardState.activeCluster && wizardState.activeCluster.type === 'DataCenter' && (
+        (wizardState.activeCluster.id === undefined ? (
+        <DataCenterForm {...{dispatch, activeProject}} />
+        ) : (
+        <DataCenterView
+          cluster={wizardState.activeCluster! as DataCenterCluster}
           {...{dispatch, activeProject}}
         />
         ))
@@ -112,7 +131,7 @@ function ClusterChoice({
           <div className={clusterStyles.choiceCard}>
             <a
               className={`button is-link is-large is-fullwidth ${clusterStyles.cardButton}`}
-              onClick={() => dispatch(new NewClusterAction({title: '', type: 'AWS'}))}
+              onClick={() => dispatch(new ActivateClusterAction({title: '', type: 'AWS'}))}
             >
               <span className="icon is-medium">
                 <i className="fab fa-aws"></i>
@@ -128,7 +147,10 @@ function ClusterChoice({
         </div>
         <div className="column is-half">
           <div className={clusterStyles.choiceCard}>
-            <a className={`button is-link is-large is-fullwidth ${clusterStyles.cardButton}`}>
+            <a
+              className={`button is-link is-large is-fullwidth ${clusterStyles.cardButton}`}
+              onClick={() => dispatch(new ActivateClusterAction({title: '', type: 'DataCenter'}))}
+            >
               <span className="icon is-medium">
                 <i className="fas fa-network-wired"></i>
               </span>
@@ -142,6 +164,11 @@ function ClusterChoice({
           </div>
         </div>
       </div>
+      {clusters && clusters.length > 0 && (
+      <div className="control has-text-centered">
+        <a className="is-link" role="Cancel Choice" onClick={() => dispatch(new ActivateClusterAction())}>Cancel</a>
+      </div>
+      )}
     </>
   )
 }

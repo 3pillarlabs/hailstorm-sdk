@@ -2,7 +2,6 @@ import { Project, ExecutionCycleStatus, ExecutionCycle, Report, JtlFile, JMeter,
 import { DB } from "./db";
 import { JMeterFileUploadState } from "./NewProjectWizard/domain";
 import { AWSInstanceChoiceOption, AWSRegionType, AWSRegionList } from "./ClusterConfiguration/domain";
-import { number } from "prop-types";
 
 export type ProjectActions = 'stop' | 'abort' | 'start' | 'terminate';
 export type ResultActions = 'report' | 'export' | 'trash';

@@ -5,6 +5,10 @@ import { render, fireEvent, wait } from '@testing-library/react';
 import { FileServer } from './fileServer';
 
 describe('<FileUpload />', () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
   it('should render without crashing', () => {
     shallow(
       <FileUpload
@@ -21,8 +25,8 @@ describe('<FileUpload />', () => {
     const onUploadError = jest.fn();
     const onUploadProgress = jest.fn();
     const uploadFinished = Promise.resolve();
-    const sendFileSpy = jest.spyOn(FileServer, "sendFile").mockImplementation((_file, callback) => {
-      callback(100);
+    const sendFileSpy = jest.spyOn(FileServer, "sendFile").mockImplementation((_file, cb) => {
+      cb && cb(100);
       return uploadFinished;
     });
 
@@ -85,5 +89,36 @@ describe('<FileUpload />', () => {
     );
 
     expect(component.find('input')).toBeDisabled();
+  });
+
+  it('should prevent automatic upload on drop if preventDefault is true', async () => {
+    const onAccept = jest.fn();
+    const onFileUpload = jest.fn();
+    const onUploadError = jest.fn();
+    const onUploadProgress = jest.fn();
+    const uploadFinished = Promise.resolve();
+    const sendFileSpy = jest.spyOn(FileServer, "sendFile").mockImplementation((_file) => {
+      return uploadFinished;
+    });
+
+    const {findByRole} = render(
+      <FileUpload
+        {...{onAccept, onFileUpload, onUploadError, onUploadProgress}}
+        preventDefault={true}
+      >
+      </FileUpload>
+    );
+
+    const fileInput = await findByRole('File Upload');
+    fireEvent.change(fileInput, {
+      target: {
+        files: [new File(['<xml></xml>'], "a.jmx", {type: "text/xml"})]
+      }
+    });
+
+    await wait(() => expect(onAccept).toBeCalled);
+    expect(sendFileSpy).not.toBeCalled();
+    expect(onUploadProgress).not.toBeCalled();
+    expect(onFileUpload).not.toBeCalled();
   });
 });

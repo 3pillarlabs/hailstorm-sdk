@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NonLinearSlider } from './NonLinearSlider';
-import { lowestCostOption, computeChoice, maxThreadsByCluster } from './AWSInstanceCalculator';
+import { computeChoice, maxThreadsByCluster } from './AWSInstanceCalculator';
 import { AWSInstanceChoiceOption } from './domain';
 import { Loader } from '../Loader/Loader';
 
@@ -10,12 +10,14 @@ export function AWSInstanceChoice({
   regionCode,
   onChange,
   fetchPricing,
-  setHourlyCostByCluster
+  setHourlyCostByCluster,
+  disabled
 }: {
   regionCode: string;
   onChange: (choice: AWSInstanceChoiceOption) => void;
   fetchPricing: (regionCode: string) => Promise<AWSInstanceChoiceOption[]>;
   setHourlyCostByCluster?: React.Dispatch<React.SetStateAction<number | undefined>>;
+  disabled?: boolean;
 }) {
   const [pricingData, setPricingData] = useState<AWSInstanceChoiceOption[]>([]);
   const [instanceType, setInstanceType] = useState<string>('');
@@ -57,7 +59,7 @@ export function AWSInstanceChoice({
         <p className="card-header-title">
           AWS Instance{quickMode ? ' Advisor': ''}
         </p>
-        <a
+        {!disabled && (<a
           className="card-header-icon is-size-7"
           onClick={() => {
             if (quickMode) {
@@ -70,7 +72,7 @@ export function AWSInstanceChoice({
           }}
         >
           {quickMode ? 'Advanced ' : 'Quick '}Mode
-        </a>
+        </a>)}
       </div>
       <div className="card-content">
         {quickMode ? (
@@ -83,6 +85,7 @@ export function AWSInstanceChoice({
               step={50}
               maximum={maxThreadsByCluster(pricingData)}
               minimum={MIN_VALUE}
+              {...{disabled}}
             />
           </div>
         </div>
@@ -127,6 +130,7 @@ export function AWSInstanceChoice({
                   maxThreadsByInstance
                 }));
               }}
+              {...{disabled}}
             />
           </div>
         </div>
@@ -147,6 +151,7 @@ export function AWSInstanceChoice({
                   instanceType
                 }));
               }}
+              {...{disabled}}
             />
           </div>
         </div>

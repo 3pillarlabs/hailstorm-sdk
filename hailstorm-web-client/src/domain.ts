@@ -96,6 +96,6 @@ export interface AmazonCluster extends Cluster {
 export interface DataCenterCluster extends Cluster {
   userName: string;
   sshIdentity: {name: string};
-  machinesIPs: string[];
+  machines: string[];
   sshPort?: number;
 }

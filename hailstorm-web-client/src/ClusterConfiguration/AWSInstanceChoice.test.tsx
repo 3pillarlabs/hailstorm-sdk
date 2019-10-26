@@ -170,4 +170,19 @@ describe('<AWSInstanceChoice />', () => {
     sliderValue = computeSpy.mock.calls[2][0];
     expect(sliderValue).toEqual(1000);
   });
+
+  it('should be possible to disable the control', async () => {
+    const component =  mount(
+      <AWSInstanceChoice
+        onChange={jest.fn()}
+        fetchPricing={() => fetchPricing}
+        regionCode="us-east-1"
+        disabled={true}
+      />
+    );
+
+    await fetchPricing;
+    component.update();
+    expect(component).toHaveProp('disabled', true);
+  });
 });

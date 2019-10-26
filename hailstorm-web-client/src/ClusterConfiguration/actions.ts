@@ -2,15 +2,16 @@ import { Action } from "../store";
 import { Cluster } from "../domain";
 
 export enum ClusterConfigurationActionTypes {
-  NewCluster = '[ClusterConfiguration [NewCluster]',
-  RemoveCluster = '[ClusterConfiguration [RemoveCluster]',
-  SaveCluster = '[ClusterConfiguration [SaveCluster]',
-  SetClusterConfiguration = '[ClusterConfiguration [SetClusterConfiguration]',
+  ActivateCluster = '[ClusterConfiguration ActivateCluster',
+  RemoveCluster = '[ClusterConfiguration] RemoveCluster',
+  SaveCluster = '[ClusterConfiguration] SaveCluster',
+  SetClusterConfiguration = '[ClusterConfiguration] SetClusterConfiguration',
+  ChooseClusterOption = '[ClusterConfiguration] ChooseClusterOption'
 }
 
-export class NewClusterAction implements Action {
-  readonly type = ClusterConfigurationActionTypes.NewCluster;
-  constructor(public payload: Cluster) {}
+export class ActivateClusterAction implements Action {
+  readonly type = ClusterConfigurationActionTypes.ActivateCluster;
+  constructor(public payload?: Cluster) {}
 }
 
 export class RemoveClusterAction implements Action {
@@ -28,8 +29,14 @@ export class SetClusterConfigurationAction implements Action {
   constructor(public payload: Cluster[]) {}
 }
 
+export class ChooseClusterOptionAction implements Action {
+  readonly type = ClusterConfigurationActionTypes.ChooseClusterOption;
+  constructor() {}
+}
+
 export type ClusterConfigurationActions =
-  | NewClusterAction
+  | ActivateClusterAction
   | RemoveClusterAction
   | SaveClusterAction
-  | SetClusterConfigurationAction;
+  | SetClusterConfigurationAction
+  | ChooseClusterOptionAction;

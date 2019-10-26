@@ -5,11 +5,14 @@ import { FileServer } from './fileServer';
 
 export interface FileUploadProps {
   onAccept: (file: LocalFile) => void;
-  onFileUpload: (file: LocalFile) => void;
-  onUploadError: (file: LocalFile, error: any) => void;
+  onFileUpload?: (file: LocalFile) => void;
+  onUploadError?: (file: LocalFile, error: any) => void;
   onUploadProgress?: (file: LocalFile, progress: number) => void;
   disabled?: boolean;
   abort?: boolean;
+  name?: string;
+  preventDefault?: boolean;
+  accept?: string | string[];
 }
 
 export function FileUpload({
@@ -19,7 +22,10 @@ export function FileUpload({
   onUploadProgress,
   children,
   disabled,
-  abort
+  abort,
+  name,
+  preventDefault,
+  accept
 }: React.PropsWithChildren<FileUploadProps>) {
 
   const [httpReq, setHttpReq] = useState<XMLHttpRequest | undefined>();
@@ -33,6 +39,10 @@ export function FileUpload({
   const onDrop = (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     onAccept(file);
+    if (preventDefault) {
+      return;
+    }
+
     const handleProgress = (progress: number) => {
       if (onUploadProgress) onUploadProgress(file, progress);
     };
@@ -41,19 +51,25 @@ export function FileUpload({
     setHttpReq(_httpReq);
     FileServer
       .sendFile(file, handleProgress, _httpReq)
-      .then(() => onFileUpload(file))
-      .catch((reason) => onUploadError(file, reason));
+      .then(() => {
+        onFileUpload && onFileUpload(file);
+      })
+      .catch((reason) => {
+        onUploadError && onUploadError(file, reason);
+      });
   };
 
   const {getRootProps, getInputProps} = useDropzone({
     onDrop,
-    multiple: false
+    multiple: false,
+    accept,
+    disabled
   });
 
   return (
     <div {...getRootProps()}>
       {children}
-      <input role="File Upload" {...getInputProps()} {...{disabled}} />
+      <input name={name} role="File Upload" {...getInputProps({disabled})} />
     </div>
   );
 }

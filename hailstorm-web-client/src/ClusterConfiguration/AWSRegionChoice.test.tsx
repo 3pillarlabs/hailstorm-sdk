@@ -112,4 +112,18 @@ describe('<AWSRegionChoice />', () => {
     component.find('a.is-link').simulate('click');
     expect(component.find('input').prop('value')).toMatch(new RegExp(region.title));
   });
+
+  it('should be possible to disable the control', async () => {
+    const component = mount(
+      <AWSRegionChoice
+        onAWSRegionChange={jest.fn()}
+        {...{fetchRegions}}
+        disabled={true}
+      />
+    );
+
+    await regionsData;
+    component.update();
+    expect(component.find('span[role="EditRegion"]')).toExist();
+  });
 });

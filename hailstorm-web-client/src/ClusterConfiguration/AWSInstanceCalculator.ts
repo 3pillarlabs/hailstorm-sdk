@@ -1,9 +1,5 @@
 import { AWSInstanceChoiceOption } from "./domain";
 
-export function lowestCostOption(pricingData: AWSInstanceChoiceOption[]) {
-  return pricingData[0];
-}
-
 export function computeChoice(
   numThreads: number,
   pricingData: AWSInstanceChoiceOption[],

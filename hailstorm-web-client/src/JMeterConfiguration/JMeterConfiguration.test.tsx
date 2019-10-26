@@ -1,5 +1,5 @@
 import React from 'react';
-import { mount, shallow } from "enzyme";
+import { mount } from "enzyme";
 import { JMeterConfiguration } from "./JMeterConfiguration";
 import { AppStateContext } from '../appStateContext';
 import { AppState } from '../store';
@@ -207,13 +207,14 @@ describe('<JMeterConfiguration />', () => {
     expect(dispatch).toHaveBeenCalled();
   });
 
-  it('should show validation errors', (done) => {
+  it('should show validation errors', async (done) => {
     const validation: ValidationNotice = {type: 'error', message: 'Missing DataWriter'};
     const validations = Promise.reject({validationErrors: [validation]});
     jest.spyOn(JMeterValidationService.prototype, "create").mockReturnValue(validations);
     const component = mount(createComponent());
     const onFileLoad = component.find('FileUpload').prop('onFileUpload') as ((file: LocalFile) => void);
     onFileLoad(mockFile("a.jmx"));
+    await wait();
     validations
       .then(() => fail("Control should not reach here"))
       .catch(() => {

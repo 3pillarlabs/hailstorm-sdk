@@ -4,7 +4,9 @@ import { Cluster } from '../domain';
 export const ClusterList: React.FC<{
   clusters?: Cluster[];
   hideEdit?: boolean;
-}> = ({clusters, hideEdit}) => {
+  onSelectCluster?: (cluster: Cluster) => void;
+  activeCluster?: Cluster;
+}> = ({clusters, hideEdit, onSelectCluster, activeCluster}) => {
   return (
     <div className="panel">
       <div className="panel-heading">
@@ -25,12 +27,25 @@ export const ClusterList: React.FC<{
       </div>
       {clusters !== undefined ? (
       clusters.map(cluster => (
-        <a className="panel-block" key={cluster.id}>
+        (onSelectCluster ? (
+        <a
+          className={`panel-block${activeCluster && activeCluster.id === cluster.id ? " is-active": ""}`}
+          key={cluster.id}
+          onClick={() => onSelectCluster(cluster)}
+        >
           <span className="panel-icon">
             <i className="fas fa-server" aria-hidden="true"></i>
           </span>
           {cluster.title}
         </a>
+        ) : (
+        <div className="panel-block" key={cluster.id} >
+          <span className="panel-icon">
+            <i className="fas fa-server" aria-hidden="true"></i>
+          </span>
+          {cluster.title}
+        </div>
+        ))
       ))
       ) : (
       <>

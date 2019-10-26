@@ -1,6 +1,6 @@
 export const FileServer: {
   uploadURL: string;
-  sendFile: (file: File, callback: (progress: number) => void, httpReq?: XMLHttpRequest) => Promise<any>;
+  sendFile: (file: File, callback?: (progress: number) => void, httpReq?: XMLHttpRequest) => Promise<any>;
   removeFile: (file: {name: string}) => Promise<any>;
 } = {
 
@@ -10,22 +10,22 @@ export const FileServer: {
     return new Promise((resolve, reject) => {
       const req = httpReq || new XMLHttpRequest();
       req.upload.addEventListener("load", () => {
-        callback(100);
+        callback && callback(100);
         resolve(req.response);
       });
 
       req.upload.addEventListener("error", () => {
-        callback(0);
+        callback && callback(0);
         reject(req.response);
       });
 
       req.upload.addEventListener("progress", (event) => {
         if (!event.lengthComputable) return;
-        callback((event.loaded / event.total) * 100);
+        callback && callback((event.loaded / event.total) * 100);
       });
 
       req.upload.addEventListener("abort", () => {
-        callback(0);
+        callback && callback(0);
         reject('User aborted upload');
       });
 

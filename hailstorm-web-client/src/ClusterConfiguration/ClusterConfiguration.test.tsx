@@ -7,7 +7,8 @@ import { AppStateContext } from '../appStateContext';
 import { AWSInstanceChoiceOption, AWSRegionList } from './domain';
 import { AWSEC2PricingService, AWSRegionService, ClusterService } from '../api';
 import { render as renderComponent, fireEvent, wait} from '@testing-library/react';
-import { AmazonCluster, Cluster } from '../domain';
+import { AmazonCluster, Cluster, DataCenterCluster } from '../domain';
+import { FileServer } from '../FileUpload/fileServer';
 
 describe('<ClusterConfiguration />', () => {
   let appState: AppState;
@@ -106,6 +107,7 @@ describe('<ClusterConfiguration />', () => {
       const component = mount(createComponent());
       expect(component.find('a').findWhere((wrapper) => wrapper.text().match(/aws/i) !== null).at(0)).toExist();
       expect(component.find('a').findWhere((wrapper) => wrapper.text().match(/data center/i) !== null).at(0)).toExist();
+      expect(component.find('ClusterChoice a').findWhere((wrapper) => wrapper.text().match(/cancel/i) !== null).at(0)).not.toExist();
     });
 
     it('should disable add cluster button', () => {
@@ -125,7 +127,21 @@ describe('<ClusterConfiguration />', () => {
       expect(component).toContainExactlyOneMatchingElement('AWSForm');
     });
 
-    test.todo('should show data center form when data center is chosen');
+    it('should show data center form when data center is chosen', () => {
+      const component = mount(createComponent());
+      const dataCenterLink = component
+        .find('ClusterChoice')
+        .find('a')
+        .findWhere((wrapper) => wrapper.text().match(/data center/i) !== null)
+        .at(0);
+      dataCenterLink.simulate('click');
+      component.update();
+      expect(dispatch).toBeCalled();
+      appState.wizardState!.activeCluster = {title: '', type: 'DataCenter'};
+      component.setProps({value: {appState, dispatch}});
+      component.update();
+      expect(component).toContainExactlyOneMatchingElement('DataCenterForm');
+    });
   });
 
   describe('when aws cluster is chosen', () => {
@@ -224,8 +240,9 @@ describe('<ClusterConfiguration />', () => {
   });
 
   describe('given a cluster is added', () => {
+    let savedCluster: AmazonCluster;
     beforeEach(() => {
-      const savedCluster: AmazonCluster = {
+      savedCluster = {
         id: 23,
         code: 'singing-penguin-23',
         title: '',
@@ -246,6 +263,170 @@ describe('<ClusterConfiguration />', () => {
       const clusterList = component.find('ClusterList');
       expect(clusterList).toExist();
       expect(clusterList.prop('clusters')).toEqual(appState.activeProject!.clusters);
+    });
+
+    it('should remove the cluster from list', async () => {
+      const destroyPromise = Promise.resolve();
+      const destroySpy = jest.spyOn(ClusterService.prototype, 'destroy').mockReturnValue(destroyPromise);
+      const {findByRole} = renderComponent(createComponent());
+      const remove = await findByRole('Remove Cluster');
+      fireEvent.click(remove);
+      expect(destroySpy).toBeCalled();
+      await destroyPromise;
+      expect(dispatch).toBeCalled();
+    });
+
+    it('should enable Add Cluster', async () => {
+      const {findByRole} = renderComponent(createComponent());
+      const add = await findByRole('Add Cluster');
+      expect(add.getAttribute("disabled")).toBeFalsy();
+    });
+
+    it('should open cluster choice to add a cluster', async () => {
+      const {findByRole} = renderComponent(createComponent());
+      const add = await findByRole('Add Cluster');
+      fireEvent.click(add);
+      expect(dispatch).toBeCalled();
+    });
+
+    it('should cancel the open cluster choice', async () => {
+      appState.wizardState!.activeCluster = undefined;
+      const {findByRole} = renderComponent(createComponent());
+      const cancel = await findByRole('Cancel Choice');
+      fireEvent.click(cancel);
+      expect(dispatch).toBeCalled();
+    });
+
+    it('should select a cluster from the list', () => {
+      const component = mount(createComponent());
+      const clusterList = component.find('ClusterList');
+      const onSelectCluster = clusterList.prop('onSelectCluster') as (cluster: Cluster) => void;
+      onSelectCluster(savedCluster);
+      expect(dispatch).toBeCalled();
+    });
+  });
+
+  describe('when data center cluster is chosen', () => {
+    beforeEach(() => {
+      appState.wizardState!.activeCluster = {title: '', type: 'DataCenter'};
+    });
+
+    it('should show form fields', () => {
+      const component = mount(createComponent());
+      expect(component.find('input[name="title"]')).toExist();
+      expect(component.find('input[name="userName"]')).toExist();
+      expect(component.find('input[name="sshPort"]')).toExist();
+      expect(component.find('FileUpload[name="pemFile"]')).toExist();
+      expect(component.find('MachineSet')).toExist();
+    });
+
+    it('should submit to create a cluster', async () => {
+      const fileServerSpy = jest.spyOn(FileServer, 'sendFile').mockResolvedValueOnce("200 OK");
+      const createdCluster: DataCenterCluster = {
+        id: 42,
+        title: 'RAC 1',
+        code: 'rising-moon-346',
+        type: 'DataCenter',
+        userName: 'ubuntu',
+        sshIdentity: {name: 'secure.pem'},
+        machines: [ 'host-a', 'host-b' ],
+        sshPort: 8022
+      };
+
+      const createApiSpy = jest.spyOn(ClusterService.prototype, 'create').mockResolvedValueOnce(createdCluster);
+      const component = mount(createComponent());
+      component.find('input[name="title"]').simulate('change', {target: {value: createdCluster.title, name: 'title'}});
+      component.find('input[name="userName"]').simulate('change', {target: {value: createdCluster.userName, name: 'userName'}});
+      component.find('input[name="sshPort"]').simulate('change', {target: {value: createdCluster.sshPort, name: 'sshPort'}});
+      const onFileAccept = component.find('FileUpload').prop('onAccept') as (file: File) => void;
+      onFileAccept(new File([], createdCluster.sshIdentity.name));
+      const onMachinesChange = component.find('MachineSet').prop('onChange') as unknown as (machines: string[]) => void;
+      onMachinesChange(createdCluster.machines);
+      component.find('form').simulate('submit');
+      await wait(() => {
+        expect(createApiSpy).toBeCalled();
+      });
+
+      expect(fileServerSpy).toBeCalled();
+      const clusterArg = {...createdCluster};
+      delete clusterArg.id;
+      delete clusterArg.code;
+      expect(createApiSpy.mock.calls[0][1]).toEqual(clusterArg);
+    });
+
+    it('should validate inputs when form is submitted', async () => {
+      const component = mount(createComponent());
+      expect(component.find('button[type="submit"]')).toBeDisabled();
+      component.find('input[name="title"]').simulate('change', {target: {value: 'foo', name: 'title'}});
+      component.find('input[name="userName"]').simulate('change', {target: {value: 'baz', name: 'userName'}});
+      component.find('input[name="sshPort"]').simulate('change', {target: {value: 8022, name: 'sshPort'}});
+
+      const onFileAccept = component.find('FileUpload').prop('onAccept') as (file: File) => void;
+      onFileAccept(new File([], 'secure.pem'));
+
+      const onMachinesChange = component.find('MachineSet').prop('onChange') as unknown as (machines: string[]) => void;
+      onMachinesChange([ 'host-a', 'host-b' ]);
+
+      expect(component.find('button[type="submit"]')).not.toBeDisabled();
+    });
+
+    it('should display validation errors from api', async () => {
+      jest.spyOn(FileServer, 'sendFile').mockResolvedValueOnce("200 OK");
+      const createApiSpy = jest.spyOn(ClusterService.prototype, 'create').mockImplementation(() => {
+        return new Promise((_resolve, reject) => reject({
+          validationErrors: {
+            machines: {
+              'host-a': 'not reachable',
+              'host-b': 'unsupported JMeter version'
+            },
+            title: 'Title is already taken'
+          }
+        }));
+      });
+
+      const component = mount(createComponent());
+      component.find('input[name="title"]').simulate('change', {target: {value: 'foo', name: 'title'}});
+      component.find('input[name="userName"]').simulate('change', {target: {value: 'baz', name: 'userName'}});
+      component.find('input[name="sshPort"]').simulate('change', {target: {value: 8022, name: 'sshPort'}});
+      const onFileAccept = component.find('FileUpload').prop('onAccept') as (file: File) => void;
+      onFileAccept(new File([], 'secure.pem'));
+      const onMachinesChange = component.find('MachineSet').prop('onChange') as unknown as (machines: string[]) => void;
+      onMachinesChange([ 'host-a', 'host-b' ]);
+      component.find('form').simulate('submit');
+      await wait();
+      expect(createApiSpy).toBeCalled();
+    });
+
+    it('should not upload PEM file immediately', () => {
+      const component = mount(createComponent());
+      expect(component.find('FileUpload')).toHaveProp('preventDefault', true);
+    });
+
+    it('should remove an incomplete active cluster', async () => {
+      const {findByRole} = renderComponent(createComponent());
+      const remove = await findByRole('Remove Cluster');
+      fireEvent.click(remove);
+      expect(dispatch).toBeCalled();
+    });
+  });
+
+  describe('when a data center cluster is active', () => {
+    beforeEach(() => {
+      appState.wizardState!.activeCluster = {
+        id: 42,
+        title: 'Cluster One',
+        code: 'rising-star-23',
+        sshIdentity: {name: 'secure.pem'},
+        sshPort: 22,
+        type: 'DataCenter',
+        userName: 'ubuntu',
+        machines: ['servo']
+      } as DataCenterCluster;
+    });
+
+    it('should show a created cluster', () => {
+      const component = mount(createComponent());
+      expect(component).toContainExactlyOneMatchingElement('DataCenterView');
     });
 
     it('should remove the cluster from list', async () => {

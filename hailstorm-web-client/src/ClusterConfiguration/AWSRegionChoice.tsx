@@ -5,9 +5,11 @@ import { Loader } from '../Loader/Loader';
 export function AWSRegionChoice({
   fetchRegions,
   onAWSRegionChange,
+  disabled
 }: {
   onAWSRegionChange: (value: string) => void;
   fetchRegions: () => Promise<AWSRegionList>;
+  disabled?: boolean;
 }) {
   const [regionList, setRegionList] = useState<AWSRegionList>();
   const [regions, setRegions] = useState<AWSRegionType[]>([]);
@@ -55,7 +57,11 @@ export function AWSRegionChoice({
           <input readOnly className="input" value={selectedRegion.title} />
         </div>
         <div className="control">
+          {!disabled ? (
           <a className="button" role="EditRegion" onClick={handleEdit}>Edit</a>
+          ) : (
+          <span className="button is-static is-disabled" role="EditRegion">Edit</span>
+          )}
         </div>
       </div>
     )

@@ -5,13 +5,15 @@ export function NonLinearSlider({
   onChange,
   minimum,
   maximum,
-  step
+  step,
+  disabled
 }: {
   initialValue?: number;
   onChange: (value: number) => void;
   minimum?: number;
   maximum?: number;
   step?: number;
+  disabled?: boolean;
 }) {
   const minimumValue = minimum || 0;
   const maximumValue = maximum || 1000;
@@ -51,6 +53,7 @@ export function NonLinearSlider({
           value={maxUsers}
           onChange={handleChange}
           onBlur={handleBlur}
+          disabled={disabled}
         />
       </div>
       <p className="help">This is a number between {minimumValue} and {maximumValue}</p>

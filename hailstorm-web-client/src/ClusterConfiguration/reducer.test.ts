@@ -1,6 +1,6 @@
 import { reducer } from './reducer';
 import { NewProjectWizardState, WizardTabTypes } from '../NewProjectWizard/domain';
-import { NewClusterAction, RemoveClusterAction, SaveClusterAction, SetClusterConfigurationAction } from './actions';
+import { ActivateClusterAction, RemoveClusterAction, SaveClusterAction, SetClusterConfigurationAction, ChooseClusterOptionAction } from './actions';
 import { Cluster, AmazonCluster } from '../domain';
 
 describe('reducer', () => {
@@ -31,7 +31,7 @@ describe('reducer', () => {
 
   it('should activate new AWS cluster', () => {
     const payload: Cluster = {title: '', type: 'AWS'};
-    const nextState = reducer(initialState(), new NewClusterAction(payload));
+    const nextState = reducer(initialState(), new ActivateClusterAction(payload));
     expect(nextState.wizardState!.activeCluster).toEqual(payload);
   });
 
@@ -103,5 +103,43 @@ describe('reducer', () => {
     expect(nextState.activeProject!.clusters![0]).toEqual(anotherCluster);
     nextState = reducer(nextState, new RemoveClusterAction(anotherCluster));
     expect(nextState.activeProject!.clusters).toBeUndefined();
+  });
+
+  it('should show option to choose cluster', () => {
+    const state = initialState();
+    state.wizardState!.activeCluster = {
+      title: '',
+      type: 'AWS',
+      accessKey: 'A',
+      secretKey: 'S',
+      region: 'us-east-1',
+      instanceType: 'm3a.small',
+      maxThreadsByInstance: 500,
+      id: 23,
+      code: 'singing-penguin-23'
+    } as AmazonCluster;
+
+    const nextState = reducer(state, new ChooseClusterOptionAction());
+    expect(nextState.wizardState!.activeCluster).toBeUndefined();
+  });
+
+  it('should activate first cluster in list when no payload is passed', () => {
+    const cluster: AmazonCluster = {
+      title: '',
+      type: 'AWS',
+      accessKey: 'A',
+      secretKey: 'S',
+      region: 'us-east-1',
+      instanceType: 'm3a.small',
+      maxThreadsByInstance: 500,
+      id: 23,
+      code: 'singing-penguin-23'
+    };
+
+    const state = initialState();
+    state.activeProject!.clusters = [ cluster ];
+
+    const nextState = reducer(state, new ActivateClusterAction());
+    expect(nextState.wizardState!.activeCluster).toEqual(cluster);
   });
 });

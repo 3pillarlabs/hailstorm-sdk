@@ -68,42 +68,44 @@ function StepHeader({
   setUploadAborted: React.Dispatch<React.SetStateAction<boolean>>;
   uploadAborted: boolean;
 }) {
-  return <div className={`level ${styles.stepHeader}`}>
-    <div className="level-left">
-      <div className="level-item">
-        <h3 className="title is-3">{state.activeProject!.title} &mdash; JMeter</h3>
+  return (
+    <div className={`level ${styles.stepHeader}`}>
+      <div className="level-left">
+        <div className="level-item">
+          <h3 className="title is-3">{state.activeProject!.title} &mdash; JMeter</h3>
+        </div>
       </div>
-    </div>
-    <div className="level-right">
-      <div className="level-item">
-        <FileUpload
-          onAccept={(file) => {
-            setDisableAbort(true);
-            const dataFile: boolean = !file.name.match(/\.jmx$/);
-            dispatch(new AddJMeterFileAction({ name: file.name, dataFile }));
-            setTimeout(() => {
-              setDisableAbort(false);
-            }, UPLOAD_ABORT_ENABLE_DELAY_MS);
-          }}
-          onFileUpload={handleFileUpload}
-          onUploadError={(file, error) => {
-            dispatch(new AbortJMeterFileUploadAction({ name: file.name, uploadError: error }));
-            setUploadAborted(false);
-            setDisableAbort(true);
-          }}
-          disabled={isUploadInProgress(state.wizardState!.activeJMeterFile)} abort={uploadAborted}
-        >
-          <button
-            className="button is-link is-medium"
-            title="Upload .jmx and data files (like .csv)"
-            disabled={isUploadInProgress(state.wizardState!.activeJMeterFile)}
+      <div className="level-right">
+        <div className="level-item">
+          <FileUpload
+            onAccept={(file) => {
+              setDisableAbort(true);
+              const dataFile: boolean = !file.name.match(/\.jmx$/);
+              dispatch(new AddJMeterFileAction({ name: file.name, dataFile }));
+              setTimeout(() => {
+                setDisableAbort(false);
+              }, UPLOAD_ABORT_ENABLE_DELAY_MS);
+            }}
+            onFileUpload={handleFileUpload}
+            onUploadError={(file, error) => {
+              dispatch(new AbortJMeterFileUploadAction({ name: file.name, uploadError: error }));
+              setUploadAborted(false);
+              setDisableAbort(true);
+            }}
+            disabled={isUploadInProgress(state.wizardState!.activeJMeterFile)} abort={uploadAborted}
           >
-            Upload
-          </button>
-        </FileUpload>
+            <button
+              className="button is-link is-medium"
+              title="Upload .jmx and data files (like .csv)"
+              disabled={isUploadInProgress(state.wizardState!.activeJMeterFile)}
+            >
+              Upload
+            </button>
+          </FileUpload>
+        </div>
       </div>
     </div>
-  </div>;
+  );
 }
 
 function StepContent({
