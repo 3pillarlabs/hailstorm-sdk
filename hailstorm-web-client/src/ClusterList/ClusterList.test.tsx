@@ -41,4 +41,9 @@ describe('<ClusterList />', () => {
     const invoked = onSelectCluster.mock.calls[0][0] as Cluster;
     expect(invoked.code).toEqual('aws-1');
   });
+
+  it('should disable edit', () =>{
+    const wrapper = shallow(<ClusterList disableEdit={true} showEdit={true} />);
+    expect(wrapper.find('.button')).toBeDisabled();
+  });
 });

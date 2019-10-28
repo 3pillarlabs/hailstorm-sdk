@@ -3,10 +3,11 @@ import { Cluster } from '../domain';
 
 export const ClusterList: React.FC<{
   clusters?: Cluster[];
-  hideEdit?: boolean;
+  showEdit?: boolean;
   onSelectCluster?: (cluster: Cluster) => void;
   activeCluster?: Cluster;
-}> = ({clusters, hideEdit, onSelectCluster, activeCluster}) => {
+  disableEdit?: boolean;
+}> = ({clusters, showEdit, onSelectCluster, activeCluster, disableEdit}) => {
 
   return (
     <div className="panel">
@@ -19,8 +20,10 @@ export const ClusterList: React.FC<{
           </div>
           <div className="level-right">
             <div className="level-item">
-              {!hideEdit && (
-              <a className="button is-small"><i className="far fa-edit"></i> Edit</a>
+              {showEdit && (
+              <button className="button is-small" disabled={disableEdit}>
+                <i className="far fa-edit"></i> Edit
+              </button>
               )}
             </div>
           </div>

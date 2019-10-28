@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { JMeterPlanList } from '../JMeterPlanList';
-import { ClusterList } from '../ClusterConfiguration/ClusterList';
-import { ReportsList } from '../ReportsList/ReportsList';
+import { ClusterList } from '../ClusterList';
+import { ReportsList } from '../ReportsList';
 import { ControlPanel } from './ControlPanel';
 import { AppStateContext } from '../appStateContext';
 import { ApiFactory } from '../api';
@@ -42,7 +42,11 @@ export const ProjectWorkspaceMain: React.FC = () => {
           }
           disableEdit={appState.activeProject && (appState.activeProject.running || appState.activeProject.interimState !== undefined)}
         />
-        <ClusterList clusters={appState.activeProject ? appState.activeProject.clusters : undefined} />
+        <ClusterList
+          clusters={appState.activeProject ? appState.activeProject.clusters : undefined}
+          showEdit={true}
+          disableEdit={appState.activeProject && (appState.activeProject.running || appState.activeProject.interimState !== undefined)}
+        />
       </div>
       <div className="column is-6">
         <ControlPanel {...{reloadReports}} />

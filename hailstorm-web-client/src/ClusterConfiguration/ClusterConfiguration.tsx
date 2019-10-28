@@ -7,7 +7,7 @@ import styles from '../NewProjectWizard/NewProjectWizard.module.scss';
 import { selector } from '../NewProjectWizard/reducer';
 import { Project, Cluster, AmazonCluster, DataCenterCluster } from '../domain';
 import clusterStyles from './ClusterConfiguration.module.scss';
-import { ClusterList } from './ClusterList';
+import { ClusterList } from '../ClusterList';
 import { ActivateClusterAction, ChooseClusterOptionAction } from './actions';
 import { AWSForm } from './AWSForm';
 import { AWSView } from './AWSView';
@@ -75,7 +75,6 @@ function StepContent({
       <div className="column is-two-fifths">
         <ClusterList
           clusters={activeProject.clusters}
-          hideEdit={true}
           onSelectCluster={(cluster) => dispatch(new ActivateClusterAction(cluster))}
           activeCluster={wizardState.activeCluster}
         />

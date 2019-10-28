@@ -121,4 +121,48 @@ describe('<ProjectWorkspaceMain />', () => {
     component.update();
     expect(component.find('JMeterPlanList')).toHaveProp('disableEdit', true);
   });
+
+  it('should disable Cluster Edit when project is running', async () => {
+    jest.spyOn(JMeterService.prototype, "list").mockReturnValue(Promise.resolve({files: []}));
+    jest.spyOn(ClusterService.prototype, "list").mockReturnValue(Promise.resolve([]));
+    const component = mount(
+      <AppStateContext.Provider
+        value={{
+          appState: {
+            runningProjects: [
+              {id: 1, code: 'a', title: 'A', running: true}
+            ],
+            activeProject: {id: 1, code: 'a', title: 'A', running: true},
+          },
+          dispatch: jest.fn()
+        }}
+      >
+        <ProjectWorkspaceMain />
+      </AppStateContext.Provider>
+    );
+
+    component.update();
+    expect(component.find('ClusterList')).toHaveProp('disableEdit', true);
+  });
+
+  it('should disable Cluster Edit when project has an interim state', async () => {
+    jest.spyOn(JMeterService.prototype, "list").mockReturnValue(Promise.resolve({files: []}));
+    jest.spyOn(ClusterService.prototype, "list").mockReturnValue(Promise.resolve([]));
+    const component = mount(
+      <AppStateContext.Provider
+        value={{
+          appState: {
+            runningProjects: [],
+            activeProject: {id: 1, code: 'a', title: 'A', running: false, interimState: InterimProjectState.STARTING},
+          },
+          dispatch: jest.fn()
+        }}
+      >
+        <ProjectWorkspaceMain />
+      </AppStateContext.Provider>
+    );
+
+    component.update();
+    expect(component.find('ClusterList')).toHaveProp('disableEdit', true);
+  });
 });
