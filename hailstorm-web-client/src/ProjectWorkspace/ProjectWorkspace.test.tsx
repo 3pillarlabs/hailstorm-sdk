@@ -1,5 +1,5 @@
-import React, { useContext } from 'react';
-import { shallow, mount, ReactWrapper } from 'enzyme';
+import React from 'react';
+import { shallow, mount } from 'enzyme';
 import { ProjectWorkspace } from './ProjectWorkspace';
 import { createHashHistory } from 'history';
 import { Project, InterimProjectState } from '../domain';
@@ -199,5 +199,25 @@ describe('<ProjectWorkspace />', () => {
 
     const warningText = await findByText(/are you sure/i);
     expect(warningText).toBeTruthy();
+  });
+
+  it('should redirect to projects if id is not known', async () => {
+    const rejection = Promise.reject('Not found');
+    const spy = jest.spyOn(ProjectService.prototype, 'get').mockReturnValue(rejection);
+    const dispatch = jest.fn();
+    const component = mount(
+      <AppStateContext.Provider value={{appState: {activeProject: undefined, runningProjects: []}, dispatch}}>
+        <MemoryRouter>
+          <ProjectWorkspace
+            location={{hash: '', pathname: '', search: '', state: null}}
+            history={createHashHistory()}
+            match={{isExact: true, params: {id: "1"}, path: '', url: ''}} />
+        </MemoryRouter>
+      </AppStateContext.Provider>
+    );
+
+    return rejection.then(() => fail('should not reach here')).catch(() => {
+      expect(spy).toBeCalled();
+    })
   });
 });

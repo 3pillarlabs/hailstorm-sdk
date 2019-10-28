@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext } from 'react';
 import { AppStateContext } from '../appStateContext';
 import { ClusterSetupCompletedAction } from '../NewProjectWizard/actions';
 import { CancelLink, BackLink } from '../NewProjectWizard/WizardControls';
@@ -11,7 +11,8 @@ import { ClusterList } from './ClusterList';
 import { ActivateClusterAction, ChooseClusterOptionAction } from './actions';
 import { AWSForm } from './AWSForm';
 import { AWSView } from './AWSView';
-import { DataCenterForm, DataCenterView } from './DataCenterForm';
+import { DataCenterForm } from './DataCenterForm';
+import { DataCenterView } from './DataCenterView';
 
 export const ClusterConfiguration: React.FC = () => {
   const {appState, dispatch} = useContext(AppStateContext);

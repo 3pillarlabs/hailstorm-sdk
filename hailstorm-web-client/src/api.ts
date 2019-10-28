@@ -81,7 +81,7 @@ export class ProjectService {
     let matchedProject: Project | undefined = DB.projects.find((project) => project.id === id);
     return new Promise((resolve, reject) => {
       if (matchedProject) {
-        setTimeout(() => resolve({...matchedProject, jmeter: undefined} as Project), 100 * SLOW_FACTOR);
+        setTimeout(() => resolve({...matchedProject} as Project), 100 * SLOW_FACTOR);
       } else {
         setTimeout(() => reject(new Error(`No Project found with id - ${id}`)), 500 * SLOW_FACTOR);
       }

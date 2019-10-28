@@ -2,7 +2,7 @@ import React from 'react';
 import { JMeterFileUploadState } from "../NewProjectWizard/domain";
 import { isUploadInProgress } from './isUploadInProgress';
 
-export function ActiveJMeterFile({ file, setUploadAborted, disableAbort }: {
+export function JMeterFileMessage({ file, setUploadAborted, disableAbort }: {
   file: JMeterFileUploadState;
   setUploadAborted: React.Dispatch<React.SetStateAction<boolean>>;
   disableAbort: boolean;
@@ -54,5 +54,6 @@ export function ActiveJMeterFile({ file, setUploadAborted, disableAbort }: {
       </div>))}
     </>);
   }
+
   return null;
 }

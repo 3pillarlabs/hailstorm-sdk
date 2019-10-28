@@ -6,10 +6,11 @@ import { ProjectWorkspaceFooter } from '../ProjectWorkspaceFooter';
 import { Project } from '../domain';
 import { ApiFactory } from '../api';
 import { Loader, LoaderSize } from '../Loader';
-import { RouteComponentProps, Prompt, Redirect } from 'react-router';
+import { RouteComponentProps } from 'react-router';
 import { SetProjectAction, UnsetProjectAction } from './actions';
 import { AppStateContext } from '../appStateContext';
 import { UnsavedChangesPrompt } from '../Modal/UnsavedChangesPrompt';
+import { Link } from 'react-router-dom';
 
 export interface ProjectWorkspaceBasicProps {
   project: Project;
@@ -19,6 +20,7 @@ export const ProjectWorkspace: React.FC<RouteComponentProps<{ id: string }>> = (
   const {appState, dispatch} = useContext(AppStateContext);
   const project = appState.activeProject;
   const [showModal, setShowModal] = useState(false);
+  const [handleNotFound, setHandleFound] = useState(false);
 
   useEffect(() => {
     console.debug('ProjectWorkspace#useEffect(props.match.params.id)');
@@ -28,7 +30,10 @@ export const ProjectWorkspace: React.FC<RouteComponentProps<{ id: string }>> = (
       ApiFactory()
         .projects()
         .get(parseInt(props.match.params.id))
-        .then((fetchedProject) => dispatch(new SetProjectAction(fetchedProject)));
+        .then((fetchedProject) => dispatch(new SetProjectAction(fetchedProject)))
+        .catch((reason) => {
+          if (typeof(reason) === 'object' && reason instanceof Error) setHandleFound(true);
+        });
     }
   }, [props.match.params.id]);
 
@@ -38,6 +43,17 @@ export const ProjectWorkspace: React.FC<RouteComponentProps<{ id: string }>> = (
       dispatch(new UnsetProjectAction());
     };
   }, []);
+
+  if (handleNotFound) {
+    return (
+      <div className="container">
+        <div className="notification is-warning">
+          Did not find a project at <code>{`${props.location.pathname}`}</code>. <br/><br/>
+          <Link to="/projects" className="button is-dark">Back to Projects</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container">

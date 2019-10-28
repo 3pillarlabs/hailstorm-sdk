@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { WizardStepTitle, WizardStepTitleProps } from './WizardStepTitle';
 import styles from './NewProjectWizard.module.scss';
-import { Route, RouteComponentProps, withRouter } from 'react-router';
+import { Route, RouteComponentProps, withRouter, Redirect } from 'react-router';
 import { ProjectConfiguration } from '../ProjectConfiguration';
 import { JMeterConfiguration } from '../JMeterConfiguration';
 import { ClusterConfiguration } from '../ClusterConfiguration';
@@ -16,9 +16,16 @@ interface LabeledWizardStepTitleProps extends WizardStepTitleProps {
   label: string;
 }
 
-const RouterlessNewProjectWizard: React.FC<RouteComponentProps> = ({history}) => {
+const RouterlessNewProjectWizard: React.FC<RouteComponentProps> = ({history, location}) => {
   const {appState, dispatch} = useContext(AppStateContext);
   const [showModal, setShowModal] = useState(false);
+  const [redirectOnCompletion, setRedirectOnCompletion] = useState(false);
+
+  const pushHistory = (path: string) => {
+    if (location.pathname !== path) {
+      history.push(path);
+    }
+  };
 
   useEffect(() => {
     console.debug('NewProjectWizard#useEffect(appState.wizardState)');
@@ -26,21 +33,21 @@ const RouterlessNewProjectWizard: React.FC<RouteComponentProps> = ({history}) =>
     switch (appState.wizardState.activeTab) {
       case WizardTabTypes.Project:
         if (appState.activeProject) {
-          history.push(`/wizard/projects/${appState.activeProject.id}`);
+          pushHistory(`/wizard/projects/${appState.activeProject.id}`);
         }
 
         break;
 
       case WizardTabTypes.JMeter:
-        history.push(`/wizard/projects/${appState.activeProject!.id}/jmeter_plans`);
+        pushHistory(`/wizard/projects/${appState.activeProject!.id}/jmeter_plans`);
         break;
 
       case WizardTabTypes.Cluster:
-        history.push(`/wizard/projects/${appState.activeProject!.id}/clusters`);
+        pushHistory(`/wizard/projects/${appState.activeProject!.id}/clusters`);
         break;
 
       case WizardTabTypes.Review:
-        history.push(`/wizard/projects/${appState.activeProject!.id}/review`);
+        pushHistory(`/wizard/projects/${appState.activeProject!.id}/review`);
         break;
 
       default:
@@ -56,15 +63,20 @@ const RouterlessNewProjectWizard: React.FC<RouteComponentProps> = ({history}) =>
     console.debug('NewProjectWizard#useEffect(appState)');
     if (!appState.wizardState) {
       if (appState.activeProject) {
-        history.push(`/projects/${appState.activeProject.id}`);
+        setRedirectOnCompletion(true);
       } else {
         history.push('/projects');
       }
     }
   }, [appState]);
 
+  if (redirectOnCompletion) {
+    return (
+      <Redirect to={{pathname: `/projects/${appState.activeProject!.id}`, state: {project: appState.activeProject}}} />
+    );
+  }
+
   if (!appState.wizardState) {
-    console.debug('!appState.wizardState return');
     return <Loader size={LoaderSize.APP} />;
   }
 
@@ -138,11 +150,10 @@ const RouterlessNewProjectWizard: React.FC<RouteComponentProps> = ({history}) =>
       <UnsavedChangesPrompt
         {...{showModal, setShowModal}}
         hasUnsavedChanges={
-          appState.activeProject !== undefined &&
           appState.wizardState &&
           !appState.wizardState.done[WizardTabTypes.Review]
         }
-        shouldUpdateNavChange={(location) => (location.pathname.match(/^\/wizard/) === null)}
+        whiteList={(location) => (location.pathname.match(/^\/wizard/) !== null)}
         handleCancel={() => dispatch(new StayInProjectSetupAction())}
         handleConfirm={() => dispatch(new ProjectSetupCancelAction())}
       >

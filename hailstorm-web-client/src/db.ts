@@ -104,12 +104,6 @@ export const DB: {
       running: true,
       autoStop: false
     },
-    {
-      id: 8,
-      code: 'sphynx',
-      title: 'Sphynx',
-      running: false
-    }
   ],
 
   executionCycles: [

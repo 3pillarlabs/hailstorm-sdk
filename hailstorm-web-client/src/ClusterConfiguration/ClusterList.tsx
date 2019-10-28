@@ -7,6 +7,7 @@ export const ClusterList: React.FC<{
   onSelectCluster?: (cluster: Cluster) => void;
   activeCluster?: Cluster;
 }> = ({clusters, hideEdit, onSelectCluster, activeCluster}) => {
+
   return (
     <div className="panel">
       <div className="panel-heading">
@@ -33,16 +34,12 @@ export const ClusterList: React.FC<{
           key={cluster.id}
           onClick={() => onSelectCluster(cluster)}
         >
-          <span className="panel-icon">
-            <i className="fas fa-server" aria-hidden="true"></i>
-          </span>
+          <PanelItemIcon {...{cluster}} />
           {cluster.title}
         </a>
         ) : (
         <div className="panel-block" key={cluster.id} >
-          <span className="panel-icon">
-            <i className="fas fa-server" aria-hidden="true"></i>
-          </span>
+          <PanelItemIcon {...{cluster}} />
           {cluster.title}
         </div>
         ))
@@ -55,5 +52,18 @@ export const ClusterList: React.FC<{
       </>
       )}
     </div>
+  );
+}
+
+function PanelItemIcon({
+  cluster
+}: {
+  cluster: Cluster;
+}) {
+
+  return (
+    <span className="panel-icon">
+      <i className={cluster.type === 'AWS' ? "fab fa-aws" : "fas fa-network-wired"} aria-hidden="true"></i>
+    </span>
   );
 }

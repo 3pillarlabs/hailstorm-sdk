@@ -15,7 +15,7 @@ export const ProjectWorkspaceMain: React.FC = () => {
 
   useEffect(() => {
     console.debug('ProjectWorkspaceMain#useEffect()');
-    if (appState.activeProject && !appState.activeProject.jmeter) {
+    if (appState.activeProject && appState.activeProject.jmeter === undefined) {
       ApiFactory()
         .jmeter()
         .list(appState.activeProject.id)

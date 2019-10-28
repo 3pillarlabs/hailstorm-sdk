@@ -154,8 +154,7 @@ describe('<JMeterConfiguration />', () => {
     onAccept({name: 'a.jmx'});
     jest.runAllTimers();
     component.update();
-    console.debug(component.find('ActiveJMeterFile').find('button[role="Abort Upload"]').html());
-    component.find('ActiveJMeterFile').find('button[role="Abort Upload"]').simulate('click');
+    component.find('JMeterFileMessage').find('button[role="Abort Upload"]').simulate('click');
     component.update();
     expect(component.find('FileUpload')).toHaveProp('abort', true);
   });

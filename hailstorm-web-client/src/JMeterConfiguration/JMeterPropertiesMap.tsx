@@ -8,15 +8,92 @@ export function JMeterPropertiesMap({
   headerTitle
 }: {
   properties: Map<string, any>;
-  onSubmit: (values: {[key: string]: any}, actions: FormikActions<{[key: string]: any}>) => void;
-  onRemove: () => void;
+  onSubmit?: (values: {[key: string]: any}, actions: FormikActions<{[key: string]: any}>) => void;
+  onRemove?: () => void;
   headerTitle?: string;
 }) {
-  const internalKey = (key: string) => key.replace(/\./g, '-');
-  const externalKey = (key: string) => key.replace(/\-/g, '.');
+
+  return (
+    <div className="card">
+      <header className="card-header">
+        {headerTitle ? (
+        <p className="card-header-title">
+          <span className="icon">
+            <i className="fas fa-feather-alt"></i>
+          </span>
+          {headerTitle}
+        </p>
+        ) : null}
+      </header>
+      {onSubmit && onRemove ? (
+      <PropertiesForm {...{properties, onRemove, onSubmit}} />
+      ) : (
+      <Properties {...{properties}} readOnly={true} />
+      )}
+    </div>
+  );
+}
+
+function internalKey(key: string) {
+  return key.replace(/\./g, '-');
+}
+
+function externalKey(key: string) {
+  return key.replace(/\-/g, '.');
+}
+
+function Properties({
+  properties,
+  readOnly
+}: {
+  properties: Map<string, any>;
+  readOnly?: boolean;
+}) {
+  const readWrite = !readOnly;
+
+  const elements = Array.from(properties.keys()).map((key) => (
+    <div {...{key}} className="field">
+      <label className="label">{key}</label>
+      <div className="control">
+        {readWrite ? (
+        <Field className="input" type="text" name={internalKey(key)} />
+        ) : (
+        <input
+          readOnly
+          className="input is-static has-background-light has-text-dark is-size-5"
+          type="text"
+          name={internalKey(key)}
+          value={properties.get(key)}
+        />
+        )}
+      </div>
+      {readWrite && (<ErrorMessage name={internalKey(key)} render={(message) => (
+        <p className="help is-danger">{message}</p>
+      )} />)}
+    </div>
+  ));
+
+  return (
+    <div className="card-content">
+      <div className="content">
+        {elements}
+      </div>
+    </div>
+  )
+}
+
+function PropertiesForm({
+  properties,
+  onSubmit,
+  onRemove
+}: {
+  properties: Map<string, any>;
+  onSubmit: (values: {[key: string]: any}, actions: FormikActions<{[key: string]: any}>) => void;
+  onRemove: () => void;
+}) {
   const initialValues: {[key: string]: any} = {};
   for (const [key, value] of properties) {
-    initialValues[internalKey(key)] = value;
+    initialValues[internalKey(key)] = value || '';
   }
 
   const isInitialValid = Array.from(properties.values()).every((value) => value !== undefined);
@@ -41,45 +118,22 @@ export function JMeterPropertiesMap({
   };
 
   return (
-    <div className="card">
-      <header className="card-header">
-        {headerTitle ? (
-        <p className="card-header-title">{headerTitle}</p>
-        ) : null}
-      </header>
-      <Formik
-        {...{initialValues, isInitialValid, onSubmit: handleSubmit, validate}}
-      >
-      {({isSubmitting, isValid}) => (
-        <Form>
-          <div className="card-content">
-            <div className="content">
-            {Array.from(properties.keys()).map((key) => {
-              return (
-                <div {...{key}} className="field">
-                  <label className="label">{key}</label>
-                  <div className="control">
-                    <Field className="input" type="text" name={internalKey(key)} />
-                  </div>
-                  <ErrorMessage name={internalKey(key)} render={(message) => (
-                    <p className="help is-danger">{message}</p>
-                  )} />
-                </div>
-              );
-            })}
-            </div>
+    <Formik
+      {...{initialValues, isInitialValid, onSubmit: handleSubmit, validate}}
+    >
+    {({isSubmitting, isValid}) => (
+      <Form>
+        <Properties {...{properties}} />
+        <footer className="card-footer">
+          <div className="card-footer-item">
+            <button type="button" className="button is-warning" onClick={onRemove} role="Remove File">Remove</button>
           </div>
-          <footer className="card-footer">
-            <div className="card-footer-item">
-              <button type="button" className="button is-warning" onClick={onRemove} role="Remove File">Remove</button>
-            </div>
-            <div className="card-footer-item">
-              <button type="submit" className="button is-dark" disabled={isSubmitting || !isValid}> Save </button>
-            </div>
-          </footer>
-        </Form>
-      )}
-      </Formik>
-    </div>
+          <div className="card-footer-item">
+            <button type="submit" className="button is-dark" disabled={isSubmitting || !isValid}> Save </button>
+          </div>
+        </footer>
+      </Form>
+    )}
+    </Formik>
   );
 }

@@ -2,10 +2,9 @@ import React from 'react';
 import { NewProjectWizardState } from "../NewProjectWizard/domain";
 import { MergeJMeterFileAction } from './actions';
 import { ApiFactory } from '../api';
-import { JMeterPropertiesMap } from './JMeterPropertiesMap';
-import { ActiveJMeterFile } from './ActiveJMeterFile';
-import { isUploadInProgress } from './isUploadInProgress';
+import { JMeterFileMessage } from './JMeterFileMessage';
 import { FormikActions } from 'formik';
+import { JMeterFileDetail } from './JMeterFileDetail';
 
 export function ActiveFileDetail({ state, dispatch, setShowModal, setUploadAborted, disableAbort }: {
   state: NewProjectWizardState;
@@ -43,48 +42,21 @@ export function ActiveFileDetail({ state, dispatch, setShowModal, setUploadAbort
       .then(() => setSubmitting(false));
   };
 
-  return (<>
+  return (
+    <>
     {!state.wizardState!.activeJMeterFile && (
     <div className="notification is-info">
       There are no test plans or data files yet. You need to upload at least one test plan (.jmx) file.
     </div>)}
 
     {state.wizardState!.activeJMeterFile &&
-      <ActiveJMeterFile file={state.wizardState!.activeJMeterFile} {...{ setUploadAborted, disableAbort }} />}
+    <JMeterFileMessage file={state.wizardState!.activeJMeterFile} {...{ setUploadAborted, disableAbort }} />}
 
-    {mayShowProperties(state) && (
-      <JMeterPropertiesMap
-        headerTitle={`Set properties for ${state.wizardState!.activeJMeterFile!.name}`}
-        properties={state.wizardState!.activeJMeterFile!.properties!}
-        onSubmit={onSubmit} onRemove={() => setShowModal(true)} />)}
-
-    {isFileUploaded(state) && (
-      <div className="card">
-        <header className="card-header">
-          <p className="card-header-title">
-            {state.wizardState!.activeJMeterFile!.name}
-          </p>
-        </header>
-        <footer className="card-footer">
-          <div className="card-footer-item">
-            <button className="button is-warning" onClick={() => setShowModal(true)} role="Remove File">Remove</button>
-          </div>
-        </footer>
-      </div>)}
-  </>);
-}
-
-function isFileUploaded(state: NewProjectWizardState): boolean {
-  return state.wizardState!.activeJMeterFile &&
-    state.wizardState!.activeJMeterFile.removeInProgress === undefined &&
-    state.wizardState!.activeJMeterFile.uploadError === undefined &&
-    state.wizardState!.activeJMeterFile.dataFile &&
-    !isUploadInProgress(state.wizardState!.activeJMeterFile) ? true : false;
-}
-
-function mayShowProperties(state: NewProjectWizardState): boolean {
-  return state.wizardState!.activeJMeterFile &&
-    state.wizardState!.activeJMeterFile.removeInProgress === undefined &&
-    !state.wizardState!.activeJMeterFile.dataFile &&
-    state.wizardState!.activeJMeterFile.properties ? true : false;
+    {state.wizardState!.activeJMeterFile &&
+    <JMeterFileDetail
+      {...{setShowModal, onSubmit}}
+      jmeterFile={state.wizardState!.activeJMeterFile}
+    />}
+    </>
+  );
 }

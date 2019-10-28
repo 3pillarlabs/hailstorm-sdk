@@ -12,7 +12,7 @@ export interface UnsavedChangesPromptProps {
   confirmButtonLabel?: string;
   handleConfirm?: () => void;
   handleCancel?: () => void;
-  shouldUpdateNavChange?: (location: Location<any>) => boolean;
+  whiteList?: (location: Location<any>) => boolean;
   delayConfirmation?: boolean;
 }
 
@@ -27,7 +27,7 @@ export const UnsavedChangesPrompt: React.FC<UnsavedChangesPromptProps> = ({
   confirmButtonLabel,
   handleConfirm,
   handleCancel,
-  shouldUpdateNavChange,
+  whiteList,
   delayConfirmation,
   children
 }) => {
@@ -36,7 +36,7 @@ export const UnsavedChangesPrompt: React.FC<UnsavedChangesPromptProps> = ({
   const [confirmDisabled, setConfirmDisabled] = useState(true);
 
   const navAwayHandler = (location: Location<any>) => {
-    if (shouldUpdateNavChange && !shouldUpdateNavChange(location)) {
+    if (whiteList && whiteList(location)) {
       return true;
     }
 
