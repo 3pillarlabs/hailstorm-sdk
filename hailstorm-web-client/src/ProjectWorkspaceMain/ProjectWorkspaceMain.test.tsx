@@ -3,7 +3,7 @@ import { shallow, mount } from 'enzyme';
 import { ProjectWorkspaceMain } from './ProjectWorkspaceMain';
 import { AppStateContext } from '../appStateContext';
 import { JMeterService, ClusterService } from '../api';
-import { JMeter, Cluster, AmazonCluster } from '../domain';
+import { JMeter, Cluster, AmazonCluster, InterimProjectState } from '../domain';
 
 describe('<ProjectWorkspaceMain />', () => {
   it('should render without crashing', () => {
@@ -76,5 +76,49 @@ describe('<ProjectWorkspaceMain />', () => {
     expect(dispatch).toBeCalledTimes(2);
     const action = dispatch.mock.calls[1][0] as {payload: Cluster[]};
     expect(action.payload.length).toEqual(1);
+  });
+
+  it('should disable JMeter Edit when project is running', async () => {
+    jest.spyOn(JMeterService.prototype, "list").mockReturnValue(Promise.resolve({files: []}));
+    jest.spyOn(ClusterService.prototype, "list").mockReturnValue(Promise.resolve([]));
+    const component = mount(
+      <AppStateContext.Provider
+        value={{
+          appState: {
+            runningProjects: [
+              {id: 1, code: 'a', title: 'A', running: true}
+            ],
+            activeProject: {id: 1, code: 'a', title: 'A', running: true},
+          },
+          dispatch: jest.fn()
+        }}
+      >
+        <ProjectWorkspaceMain />
+      </AppStateContext.Provider>
+    );
+
+    component.update();
+    expect(component.find('JMeterPlanList')).toHaveProp('disableEdit', true);
+  });
+
+  it('should disable JMeter Edit when project has an interim state', async () => {
+    jest.spyOn(JMeterService.prototype, "list").mockReturnValue(Promise.resolve({files: []}));
+    jest.spyOn(ClusterService.prototype, "list").mockReturnValue(Promise.resolve([]));
+    const component = mount(
+      <AppStateContext.Provider
+        value={{
+          appState: {
+            runningProjects: [],
+            activeProject: {id: 1, code: 'a', title: 'A', running: false, interimState: InterimProjectState.STARTING},
+          },
+          dispatch: jest.fn()
+        }}
+      >
+        <ProjectWorkspaceMain />
+      </AppStateContext.Provider>
+    );
+
+    component.update();
+    expect(component.find('JMeterPlanList')).toHaveProp('disableEdit', true);
   });
 });

@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { JMeterPlanList } from '../JMeterConfiguration/JMeterPlanList';
+import { JMeterPlanList } from '../JMeterPlanList';
 import { ClusterList } from '../ClusterConfiguration/ClusterList';
 import { ReportsList } from '../ReportsList/ReportsList';
 import { ControlPanel } from './ControlPanel';
@@ -40,6 +40,7 @@ export const ProjectWorkspaceMain: React.FC = () => {
             appState.activeProject.jmeter :
             {files: []}
           }
+          disableEdit={appState.activeProject && (appState.activeProject.running || appState.activeProject.interimState !== undefined)}
         />
         <ClusterList clusters={appState.activeProject ? appState.activeProject.clusters : undefined} />
       </div>

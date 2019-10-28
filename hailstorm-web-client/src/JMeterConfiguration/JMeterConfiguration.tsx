@@ -3,7 +3,7 @@ import { AppStateContext } from '../appStateContext';
 import { JMeterSetupCompletedAction } from '../NewProjectWizard/actions';
 import { CancelLink, BackLink } from '../NewProjectWizard/WizardControls';
 import { WizardTabTypes, NewProjectWizardState } from "../NewProjectWizard/domain";
-import { JMeterPlanList } from './JMeterPlanList';
+import { JMeterPlanList } from '../JMeterPlanList';
 import { selector } from '../NewProjectWizard/reducer';
 import styles from '../NewProjectWizard/NewProjectWizard.module.scss';
 import { FileUpload } from '../FileUpload';

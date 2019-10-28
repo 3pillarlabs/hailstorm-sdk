@@ -63,4 +63,9 @@ describe('<JMeterPlanList />', () => {
     const blocks = component.find('a').findWhere((wrapper) => wrapper.hasClass('panel-block'));
     expect(blocks.at(1).hasClass('is-active')).toBeTruthy();
   });
+
+  it('should disable edit link', () => {
+    const wrapper = shallow(<JMeterPlanList jmeter={{files: []}} disableEdit={true} showEdit={true} />);
+    expect(wrapper.find('.button')).toBeDisabled();
+  });
 });
