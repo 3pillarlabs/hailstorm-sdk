@@ -7,7 +7,8 @@ export const ClusterList: React.FC<{
   onSelectCluster?: (cluster: Cluster) => void;
   activeCluster?: Cluster;
   disableEdit?: boolean;
-}> = ({clusters, showEdit, onSelectCluster, activeCluster, disableEdit}) => {
+  onEdit?: () => void;
+}> = ({clusters, showEdit, onSelectCluster, activeCluster, disableEdit, onEdit}) => {
 
   return (
     <div className="panel">
@@ -21,7 +22,7 @@ export const ClusterList: React.FC<{
           <div className="level-right">
             <div className="level-item">
               {showEdit && (
-              <button className="button is-small" disabled={disableEdit}>
+              <button className="button is-small" disabled={disableEdit} onClick={onEdit}>
                 <i className="far fa-edit"></i> Edit
               </button>
               )}
@@ -29,7 +30,7 @@ export const ClusterList: React.FC<{
           </div>
         </div>
       </div>
-      {clusters !== undefined ? (
+      {clusters !== undefined && clusters.length > 0 ? (
       clusters.map(cluster => (
         (onSelectCluster ? (
         <a

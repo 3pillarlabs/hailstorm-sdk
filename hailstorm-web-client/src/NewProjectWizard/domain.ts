@@ -24,6 +24,7 @@ export interface NewProjectWizardProgress {
   confirmCancel?: boolean;
   activeJMeterFile?: JMeterFileUploadState;
   activeCluster?: Cluster;
+  modifiedAfterReview?: boolean;
 }
 
 

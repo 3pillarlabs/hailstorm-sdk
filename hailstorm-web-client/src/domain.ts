@@ -11,6 +11,7 @@ export interface Project {
   interimState?: InterimProjectState;
   jmeter?: JMeter;
   clusters?: Cluster[];
+  incomplete?: boolean;
 }
 
 export interface ExecutionCycle {

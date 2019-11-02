@@ -4,19 +4,47 @@ import { ProjectWorkspaceMain } from './ProjectWorkspaceMain';
 import { AppStateContext } from '../appStateContext';
 import { JMeterService, ClusterService } from '../api';
 import { JMeter, Cluster, AmazonCluster, InterimProjectState } from '../domain';
+import { MemoryRouter, Route } from 'react-router';
 
 describe('<ProjectWorkspaceMain />', () => {
+  let jmeterPromise: Promise<JMeter>;
+  let clustersPromise: Promise<Cluster[]>;
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
+  beforeEach(() => {
+    jmeterPromise = Promise.resolve<JMeter>({files: [
+      {id: 1, name: 'data.csv', dataFile: true}
+    ]});
+
+    jest.spyOn(JMeterService.prototype, "list").mockReturnValue(jmeterPromise);
+  });
+
+  beforeEach(() => {
+    clustersPromise = Promise.resolve<Cluster[]>([
+      {
+        id: 23,
+        code: 'smiling-ninja-23',
+        type: 'AWS',
+        title: '',
+        accessKey: 'A',
+        secretKey: 'S',
+        instanceType: 't2.small',
+        maxThreadsByInstance: 25,
+        region: 'sa-east-11'
+      } as AmazonCluster
+    ]);
+
+    jest.spyOn(ClusterService.prototype, "list").mockReturnValue(clustersPromise);
+  });
+
   it('should render without crashing', () => {
     shallow(<ProjectWorkspaceMain />);
   });
 
   it('should load JMeter configuration if not loaded', async () => {
-    const jmeterPromise = Promise.resolve<JMeter>({files: [
-      {id: 1, name: 'data.csv', dataFile: true}
-    ]});
-
-    jest.spyOn(JMeterService.prototype, "list").mockReturnValue(jmeterPromise);
-    jest.spyOn(ClusterService.prototype, "list").mockReturnValue(Promise.resolve([]));
     const dispatch = jest.fn();
     const component = mount(
       <AppStateContext.Provider
@@ -40,22 +68,6 @@ describe('<ProjectWorkspaceMain />', () => {
   });
 
   it('should load Cluster configuration if not loaded', async () => {
-    const clustersPromise = Promise.resolve<Cluster[]>([
-      {
-        id: 23,
-        code: 'smiling-ninja-23',
-        type: 'AWS',
-        title: '',
-        accessKey: 'A',
-        secretKey: 'S',
-        instanceType: 't2.small',
-        maxThreadsByInstance: 25,
-        region: 'sa-east-11'
-      } as AmazonCluster
-    ]);
-
-    jest.spyOn(JMeterService.prototype, "list").mockReturnValue(Promise.resolve({files: []}));
-    jest.spyOn(ClusterService.prototype, "list").mockReturnValue(clustersPromise);
     const dispatch = jest.fn();
     const component = mount(
       <AppStateContext.Provider
@@ -79,8 +91,6 @@ describe('<ProjectWorkspaceMain />', () => {
   });
 
   it('should disable JMeter Edit when project is running', async () => {
-    jest.spyOn(JMeterService.prototype, "list").mockReturnValue(Promise.resolve({files: []}));
-    jest.spyOn(ClusterService.prototype, "list").mockReturnValue(Promise.resolve([]));
     const component = mount(
       <AppStateContext.Provider
         value={{
@@ -102,8 +112,6 @@ describe('<ProjectWorkspaceMain />', () => {
   });
 
   it('should disable JMeter Edit when project has an interim state', async () => {
-    jest.spyOn(JMeterService.prototype, "list").mockReturnValue(Promise.resolve({files: []}));
-    jest.spyOn(ClusterService.prototype, "list").mockReturnValue(Promise.resolve([]));
     const component = mount(
       <AppStateContext.Provider
         value={{
@@ -123,8 +131,6 @@ describe('<ProjectWorkspaceMain />', () => {
   });
 
   it('should disable Cluster Edit when project is running', async () => {
-    jest.spyOn(JMeterService.prototype, "list").mockReturnValue(Promise.resolve({files: []}));
-    jest.spyOn(ClusterService.prototype, "list").mockReturnValue(Promise.resolve([]));
     const component = mount(
       <AppStateContext.Provider
         value={{
@@ -146,8 +152,6 @@ describe('<ProjectWorkspaceMain />', () => {
   });
 
   it('should disable Cluster Edit when project has an interim state', async () => {
-    jest.spyOn(JMeterService.prototype, "list").mockReturnValue(Promise.resolve({files: []}));
-    jest.spyOn(ClusterService.prototype, "list").mockReturnValue(Promise.resolve([]));
     const component = mount(
       <AppStateContext.Provider
         value={{
@@ -164,5 +168,63 @@ describe('<ProjectWorkspaceMain />', () => {
 
     component.update();
     expect(component.find('ClusterList')).toHaveProp('disableEdit', true);
+  });
+
+  it('should edit JMeter plans', () => {
+    const NewProjectWizard = () => (
+      <div id="NewProjectWizard"></div>
+    );
+
+    const dispatch = jest.fn();
+    const component = mount(
+      <AppStateContext.Provider
+        value={{
+          appState: {
+            runningProjects: [],
+            activeProject: {id: 1, code: 'a', title: 'A', running: false},
+          },
+          dispatch
+        }}
+      >
+        <MemoryRouter>
+          <ProjectWorkspaceMain />
+          <Route exact path="/wizard/projects/:id/jmeter_plans" component={NewProjectWizard} />
+        </MemoryRouter>
+      </AppStateContext.Provider>
+    );
+
+    component.update();
+    component.find('JMeterPlanList button').simulate('click');
+    component.update();
+    expect(component).toContainExactlyOneMatchingElement("#NewProjectWizard");
+  });
+
+  it('should edit Clusters', () => {
+    const NewProjectWizard = () => (
+      <div id="NewProjectWizard"></div>
+    );
+
+    const dispatch = jest.fn();
+    const component = mount(
+      <AppStateContext.Provider
+        value={{
+          appState: {
+            runningProjects: [],
+            activeProject: {id: 1, code: 'a', title: 'A', running: false},
+          },
+          dispatch
+        }}
+      >
+        <MemoryRouter>
+          <ProjectWorkspaceMain />
+          <Route exact path="/wizard/projects/:id/clusters" component={NewProjectWizard} />
+        </MemoryRouter>
+      </AppStateContext.Provider>
+    );
+
+    component.update();
+    component.find('ClusterList button').simulate('click');
+    component.update();
+    expect(component).toContainExactlyOneMatchingElement("#NewProjectWizard");
   });
 });

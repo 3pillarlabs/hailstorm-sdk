@@ -2,13 +2,14 @@ import React from 'react';
 import { mount } from "enzyme";
 import { JMeterConfiguration } from "./JMeterConfiguration";
 import { AppStateContext } from '../appStateContext';
-import { AppState } from '../store';
+import { AppState, Action } from '../store';
 import { WizardTabTypes, JMeterFileUploadState } from '../NewProjectWizard/domain';
 import { JMeterFile, Project, JMeter, ValidationNotice } from '../domain';
 import { JMeterValidationService, JMeterService } from '../api';
 import { LocalFile } from '../FileUpload/domain';
-import { wait } from '@testing-library/dom';
+import { wait, fireEvent } from '@testing-library/dom';
 import { FileServer } from '../FileUpload/fileServer';
+import { render } from '@testing-library/react';
 
 jest.mock('../FileUpload', () => ({
   __esModule: true,
@@ -95,6 +96,15 @@ describe('<JMeterConfiguration />', () => {
     expect(nextButton).toBeDisabled();
   });
 
+  it('should go back in wizard', () => {
+    const component = mount(createComponent());
+    const back = component.find('BackLink .button');
+    back.simulate('click');
+    expect(dispatch).toBeCalled();
+    const action = dispatch.mock.calls[0][0] as Action;
+    expect(action.payload).toEqual(WizardTabTypes.Project);
+  });
+
   it('should indicate that file upload has started', () => {
     const component = mount(createComponent());
     const onAccept = component.find('FileUpload').prop('onAccept') as ((file: LocalFile) => void);
@@ -143,20 +153,24 @@ describe('<JMeterConfiguration />', () => {
 
   it('should cancel an upload based on user action', () => {
     jest.useFakeTimers();
-    appState.wizardState!.activeJMeterFile = {
-      name: 'a.jmx',
-      uploadProgress: 0
-    };
+    try {
+      appState.wizardState!.activeJMeterFile = {
+        name: 'a.jmx',
+        uploadProgress: 0
+      };
 
-    const component = mount(createComponent());
-    expect(component.find('FileUpload')).toHaveProp('abort', false);
-    const onAccept = component.find('FileUpload').prop('onAccept') as ((file: {name: string}) => void);
-    onAccept({name: 'a.jmx'});
-    jest.runAllTimers();
-    component.update();
-    component.find('JMeterFileMessage').find('button[role="Abort Upload"]').simulate('click');
-    component.update();
-    expect(component.find('FileUpload')).toHaveProp('abort', true);
+      const component = mount(createComponent());
+      expect(component.find('FileUpload')).toHaveProp('abort', false);
+      const onAccept = component.find('FileUpload').prop('onAccept') as ((file: {name: string}) => void);
+      onAccept({name: 'a.jmx'});
+      jest.runAllTimers();
+      component.update();
+      component.find('JMeterFileMessage').find('button[role="Abort Upload"]').simulate('click');
+      component.update();
+      expect(component.find('FileUpload')).toHaveProp('abort', true);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('should indicate that a file upload failed', () => {
@@ -356,6 +370,34 @@ describe('<JMeterConfiguration />', () => {
     expect(dispatch).toBeCalled();
   });
 
+  it('should show validation message if a field value is unset', async () => {
+    const properties = new Map<string, any>([ ["bat", ""] ]);
+    appState.wizardState!.activeJMeterFile = { id: 100, name: 'a.jmx', properties };
+    const {findByTestId, findByText} = render(createComponent({plans: [{id: 100, name: 'a.jmx', properties}]}));
+    const input = await findByTestId("bat");
+    fireEvent.focus(input);
+    fireEvent.change(input, {target: {value: ''}});
+    fireEvent.blur(input);
+    const errorMessage = await findByText(/blank/i);
+    expect(errorMessage).toBeDefined();
+  });
+
+  it('should save a data file', async () => {
+    const createdPromise = Promise.resolve({name: 'a.csv', dataFile: true, id: 23});
+    const spy = jest.spyOn(JMeterService.prototype, 'create').mockReturnValueOnce(createdPromise);
+    const component = mount(createComponent());
+    const onFileLoad = component.find('FileUpload').prop('onFileUpload') as ((file: LocalFile) => void);
+    onFileLoad(mockFile("a.csv"));
+    expect(dispatch).toBeCalled();
+    const action = dispatch.mock.calls[0][0] as Action;
+    expect(action.payload).toEqual({name: 'a.csv', dataFile: true});
+    expect(spy).toBeCalled();
+    await createdPromise;
+    expect(dispatch).toBeCalled();
+    const nextAction = dispatch.mock.calls[1][0] as Action;
+    expect(nextAction.payload).toEqual({name: 'a.csv', dataFile: true, id: 23});
+  });
+
   it('should enable Next and Back buttons when properties have been saved', () => {
     const properties = new Map<string, any>([
       ["foo", "bar"],
@@ -486,5 +528,16 @@ describe('<JMeterConfiguration />', () => {
     const component = mount(createComponent({plans: [jmeterFile, dataFile]}));
     const jmeterList = component.find('JMeterPlanList');
     expect(jmeterList).toHaveProp('activeFile', dataFile);
+  });
+
+  it('should show notification when removing a file', () => {
+    const dataFile = { id: 100, name: 'a.csv', dataFile: true };
+    appState.wizardState!.activeJMeterFile = dataFile;
+    const component = mount(createComponent({plans: [dataFile]}));
+    component.update();
+    expect(component).not.toContainExactlyOneMatchingElement('#modal');
+    component.find('button[role="Remove File"]').simulate('click');
+    component.update();
+    expect(component).toContainExactlyOneMatchingElement('#modal');
   });
 });

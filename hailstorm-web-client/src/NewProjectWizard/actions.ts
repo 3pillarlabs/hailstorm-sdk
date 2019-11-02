@@ -1,5 +1,5 @@
 import { Action } from "../store";
-import { Project } from "../domain";
+import { Project, JMeter } from "../domain";
 import { WizardTabTypes } from "./domain";
 
 export enum NewProjectWizardActionTypes {
@@ -13,6 +13,8 @@ export enum NewProjectWizardActionTypes {
   ConfirmProjectSetupCancel = '[NewProjectWizard] ConfirmProjectSetupCancel',
   StayInProjectSetup = '[NewProjectWizard] StayInProjectSetup',
   UpdateProjectTitle = '[NewProjectWizard] UpdateProjectTitle',
+  EditInProjectWizard = '[NewProjectWizard] EditInProjectWizard',
+  UnsetProject = '[ProjectWorkspace] UnsetProject',
 }
 
 export class ProjectSetupAction implements Action {
@@ -58,6 +60,15 @@ export class UpdateProjectTitleAction implements Action {
   constructor(public payload: string) {}
 }
 
+export class EditInProjectWizard implements Action {
+  readonly type = NewProjectWizardActionTypes.EditInProjectWizard;
+  constructor(public payload: {project: Project, activeTab?: WizardTabTypes}) {}
+}
+
+export class UnsetProjectAction implements Action {
+  readonly type = NewProjectWizardActionTypes.UnsetProject;
+}
+
 export type NewProjectWizardActions =
   | ProjectSetupAction
   | ProjectSetupCancelAction
@@ -68,4 +79,6 @@ export type NewProjectWizardActions =
   | ReviewCompletedAction
   | ConfirmProjectSetupCancelAction
   | StayInProjectSetupAction
-  | UpdateProjectTitleAction;
+  | UpdateProjectTitleAction
+  | EditInProjectWizard
+  | UnsetProjectAction;

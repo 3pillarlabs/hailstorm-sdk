@@ -9,6 +9,7 @@ import { AWSEC2PricingService, AWSRegionService, ClusterService } from '../api';
 import { render as renderComponent, fireEvent, wait} from '@testing-library/react';
 import { AmazonCluster, Cluster, DataCenterCluster } from '../domain';
 import { FileServer } from '../FileUpload/fileServer';
+import { ClusterSetupCompletedAction } from '../NewProjectWizard/actions';
 
 describe('<ClusterConfiguration />', () => {
   let appState: AppState;
@@ -304,6 +305,14 @@ describe('<ClusterConfiguration />', () => {
       onSelectCluster(savedCluster);
       expect(dispatch).toBeCalled();
     });
+
+    it('should move to the review tab on next', async () => {
+      const {findByText} = renderComponent(createComponent());
+      const nextButton = await findByText('Next');
+      fireEvent.click(nextButton);
+      expect(dispatch).toBeCalled();
+      expect(dispatch.mock.calls[0][0]).toBeInstanceOf(ClusterSetupCompletedAction);
+    });
   });
 
   describe('when data center cluster is chosen', () => {
@@ -368,6 +377,22 @@ describe('<ClusterConfiguration />', () => {
       onMachinesChange([ 'host-a', 'host-b' ]);
 
       expect(component.find('button[type="submit"]')).not.toBeDisabled();
+    });
+
+    it('should show error messages on change when field validation fails', async () => {
+      const {findByTestId, findByText} = renderComponent(createComponent());
+      const expectError: (testId: string, value?: any) => void = async (testId, value) => {
+        const input = await findByTestId(testId);
+        fireEvent.focus(input);
+        fireEvent.change(input, {target: {value: value || ''}});
+        fireEvent.blur(input);
+        const errorMessage = await findByText(new RegExp(`${testId}\.+blank`, 'i'));
+        expect(errorMessage).toBeDefined();
+      };
+
+      expectError('title');
+      expectError('userName');
+      expectError('sshPort', '-1');
     });
 
     it('should display validation errors from api', async () => {

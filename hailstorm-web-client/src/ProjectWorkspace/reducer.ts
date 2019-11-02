@@ -23,9 +23,6 @@ export const reducer: (
       delete next.interimState;
       return next;
 
-    case ProjectWorkspaceActionTypes.UnsetProject:
-      return undefined;
-
     case ProjectWorkspaceActionTypes.UpdateProject:
       return {...state!, ...action.payload};
 

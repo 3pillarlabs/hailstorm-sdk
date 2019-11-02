@@ -81,7 +81,8 @@ export const DB: {
       code: "acme_90_burst",
       title: "Acme 90 Burst",
       running: false,
-      autoStop: false
+      autoStop: false,
+      incomplete: true
     },
     {
       id: 6,

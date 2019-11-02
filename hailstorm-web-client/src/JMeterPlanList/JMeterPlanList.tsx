@@ -7,6 +7,7 @@ export interface JMeterPlanListProps {
   onSelect?: (file: JMeterFile) => void;
   activeFile?: JMeterFile;
   disableEdit?: boolean;
+  onEdit?: () => void;
 }
 
 export const JMeterPlanList: React.FC<JMeterPlanListProps> = ({
@@ -14,7 +15,8 @@ export const JMeterPlanList: React.FC<JMeterPlanListProps> = ({
   jmeter,
   onSelect,
   activeFile,
-  disableEdit
+  disableEdit,
+  onEdit
 }) => {
   return (
     <div className="panel">
@@ -28,7 +30,7 @@ export const JMeterPlanList: React.FC<JMeterPlanListProps> = ({
           <div className="level-right">
             <div className="level-item">
               {showEdit ? (
-              <button className="button is-small" disabled={disableEdit}>
+              <button className="button is-small" disabled={disableEdit} onClick={onEdit}>
                 <i className="far fa-edit"></i> Edit
               </button>)
               : null}

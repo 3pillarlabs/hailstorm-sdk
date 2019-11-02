@@ -1,4 +1,4 @@
-import { NewProjectWizardState, NewProjectWizardProgress } from "../NewProjectWizard/domain";
+import { NewProjectWizardState, NewProjectWizardProgress, WizardTabTypes } from "../NewProjectWizard/domain";
 import { ClusterConfigurationActions, ClusterConfigurationActionTypes } from "./actions";
 import { Project, Cluster } from "../domain";
 
@@ -26,6 +26,10 @@ export function reducer(state: NewProjectWizardState, action: ClusterConfigurati
         }
       }
 
+      if (wizardState.done[WizardTabTypes.Review]) {
+        wizardState.modifiedAfterReview = true;
+      }
+
       return {...state, wizardState, activeProject};
     }
 
@@ -37,6 +41,10 @@ export function reducer(state: NewProjectWizardState, action: ClusterConfigurati
       }
 
       activeProject.clusters = [...activeProject.clusters, action.payload];
+      if (wizardState.done[WizardTabTypes.Review]) {
+        wizardState.modifiedAfterReview = true;
+      }
+
       return {...state, wizardState, activeProject};
     }
 

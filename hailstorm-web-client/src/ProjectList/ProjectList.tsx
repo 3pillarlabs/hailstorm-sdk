@@ -6,6 +6,8 @@ import { Link } from 'react-router-dom';
 import { ApiFactory } from '../api';
 import { AppStateContext } from '../appStateContext';
 import { SetRunningProjectsAction } from '../TopNav/actions';
+import { History } from 'history';
+import { WizardTabTypes } from '../NewProjectWizard/domain';
 
 function projectItem(project: Project): JSX.Element {
   let notificationQualifier = 'is-light';
@@ -31,11 +33,18 @@ function projectItem(project: Project): JSX.Element {
     }
   }
 
+  let linkTo: History.LocationDescriptor<{project: Project, activeTab?: WizardTabTypes}>;
+  if (project.incomplete) {
+    linkTo = {pathname: `/wizard/projects/${project.id}`, state: {project, activeTab: WizardTabTypes.Project}};
+  } else {
+    linkTo = {pathname: `/projects/${project.id}`, state: {project}};
+  }
+
   return (
     <div className="tile is-3 is-parent" key={project.id}>
       <article className={`tile is-child notification ${notificationQualifier} ${styles.tileCard}`}>
         <p className="title is-4">
-          <Link to={{pathname: `/projects/${project.id}`, state: { project }}}>
+          <Link to={linkTo}>
             {project.title}
           </Link>
         </p>

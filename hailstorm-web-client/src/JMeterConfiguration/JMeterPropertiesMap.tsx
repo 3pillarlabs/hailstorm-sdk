@@ -56,7 +56,7 @@ function Properties({
       <label className="label">{key}</label>
       <div className="control">
         {readWrite ? (
-        <Field className="input" type="text" name={internalKey(key)} />
+        <Field className="input" type="text" name={internalKey(key)} data-testid={key} />
         ) : (
         <input
           readOnly

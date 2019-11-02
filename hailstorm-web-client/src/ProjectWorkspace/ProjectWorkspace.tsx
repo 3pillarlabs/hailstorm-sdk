@@ -6,11 +6,12 @@ import { ProjectWorkspaceFooter } from '../ProjectWorkspaceFooter';
 import { Project } from '../domain';
 import { ApiFactory } from '../api';
 import { Loader, LoaderSize } from '../Loader';
-import { RouteComponentProps } from 'react-router';
-import { SetProjectAction, UnsetProjectAction } from './actions';
+import { RouteComponentProps, Redirect } from 'react-router';
+import { SetProjectAction } from './actions';
 import { AppStateContext } from '../appStateContext';
 import { UnsavedChangesPrompt } from '../Modal/UnsavedChangesPrompt';
 import { Link } from 'react-router-dom';
+import { UnsetProjectAction } from '../NewProjectWizard/actions';
 
 export interface ProjectWorkspaceBasicProps {
   project: Project;
@@ -18,9 +19,8 @@ export interface ProjectWorkspaceBasicProps {
 
 export const ProjectWorkspace: React.FC<RouteComponentProps<{ id: string }>> = (props) => {
   const {appState, dispatch} = useContext(AppStateContext);
-  const project = appState.activeProject;
   const [showModal, setShowModal] = useState(false);
-  const [handleNotFound, setHandleFound] = useState(false);
+  const [handleNotFound, setHandleNotFound] = useState(false);
 
   useEffect(() => {
     console.debug('ProjectWorkspace#useEffect(props.match.params.id)');
@@ -32,16 +32,14 @@ export const ProjectWorkspace: React.FC<RouteComponentProps<{ id: string }>> = (
         .get(parseInt(props.match.params.id))
         .then((fetchedProject) => dispatch(new SetProjectAction(fetchedProject)))
         .catch((reason) => {
-          if (typeof(reason) === 'object' && reason instanceof Error) setHandleFound(true);
+          if (typeof(reason) === 'object' && reason instanceof Error) setHandleNotFound(true);
         });
     }
   }, [props.match.params.id]);
 
   useEffect(() => {
     console.debug('ProjectWorkspace#useEffect()');
-    return () => {
-      dispatch(new UnsetProjectAction());
-    };
+    return () => dispatch(new UnsetProjectAction());
   }, []);
 
   if (handleNotFound) {
@@ -54,6 +52,8 @@ export const ProjectWorkspace: React.FC<RouteComponentProps<{ id: string }>> = (
       </div>
     );
   }
+
+  const project = appState.activeProject;
 
   return (
     <div className="container">

@@ -1,4 +1,5 @@
 import React, { useReducer } from 'react';
+import {useReducer as useStoreReducer} from 'reinspect';
 import './App.scss';
 import { TopNav } from './TopNav';
 import { ProjectWorkspace } from './ProjectWorkspace';
@@ -9,7 +10,8 @@ import { rootReducer, initialState } from './store';
 import { AppStateContext } from './appStateContext';
 
 const App: React.FC = () => {
-  const [appState, dispatch] = useReducer(rootReducer, initialState);
+  // const [appState, dispatch] = useReducer(rootReducer, initialState);
+  const [appState, dispatch] = useStoreReducer(rootReducer, initialState, (state) => state, "Hailstorm");
 
   return (
     <AppStateContext.Provider value={{appState, dispatch}}>

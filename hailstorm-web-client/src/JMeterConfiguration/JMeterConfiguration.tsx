@@ -259,10 +259,10 @@ async function saveDataFile({ dispatch, file, projectId }: { dispatch: React.Dis
   dispatch(new CommitJMeterFileAction({ name: file.name, dataFile: true }));
   try {
     const data = await ApiFactory().jmeter().create(projectId, { name: file.name, dataFile: true });
-    return dispatch(new MergeJMeterFileAction(data));
+    dispatch(new MergeJMeterFileAction(data));
   }
   catch (reason) {
-    return console.error(reason);
+    console.error(reason);
   }
 }
 

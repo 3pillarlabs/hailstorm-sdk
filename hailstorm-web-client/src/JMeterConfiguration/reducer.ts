@@ -1,5 +1,5 @@
 import { JMeterConfigurationActions, JMeterConfigurationActionTypes } from "./actions";
-import { NewProjectWizardState, NewProjectWizardProgress, JMeterFileUploadState } from "../NewProjectWizard/domain";
+import { NewProjectWizardState, NewProjectWizardProgress, JMeterFileUploadState, WizardTabTypes } from "../NewProjectWizard/domain";
 import { Project, JMeterFile } from "../domain";
 
 export function reducer(state: NewProjectWizardState, action: JMeterConfigurationActions): NewProjectWizardState {
@@ -82,6 +82,10 @@ export function reducer(state: NewProjectWizardState, action: JMeterConfiguratio
         activeJMeterFile
       };
 
+      if (wizardState.done[WizardTabTypes.Review]) {
+        wizardState.modifiedAfterReview = true;
+      }
+
       return {...state, wizardState, activeProject};
     }
 
@@ -109,6 +113,10 @@ export function reducer(state: NewProjectWizardState, action: JMeterConfiguratio
         wizardState.activeJMeterFile = activeProject.jmeter!.files[0];
       } else {
         wizardState.activeJMeterFile = undefined;
+      }
+
+      if (wizardState.done[WizardTabTypes.Review]) {
+        wizardState.modifiedAfterReview = true;
       }
 
       return {...state, activeProject, wizardState};

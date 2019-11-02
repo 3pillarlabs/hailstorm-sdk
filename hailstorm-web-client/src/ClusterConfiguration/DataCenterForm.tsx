@@ -112,7 +112,7 @@ export function DataCenterForm({
             <div className="field">
               <label className="label">Cluster Name *</label>
               <div className="control">
-                <Field required className="input" type="text" name="title" disabled={isSubmitting} />
+                <Field required className="input" type="text" name="title" disabled={isSubmitting} data-testid="title" />
               </div>
               <p className="help">
                 Name or title of the cluster.
@@ -125,7 +125,7 @@ export function DataCenterForm({
             <div className="field">
               <label className="label">Username *</label>
               <div className="control">
-                <Field required className="input" type="text" name="userName" disabled={isSubmitting} />
+                <Field required className="input" type="text" name="userName" disabled={isSubmitting} data-testid="userName" />
               </div>
               <p className="help">
                 Username to connect to machines in the data center.
@@ -204,7 +204,14 @@ export function DataCenterForm({
             <div className="field">
               <label className="label">SSH Port</label>
               <div className="control">
-                <Field className="input" type="number" name="sshPort" disabled={isSubmitting} minimum={0} maximum={65535} />
+                <Field
+                  className="input"
+                  type="number"
+                  name="sshPort"
+                  disabled={isSubmitting}
+                  minimum={0}
+                  maximum={65535}
+                  data-testid="sshPort" />
               </div>
               <p className="help">
                 SSH port for all machines that are used for load generation.

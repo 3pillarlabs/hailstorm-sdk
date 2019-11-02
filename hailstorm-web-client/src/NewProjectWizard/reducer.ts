@@ -61,12 +61,23 @@ export function reducer(state: NewProjectWizardState, action: NewProjectWizardAc
 
     case NewProjectWizardActionTypes.ReviewCompleted: {
       const nextState = {...state};
+      if (state.activeProject!.incomplete) {
+        const activeProject = {...state.activeProject! }
+        delete activeProject.incomplete
+        nextState.activeProject = activeProject
+      }
+
       delete nextState.wizardState;
       return nextState;
     }
 
     case NewProjectWizardActionTypes.ConfirmProjectSetupCancel: {
-      if (!state.activeProject) {
+      if (
+        !state.activeProject || (
+          state.wizardState!.done[WizardTabTypes.Review] &&
+          !state.wizardState!.modifiedAfterReview
+        )
+      ) {
         const nextState = {...state};
         delete nextState.wizardState;
         return nextState;
@@ -92,7 +103,39 @@ export function reducer(state: NewProjectWizardState, action: NewProjectWizardAc
         ...state.wizardState!,
         activeTab: WizardTabTypes.JMeter
       };
+
+      if (wizardState && wizardState.done[WizardTabTypes.Review]) {
+        wizardState.modifiedAfterReview = true;
+      }
+
       return {...state, activeProject, wizardState};
+    }
+
+    case NewProjectWizardActionTypes.EditInProjectWizard: {
+      const project = action.payload.project;
+      const done = project.incomplete ? {} : {
+        [WizardTabTypes.Project]: true,
+        [WizardTabTypes.JMeter]: true,
+        [WizardTabTypes.Cluster]: true,
+        [WizardTabTypes.Review]: true,
+      };
+
+      const wizardState: NewProjectWizardProgress = {
+        activeTab: project.incomplete || action.payload.activeTab === undefined ? WizardTabTypes.Project : action.payload.activeTab,
+        done,
+        activeJMeterFile: project.jmeter ? project.jmeter.files[0] : undefined,
+        activeCluster: project.clusters && project.clusters.length > 0 ? project.clusters[0] : undefined
+      }
+
+      return {...state, wizardState, activeProject: project};
+    }
+
+    case NewProjectWizardActionTypes.UnsetProject: {
+      if (state.wizardState === undefined) {
+        return {...state, activeProject: undefined};
+      }
+
+      return state;
     }
 
     default:

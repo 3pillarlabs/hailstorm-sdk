@@ -276,12 +276,21 @@ export class JMeterService {
     console.log(`api ---- JMeterService#list(${projectId})`);
     return new Promise<JMeter>((resolve, reject) => {
       setTimeout(() => {
-        resolve({
-          files: [
-            {id: 1, name: 'prime.jmx', properties: new Map([["foo", "1"]]) },
-            {id: 2, name: 'data.csv', dataFile: true },
-          ]
-        });
+        const matchedProject = DB.projects.find((value) => value.id === projectId);
+        if (matchedProject) {
+          if (!matchedProject.incomplete) {
+            resolve(matchedProject.jmeter || {
+              files: [
+                {id: 1, name: 'prime.jmx', properties: new Map([["foo", "1"]]) },
+                {id: 2, name: 'data.csv', dataFile: true },
+              ]
+            });
+          } else {
+            resolve(matchedProject.jmeter);
+          }
+        } else {
+          reject(`No project found with ${projectId}`);
+        }
       }, 300 * SLOW_FACTOR)
     });
   }
@@ -493,12 +502,21 @@ export class ClusterService {
     console.log(`api ---- ClusterService#list(${projectId})`);
     return new Promise((resolve, reject) => {
       setTimeout(() => {
-        const awsCluster: AmazonCluster = {
-          id: 223, accessKey: 'A', secretKey: 'S', code: 'aws-223', instanceType: 't2.small', maxThreadsByInstance: 25,
-          region: 'us-east-1', title: 'AWS us-east-1', type: 'AWS'
-        }
+        const matchedProject = DB.projects.find((value) => value.id === projectId);
+        if (matchedProject) {
+          if (!matchedProject.incomplete) {
+            const awsCluster: AmazonCluster = {
+              id: 223, accessKey: 'A', secretKey: 'S', code: 'aws-223', instanceType: 't2.small', maxThreadsByInstance: 25,
+              region: 'us-east-1', title: 'AWS us-east-1', type: 'AWS'
+            }
 
-        resolve([awsCluster]);
+            resolve(matchedProject.clusters || [awsCluster]);
+          } else {
+            resolve(matchedProject.clusters || []);
+          }
+        } else {
+          reject(`No project with id: ${projectId}`);
+        }
       }, 300 * SLOW_FACTOR);
     });
   }

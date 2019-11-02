@@ -1,6 +1,6 @@
 import { Project, InterimProjectState } from "../domain";
 import { reducer } from "./reducer";
-import { SetInterimStateAction, UnsetInterimStateAction, UpdateProjectAction, SetProjectAction, SetRunningAction, UnsetProjectAction } from "./actions";
+import { SetInterimStateAction, UnsetInterimStateAction, UpdateProjectAction, SetProjectAction, SetRunningAction } from "./actions";
 
 describe("ProjectWorkspace reducer", () => {
   it("should set the interim state", () => {
@@ -64,17 +64,5 @@ describe("ProjectWorkspace reducer", () => {
     expect(nextState!.running).toEqual(true);
     nextState = reducer(nextState, new SetRunningAction(false));
     expect(nextState!.running).toEqual(false);
-  });
-
-  it('should unset the project', () => {
-    const nextState = reducer({
-      id: 1,
-      code: 'a',
-      title: 'B',
-      running: false,
-      autoStop: false
-    }, new UnsetProjectAction());
-
-    expect(nextState).toBeUndefined();
   });
 });

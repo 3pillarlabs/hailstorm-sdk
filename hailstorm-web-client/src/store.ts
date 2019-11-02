@@ -9,6 +9,7 @@ import { reducer as clusterReducer } from './ClusterConfiguration/reducer';
 
 export interface Action {
   type: string;
+  payload?: any;
 }
 
 export type AppState =

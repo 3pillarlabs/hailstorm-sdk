@@ -5,7 +5,14 @@ import { WizardTabTypes } from "./domain";
 export function CancelLink({ dispatch }: {
   dispatch: React.Dispatch<any>;
 }): JSX.Element {
-  return <a className="button" onClick={() => dispatch(new ConfirmProjectSetupCancelAction())}>Cancel</a>;
+  return (
+    <a
+      className="button"
+      onClick={() => dispatch(new ConfirmProjectSetupCancelAction())}
+    >
+      Cancel
+    </a>
+  );
 }
 
 export function BackLink({ dispatch, tab, disabled }: {
@@ -16,7 +23,7 @@ export function BackLink({ dispatch, tab, disabled }: {
   const enabled = !disabled;
   return enabled ?
     (<a className="button" onClick={() => dispatch(new ActivateTabAction(tab))}>Back</a>) :
-    (<span className="button is-static">Back</span>)
+    (<span className="button is-static is-disabled">Back</span>)
 }
 
 export function NextLink({ dispatch, tab }: {

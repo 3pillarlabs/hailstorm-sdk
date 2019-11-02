@@ -1,10 +1,12 @@
 import React from 'react';
-import { AppState } from '../store';
+import { AppState, Action } from '../store';
 import { AmazonCluster, DataCenterCluster } from '../domain';
 import { WizardTabTypes } from './domain';
 import { render } from '@testing-library/react';
 import { SummaryView } from './SummaryView';
 import { AppStateContext } from '../appStateContext';
+import { mount } from 'enzyme';
+import { ReviewCompletedAction } from './actions';
 
 describe('<SummaryView />', () => {
   const appState: AppState = {
@@ -88,11 +90,47 @@ describe('<SummaryView />', () => {
     }
   };
 
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
   it('should render without crashing', () => {
     render(
       <AppStateContext.Provider value={{appState, dispatch: jest.fn()}}>
         <SummaryView />
       </AppStateContext.Provider>
     );
+  });
+
+  it('should jump to from a section to a tab for editing', () => {
+    const dispatch = jest.fn();
+    const component = mount(
+      <AppStateContext.Provider value={{appState, dispatch}}>
+        <SummaryView />
+      </AppStateContext.Provider>
+    );
+
+    component.find('JMeterSection a').simulate('click');
+    expect(dispatch).toBeCalled();
+    let action: Action = dispatch.mock.calls[0][0];
+    expect(action.payload).toEqual(WizardTabTypes.JMeter);
+
+    component.find('JMeterSection a').simulate('click');
+    expect(dispatch).toBeCalledTimes(2);
+    action = dispatch.mock.calls[1][0];
+    expect(action.payload).toEqual(WizardTabTypes.JMeter);
+  });
+
+  it('should redirect to workspace on completing review', () => {
+    const dispatch = jest.fn();
+    const component = mount(
+      <AppStateContext.Provider value={{appState, dispatch}}>
+        <SummaryView />
+      </AppStateContext.Provider>
+    );
+
+    component.find('StepFooter button').simulate('click');
+    expect(dispatch).toBeCalled();
+    expect(dispatch.mock.calls[0][0]).toBeInstanceOf(ReviewCompletedAction);
   });
 });

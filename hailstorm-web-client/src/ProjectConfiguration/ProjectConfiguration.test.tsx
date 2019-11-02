@@ -1,9 +1,9 @@
 import React from 'react';
-import { shallow } from 'enzyme';
+import { shallow, mount } from 'enzyme';
 import { ProjectConfiguration } from './ProjectConfiguration';
 import { render, fireEvent, wait } from '@testing-library/react';
 import { ProjectService } from '../api';
-import { AppState } from '../store';
+import { AppState, Action } from '../store';
 import { WizardTabTypes } from "../NewProjectWizard/domain";
 import { AppStateContext } from '../appStateContext';
 import { CreateProjectAction, ConfirmProjectSetupCancelAction, UpdateProjectTitleAction } from '../NewProjectWizard/actions';
@@ -142,5 +142,57 @@ describe('<ProjectConfiguration />', () => {
         expect(dispatch.mock.calls[0][0]).toBeInstanceOf(UpdateProjectTitleAction);
       });
     });
+
+    it('should show validation message on title', async () => {
+      const appState: AppState = {
+        runningProjects: [],
+        activeProject: {id: 1, code: 'a', title: 'Yamagoto', running: false, autoStop: true},
+        wizardState: {
+          activeTab: WizardTabTypes.Project,
+          done: {
+            [WizardTabTypes.Project]: true
+          }
+        }
+      };
+
+      const dispatch = jest.fn();
+      const {findByDisplayValue, findByText, debug} = render(
+        <AppStateContext.Provider value={{appState, dispatch}}>
+          <ProjectConfiguration />
+        </AppStateContext.Provider>
+      );
+
+      const editField = await findByDisplayValue('Yamagoto');
+      fireEvent.change(editField, {target: {value: ''}});
+      fireEvent.blur(editField);
+      const errorMessage = await findByText(/blank/i);
+      expect(errorMessage).toBeDefined();
+    });
+  });
+
+  it('should go to next tab when Next is clicked', () => {
+    const appState: AppState = {
+      runningProjects: [],
+      activeProject: {id: 1, code: 'a', title: 'Yamamoto', running: false},
+      wizardState: {
+        activeTab: WizardTabTypes.Project,
+        done: {
+          [WizardTabTypes.Project]: true
+        }
+      }
+    };
+
+    const dispatch = jest.fn();
+    const component = mount(
+      <AppStateContext.Provider value={{appState, dispatch}}>
+        <ProjectConfiguration />
+      </AppStateContext.Provider>
+    );
+
+    expect(component).toContainExactlyOneMatchingElement('NextLink .button');
+    component.find('NextLink .button').simulate('click');
+    expect(dispatch).toBeCalled();
+    const action = dispatch.mock.calls[0][0] as Action;
+    expect(action.payload).toEqual(WizardTabTypes.JMeter);
   });
 });

@@ -201,8 +201,8 @@ describe('<ProjectWorkspace />', () => {
     expect(warningText).toBeTruthy();
   });
 
-  it('should redirect to projects if id is not known', async () => {
-    const rejection = Promise.reject('Not found');
+  it('should show message if project is not found', async () => {
+    const rejection = Promise.reject(new Error('Not found'));
     const spy = jest.spyOn(ProjectService.prototype, 'get').mockReturnValue(rejection);
     const dispatch = jest.fn();
     const component = mount(
@@ -216,8 +216,12 @@ describe('<ProjectWorkspace />', () => {
       </AppStateContext.Provider>
     );
 
-    return rejection.then(() => fail('should not reach here')).catch(() => {
-      expect(spy).toBeCalled();
-    })
+    return rejection
+      .then(() => fail('should not reach here'))
+      .catch(() => {
+        expect(spy).toBeCalled();
+        component.update();
+        expect(component.text()).toMatch(/not find/i);
+      });
   });
 });

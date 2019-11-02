@@ -8,7 +8,7 @@ import { ClusterConfiguration } from '../ClusterConfiguration';
 import { SummaryView } from './SummaryView';
 import { AppStateContext } from '../appStateContext';
 import { WizardTabTypes, NewProjectWizardProgress } from './domain';
-import { ActivateTabAction, StayInProjectSetupAction, ProjectSetupCancelAction } from './actions';
+import { ActivateTabAction, StayInProjectSetupAction, ProjectSetupCancelAction, EditInProjectWizard } from './actions';
 import { Loader, LoaderSize } from '../Loader/Loader';
 import { UnsavedChangesPrompt } from '../Modal/UnsavedChangesPrompt';
 
@@ -20,6 +20,7 @@ const RouterlessNewProjectWizard: React.FC<RouteComponentProps> = ({history, loc
   const {appState, dispatch} = useContext(AppStateContext);
   const [showModal, setShowModal] = useState(false);
   const [redirectOnCompletion, setRedirectOnCompletion] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const pushHistory = (path: string) => {
     if (location.pathname !== path) {
@@ -28,8 +29,16 @@ const RouterlessNewProjectWizard: React.FC<RouteComponentProps> = ({history, loc
   };
 
   useEffect(() => {
-    console.debug('NewProjectWizard#useEffect(appState.wizardState)');
+    if (location.state) {
+      console.debug('NewProjectWizard#useEffect(location.state)');
+      dispatch(new EditInProjectWizard(location.state));
+    }
+  }, [location]);
+
+  useEffect(() => {
     if (!appState.wizardState) return;
+
+    console.debug(`NewProjectWizard#useEffect(appState.wizardState)`);
     switch (appState.wizardState.activeTab) {
       case WizardTabTypes.Project:
         if (appState.activeProject) {
@@ -61,8 +70,8 @@ const RouterlessNewProjectWizard: React.FC<RouteComponentProps> = ({history, loc
 
   useEffect(() => {
     console.debug('NewProjectWizard#useEffect(appState)');
-    if (!appState.wizardState) {
-      if (appState.activeProject) {
+    if (!appState.wizardState && !loading) {
+      if (appState.activeProject && !appState.activeProject.incomplete) {
         setRedirectOnCompletion(true);
       } else {
         history.push('/projects');
@@ -70,7 +79,14 @@ const RouterlessNewProjectWizard: React.FC<RouteComponentProps> = ({history, loc
     }
   }, [appState]);
 
+  useEffect(() => {
+    console.debug('NewProjectWizard#useEffect()');
+    setLoading(false);
+    return () => dispatch(new ProjectSetupCancelAction());
+  }, []);
+
   if (redirectOnCompletion) {
+    console.debug(`redirectOnCompletion: ${redirectOnCompletion}`);
     return (
       <Redirect to={{pathname: `/projects/${appState.activeProject!.id}`, state: {project: appState.activeProject}}} />
     );
@@ -150,14 +166,22 @@ const RouterlessNewProjectWizard: React.FC<RouteComponentProps> = ({history, loc
       <UnsavedChangesPrompt
         {...{showModal, setShowModal}}
         hasUnsavedChanges={
-          appState.wizardState &&
-          !appState.wizardState.done[WizardTabTypes.Review]
+          appState.wizardState && (
+            !appState.wizardState.done[WizardTabTypes.Review] ||
+            appState.wizardState.modifiedAfterReview === true
+          )
         }
         whiteList={(location) => (location.pathname.match(/^\/wizard/) !== null)}
         handleCancel={() => dispatch(new StayInProjectSetupAction())}
         handleConfirm={() => dispatch(new ProjectSetupCancelAction())}
       >
-        <p>The project set up is not complete. Are you sure you want to exit the wizard now?</p>
+        {appState.wizardState.modifiedAfterReview ?
+        (<p>
+          You have made changes that you should review and approve. Even if you exit now,
+          the changes will be applied the next time a load test is run. Are you sure you want
+          to exit the wizard now?
+        </p>):
+        (<p>The project set up is not complete. Are you sure you want to exit the wizard now?</p>)}
       </UnsavedChangesPrompt>
     </div>
   );

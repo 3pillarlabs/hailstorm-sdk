@@ -1,7 +1,8 @@
 import { reducer } from "./reducer";
-import { ProjectSetupAction, ProjectSetupCancelAction, ConfirmProjectSetupCancelAction, StayInProjectSetupAction, CreateProjectAction, ClusterSetupCompletedAction, JMeterSetupCompletedAction, ActivateTabAction, ReviewCompletedAction } from "./actions";
-import { WizardTabTypes } from "./domain";
+import { ProjectSetupAction, ProjectSetupCancelAction, ConfirmProjectSetupCancelAction, StayInProjectSetupAction, CreateProjectAction, ClusterSetupCompletedAction, JMeterSetupCompletedAction, ActivateTabAction, ReviewCompletedAction, EditInProjectWizard, UnsetProjectAction, UpdateProjectTitleAction } from "./actions";
+import { WizardTabTypes, NewProjectWizardProgress } from "./domain";
 import { Project } from "../domain";
+import { SaveClusterAction } from "../ClusterConfiguration/actions";
 
 describe('reducer', () => {
   it('should define the function', () => {
@@ -61,6 +62,40 @@ describe('reducer', () => {
     expect(nextState.activeProject!.id).toEqual(payload.id);
     expect(nextState.wizardState!.activeTab).toEqual(WizardTabTypes.JMeter);
     expect(nextState.wizardState!.done).toHaveProperty(WizardTabTypes.Project);
+  });
+
+  it('should update the active project title', () => {
+    const nextState = reducer({
+      activeProject: {id: 1, code: 'a', title: 'A', running: true},
+      wizardState: {
+        activeTab: WizardTabTypes.Project,
+        done: {}
+      }
+    }, new UpdateProjectTitleAction('B'));
+
+    expect(nextState.activeProject!.title).toEqual('B')
+  });
+
+  it('should flag the wizard if title is updated after review', () => {
+    const nextState = reducer({
+      activeProject: {
+        id: 1,
+        code: 'a',
+        title: 'A',
+        running: false
+      },
+      wizardState: {
+        activeTab: WizardTabTypes.Project,
+        done: {
+          [WizardTabTypes.Project]: true,
+          [WizardTabTypes.JMeter]: true,
+          [WizardTabTypes.Cluster]: true,
+          [WizardTabTypes.Review]: true,
+        }
+      }
+    }, new UpdateProjectTitleAction('B'));
+
+    expect(nextState.wizardState!.modifiedAfterReview).toEqual(true);
   });
 
   it('should update JMeter setup', () => {
@@ -151,5 +186,184 @@ describe('reducer', () => {
     }, new StayInProjectSetupAction());
 
     expect(nextState).not.toHaveProperty('confirmCancel');
+  });
+
+  it('should edit JMeter configuration', () => {
+    const activeProject: Project = {
+      id: 1,
+      code: 'a',
+      title: 'A',
+      running: false,
+      jmeter: {
+        files: [
+          { id: 1, name: 'a.jmx', properties: new Map([["foo", "10"]]) },
+          { id: 2, name: 'a.csv', dataFile: true }
+        ]
+      },
+      clusters: [
+        { id: 1, title: 'AWS us-east-1', type: 'AWS' },
+        { id: 2, title: 'RAC 1', type: 'DataCenter' },
+      ]
+    };
+
+    const nextState = reducer({activeProject}, new EditInProjectWizard({
+      project: activeProject,
+      activeTab: WizardTabTypes.JMeter
+    }));
+
+    expect(nextState.activeProject).toEqual(activeProject);
+    expect(nextState.wizardState).toBeDefined();
+    expect(nextState.wizardState).toEqual({
+      activeTab: WizardTabTypes.JMeter,
+      done: {
+        [WizardTabTypes.Project]: true,
+        [WizardTabTypes.JMeter]: true,
+        [WizardTabTypes.Cluster]: true,
+        [WizardTabTypes.Review]: true,
+      },
+      activeJMeterFile: { id: 1, name: 'a.jmx', properties: new Map([["foo", "10"]]) },
+      activeCluster: { id: 1, title: 'AWS us-east-1', type: 'AWS' }
+    } as NewProjectWizardProgress)
+  });
+
+  it('should unset the project if not editing in the wizard', () => {
+    const nextState = reducer({
+      activeProject: {id: 1, code: 'a', title: 'A', running: false, autoStop: false}
+    }, new UnsetProjectAction());
+
+    expect(nextState.activeProject).toBeUndefined();
+  });
+
+  it('should not unset the project if editing in the wizard', () => {
+    const nextState = reducer({
+      wizardState: {
+        activeTab: WizardTabTypes.Cluster,
+        done: {
+          [WizardTabTypes.Project]: true,
+          [WizardTabTypes.JMeter]: true,
+        },
+        confirmCancel: true
+      },
+      activeProject: {id: 1, code: 'a', title: 'A', running: false, autoStop: false}
+    }, new UnsetProjectAction());
+
+    expect(nextState.activeProject).toBeDefined();
+  });
+
+  it('should not prompt on canceling the wizard for a configured project without modifications', () => {
+    const nextState = reducer({
+      activeProject: {
+        id: 1,
+        code: 'a',
+        title: 'A',
+        running: false,
+        clusters: [
+          { id: 23, type: 'DataCenter', title: 'RACK 1' }
+        ],
+        jmeter: {
+          files: [
+            { id: 12, name: 'a.jmx', properties: new Map([["foo", "1"]]) }
+          ]
+        }
+      },
+      wizardState: {
+        activeTab: WizardTabTypes.Cluster,
+        done: {
+          [WizardTabTypes.Project]: true,
+          [WizardTabTypes.JMeter]: true,
+          [WizardTabTypes.Cluster]: true,
+          [WizardTabTypes.Review]: true
+        },
+        activeCluster: { id: 23, type: 'DataCenter', title: 'RACK 1' },
+        activeJMeterFile: { id: 12, name: 'a.jmx', properties: new Map([["foo", "1"]]) }
+      }
+    }, new ConfirmProjectSetupCancelAction());
+
+    expect(nextState.wizardState).toBeUndefined();
+  });
+
+  it('should confirm exiting the wizard when the project has been modified', () => {
+    const nextState = reducer({
+      activeProject: {
+        id: 1,
+        code: 'a',
+        title: 'A',
+        running: false,
+        clusters: [
+          { id: 23, type: 'DataCenter', title: 'RACK 1' }
+        ],
+        jmeter: {
+          files: [
+            { id: 12, name: 'a.jmx', properties: new Map([["foo", "1"]]) },
+            { id: 13, name: 'a.csv', dataFile: true}
+          ]
+        }
+      },
+      wizardState: {
+        activeTab: WizardTabTypes.Cluster,
+        done: {
+          [WizardTabTypes.Project]: true,
+          [WizardTabTypes.JMeter]: true,
+          [WizardTabTypes.Cluster]: true,
+          [WizardTabTypes.Review]: true
+        },
+        activeCluster: { id: 23, type: 'DataCenter', title: 'RACK 1' },
+        activeJMeterFile: { id: 12, name: 'a.jmx', properties: new Map([["foo", "1"]]) },
+        modifiedAfterReview: true
+      }
+    }, new ConfirmProjectSetupCancelAction());
+
+    expect(nextState.wizardState!.confirmCancel).toBeTruthy();
+  });
+
+  it('should edit an incomplete project from Project tab', () => {
+    const project: Project = {
+      id: 1,
+      code: 'a',
+      title: 'A',
+      running: false,
+      incomplete: true
+    };
+
+    const nextState = reducer({
+      activeProject: undefined,
+    }, new EditInProjectWizard({project}));
+
+    expect(nextState.wizardState!.activeTab).toEqual(WizardTabTypes.Project);
+    expect(nextState.activeProject).toEqual(project);
+  });
+
+  it('should mark a project complete after review', () => {
+    const nextState = reducer({
+      activeProject: {
+        id: 1,
+        code: 'a',
+        title: 'A',
+        running: false,
+        incomplete: true,
+        jmeter: {
+          files: [
+            { id: 2, name: 'a.jmx', properties: new Map([["foo", "10"]]) }
+          ]
+        },
+        clusters: [
+          { id: 23, type: 'DataCenter', title: 'RACK 1' }
+        ]
+      },
+
+      wizardState: {
+        activeTab: WizardTabTypes.Review,
+        done: {
+          [WizardTabTypes.Project]: true,
+          [WizardTabTypes.JMeter]: true,
+          [WizardTabTypes.Cluster]: true,
+          [WizardTabTypes.Review]: true
+        },
+        activeCluster: { id: 23, type: 'DataCenter', title: 'RACK 1' },
+        activeJMeterFile: { id: 12, name: 'a.jmx', properties: new Map([["foo", "10"]]) }
+      }
+    }, new ReviewCompletedAction());
+
+    expect(nextState.activeProject!.incomplete).toBeFalsy();
   });
 });
