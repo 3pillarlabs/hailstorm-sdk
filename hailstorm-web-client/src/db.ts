@@ -1,3 +1,4 @@
+import { subMinutes } from 'date-fns';
 import {
   Project,
   ExecutionCycle,
@@ -5,8 +6,7 @@ import {
   ExecutionCycleStatus
 } from "./domain";
 
-const minutesAgo = (minutes: number): Date =>
-  new Date(new Date().getTime() - minutes * 60 * 1000);
+const minutesAgo = (minutes: number, date?: Date): Date => subMinutes(date || new Date(), minutes);
 
 function counter(begin: number) {
   return function() {
@@ -53,12 +53,13 @@ export const DB: {
       code: "acme_30_burst",
       title: "Acme 30 Burst",
       running: false,
-      recentExecutionCycle: {
+      lastExecutionCycle: {
         id: 10,
-        startedAt: new Date(),
+        startedAt: minutesAgo(120),
         stoppedAt: new Date(),
         status: ExecutionCycleStatus.STOPPED,
-        projectId: 3
+        projectId: 3,
+        threadsCount: 25
       },
       autoStop: false
     },
@@ -67,12 +68,13 @@ export const DB: {
       code: "acme_60_burst",
       title: "Acme 60 Burst",
       running: false,
-      recentExecutionCycle: {
+      lastExecutionCycle: {
         id: 23,
-        startedAt: new Date(),
-        stoppedAt: new Date(),
+        startedAt: minutesAgo(45, new Date(2019, 11, 31, 10, 40, 18, 489)),
+        stoppedAt: new Date(2019, 11, 31, 10, 40, 18, 489),
         status: ExecutionCycleStatus.ABORTED,
-        projectId: 4
+        projectId: 4,
+        threadsCount: 3000
       },
       autoStop: true
     },
@@ -89,12 +91,13 @@ export const DB: {
       code: "hailstorm_basic",
       title: "Hailstorm Basic",
       running: false,
-      recentExecutionCycle: {
+      lastExecutionCycle: {
         id: 12,
-        startedAt: new Date(),
-        stoppedAt: new Date(),
+        startedAt: minutesAgo(4320, new Date(2019, 6, 30, 23, 30, 0, 897)),
+        stoppedAt: new Date(2019, 6, 30, 23, 30, 0, 897),
         status: ExecutionCycleStatus.FAILED,
-        projectId: 6
+        projectId: 6,
+        threadsCount: 50
       },
       autoStop: true
     },

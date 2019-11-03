@@ -6,7 +6,7 @@ export interface Project {
   title: string;
   running: boolean;
   currenExecutionCycle?: ExecutionCycle;
-  recentExecutionCycle?: ExecutionCycle;
+  lastExecutionCycle?: ExecutionCycle;
   autoStop?: boolean;
   interimState?: InterimProjectState;
   jmeter?: JMeter;
