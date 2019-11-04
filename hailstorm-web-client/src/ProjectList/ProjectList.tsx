@@ -88,15 +88,15 @@ function projectItem(project: Project): JSX.Element {
                 {project.title}
               </Link>
             </p>
-            <a href="#" className="card-header-icon">
+            <Link to={linkTo} className="card-header-icon">
               <span className={`tag ${notificationQualifier}`}>{tagText}</span>
-            </a>
+            </Link>
           </header>
           {stats.length > 0 && (<div className="card-content">
             <div className="content">
               <div className="level">
               {stats.map((stat) => (
-                <div className="level-item has-text-centered">
+                <div className="level-item has-text-centered" key={Object.keys(stat)[0]}>
                   <div>
                     <p className="heading">{Object.keys(stat)[0]}</p>
                     <p className="title is-6">{Object.values(stat)[0]}</p>
