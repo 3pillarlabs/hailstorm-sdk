@@ -51,7 +51,6 @@ export const UnsavedChangesPrompt: React.FC<UnsavedChangesPromptProps> = ({
   const modalConfirmHandler = () => {
     setShowModal(false);
     setOkConfirmed(true);
-    handleConfirm && handleConfirm();
   }
 
   const modalCancelHandler = () => {
@@ -70,6 +69,13 @@ export const UnsavedChangesPrompt: React.FC<UnsavedChangesPromptProps> = ({
       setConfirmDisabled(false);
     }
   }, [showModal]);
+
+  useEffect(() => {
+    console.debug('UnsavedChangesPrompt#useEffect(okConfirmed)');
+    if (okConfirmed) {
+      handleConfirm && handleConfirm();
+    }
+  }, [okConfirmed]);
 
   return (
     <>
