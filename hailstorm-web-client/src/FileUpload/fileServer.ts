@@ -1,12 +1,15 @@
+import environment from '../environment';
+
 export const FileServer: {
   uploadURL: string;
   sendFile: (file: File, callback?: (progress: number) => void, httpReq?: XMLHttpRequest) => Promise<any>;
   removeFile: (file: {name: string}) => Promise<any>;
 } = {
 
-  uploadURL: "https://slash-web-null.herokuapp.com/upload",
+  uploadURL: `${environment.fileServerBaseURL}/upload`,
 
   sendFile: function (file, callback, httpReq) {
+    console.debug(`FileServer ---- .sendFile({name: ${file.name}})`);
     return new Promise((resolve, reject) => {
       const req = httpReq || new XMLHttpRequest();
       req.upload.addEventListener("load", () => {
@@ -37,7 +40,7 @@ export const FileServer: {
   },
 
   removeFile: (file) => {
-    console.log(`FileServer ---- .removeFile(${file})`);
+    console.debug(`FileServer ---- .removeFile(${file})`);
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         resolve();
