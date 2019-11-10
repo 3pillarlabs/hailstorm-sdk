@@ -6,7 +6,7 @@ import { AppState, Action } from '../store';
 import { WizardTabTypes, JMeterFileUploadState } from '../NewProjectWizard/domain';
 import { JMeterFile, Project, JMeter, ValidationNotice } from '../domain';
 import { JMeterValidationService, JMeterService } from '../api';
-import { LocalFile } from '../FileUpload/domain';
+import { SavedFile } from '../FileUpload/domain';
 import { wait, fireEvent } from '@testing-library/dom';
 import { FileServer } from '../FileUpload/fileServer';
 import { render } from '@testing-library/react';
@@ -14,9 +14,9 @@ import { render } from '@testing-library/react';
 jest.mock('../FileUpload', () => ({
   __esModule: true,
   FileUpload: ({children}: React.PropsWithChildren<{
-    onAccept: (file: LocalFile) => void;
-    onFileUpload: (file: LocalFile) => void;
-    onUploadError: (file: LocalFile, error: any) => void;
+    onAccept: (file: File) => void;
+    onFileUpload: (file: SavedFile) => void;
+    onUploadError: (file: File, error: any) => void;
   }>) => (
     <div id="FileUpload">
       {children}
@@ -61,7 +61,7 @@ describe('<JMeterConfiguration />', () => {
     )
   }
 
-  function mockFile(name: string): LocalFile {
+  function mockFile(name: string): File {
     return {
       name,
       type: 'text/xml',
@@ -107,7 +107,7 @@ describe('<JMeterConfiguration />', () => {
 
   it('should indicate that file upload has started', () => {
     const component = mount(createComponent());
-    const onAccept = component.find('FileUpload').prop('onAccept') as ((file: LocalFile) => void);
+    const onAccept = component.find('FileUpload').prop('onAccept') as ((file: File) => void);
     onAccept(mockFile("a"));
     expect(dispatch).toHaveBeenCalled();
     appState.wizardState!.activeJMeterFile = {
@@ -175,7 +175,7 @@ describe('<JMeterConfiguration />', () => {
 
   it('should indicate that a file upload failed', () => {
     const component = mount(createComponent());
-    const onUploadError = component.find('FileUpload').prop('onUploadError') as ((file: LocalFile, error: any) => void);
+    const onUploadError = component.find('FileUpload').prop('onUploadError') as ((file: File, error: any) => void);
     const error = new Error('Server not available');
     onUploadError(mockFile("a"), error);
     appState.wizardState!.activeJMeterFile = {
@@ -214,8 +214,8 @@ describe('<JMeterConfiguration />', () => {
     });
     jest.spyOn(JMeterValidationService.prototype, "create").mockReturnValue(validations);
     const component = mount(createComponent());
-    const onFileLoad = component.find('FileUpload').prop('onFileUpload') as ((file: LocalFile) => void);
-    onFileLoad(mockFile("a.jmx"));
+    const onFileLoad = component.find('FileUpload').prop('onFileUpload') as ((file: SavedFile) => void);
+    onFileLoad({originalName: "a.jmx", id: "12345"});
     await validations;
     expect(dispatch).toHaveBeenCalled();
   });
@@ -225,8 +225,8 @@ describe('<JMeterConfiguration />', () => {
     const validations = Promise.reject({validationErrors: [validation]});
     jest.spyOn(JMeterValidationService.prototype, "create").mockReturnValue(validations);
     const component = mount(createComponent());
-    const onFileLoad = component.find('FileUpload').prop('onFileUpload') as ((file: LocalFile) => void);
-    onFileLoad(mockFile("a.jmx"));
+    const onFileLoad = component.find('FileUpload').prop('onFileUpload') as ((file: SavedFile) => void);
+    onFileLoad({originalName: "a.jmx", id: "12345"});
     await wait();
     validations
       .then(() => fail("Control should not reach here"))
@@ -272,8 +272,8 @@ describe('<JMeterConfiguration />', () => {
     const validations = Promise.resolve<JMeterFileUploadState & {autoStop: boolean}>({ name: "a.jmx", properties, autoStop: false });
     jest.spyOn(JMeterValidationService.prototype, "create").mockReturnValue(validations);
     const component = mount(createComponent());
-    const onFileLoad = component.find('FileUpload').prop('onFileUpload') as ((file: LocalFile) => void);
-    onFileLoad(mockFile("a.jmx"));
+    const onFileLoad = component.find('FileUpload').prop('onFileUpload') as ((file: SavedFile) => void);
+    onFileLoad({originalName: "a.jmx", id: "12345"});
     await validations;
     expect(dispatch).toBeCalled();
     appState.wizardState!.activeJMeterFile = { name: "a.jmx", properties, uploadProgress: 100 };
@@ -317,8 +317,8 @@ describe('<JMeterConfiguration />', () => {
 
     jest.spyOn(JMeterValidationService.prototype, "create").mockReturnValue(validations);
     const component = mount(createComponent());
-    const onFileLoad = component.find('FileUpload').prop('onFileUpload') as ((file: LocalFile) => void);
-    onFileLoad(mockFile("a.jmx"));
+    const onFileLoad = component.find('FileUpload').prop('onFileUpload') as ((file: SavedFile) => void);
+    onFileLoad({originalName: "a.jmx", id: "12345"});
     await validations;
     appState.wizardState!.activeJMeterFile = { name: "a.jmx", properties };
     component.setProps({value: {appState, dispatch}});
@@ -383,19 +383,19 @@ describe('<JMeterConfiguration />', () => {
   });
 
   it('should save a data file', async () => {
-    const createdPromise = Promise.resolve({name: 'a.csv', dataFile: true, id: 23});
+    const createdPromise = Promise.resolve({name: 'a.csv', dataFile: true, id: 23, path: "12345"});
     const spy = jest.spyOn(JMeterService.prototype, 'create').mockReturnValueOnce(createdPromise);
     const component = mount(createComponent());
-    const onFileLoad = component.find('FileUpload').prop('onFileUpload') as ((file: LocalFile) => void);
-    onFileLoad(mockFile("a.csv"));
+    const onFileLoad = component.find('FileUpload').prop('onFileUpload') as ((file: SavedFile) => void);
+    onFileLoad({originalName: "a.csv", id: "12345"});
     expect(dispatch).toBeCalled();
     const action = dispatch.mock.calls[0][0] as Action;
-    expect(action.payload).toEqual({name: 'a.csv', dataFile: true});
+    expect(action.payload).toEqual({name: 'a.csv', dataFile: true, path: "12345"});
     expect(spy).toBeCalled();
     await createdPromise;
     expect(dispatch).toBeCalled();
     const nextAction = dispatch.mock.calls[1][0] as Action;
-    expect(nextAction.payload).toEqual({name: 'a.csv', dataFile: true, id: 23});
+    expect(nextAction.payload).toEqual({name: 'a.csv', dataFile: true, id: 23, path: "12345"});
   });
 
   it('should enable Next and Back buttons when properties have been saved', () => {

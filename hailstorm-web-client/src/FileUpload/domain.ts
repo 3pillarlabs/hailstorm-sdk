@@ -1,1 +1,4 @@
-export type LocalFile = File;
+export type SavedFile = {
+  id: string;
+  originalName: string;
+};

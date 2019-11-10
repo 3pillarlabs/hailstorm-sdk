@@ -281,8 +281,8 @@ export class JMeterService {
           if (!matchedProject.incomplete) {
             resolve(matchedProject.jmeter || {
               files: [
-                {id: 1, name: 'prime.jmx', properties: new Map([["foo", "1"]]) },
-                {id: 2, name: 'data.csv', dataFile: true },
+                {id: 1, name: 'prime.jmx', properties: new Map([["foo", "1"]]), path: "12345" },
+                {id: 2, name: 'data.csv', dataFile: true, path: "1234556" },
               ]
             });
           } else {
@@ -375,13 +375,14 @@ export class JMeterValidationService {
     console.log(`api ---- JMeterValidationService#create(${attrs})`);
     return new Promise<JMeterFileUploadState & {autoStop: boolean}>((resolve, reject) => setTimeout(() => {
       resolve({
+        ...attrs,
         name: attrs.name,
         properties: new Map([
           ["ThreadGroup.Admin.NumThreads", "1"],
           ["ThreadGroup.Users.NumThreads", "10"],
           ["Users.RampupTime", undefined]
         ]),
-        autoStop: Date.now() % 2 === 0
+        autoStop: Date.now() % 2 === 0,
       });
     }, 500 * SLOW_FACTOR));
   }

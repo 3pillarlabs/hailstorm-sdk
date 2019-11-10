@@ -3,7 +3,7 @@ import environment from '../environment';
 export const FileServer: {
   uploadURL: string;
   sendFile: (file: File, callback?: (progress: number) => void, httpReq?: XMLHttpRequest) => Promise<any>;
-  removeFile: (file: {name: string}) => Promise<any>;
+  removeFile: (file: {name: string, path: string}) => Promise<any>;
 } = {
 
   uploadURL: `${environment.fileServerBaseURL}/upload`,
@@ -12,9 +12,11 @@ export const FileServer: {
     console.debug(`FileServer ---- .sendFile({name: ${file.name}})`);
     return new Promise((resolve, reject) => {
       const req = httpReq || new XMLHttpRequest();
-      req.upload.addEventListener("load", () => {
-        callback && callback(100);
-        resolve(req.response);
+      req.addEventListener("readystatechange", () => {
+        if (req.readyState === req.DONE && req.status === 200) {
+          callback && callback(100);
+          resolve(JSON.parse(req.response));
+        }
       });
 
       req.upload.addEventListener("error", () => {
@@ -41,10 +43,16 @@ export const FileServer: {
 
   removeFile: (file) => {
     console.debug(`FileServer ---- .removeFile(${file})`);
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        await fetch(`${environment.fileServerBaseURL}/${file.path}`, {
+          method: 'DELETE'
+        });
+
         resolve();
-      }, 300);
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 };

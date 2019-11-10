@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { LocalFile } from './domain';
+import { SavedFile } from './domain';
 import { FileServer } from './fileServer';
 
 export interface FileUploadProps {
-  onAccept: (file: LocalFile) => void;
-  onFileUpload?: (file: LocalFile) => void;
-  onUploadError?: (file: LocalFile, error: any) => void;
-  onUploadProgress?: (file: LocalFile, progress: number) => void;
+  onAccept: (file: File) => void;
+  onFileUpload?: (file: SavedFile) => void;
+  onUploadError?: (file: File, error: any) => void;
+  onUploadProgress?: (file: File, progress: number) => void;
   disabled?: boolean;
   abort?: boolean;
   name?: string;
@@ -51,8 +51,8 @@ export function FileUpload({
     setHttpReq(_httpReq);
     FileServer
       .sendFile(file, handleProgress, _httpReq)
-      .then(() => {
-        onFileUpload && onFileUpload(file);
+      .then((savedFile: SavedFile) => {
+        onFileUpload && onFileUpload(savedFile);
       })
       .catch((reason) => {
         onUploadError && onUploadError(file, reason);

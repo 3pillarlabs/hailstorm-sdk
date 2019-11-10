@@ -10,7 +10,7 @@ import { FileUpload } from '../FileUpload';
 import { AddJMeterFileAction, CommitJMeterFileAction, AbortJMeterFileUploadAction } from './actions';
 import { MergeJMeterFileAction, SelectJMeterFileAction, RemoveJMeterFileAction, FileRemoveInProgressAction } from './actions';
 import { ApiFactory } from '../api';
-import { LocalFile } from '../FileUpload/domain';
+import { SavedFile } from '../FileUpload/domain';
 import { ValidationNotice, JMeterFile } from '../domain';
 import { Modal } from '../Modal';
 import { FileServer } from '../FileUpload/fileServer';
@@ -26,8 +26,8 @@ export const JMeterConfiguration: React.FC = () => {
   const [uploadAborted, setUploadAborted] = useState(false);
   const [disableAbort, setDisableAbort] = useState(true);
 
-  const handleFileUpload = (file: LocalFile) => {
-    const jmeterPlan = file.name.match(/\.jmx$/);
+  const handleFileUpload = (file: SavedFile) => {
+    const jmeterPlan = file.originalName.match(/\.jmx$/);
     if (jmeterPlan) {
       validateJMeterPlan({ file, dispatch });
     } else {
@@ -64,7 +64,7 @@ function StepHeader({
   state: NewProjectWizardState;
   setDisableAbort: React.Dispatch<React.SetStateAction<boolean>>;
   dispatch: React.Dispatch<any>;
-  handleFileUpload: (file: File) => void;
+  handleFileUpload: (file: SavedFile) => void;
   setUploadAborted: React.Dispatch<React.SetStateAction<boolean>>;
   uploadAborted: boolean;
 }) {
@@ -247,7 +247,7 @@ async function destroyFile({ file, projectId, dispatch }: { file: JMeterFile; pr
   }
 
   try {
-    await FileServer.removeFile({ name: file.name });
+    await FileServer.removeFile({ name: file.name, path: file.path! });
     dispatch(new RemoveJMeterFileAction(file));
   }
   catch (reason_1) {
@@ -255,10 +255,10 @@ async function destroyFile({ file, projectId, dispatch }: { file: JMeterFile; pr
   }
 }
 
-async function saveDataFile({ dispatch, file, projectId }: { dispatch: React.Dispatch<any>; file: File; projectId: number; }) {
-  dispatch(new CommitJMeterFileAction({ name: file.name, dataFile: true }));
+async function saveDataFile({ dispatch, file, projectId }: { dispatch: React.Dispatch<any>; file: SavedFile; projectId: number; }) {
+  dispatch(new CommitJMeterFileAction({ name: file.originalName, dataFile: true, path: file.id }));
   try {
-    const data = await ApiFactory().jmeter().create(projectId, { name: file.name, dataFile: true });
+    const data = await ApiFactory().jmeter().create(projectId, { name: file.originalName, dataFile: true, path: file.id });
     dispatch(new MergeJMeterFileAction(data));
   }
   catch (reason) {
@@ -266,15 +266,15 @@ async function saveDataFile({ dispatch, file, projectId }: { dispatch: React.Dis
   }
 }
 
-async function validateJMeterPlan({ file, dispatch }: { file: File; dispatch: React.Dispatch<any>; }) {
+async function validateJMeterPlan({ file, dispatch }: { file: SavedFile; dispatch: React.Dispatch<any>; }) {
   try {
-    const data = await ApiFactory().jmeterValidation().create({ name: file.name });
-    return dispatch(new CommitJMeterFileAction({ name: file.name, properties: (data.properties!) }));
+    const data = await ApiFactory().jmeterValidation().create({ name: file.originalName, path: file.id });
+    return dispatch(new CommitJMeterFileAction({ name: file.originalName, properties: data.properties!, path: file.id }));
   }
   catch (reason) {
     if (Object.keys(reason).includes('validationErrors')) {
       const validationErrors = (reason['validationErrors'] as ValidationNotice[]);
-      dispatch(new AbortJMeterFileUploadAction({ name: file.name, validationErrors }));
+      dispatch(new AbortJMeterFileUploadAction({ name: file.originalName, validationErrors }));
     }
     else {
       console.error(reason);

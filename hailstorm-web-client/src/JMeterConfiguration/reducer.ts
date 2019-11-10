@@ -38,6 +38,10 @@ export function reducer(state: NewProjectWizardState, action: JMeterConfiguratio
         properties: action.payload.properties
       };
 
+      if (action.payload.path) {
+        activeJMeterFile.path = action.payload.path;
+      }
+
       const wizardState: NewProjectWizardProgress =  {
         ...state.wizardState!,
         activeJMeterFile

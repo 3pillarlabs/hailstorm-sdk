@@ -70,6 +70,7 @@ export interface JMeterFile {
   properties?: Map<string, string | undefined>;
   dataFile?: boolean;
   disabled?: boolean;
+  path?: string;
 }
 
 export interface ValidationNotice {
@@ -96,7 +97,7 @@ export interface AmazonCluster extends Cluster {
 
 export interface DataCenterCluster extends Cluster {
   userName: string;
-  sshIdentity: {name: string};
+  sshIdentity: {name: string, path?: string};
   machines: string[];
   sshPort?: number;
 }

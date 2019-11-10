@@ -6,6 +6,7 @@ import { FileServer } from '../FileUpload/fileServer';
 import { ApiFactory } from '../api';
 import { Project, DataCenterCluster } from '../domain';
 import { RemoveClusterAction, SaveClusterAction } from './actions';
+import { SavedFile } from '../FileUpload/domain';
 
 export function DataCenterForm({
   dispatch,
@@ -29,13 +30,13 @@ export function DataCenterForm({
   }) => {
     return FileServer
       .sendFile(pemFile!)
-      .then(async () => {
+      .then(async ({id}: SavedFile) => {
         const attrs: DataCenterCluster = {
           userName,
           sshPort,
           title,
           machines,
-          sshIdentity: { name: pemFile!.name },
+          sshIdentity: { name: pemFile!.name, path: id },
           type: 'DataCenter',
         };
 
