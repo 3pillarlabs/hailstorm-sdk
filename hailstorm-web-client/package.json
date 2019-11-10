@@ -18,7 +18,7 @@
     "eject": "react-scripts eject",
     "clean": "rimraf build",
     "build:docker": "docker build -t hailstorm/web-client .",
-    "package": "NODE_ENV=production run-s clean build build:docker"
+    "package": "run-s clean build build:docker"
   },
   "eslintConfig": {
     "extends": "react-app"

@@ -1,0 +1,30 @@
+version: '3.2'
+services:
+  web:
+    image: "hailstorm/web-client"
+    ports:
+      - "8080:80"
+    networks:
+      - dmz
+    tty:
+      true
+    depends_on:
+      - file-server
+
+  file-server:
+    image: "hailstorm/hailstorm-file-server"
+    hostname: "hailstorm-file-server"
+    ports:
+      - "9000:8080"
+    networks:
+      - dmz
+    volumes:
+      - type: volume
+        source: fileStore
+        target: /hailstorm
+
+networks:
+  dmz:
+
+volumes:
+  fileStore:

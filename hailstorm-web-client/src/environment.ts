@@ -12,7 +12,7 @@ const dev: Config = {
 
 const prod: Config = {
   ...common,
-  fileServerBaseURL: "http://hailstorm-file-server:8080"
+  fileServerBaseURL: "http://localhost:9000"
 };
 
 const config: Config = process.env.NODE_ENV === 'production' ? prod : dev;
