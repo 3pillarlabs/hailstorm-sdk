@@ -1,11 +1,10 @@
-.PHONY: ALL
+all: file_server web_client
 
-ALL: file_server web_client
-	echo "All Done!"
+.PHONY: all
 
-web_client:
+file_server:
 	cd hailstorm-file-server && \
 	./gradlew clean bootJar docker
 
-file_server:
+web_client:
 	cd hailstorm-web-client && npm run package
