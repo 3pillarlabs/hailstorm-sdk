@@ -15,8 +15,9 @@ export const ProjectWorkspaceLog: React.FC = () => {
   const logBox = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!project.running && !project.interimState) return;
     console.debug('ProjectWorkspaceLog#useEffect');
+    if (!project.running && !project.interimState) return;
+
     const subscription = LogStream.observe(project).subscribe({
       next: (log) => {
         appendLog(log);
@@ -24,11 +25,16 @@ export const ProjectWorkspaceLog: React.FC = () => {
           const scrollY = window.getComputedStyle && window.getComputedStyle(logBox.current).lineHeight;
           if (scrollY) logBox.current.scrollBy(0, parseInt(scrollY));
         }
-      }
+      },
+
+      error: (error) => console.error(error)
     });
 
-    return () => subscription.unsubscribe();
-  }, [project]);
+    return () => {
+      console.debug('ProjectWorkspaceLog#useEffect unmount');
+      subscription.unsubscribe();
+    }
+  }, [project.id]);
 
   return (
     <div className="columns">

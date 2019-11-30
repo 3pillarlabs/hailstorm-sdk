@@ -9,6 +9,8 @@
     "react-dom": "^16.9.0",
     "react-dropzone": "^10.1.10",
     "react-router-dom": "^5.0.1",
+    "rsocket-core": "0.0.18",
+    "rsocket-websocket-client": "0.0.18",
     "rxjs": "^6.5.2"
   },
   "scripts": {
@@ -46,6 +48,8 @@
     "@types/react-dom": "^16.8.4",
     "@types/react-router": "^5.0.3",
     "@types/react-router-dom": "^4.3.5",
+    "@types/rsocket-core": "0.0.3",
+    "@types/rsocket-websocket-client": "0.0.3",
     "@types/testing-library__react": "^9.1.1",
     "bulma-3pillar": "git+ssh://git@github.com/3pillarlabs/bulma-3pillar.git",
     "enzyme": "^3.10.0",

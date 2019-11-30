@@ -1,5 +1,5 @@
 import React from 'react';
-import { shallow, mount } from 'enzyme';
+import { shallow, mount, render } from 'enzyme';
 import { ProjectWorkspaceLog } from './ProjectWorkspaceLog';
 import { Project } from '../domain';
 import { LogStream } from '../stream';
@@ -12,7 +12,12 @@ describe('<ProjectWorkspaceLog />', () => {
   });
 
   it('should render without crashing', () => {
-    shallow(<ProjectWorkspaceLog />);
+    const project: Project = {id: 1, code: 'a', title: 'A', running: true, autoStop: false};
+    render(
+      <AppStateContext.Provider value={{appState: {activeProject: project, runningProjects: []}, dispatch: jest.fn()}}>
+        <ProjectWorkspaceLog />
+      </AppStateContext.Provider>
+    );
   });
 
   it('should update logs as they are received', () => {
