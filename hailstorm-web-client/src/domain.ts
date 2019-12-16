@@ -5,7 +5,7 @@ export interface Project {
   code: string;
   title: string;
   running: boolean;
-  currenExecutionCycle?: ExecutionCycle;
+  currentExecutionCycle?: ExecutionCycle;
   lastExecutionCycle?: ExecutionCycle;
   autoStop?: boolean;
   interimState?: InterimProjectState;

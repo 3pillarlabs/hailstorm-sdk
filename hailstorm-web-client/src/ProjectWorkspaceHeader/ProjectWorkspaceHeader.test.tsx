@@ -2,7 +2,7 @@ import React from 'react';
 import { mount, ReactWrapper, shallow } from 'enzyme';
 import { ProjectWorkspaceHeader } from './ProjectWorkspaceHeader';
 import { act, render, fireEvent, wait } from '@testing-library/react';
-import { ProjectService } from '../api';
+import { ProjectService } from "../services/ProjectService";
 import { InterimProjectState } from '../domain';
 import { AppStateContext } from '../appStateContext';
 import { UpdateProjectAction } from '../ProjectWorkspace/actions';

@@ -70,7 +70,7 @@ describe('<ProjectBar />', () => {
       });
 
       const runningProject: Project = {id: 1, title: 'test', code: 'test', autoStop: false, running: true};
-      runningProject.currenExecutionCycle = executionCycle(runningProject.id, 30);
+      runningProject.currentExecutionCycle = executionCycle(runningProject.id, 30);
 
       const projectBar = mount(
         <HashRouter>
@@ -83,7 +83,7 @@ describe('<ProjectBar />', () => {
                 id: 2,
                 code: 'test2',
                 title: 'test2',
-                currenExecutionCycle: executionCycle(2, 15)
+                currentExecutionCycle: executionCycle(2, 15)
               }
             ]} />
         </HashRouter>

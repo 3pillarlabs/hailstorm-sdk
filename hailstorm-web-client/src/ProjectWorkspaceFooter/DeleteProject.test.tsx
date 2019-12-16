@@ -2,7 +2,7 @@ import React from 'react';
 import { ReactWrapper, mount } from 'enzyme';
 import { Project, InterimProjectState } from '../domain';
 import { DeleteProject } from './DeleteProject';
-import { ProjectService } from '../api';
+import { ProjectService } from "../services/ProjectService";
 import { MemoryRouter } from 'react-router';
 import { AppStateContext } from '../appStateContext';
 import { act } from '@testing-library/react';

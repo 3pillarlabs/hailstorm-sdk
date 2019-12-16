@@ -4,7 +4,7 @@ import { ProjectWorkspace } from './ProjectWorkspace';
 import { createHashHistory } from 'history';
 import { Project, InterimProjectState } from '../domain';
 import { Link, Route, MemoryRouter, HashRouter } from 'react-router-dom';
-import { ProjectService } from '../api';
+import { ProjectService } from "../services/ProjectService";
 import { act, render, fireEvent } from '@testing-library/react';
 import { SetProjectAction } from './actions';
 import { AppStateContext } from '../appStateContext';

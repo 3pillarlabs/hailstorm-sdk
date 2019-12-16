@@ -4,7 +4,7 @@ import { mount } from 'enzyme';
 import { MemoryRouter, Route } from 'react-router-dom';
 import { ProjectList } from './ProjectList';
 import { AppStateContext } from '../appStateContext';
-import { ProjectService } from '../api';
+import { ProjectService } from "../services/ProjectService";
 
 describe('<ProjectList />', () => {
   it('should show the loader when projects are being fetched', () => {
@@ -31,7 +31,7 @@ describe('<ProjectList />', () => {
         lastExecutionCycle: {
           id: 10, projectId: 1, startedAt: new Date(), threadsCount: 50
         },
-        currenExecutionCycle: {
+        currentExecutionCycle: {
           id: 1234, projectId: 1, startedAt: new Date(), threadsCount: 100
         }
       },

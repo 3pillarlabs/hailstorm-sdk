@@ -2,7 +2,7 @@ import React from 'react';
 import { shallow, mount } from 'enzyme';
 import { ProjectConfiguration } from './ProjectConfiguration';
 import { render, fireEvent, wait } from '@testing-library/react';
-import { ProjectService } from '../api';
+import { ProjectService } from "../services/ProjectService";
 import { AppState, Action } from '../store';
 import { WizardTabTypes } from "../NewProjectWizard/domain";
 import { AppStateContext } from '../appStateContext';

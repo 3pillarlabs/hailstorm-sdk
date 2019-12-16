@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { ButtonStateLookup, CheckedExecutionCycle } from './ControlPanel';
-import { ProjectActions, ResultActions, ApiFactory } from '../api';
+import { ResultActions, ApiFactory } from '../api';
+import { ProjectActions } from '../services/ProjectService';
 import { JtlDownloadContentProps, JtlDownloadModal } from './JtlDownloadModal';
 import { Modal } from '../Modal';
 import { InterimProjectState } from '../domain';

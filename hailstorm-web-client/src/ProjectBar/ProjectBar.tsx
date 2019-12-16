@@ -10,8 +10,8 @@ export interface ProjectBarProps {
 export const ProjectBar: React.FC<ProjectBarProps> = ({maxItems, runningProjects} = {maxItems: 10, runningProjects: []}) => {
   const [projectItems, setProjectItems] = useState<Project[]>([]);
   const projectCompareFn = (a: Project, b: Project) =>
-    a.currenExecutionCycle && b.currenExecutionCycle
-      ? b.currenExecutionCycle.startedAt.getTime() - a.currenExecutionCycle.startedAt.getTime()
+    a.currentExecutionCycle && b.currentExecutionCycle
+      ? b.currentExecutionCycle.startedAt.getTime() - a.currentExecutionCycle.startedAt.getTime()
       : b.id - a.id
 
   useEffect(() => {

@@ -38,9 +38,9 @@ function projectItem(project: Project): JSX.Element {
     notificationQualifier = 'is-warning';
     tagText = 'running';
     stats.push(
-      { started: format(project.currenExecutionCycle!.startedAt, 'MM/dd HH:mm') },
-      { running: runningTime(now, project.currenExecutionCycle!.startedAt) },
-      { threads: project.currenExecutionCycle!.threadsCount }
+      { started: format(project.currentExecutionCycle!.startedAt, 'MM/dd HH:mm') },
+      { running: runningTime(now, project.currentExecutionCycle!.startedAt) },
+      { threads: project.currentExecutionCycle!.threadsCount }
     );
   } else if (project.lastExecutionCycle) {
     stats.push(
