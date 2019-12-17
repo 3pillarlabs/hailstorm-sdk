@@ -23,9 +23,19 @@ describe('ProjectService', () => {
     const mockFetchError = "mock fetch error";
     jest.spyOn(window, 'fetch').mockReturnValueOnce(Promise.reject(mockFetchError));
     const service = new ProjectService();
-    service.list().catch((reason) => {
+    service.list().catch((error: Error) => {
       done();
-      expect(reason).toEqual(mockFetchError);
+      expect(error.message).toEqual(mockFetchError);
     });
+  });
+
+  it('should fetch a project', async () => {
+    const project: Project = {id: 1, code: 'a', title: 'A', running: false}
+    const responsePromise = Promise.resolve(new Response(new Blob([JSON.stringify(project)])));
+    const fetchSpy = jest.spyOn(window, 'fetch').mockReturnValue(responsePromise);
+    const service = new ProjectService();
+    const payload = await service.get(1);
+    expect(fetchSpy).toHaveBeenCalled();
+    expect(payload).toEqual(project);
   });
 });

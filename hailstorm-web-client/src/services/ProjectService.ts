@@ -8,43 +8,51 @@ const SLOW_FACTOR = 1;
 
 export class ProjectService {
 
-  list(): Promise<Project[]> {
+  async list(): Promise<Project[]> {
     console.log(`api ---- ProjectService#list()`);
-    return new Promise(async (resolve, reject) => {
-      try {
-        const response = await fetch(`${environ.apiBaseURL}/projects`);
-        if (!response.ok) {
-          reject(response.statusText);
-          return;
+    try {
+      const response = await fetch(`${environ.apiBaseURL}/projects`);
+      if (!response.ok) {
+        throw(new Error(response.statusText));
+      }
+
+      const body = await response.text();
+      const data: Project[] = JSON.parse(body, (key, value) => {
+        if ((key === "startedAt" || key === "stoppedAt") && value !== undefined && value !== null) {
+          return new Date(value);
         }
 
-        const body = await response.text();
-        const data: Project[] = JSON.parse(body, (key, value) => {
-          if ((key === "startedAt" || key === "stoppedAt") && value !== undefined && value !== null) {
-            return new Date(value);
-          }
+        return value;
+      });
 
-          return value;
-        });
+      return data;
 
-        resolve(data);
-      } catch (error) {
-        reject(error);
-      }
-    });
+    } catch (error) {
+      throw(new Error(error));
+    }
   }
 
-  get(id: number): Promise<Project> {
+  async get(id: number): Promise<Project> {
     console.log(`api ---- ProjectService#get(${id})`);
-    let matchedProject: Project | undefined = DB.projects.find((project) => project.id === id);
-    return new Promise((resolve, reject) => {
-      if (matchedProject) {
-        setTimeout(() => resolve({ ...matchedProject } as Project), 100 * SLOW_FACTOR);
+    try {
+      const response = await fetch(`${environ.apiBaseURL}/projects/${id}`);
+      if (!response.ok) {
+        throw(new Error(response.statusText));
       }
-      else {
-        setTimeout(() => reject(new Error(`No Project found with id - ${id}`)), 500 * SLOW_FACTOR);
-      }
-    });
+
+      const body = await response.text();
+      const data: Project = JSON.parse(body, (key, value) => {
+        if ((key === "startedAt" || key === "stoppedAt") && value !== undefined && value !== null) {
+          return new Date(value);
+        }
+
+        return value;
+      });
+
+      return data;
+    } catch (error) {
+      throw(new Error(error));
+    }
   }
 
   update(id: number, attributes: {

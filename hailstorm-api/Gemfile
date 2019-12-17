@@ -7,3 +7,6 @@ git_source(:github) { |repo_name| "https://github.com/#{repo_name}" }
 gem 'hailstorm', path: '../hailstorm-gem'
 gem 'sinatra', '~> 1.4'
 gem 'puma'
+group :development do
+  gem 'rerun'
+end
