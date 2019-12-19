@@ -77,4 +77,16 @@ describe('ProjectService', () => {
     expect(fetchSpy).toHaveBeenCalled();
     expect(status).toEqual(204);
   });
+
+  it('should create a project', async () => {
+    const attrs: {[K in keyof Project]?: Project[K]} = { code: 'a', title: 'A' };
+    const fetchSpy = jest.spyOn(window, 'fetch').mockResolvedValue(new Response(new Blob([JSON.stringify({
+      ...attrs, id: 1, running: false
+    })])));
+
+    const service = new ProjectService();
+    const created = await service.create(attrs);
+    expect(fetchSpy).toHaveBeenCalled();
+    expect(created.id).toEqual(1);
+  });
 });

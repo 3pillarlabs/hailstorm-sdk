@@ -96,27 +96,28 @@ export class ProjectService {
     });
   }
 
-  create({ title }: {
+  async create(attributes: {
     [K in keyof Project]?: Project[K];
   }): Promise<Project> {
-    console.log(`api ---- ProjectService#create(${title})`);
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (title) {
-          const newProject = {
-            id: DB.sys.projectIndex.nextId(),
-            autoStop: false,
-            code: title.toLowerCase().replace(/\s+/, '-'),
-            title,
-            running: false
-          };
-          DB.projects.push(newProject);
-          resolve({ ...newProject });
-        }
-        else {
-          reject(new Error('Missing attributes: title'));
-        }
-      }, 100);
-    });
+    console.log(`api ---- ProjectService#create(${attributes})`);
+    try {
+      const response = await fetch(`${environ.apiBaseURL}/projects`, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(attributes),
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        throw new Error(response.statusText);
+      }
+
+      const created: Project = await response.json();
+      return created;
+
+    } catch (error) {
+      throw new Error(error);
+    }
   }
 }

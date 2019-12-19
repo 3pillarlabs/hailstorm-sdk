@@ -8,7 +8,8 @@ module Seed
 
   DB = {
       sys: {
-        execution_cycle_idx: id_counter(205)
+        execution_cycle_idx: id_counter(205),
+        project_idx: id_counter(8)
       },
 
       projects: [

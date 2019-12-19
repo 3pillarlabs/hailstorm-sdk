@@ -95,3 +95,23 @@ patch '/projects/:id' do |id|
   sleep(wait_duration) if wait_duration > 0
   204
 end
+
+post '/projects' do
+  sleep 0.1
+  request.body.rewind
+  # @type [Hash]
+  data = JSON.parse(request.body.read)
+  return 402 unless data.key?('title')
+
+  project = {
+      id: Seed::DB[:sys][:project_idx].call,
+      autoStop: false,
+      code: data['title'].to_s.downcase.gsub(/\s+/, '-'),
+      title: data['title'],
+      running: false,
+      incomplete: true
+  }
+
+  Seed::DB[:projects].push(project)
+  JSON.dump(project)
+end
