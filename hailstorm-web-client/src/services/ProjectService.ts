@@ -1,17 +1,14 @@
 import { Project, ExecutionCycleStatus, ExecutionCycle } from "../domain";
-import { DB } from "../db";
-import environ from '../environment';
+import environvent from '../environment';
 
 export type ProjectActions = 'stop' | 'abort' | 'start' | 'terminate';
-
-const SLOW_FACTOR = 1;
 
 export class ProjectService {
 
   async list(): Promise<Project[]> {
     console.log(`api ---- ProjectService#list()`);
     try {
-      const response = await fetch(`${environ.apiBaseURL}/projects`);
+      const response = await fetch(`${environvent.apiBaseURL}/projects`);
       if (!response.ok) {
         throw(new Error(response.statusText));
       }
@@ -35,7 +32,7 @@ export class ProjectService {
   async get(id: number): Promise<Project> {
     console.log(`api ---- ProjectService#get(${id})`);
     try {
-      const response = await fetch(`${environ.apiBaseURL}/projects/${id}`);
+      const response = await fetch(`${environvent.apiBaseURL}/projects/${id}`);
       if (!response.ok) {
         throw(new Error(response.statusText));
       }
@@ -62,7 +59,7 @@ export class ProjectService {
   }): Promise<number> {
     console.log(`api ---- ProjectService#update(${id}, ${Object.keys(attributes)}, ${Object.values(attributes)})`);
     try {
-      const response = await fetch(`${environ.apiBaseURL}/projects/${id}`, {
+      const response = await fetch(`${environvent.apiBaseURL}/projects/${id}`, {
         headers: {
           'Content-Type': 'application/json'
         },
@@ -80,20 +77,21 @@ export class ProjectService {
     }
   }
 
-  delete(id: number) {
+  async delete(id: number) {
     console.log(`api ---- ProjectService#delete(${id})`);
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const matchedProject: Project | undefined = DB.projects.find((project) => id === project.id);
-        if (matchedProject) {
-          DB.projects = DB.projects.filter((project) => project.id !== matchedProject.id);
-          resolve();
-        }
-        else {
-          reject(new Error(`No project with ID ${id}`));
-        }
-      }, 300 * SLOW_FACTOR);
-    });
+    try {
+      const response = await fetch(`${environvent.apiBaseURL}/projects/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error(response.statusText);
+      }
+
+      return response.status;
+    } catch (error) {
+      throw new Error(error);
+    }
   }
 
   async create(attributes: {
@@ -101,7 +99,7 @@ export class ProjectService {
   }): Promise<Project> {
     console.log(`api ---- ProjectService#create(${attributes})`);
     try {
-      const response = await fetch(`${environ.apiBaseURL}/projects`, {
+      const response = await fetch(`${environvent.apiBaseURL}/projects`, {
         headers: {
           'Content-Type': 'application/json'
         },

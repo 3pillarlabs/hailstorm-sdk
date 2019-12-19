@@ -115,3 +115,9 @@ post '/projects' do
   Seed::DB[:projects].push(project)
   JSON.dump(project)
 end
+
+delete '/projects/:id' do |id|
+  sleep 0.3
+  Seed::DB[:projects].reject! { |project| project[:id] == id.to_s.to_i }
+  204
+end

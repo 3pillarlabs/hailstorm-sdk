@@ -3,6 +3,10 @@ import { Project } from '../domain';
 import { subMinutes } from 'date-fns';
 
 describe('ProjectService', () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+  })
+
   it('should list the projects', async () => {
     const projectListResponse: Project[] = [
       {id: 1, code: 'a', title: 'A', running: false},
@@ -88,5 +92,13 @@ describe('ProjectService', () => {
     const created = await service.create(attrs);
     expect(fetchSpy).toHaveBeenCalled();
     expect(created.id).toEqual(1);
+  });
+
+  it('should delete a project', async () => {
+    const fetchSpy = jest.spyOn(window, 'fetch').mockResolvedValue(new Response(null, {status: 204}));
+    const service = new ProjectService();
+    const status = await service.delete(1);
+    expect(fetchSpy).toHaveBeenCalled();
+    expect(status).toEqual(204);
   });
 });
