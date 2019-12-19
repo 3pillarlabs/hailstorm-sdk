@@ -14,14 +14,15 @@ after do
 end
 
 options "*" do
-  response.headers["Allow"] = "GET, PUT, POST, DELETE, OPTIONS"
-  response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-User-Email, X-Auth-Token"
   response.headers["Access-Control-Allow-Origin"] = "*"
+  response.headers["Access-Control-Allow-Methods"] = "GET, PUT, POST, DELETE, PATCH, OPTIONS"
+  response.headers["Access-Control-Allow-Headers"] = "Content-Type, Accept"
   200
 end
 
 get "/" do
-  JSON.dump(%W[/projects])
+  JSON.dump(%W[/projects /execution_cycles])
 end
 
 require 'api/projects'
+require 'api/execution_cycles'

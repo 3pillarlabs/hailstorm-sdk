@@ -38,4 +38,43 @@ describe('ProjectService', () => {
     expect(fetchSpy).toHaveBeenCalled();
     expect(payload).toEqual(project);
   });
+
+  it('should update the title of a project', async () => {
+    const responsePromise = Promise.resolve(new Response(null, {status: 204}));
+    const fetchSpy = jest.spyOn(window, 'fetch').mockReturnValue(responsePromise);
+    const service = new ProjectService();
+    const status = await service.update(1, {title: "Hailstorm Priming with Digital Ocean and custom JMeter"});
+    expect(fetchSpy).toHaveBeenCalled();
+    expect(status).toEqual(204);
+  });
+
+  it('should update the running status of a project', async () => {
+    const responsePromise = Promise.resolve(new Response(null, {status: 204}));
+    const fetchSpy = jest.spyOn(window, 'fetch').mockReturnValue(responsePromise);
+    const service = new ProjectService();
+    const status = await service.update(1, {running: true});
+    expect(fetchSpy).toHaveBeenCalled();
+    expect(status).toEqual(204);
+  });
+
+  it('should start, stop and abort the execution cycle of a project', async () => {
+    const responsePromise = Promise.resolve(new Response(null, {status: 204}));
+    const fetchSpy = jest.spyOn(window, 'fetch').mockReturnValue(responsePromise);
+    const service = new ProjectService();
+    let status = await service.update(1, {action: 'start'});
+    expect(fetchSpy).toHaveBeenCalled();
+    expect(status).toEqual(204);
+
+    status = await service.update(1, {action: 'stop'});
+    expect(fetchSpy).toHaveBeenCalled();
+    expect(status).toEqual(204);
+
+    status = await service.update(1, {action: 'abort'});
+    expect(fetchSpy).toHaveBeenCalled();
+    expect(status).toEqual(204);
+
+    status = await service.update(1, {action: 'terminate'});
+    expect(fetchSpy).toHaveBeenCalled();
+    expect(status).toEqual(204);
+  });
 });

@@ -55,80 +55,31 @@ export class ProjectService {
     }
   }
 
-  update(id: number, attributes: {
+  async update(id: number, attributes: {
     title?: string;
     running?: boolean;
     action?: ProjectActions;
-  }): Promise<void> {
+  }): Promise<number> {
     console.log(`api ---- ProjectService#update(${id}, ${Object.keys(attributes)}, ${Object.values(attributes)})`);
-    const matchedProject: Project | undefined = DB.projects.find((project) => id === project.id);
-    let processingTime = 100;
-    let dbOp: (() => any) | undefined = undefined;
-    if (matchedProject) {
-      if (attributes.title)
-        matchedProject.title = attributes.title;
-      if (attributes.running !== undefined)
-        matchedProject.running = attributes.running;
-      switch (attributes.action) {
-        case 'start':
-          processingTime = 3000;
-          dbOp = () => DB.executionCycles.push({
-            id: DB.executionCycles[DB.executionCycles.length - 1].id + 1,
-            startedAt: new Date(),
-            threadsCount: 100,
-            projectId: id
-          });
-          break;
-        case 'stop':
-          processingTime = 3000;
-          dbOp = () => {
-            const index = DB.executionCycles.findIndex((x) => x.projectId === id && !x.stoppedAt);
-            if (index < 0)
-              return;
-            DB.executionCycles[index].stoppedAt = new Date();
-            DB.executionCycles[index].responseTime = 234.56;
-            DB.executionCycles[index].status = ExecutionCycleStatus.STOPPED;
-            DB.executionCycles[index].throughput = 10.24;
-          };
-          break;
-        case 'abort':
-          processingTime = 1500;
-          dbOp = () => {
-            const index = DB.executionCycles.findIndex((x) => x.projectId === id && !x.stoppedAt);
-            if (index < 0)
-              return;
-            DB.executionCycles[index].stoppedAt = new Date();
-            DB.executionCycles[index].status = ExecutionCycleStatus.ABORTED;
-          };
-          break;
-        case 'terminate':
-          processingTime = 3000;
-          dbOp = () => {
-            const index = DB.executionCycles.findIndex((x) => x.projectId === id && !x.stoppedAt);
-            if (index < 0)
-              return;
-            DB.executionCycles[index].stoppedAt = new Date();
-            DB.executionCycles[index].status = ExecutionCycleStatus.ABORTED;
-            matchedProject.running = false;
-          };
-          break;
-        default:
-          break;
+    try {
+      const response = await fetch(`${environ.apiBaseURL}/projects/${id}`, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(attributes),
+        method: 'PATCH'
+      });
+
+      if (!response.ok) {
+        throw new Error(response.statusText);
       }
+
+      return response.status;
+    } catch (error) {
+      throw new Error(error);
     }
-    return new Promise((resolve, reject) => {
-      if (matchedProject) {
-        setTimeout(() => {
-          if (dbOp)
-            dbOp();
-          resolve();
-        }, processingTime * SLOW_FACTOR);
-      }
-      else {
-        setTimeout(() => reject(new Error(`No Project found with id - ${id}`)), 500 * SLOW_FACTOR);
-      }
-    });
   }
+
   delete(id: number) {
     console.log(`api ---- ProjectService#delete(${id})`);
     return new Promise((resolve, reject) => {
@@ -144,6 +95,7 @@ export class ProjectService {
       }, 300 * SLOW_FACTOR);
     });
   }
+
   create({ title }: {
     [K in keyof Project]?: Project[K];
   }): Promise<Project> {

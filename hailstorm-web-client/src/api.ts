@@ -1,12 +1,13 @@
-import { ExecutionCycleStatus, ExecutionCycle, Report, JtlFile, JMeter, JMeterFile, AmazonCluster, DataCenterCluster, Cluster } from "./domain";
+import { Report, JtlFile, JMeter, JMeterFile, AmazonCluster, DataCenterCluster, Cluster } from "./domain";
 import { DB } from "./db";
 import { JMeterFileUploadState } from "./NewProjectWizard/domain";
 import { AWSInstanceChoiceOption, AWSRegionType, AWSRegionList } from "./ClusterConfiguration/domain";
 import { ProjectService } from "./services/ProjectService";
+import { ExecutionCycleService } from "./services/ExecutionCycleService";
 
 export type ResultActions = 'report' | 'export' | 'trash';
 
-const SLOW_FACTOR = 1;
+export const SLOW_FACTOR = 1;
 
 // API
 export class ApiService {
@@ -57,31 +58,6 @@ export class ApiService {
 
   clusters() {
     return this.singletonContext['clusters'] as ClusterService;
-  }
-}
-
-export class ExecutionCycleService {
-
-  list(projectId: number): Promise<ExecutionCycle[]> {
-    console.log(`api ---- ExecutionCycle#list(${projectId})`);
-    return new Promise(
-      (resolve, reject) => setTimeout(
-        () => resolve(DB.executionCycles
-          .filter((x) => x.projectId === projectId && x.status !== ExecutionCycleStatus.ABORTED)
-          .map((x) => ({...x}))), 300 * SLOW_FACTOR));
-  }
-
-  update(executionCycleId: number, projectId: number, attributes: {status?: ExecutionCycleStatus}): Promise<ExecutionCycle> {
-    console.log(`api ---- ExecutionCycleService#update(${executionCycleId}, ${projectId}, ${attributes})`);
-    const matchedCycle = DB.executionCycles.find((value) => value.id === executionCycleId && value.projectId === projectId);
-    return new Promise((resolve, reject) => setTimeout(() => {
-      if (matchedCycle) {
-        if (attributes.status) matchedCycle.status = attributes.status;
-        resolve(matchedCycle);
-      } else {
-        reject(new Error(`No execution cycle with id: ${executionCycleId}, projectId: ${projectId}`));
-      }
-    }, 100 * SLOW_FACTOR));
   }
 }
 

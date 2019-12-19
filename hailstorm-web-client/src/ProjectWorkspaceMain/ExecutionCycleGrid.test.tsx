@@ -3,7 +3,7 @@ import { ExecutionCycleGrid } from './ExecutionCycleGrid';
 import { shallow, mount, ReactWrapper } from 'enzyme';
 import { CheckedExecutionCycle } from './ControlPanel';
 import { Project, ExecutionCycleStatus, ExecutionCycle } from '../domain';
-import { ExecutionCycleService } from '../api';
+import { ExecutionCycleService } from "../services/ExecutionCycleService";
 import { act } from '@testing-library/react';
 import { AppStateContext } from '../appStateContext';
 

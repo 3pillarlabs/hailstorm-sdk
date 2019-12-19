@@ -1,7 +1,16 @@
 require 'hailstorm/model/execution_cycle'
 
 module Seed
+
+  def self.id_counter(start)
+    ->() { start += 1 }
+  end
+
   DB = {
+      sys: {
+        execution_cycle_idx: id_counter(205)
+      },
+
       projects: [
           {
               id: 1,
