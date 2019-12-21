@@ -3,7 +3,8 @@ import { shallow, mount } from 'enzyme';
 import { ToolBar } from './ToolBar';
 import { ButtonStateLookup, CheckedExecutionCycle } from './ControlPanel';
 import { Project, ExecutionCycle, InterimProjectState } from '../domain';
-import { ReportService, JtlExportService } from '../api';
+import { JtlExportService } from '../api';
+import { ReportService } from "../services/ReportService";
 import { ProjectService } from "../services/ProjectService";
 import { ModalProps } from '../Modal';
 import { act } from '@testing-library/react';
@@ -105,7 +106,7 @@ describe('<ToolBar />', () => {
   it('should set interim state on start', (done) => {
     const project: Project = createProject();
     const component = mount(createToolBarHierarchy({project}));
-    const apiSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(undefined);
+    const apiSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
     component.find('button[name="start"]').simulate('click');
     expect(apiSpy).toBeCalled();
     setTimeout(() => {
@@ -122,7 +123,7 @@ describe('<ToolBar />', () => {
   it('should reload running projects on start', (done) => {
     const project: Project = createProject();
     const component = mount(createToolBarHierarchy({project}));
-    const apiSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(undefined);
+    const apiSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
     component.find('button[name="start"]').simulate('click');
     expect(apiSpy).toBeCalled();
     setTimeout(() => {
@@ -136,7 +137,7 @@ describe('<ToolBar />', () => {
   it('should reload running projects on stop', (done) => {
     const project: Project = createProject({running: true});
     const component = mount(createToolBarHierarchy({project, buttonStates: {stop: false}}));
-    const apiSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(undefined);
+    const apiSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
     component.find('button[name="stop"]').simulate('click');
     expect(apiSpy).toBeCalled();
     setTimeout(() => {
@@ -150,7 +151,7 @@ describe('<ToolBar />', () => {
   it('should reload running projects on abort', (done) => {
     const project: Project = createProject({running: true});
     const component = mount(createToolBarHierarchy({project, buttonStates: {abort: false}}));
-    const apiSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(undefined);
+    const apiSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
     component.find('button[name="abort"]').simulate('click');
     expect(apiSpy).toBeCalled();
     setTimeout(() => {

@@ -26,3 +26,4 @@ end
 
 require 'api/projects'
 require 'api/execution_cycles'
+require 'api/reports'

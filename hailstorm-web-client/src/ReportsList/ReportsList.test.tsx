@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { shallow, mount, ReactWrapper } from 'enzyme';
 import { ReportsList } from './ReportsList';
-import { ReportService } from '../api';
+import { ReportService } from "../services/ReportService";
 import { act } from '@testing-library/react';
 import { AppStateContext } from '../appStateContext';
 

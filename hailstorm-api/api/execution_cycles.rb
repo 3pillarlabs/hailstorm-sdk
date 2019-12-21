@@ -3,6 +3,7 @@ require 'json'
 require 'config/db/seed'
 
 get '/projects/:id/execution_cycles' do |project_id|
+  sleep 0.3
   found_project = Seed::DB[:projects].find { |project| project[:id] == project_id.to_s.to_i }
   return not_found unless found_project
 
@@ -20,7 +21,7 @@ get '/projects/:id/execution_cycles' do |project_id|
 end
 
 patch '/projects/:projectId/execution_cycles/:id' do |projectId, id|
-  sleep 0.1
+  sleep 0.3
   found_x_cycle = Seed::DB[:executionCycles].find { |x| x[:id] == id.to_s.to_i && x[:projectId] == projectId.to_s.to_i }
   return not_found unless found_x_cycle
 

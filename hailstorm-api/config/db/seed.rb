@@ -9,7 +9,8 @@ module Seed
   DB = {
       sys: {
         execution_cycle_idx: id_counter(205),
-        project_idx: id_counter(8)
+        project_idx: id_counter(8),
+        report_idx: id_counter(4)
       },
 
       projects: [
@@ -113,6 +114,12 @@ module Seed
           },
           { id: 203, projectId: 2, startedAt: Time.now - 15.minutes, threadsCount: 10 },
           { id: 204, projectId: 1, startedAt: Time.now - 5.minutes, threadsCount: 100 }
-      ]
+      ],
+
+      reports: [
+        { id: 1, projectId: 1, title: "hailstorm-site-basic-1-2" },
+        { id: 2, projectId: 1, title: "hailstorm-site-basic-2-5" },
+        { id: 3, projectId: 1, title: "hailstorm-site-basic-1-5" }
+      ],
   }
 end

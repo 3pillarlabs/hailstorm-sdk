@@ -1,9 +1,10 @@
-import { Report, JtlFile, JMeter, JMeterFile, AmazonCluster, DataCenterCluster, Cluster } from "./domain";
+import { JtlFile, JMeter, JMeterFile, AmazonCluster, DataCenterCluster, Cluster } from "./domain";
 import { DB } from "./db";
 import { JMeterFileUploadState } from "./NewProjectWizard/domain";
 import { AWSInstanceChoiceOption, AWSRegionType, AWSRegionList } from "./ClusterConfiguration/domain";
 import { ProjectService } from "./services/ProjectService";
 import { ExecutionCycleService } from "./services/ExecutionCycleService";
+import { ReportService } from "./services/ReportService";
 
 export type ResultActions = 'report' | 'export' | 'trash';
 
@@ -58,33 +59,6 @@ export class ApiService {
 
   clusters() {
     return this.singletonContext['clusters'] as ClusterService;
-  }
-}
-
-export class ReportService {
-
-  list(projectId: number) {
-    return new Promise<Report[]>((resolve, reject) =>
-      setTimeout(() => resolve(DB.reports.filter((report) => report.projectId === projectId).map((x) => ({...x}))), 700));
-  }
-
-  create(projectId: number, executionCycleIds: number[]): Promise<void> {
-    console.log(`api ---- ExecutionCycles#report(${projectId}, ${executionCycleIds})`);
-    return new Promise((resolve, reject) => setTimeout(() => {
-      const project = DB.projects.find((value) => value.id === projectId);
-      if (project) {
-        const [firstExCid, lastExCid] = executionCycleIds.length === 1 ?
-                                        [executionCycleIds[0], undefined] :
-                                        [executionCycleIds[0], executionCycleIds[executionCycleIds.length - 1]];
-        let title = `${project.code}-${firstExCid}`;
-        if (lastExCid) title += `-${lastExCid}`;
-        const incrementId = DB.reports[DB.reports.length - 1].id + 1;
-        DB.reports.push({id: incrementId, projectId, title});
-        resolve();
-      } else {
-        reject(new Error(`No project with id ${projectId}`));
-      }
-    }, 3000 * SLOW_FACTOR));
   }
 }
 

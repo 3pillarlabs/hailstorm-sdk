@@ -2,6 +2,10 @@ import { ExecutionCycle, ExecutionCycleStatus } from "../domain";
 import { ExecutionCycleService } from "./ExecutionCycleService";
 
 describe('ExecutionCycleService', () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
   it('should list cycles for a project', async () => {
     const responseData: ExecutionCycle[] = [
       {
