@@ -1,10 +1,11 @@
-import { JtlFile, JMeter, JMeterFile, AmazonCluster, DataCenterCluster, Cluster } from "./domain";
+import { JMeter, JMeterFile, AmazonCluster, DataCenterCluster, Cluster } from "./domain";
 import { DB } from "./db";
 import { JMeterFileUploadState } from "./NewProjectWizard/domain";
 import { AWSInstanceChoiceOption, AWSRegionType, AWSRegionList } from "./ClusterConfiguration/domain";
 import { ProjectService } from "./services/ProjectService";
 import { ExecutionCycleService } from "./services/ExecutionCycleService";
 import { ReportService } from "./services/ReportService";
+import { JtlExportService } from "./services/JtlExportService";
 
 export type ResultActions = 'report' | 'export' | 'trash';
 
@@ -59,27 +60,6 @@ export class ApiService {
 
   clusters() {
     return this.singletonContext['clusters'] as ClusterService;
-  }
-}
-
-export class JtlExportService {
-  create(projectId: number, executionCycleIds: number[]): Promise<JtlFile> {
-    console.log(`api ---- JtlExportService#create(${projectId}, ${executionCycleIds})`);
-    return new Promise((resolve, reject) => setTimeout(() => {
-      const project = DB.projects.find((value) => value.id === projectId);
-      if (project) {
-        const [firstExCid, lastExCid] = executionCycleIds.length === 1 ?
-                                        [executionCycleIds[0], undefined] :
-                                        [executionCycleIds[0], executionCycleIds[executionCycleIds.length - 1]];
-        let title = `${project.code}-${firstExCid}`;
-        if (lastExCid) title += `-${lastExCid}`;
-        const fileExtn = lastExCid ? 'zip' : 'jtl';
-        const fileName = `${title}.${fileExtn}`;
-        resolve({title: fileName, url: `http://static.hailstorm.local/${fileName}`});
-      } else {
-        reject(new Error(`No project with id ${projectId}`));
-      }
-    }, 3000 * SLOW_FACTOR));
   }
 }
 

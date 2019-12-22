@@ -3,7 +3,7 @@ import { shallow, mount } from 'enzyme';
 import { ToolBar } from './ToolBar';
 import { ButtonStateLookup, CheckedExecutionCycle } from './ControlPanel';
 import { Project, ExecutionCycle, InterimProjectState } from '../domain';
-import { JtlExportService } from '../api';
+import { JtlExportService } from "../services/JtlExportService";
 import { ReportService } from "../services/ReportService";
 import { ProjectService } from "../services/ProjectService";
 import { ModalProps } from '../Modal';
@@ -193,7 +193,7 @@ describe('<ToolBar />', () => {
   it('should report results on Report', (done) => {
     const project: Project = createProject();
     const component = mount(createToolBarHierarchy({project, buttonStates: {report: false}}));
-    const apiSpy = jest.spyOn(ReportService.prototype, 'create').mockResolvedValue(undefined);
+    const apiSpy = jest.spyOn(ReportService.prototype, 'create').mockResolvedValue({id: 200, projectId: 1, title: 'a'});
     component.find('button[name="report"]').simulate('click');
     expect(apiSpy).toBeCalled();
     setTimeout(() => {

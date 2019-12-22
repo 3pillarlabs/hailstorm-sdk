@@ -27,3 +27,4 @@ end
 require 'api/projects'
 require 'api/execution_cycles'
 require 'api/reports'
+require 'api/jtl_exports'
