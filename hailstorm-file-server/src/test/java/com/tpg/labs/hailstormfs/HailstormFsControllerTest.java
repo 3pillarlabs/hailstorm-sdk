@@ -8,14 +8,10 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.test.web.servlet.ResultHandler;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.io.FileNotFoundException;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.mockito.Mockito.*;
@@ -38,7 +34,7 @@ class HailstormFsControllerTest {
 
     @Test
     public void shouldSaveUploadedFile() throws Exception {
-        when(storageService.saveFile(any(FileMetaData.class), any(FileTransferActor.class)))
+        when(storageService.saveFile(any(FileMetaData.class), any(FileTransferDelegate.class)))
                 .thenReturn("hdfs:///1234567/file.jmx");
 
         MockMultipartFile multipartFile = new MockMultipartFile(
@@ -51,7 +47,7 @@ class HailstormFsControllerTest {
         this.mvc.perform(multipart("/upload").file(multipartFile))
                 .andExpect(status().is2xxSuccessful());
 
-        verify(storageService).saveFile(any(FileMetaData.class), any(FileTransferActor.class));
+        verify(storageService).saveFile(any(FileMetaData.class), any(FileTransferDelegate.class));
     }
 
     @Test

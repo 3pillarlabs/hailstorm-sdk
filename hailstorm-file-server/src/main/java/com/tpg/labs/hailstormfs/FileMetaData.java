@@ -2,7 +2,9 @@ package com.tpg.labs.hailstormfs;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import java.io.File;
 import java.io.InputStream;
+import java.util.Optional;
 import java.util.StringJoiner;
 
 public class FileMetaData {
@@ -12,6 +14,7 @@ public class FileMetaData {
     private final String mimeType;
     private final Long size;
     private final InputStream inputStream;
+    private String pathPrefix;
 
     public FileMetaData(String originalName, String mimeType, Long size, InputStream inputStream) {
         this.originalName = originalName;
@@ -47,6 +50,19 @@ public class FileMetaData {
 
     public FileMetaData withId(String id) {
         setId(id);
+        return this;
+    }
+
+    public String getPathPrefix() {
+        return pathPrefix;
+    }
+
+    public void setPathPrefix(String pathPrefix) {
+        this.pathPrefix = pathPrefix;
+    }
+
+    public FileMetaData withPathPrefix(String pathPrefix) {
+        setPathPrefix(pathPrefix);
         return this;
     }
 

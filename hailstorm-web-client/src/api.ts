@@ -1,4 +1,4 @@
-import { JMeter, JMeterFile, AmazonCluster, DataCenterCluster, Cluster } from "./domain";
+import { AmazonCluster, DataCenterCluster, Cluster } from "./domain";
 import { DB } from "./db";
 import { JMeterFileUploadState } from "./NewProjectWizard/domain";
 import { AWSInstanceChoiceOption, AWSRegionType, AWSRegionList } from "./ClusterConfiguration/domain";
@@ -6,6 +6,7 @@ import { ProjectService } from "./services/ProjectService";
 import { ExecutionCycleService } from "./services/ExecutionCycleService";
 import { ReportService } from "./services/ReportService";
 import { JtlExportService } from "./services/JtlExportService";
+import { JMeterService } from "./services/JMeterService";
 
 export type ResultActions = 'report' | 'export' | 'trash';
 
@@ -60,105 +61,6 @@ export class ApiService {
 
   clusters() {
     return this.singletonContext['clusters'] as ClusterService;
-  }
-}
-
-export class JMeterService {
-  list(projectId: number): Promise<JMeter> {
-    console.log(`api ---- JMeterService#list(${projectId})`);
-    return new Promise<JMeter>((resolve, reject) => {
-      setTimeout(() => {
-        const matchedProject = DB.projects.find((value) => value.id === projectId);
-        if (matchedProject) {
-          if (!matchedProject.incomplete) {
-            resolve(matchedProject.jmeter || {
-              files: [
-                {id: 1, name: 'prime.jmx', properties: new Map([["foo", "1"]]), path: "12345" },
-                {id: 2, name: 'data.csv', dataFile: true, path: "1234556" },
-              ]
-            });
-          } else {
-            resolve(matchedProject.jmeter);
-          }
-        } else {
-          reject(`No project found with ${projectId}`);
-        }
-      }, 300 * SLOW_FACTOR)
-    });
-  }
-
-  create(projectId: number, attrs: JMeterFile): Promise<JMeterFile> {
-    console.log(`api ---- JMeterService#create(${projectId}, ${attrs})`);
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const matchedProject = DB.projects.find((value) => value.id === projectId);
-        if (matchedProject) {
-          if (!matchedProject.jmeter) {
-            matchedProject.jmeter = {
-              files: []
-            }
-          }
-
-          const savedAttrs: JMeterFile = {...attrs, id: DB.sys.jmeterIndex.nextId()}
-          matchedProject.jmeter.files = [...matchedProject.jmeter.files, savedAttrs];
-          resolve(savedAttrs);
-        } else {
-          reject(new Error(`Did not find project with id: ${projectId}`));
-        }
-      }, 300 * SLOW_FACTOR);
-    });
-  }
-
-  update(projectId: number, jmeterFileId: number, attrs: {[K in keyof JMeterFile]?: JMeterFile[K]}): Promise<JMeterFile> {
-    console.log(`api ---- JMeterService#update(${projectId}, ${jmeterFileId}), ${attrs}`);
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const matchedProject = DB.projects.find((value) => value.id === projectId);
-        if (matchedProject) {
-          if (!matchedProject.jmeter) {
-            reject(new Error('Did not find any JMeter plans to update'));
-            return;
-          }
-
-          const matchedFile = matchedProject.jmeter!.files.find((value) => value.id === jmeterFileId);
-          if (!matchedFile) {
-            reject(new Error(`Did not find JMeter file with id: ${jmeterFileId} in project with id: ${projectId}`));
-            return;
-          }
-
-          matchedFile.properties = attrs.properties;
-          resolve(matchedFile);
-        } else {
-          reject(new Error(`Did not find project with id: ${projectId}`));
-        }
-      }, 300 * SLOW_FACTOR);
-    });
-  }
-
-  destroy(projectId: number, jmeterFileId: number) {
-    console.log(`api ---- JMeterService#destroy(${projectId}, ${jmeterFileId})`);
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const matchedProject = DB.projects.find((value) => value.id === projectId);
-        if (matchedProject) {
-          if (!matchedProject.jmeter) {
-            reject(new Error('Did not find any JMeter plans to update'));
-            return;
-          }
-
-          const matchedFile = matchedProject.jmeter!.files.find((value) => value.id === jmeterFileId);
-          if (!matchedFile) {
-            reject(new Error(`Did not find JMeter file with id: ${jmeterFileId} in project with id: ${projectId}`));
-            return;
-          }
-
-          matchedProject.jmeter.files = matchedProject.jmeter.files.filter((value) => value.id !== matchedFile.id);
-          resolve();
-        } else {
-          reject(new Error(`Did not find project with id: ${projectId}`));
-        }
-      }, 300 * SLOW_FACTOR);
-    });
   }
 }
 

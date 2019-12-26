@@ -17,7 +17,7 @@ class LocalStorageServiceImplTest {
 
     @Test
     void shouldSaveFile() throws Exception {
-        FileTransferActor mockActor = mock(FileTransferActor.class);
+        FileTransferDelegate delegate = mock(FileTransferDelegate.class);
         StorageService service = new LocalStorageServiceImpl();
         ((LocalStorageServiceImpl) service).setBaseURI("/tmp/hailstorm/test/fs");
         ((LocalStorageServiceImpl) service).afterPropertiesSet();
@@ -27,10 +27,10 @@ class LocalStorageServiceImplTest {
                 10L,
                 new ByteArrayInputStream("<jtl></jtl>".getBytes()));
 
-        String path = service.saveFile(fileMetaData, (dest) -> mockActor.doTransfer(dest));
+        String path = service.saveFile(fileMetaData, (dest) -> delegate.doTransfer(dest));
 
         assertNotNull(path);
-        verify(mockActor).doTransfer(any(File.class));
+        verify(delegate).doTransfer(any(File.class));
     }
 
     @Test

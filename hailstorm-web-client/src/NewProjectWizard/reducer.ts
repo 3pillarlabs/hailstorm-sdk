@@ -113,7 +113,9 @@ export function reducer(state: NewProjectWizardState, action: NewProjectWizardAc
 
     case NewProjectWizardActionTypes.EditInProjectWizard: {
       const project = action.payload.project;
-      const done = project.incomplete ? {} : {
+      const done = project.incomplete ? {
+        [WizardTabTypes.Project]: true,
+      } : {
         [WizardTabTypes.Project]: true,
         [WizardTabTypes.JMeter]: true,
         [WizardTabTypes.Cluster]: true,

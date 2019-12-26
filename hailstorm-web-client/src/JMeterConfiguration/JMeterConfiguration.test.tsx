@@ -5,9 +5,10 @@ import { AppStateContext } from '../appStateContext';
 import { AppState, Action } from '../store';
 import { WizardTabTypes, JMeterFileUploadState } from '../NewProjectWizard/domain';
 import { JMeterFile, Project, JMeter, ValidationNotice } from '../domain';
-import { JMeterValidationService, JMeterService } from '../api';
+import { JMeterValidationService } from '../api';
+import { JMeterService } from "../services/JMeterService";
 import { SavedFile } from '../FileUpload/domain';
-import { wait, fireEvent } from '@testing-library/dom';
+import { wait, fireEvent, waitForDomChange } from '@testing-library/dom';
 import { FileServer } from '../FileUpload/fileServer';
 import { render } from '@testing-library/react';
 
@@ -47,10 +48,10 @@ describe('<JMeterConfiguration />', () => {
     }
   };
 
-  function createComponent(attrs?: {plans?: JMeterFile[]}) {
+  function createComponent(attrs?: {plans?: JMeterFile[]}, incomplete: boolean = false) {
     let activeProject: Project = {id: 1, code: 'a', title: 'A', running: false};
-    if (attrs && attrs.plans) {
-      activeProject.jmeter = {files: attrs.plans};
+    if (!incomplete) {
+      activeProject.jmeter = attrs && attrs.plans ? {files: attrs.plans} : {files: []};
     }
 
     appState.activeProject = activeProject;
@@ -75,11 +76,16 @@ describe('<JMeterConfiguration />', () => {
     jest.resetAllMocks();
   });
 
-  it('should render without crashing', () => {
-    mount(createComponent());
+  it('should render without crashing', async () => {
+    const listPromise = Promise.resolve({ files: [] });
+    const spy = jest.spyOn(JMeterService.prototype, "list").mockReturnValue(listPromise);
+    const component = mount(createComponent(undefined, true));
+    component.update();
+    await listPromise;
+    expect(spy).toHaveBeenCalled();
   });
 
-  it('should display message when there are no test plans', () => {
+  it('should display message when there are no test plans', async () => {
     const component = mount(createComponent());
     expect(component.text()).toMatch(/no test plans/);
     expect(component).not.toContainMatchingElement('ActiveFileDetail button[role="Remove File"]');

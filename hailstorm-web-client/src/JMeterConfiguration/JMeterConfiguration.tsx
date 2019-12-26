@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { AppStateContext } from '../appStateContext';
 import { JMeterSetupCompletedAction } from '../NewProjectWizard/actions';
 import { CancelLink, BackLink } from '../NewProjectWizard/WizardControls';
@@ -7,7 +7,7 @@ import { JMeterPlanList } from '../JMeterPlanList';
 import { selector } from '../NewProjectWizard/reducer';
 import styles from '../NewProjectWizard/NewProjectWizard.module.scss';
 import { FileUpload } from '../FileUpload';
-import { AddJMeterFileAction, CommitJMeterFileAction, AbortJMeterFileUploadAction } from './actions';
+import { AddJMeterFileAction, CommitJMeterFileAction, AbortJMeterFileUploadAction, SetJMeterConfigurationAction } from './actions';
 import { MergeJMeterFileAction, SelectJMeterFileAction, RemoveJMeterFileAction, FileRemoveInProgressAction } from './actions';
 import { ApiFactory } from '../api';
 import { SavedFile } from '../FileUpload/domain';
@@ -16,15 +16,24 @@ import { Modal } from '../Modal';
 import { FileServer } from '../FileUpload/fileServer';
 import { isUploadInProgress } from './isUploadInProgress';
 import { ActiveFileDetail } from './ActiveFileDetail';
+import { Loader, LoaderSize } from '../Loader/Loader';
 
 const UPLOAD_ABORT_ENABLE_DELAY_MS = 5000;
 
 export const JMeterConfiguration: React.FC = () => {
   const {appState, dispatch} = useContext(AppStateContext);
-  const state = selector(appState);
   const [showModal, setShowModal] = useState(false);
   const [uploadAborted, setUploadAborted] = useState(false);
   const [disableAbort, setDisableAbort] = useState(true);
+
+  useEffect(() => {
+    if (appState.activeProject && appState.activeProject.jmeter === undefined) {
+      ApiFactory()
+        .jmeter()
+        .list(appState.activeProject.id)
+        .then((data) => dispatch(new SetJMeterConfigurationAction(data)));
+    }
+  }, []);
 
   const handleFileUpload = (file: SavedFile) => {
     const jmeterPlan = file.originalName.match(/\.jmx$/);
@@ -41,12 +50,16 @@ export const JMeterConfiguration: React.FC = () => {
     destroyFile({ file, dispatch, projectId: appState.activeProject!.id });
   };
 
+  if (appState.activeProject && appState.activeProject.jmeter === undefined) {
+    return (<Loader size={LoaderSize.APP}/>);
+  }
+
   return (
     <>
-    <StepHeader {...{state, setDisableAbort, dispatch, handleFileUpload, setUploadAborted, uploadAborted}} />
+    <StepHeader {...{state: appState, setDisableAbort, dispatch, handleFileUpload, setUploadAborted, uploadAborted}} />
     <div className={styles.stepBody}>
-      <StepContent {...{dispatch, state, setShowModal, setUploadAborted, disableAbort}} />
-      <StepFooter {...{dispatch, state}} />
+      <StepContent {...{dispatch, state: appState, setShowModal, setUploadAborted, disableAbort}} />
+      <StepFooter {...{dispatch, state: appState}} />
     </div>
     <FileRemoveConfirmation file={appState.wizardState!.activeJMeterFile!} {...{showModal, setShowModal, handleFileRemove}} />
     </>
@@ -92,7 +105,9 @@ function StepHeader({
               setUploadAborted(false);
               setDisableAbort(true);
             }}
-            disabled={isUploadInProgress(state.wizardState!.activeJMeterFile)} abort={uploadAborted}
+            disabled={isUploadInProgress(state.wizardState!.activeJMeterFile)}
+            abort={uploadAborted}
+            pathPrefix={state.activeProject!.id.toString()}
           >
             <button
               className="button is-link is-medium"

@@ -2,7 +2,8 @@ import React from 'react';
 import { shallow, mount } from 'enzyme';
 import { ProjectWorkspaceMain } from './ProjectWorkspaceMain';
 import { AppStateContext } from '../appStateContext';
-import { JMeterService, ClusterService } from '../api';
+import { ClusterService } from '../api';
+import { JMeterService } from "../services/JMeterService";
 import { JMeter, Cluster, AmazonCluster, InterimProjectState } from '../domain';
 import { MemoryRouter, Route } from 'react-router';
 

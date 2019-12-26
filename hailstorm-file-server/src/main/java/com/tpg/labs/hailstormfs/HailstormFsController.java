@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Optional;
 
 @Controller
 public class HailstormFsController {
@@ -25,12 +26,14 @@ public class HailstormFsController {
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<FileMetaData> uploadFile(@RequestParam("file") MultipartFile file) throws IOException {
+    public ResponseEntity<FileMetaData> uploadFile(@RequestParam("file") MultipartFile file,
+                                                   @RequestParam(value = "prefix",
+                                                           required = false) String pathPrefix) throws IOException {
         FileMetaData fileMetaData = new FileMetaData(
                 file.getOriginalFilename(),
                 file.getContentType(),
                 file.getSize(),
-                file.getInputStream());
+                file.getInputStream()).withPathPrefix(pathPrefix);
 
         logger.debug("fileMetaData: {}", fileMetaData);
         String path = storageService.saveFile(fileMetaData, file::transferTo);

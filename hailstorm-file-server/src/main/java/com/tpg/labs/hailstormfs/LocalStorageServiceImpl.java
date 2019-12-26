@@ -1,5 +1,8 @@
 package com.tpg.labs.hailstormfs;
 
+import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.codec.cli.Digest;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -8,16 +11,15 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
-import org.springframework.util.DigestUtils;
 import org.springframework.util.FileSystemUtils;
 
 import javax.validation.constraints.NotNull;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
 import java.util.List;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 @Service
 public class LocalStorageServiceImpl implements StorageService, InitializingBean {
@@ -61,19 +63,25 @@ public class LocalStorageServiceImpl implements StorageService, InitializingBean
     }
 
     @Override
-    public String saveFile(FileMetaData fileMetaData, FileTransferActor fileTransferActor) throws IOException {
-        String hash = calculateHash(fileMetaData.getInputStream());
+    public String saveFile(FileMetaData fileMetaData, FileTransferDelegate fileTransferDelegate) throws IOException {
+        String hash = calculateHash(fileMetaData);
         File dest = new File(baseURI, hash);
         if (!dest.exists()) {
             dest.mkdirs();
         }
 
-        fileTransferActor.doTransfer(new File(dest, fileMetaData.getOriginalName()));
+        fileTransferDelegate.doTransfer(new File(dest, fileMetaData.getOriginalName()));
         return hash;
     }
 
-    String calculateHash(InputStream stream) throws IOException {
-        return DigestUtils.md5DigestAsHex(stream);
+    String calculateHash(FileMetaData fileMetaData) throws IOException {
+        MessageDigest messageDigest = DigestUtils.getSha1Digest();
+        messageDigest = DigestUtils.updateDigest(messageDigest, fileMetaData.getInputStream());
+        if (fileMetaData.getPathPrefix() != null) {
+            messageDigest = DigestUtils.updateDigest(messageDigest, fileMetaData.getPathPrefix());
+        }
+
+        return Hex.encodeHexString(messageDigest.digest(), true);
     }
 
     @Override

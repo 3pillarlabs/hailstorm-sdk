@@ -2,13 +2,13 @@ import environment from '../environment';
 
 export const FileServer: {
   uploadURL: string;
-  sendFile: (file: File, callback?: (progress: number) => void, httpReq?: XMLHttpRequest) => Promise<any>;
+  sendFile: (file: File, callback?: (progress: number) => void, httpReq?: XMLHttpRequest, pathPrefix?: string) => Promise<any>;
   removeFile: (file: {name: string, path: string}) => Promise<any>;
 } = {
 
   uploadURL: `${environment.fileServerBaseURL}/upload`,
 
-  sendFile: function (file, callback, httpReq) {
+  sendFile: function (file, callback, httpReq, pathPrefix) {
     console.debug(`FileServer ---- .sendFile({name: ${file.name}})`);
     return new Promise((resolve, reject) => {
       const req = httpReq || new XMLHttpRequest();
@@ -21,7 +21,7 @@ export const FileServer: {
 
       req.upload.addEventListener("error", () => {
         callback && callback(0);
-        reject(req.response);
+        reject(req.statusText ? req.statusText : 'Connection refused');
       });
 
       req.upload.addEventListener("progress", (event) => {
@@ -36,6 +36,10 @@ export const FileServer: {
 
       const formData = new FormData();
       formData.append("file", file, file.name);
+      if (pathPrefix) {
+        formData.append("prefix", pathPrefix);
+      }
+
       req.open("POST", this.uploadURL);
       req.send(formData);
     });

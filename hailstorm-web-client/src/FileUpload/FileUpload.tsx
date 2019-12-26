@@ -13,6 +13,7 @@ export interface FileUploadProps {
   name?: string;
   preventDefault?: boolean;
   accept?: string | string[];
+  pathPrefix?: string;
 }
 
 export function FileUpload({
@@ -25,7 +26,8 @@ export function FileUpload({
   abort,
   name,
   preventDefault,
-  accept
+  accept,
+  pathPrefix
 }: React.PropsWithChildren<FileUploadProps>) {
 
   const [httpReq, setHttpReq] = useState<XMLHttpRequest | undefined>();
@@ -50,7 +52,7 @@ export function FileUpload({
     const _httpReq = new XMLHttpRequest();
     setHttpReq(_httpReq);
     FileServer
-      .sendFile(file, handleProgress, _httpReq)
+      .sendFile(file, handleProgress, _httpReq, pathPrefix)
       .then((savedFile: SavedFile) => {
         onFileUpload && onFileUpload(savedFile);
       })

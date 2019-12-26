@@ -11,11 +11,11 @@ public interface StorageService {
      * Saves the file to storage.
      *
      * @param fileMetaData
-     * @param fileTransferActor
+     * @param fileTransferDelegate
      * @return stored file URI
      * @throws IOException
      */
-    String saveFile(FileMetaData fileMetaData, FileTransferActor fileTransferActor) throws IOException;
+    String saveFile(FileMetaData fileMetaData, FileTransferDelegate fileTransferDelegate) throws IOException;
 
     /**
      * Delete a file

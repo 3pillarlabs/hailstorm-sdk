@@ -97,6 +97,13 @@ export function reducer(state: NewProjectWizardState, action: JMeterConfiguratio
       const activeProject: Project = {...state.activeProject!};
       activeProject.jmeter = {...action.payload};
       activeProject.jmeter.files = action.payload.files.sort(jmeterFileCompare);
+      if (state.wizardState && state.wizardState.activeTab === WizardTabTypes.JMeter &&
+          activeProject.jmeter.files.length > 0 && !state.wizardState.activeJMeterFile
+      ) {
+          const wizardState = {...state.wizardState};
+          wizardState.activeJMeterFile = activeProject.jmeter.files[0];
+          return {...state, activeProject, wizardState};
+      }
 
       return {...state, activeProject};
     }
