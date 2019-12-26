@@ -1,12 +1,13 @@
 import { AmazonCluster, DataCenterCluster, Cluster } from "./domain";
 import { DB } from "./db";
-import { AWSInstanceChoiceOption, AWSRegionType, AWSRegionList } from "./ClusterConfiguration/domain";
+import { AWSRegionType, AWSRegionList } from "./ClusterConfiguration/domain";
 import { ProjectService } from "./services/ProjectService";
 import { ExecutionCycleService } from "./services/ExecutionCycleService";
 import { ReportService } from "./services/ReportService";
 import { JtlExportService } from "./services/JtlExportService";
 import { JMeterService } from "./services/JMeterService";
 import { JMeterValidationService } from "./services/JMeterValidationService";
+import { AWSEC2PricingService } from "./services/AWSEC2PricingService";
 
 export type ResultActions = 'report' | 'export' | 'trash';
 
@@ -61,28 +62,6 @@ export class ApiService {
 
   clusters() {
     return this.singletonContext['clusters'] as ClusterService;
-  }
-}
-
-export class AWSEC2PricingService {
-  list(region: string): Promise<AWSInstanceChoiceOption[]> {
-    console.log(`api ---- AWSEC2PricingService#list(${region})`);
-    return new Promise<AWSInstanceChoiceOption[]>((resolve, reject) => {
-      setTimeout(() => {
-        const data = [
-          { instanceType: "m5a.large", maxThreadsByInstance: 500, hourlyCostByInstance: 0.096, numInstances: 1 },
-          { instanceType: "m5a.xlarge", maxThreadsByInstance: 1000, hourlyCostByInstance: 0.192, numInstances: 1 },
-          { instanceType: "m5a.2xlarge", maxThreadsByInstance: 2000, hourlyCostByInstance: 0.3440, numInstances: 1 },
-          { instanceType: "m5a.4xlarge", maxThreadsByInstance: 5000, hourlyCostByInstance: 0.6880, numInstances: 1 },
-          { instanceType: "m5a.8xlarge", maxThreadsByInstance: 10000, hourlyCostByInstance: 1.3760, numInstances: 1 },
-          { instanceType: "m5a.12xlarge", maxThreadsByInstance: 15000, hourlyCostByInstance: 2.0640, numInstances: 1 },
-          { instanceType: "m5a.16xlarge", maxThreadsByInstance: 20000, hourlyCostByInstance: 2.7520, numInstances: 1 },
-          { instanceType: "m5a.24xlarge", maxThreadsByInstance: 30000, hourlyCostByInstance: 4.1280, numInstances: 1 },
-        ]
-        .map((attrs) => new AWSInstanceChoiceOption(attrs));
-        resolve(data);
-      }, 500 * SLOW_FACTOR);
-    });
   }
 }
 
