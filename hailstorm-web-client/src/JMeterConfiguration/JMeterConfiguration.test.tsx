@@ -5,7 +5,7 @@ import { AppStateContext } from '../appStateContext';
 import { AppState, Action } from '../store';
 import { WizardTabTypes, JMeterFileUploadState } from '../NewProjectWizard/domain';
 import { JMeterFile, Project, JMeter, ValidationNotice } from '../domain';
-import { JMeterValidationService } from '../api';
+import { JMeterValidationService } from "../services/JMeterValidationService";
 import { JMeterService } from "../services/JMeterService";
 import { SavedFile } from '../FileUpload/domain';
 import { wait, fireEvent, waitForDomChange } from '@testing-library/dom';

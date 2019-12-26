@@ -1,12 +1,12 @@
 import { AmazonCluster, DataCenterCluster, Cluster } from "./domain";
 import { DB } from "./db";
-import { JMeterFileUploadState } from "./NewProjectWizard/domain";
 import { AWSInstanceChoiceOption, AWSRegionType, AWSRegionList } from "./ClusterConfiguration/domain";
 import { ProjectService } from "./services/ProjectService";
 import { ExecutionCycleService } from "./services/ExecutionCycleService";
 import { ReportService } from "./services/ReportService";
 import { JtlExportService } from "./services/JtlExportService";
 import { JMeterService } from "./services/JMeterService";
+import { JMeterValidationService } from "./services/JMeterValidationService";
 
 export type ResultActions = 'report' | 'export' | 'trash';
 
@@ -61,24 +61,6 @@ export class ApiService {
 
   clusters() {
     return this.singletonContext['clusters'] as ClusterService;
-  }
-}
-
-export class JMeterValidationService {
-  create(attrs: JMeterFileUploadState): Promise<JMeterFileUploadState & {autoStop: boolean}> {
-    console.log(`api ---- JMeterValidationService#create(${attrs})`);
-    return new Promise<JMeterFileUploadState & {autoStop: boolean}>((resolve, reject) => setTimeout(() => {
-      resolve({
-        ...attrs,
-        name: attrs.name,
-        properties: new Map([
-          ["ThreadGroup.Admin.NumThreads", "1"],
-          ["ThreadGroup.Users.NumThreads", "10"],
-          ["Users.RampupTime", undefined]
-        ]),
-        autoStop: Date.now() % 2 === 0,
-      });
-    }, 500 * SLOW_FACTOR));
   }
 }
 

@@ -4,7 +4,7 @@ import environment from "../environment";
 
 const SLOW_FACTOR = 1;
 
-function reviver(key: string, value: any): any {
+export function reviver(key: string, value: any): any {
   return key === 'properties' ? new Map(value) : value;
 }
 
