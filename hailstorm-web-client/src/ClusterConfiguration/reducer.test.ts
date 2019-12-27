@@ -63,8 +63,27 @@ describe('reducer', () => {
     expect(nextState.activeProject!.clusters![0]).toEqual(savedCluster);
   });
 
-  it('should set Cluster configuration', () => {
+  it('should set Cluster configuration in the new project wizard', () => {
     const state = initialState();
+    const savedCluster: AmazonCluster = {
+      title: '',
+      type: 'AWS',
+      accessKey: 'A',
+      secretKey: 'S',
+      region: 'us-east-1',
+      instanceType: 'm3a.small',
+      maxThreadsByInstance: 500,
+      id: 23,
+      code: 'singing-penguin-23'
+    };
+
+    const nextState = reducer(state, new SetClusterConfigurationAction([savedCluster]));
+    expect(nextState.wizardState!.activeCluster).toEqual(savedCluster);
+  });
+
+  it('should set Cluster configuration in the project workspace', () => {
+    const state = initialState();
+    delete state.wizardState;
     const savedCluster: AmazonCluster = {
       title: '',
       type: 'AWS',

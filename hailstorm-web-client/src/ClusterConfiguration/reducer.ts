@@ -50,6 +50,14 @@ export function reducer(state: NewProjectWizardState, action: ClusterConfigurati
 
     case ClusterConfigurationActionTypes.SetClusterConfiguration: {
       const activeProject: Project = {...state.activeProject!, clusters: action.payload};
+      if (state.wizardState && state.wizardState.activeTab === WizardTabTypes.Cluster &&
+          activeProject.clusters!.length > 0 && !state.wizardState.activeCluster
+      ) {
+        const wizardState = {...state.wizardState};
+        wizardState.activeCluster = activeProject.clusters![0];
+        return {...state, activeProject, wizardState};
+      }
+
       return {...state, activeProject};
     }
 

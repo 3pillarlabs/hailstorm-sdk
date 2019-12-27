@@ -1,27 +1,22 @@
 import { Report } from "../domain";
 import environment from "../environment";
+import { fetchGuard, fetchOK } from "./fetch-adapter";
 
 export class ReportService {
 
   async list(projectId: number): Promise<Report[]> {
     console.log(`api ---- ReportService#list(${projectId})`);
-    try {
-      const response = await fetch(`${environment.apiBaseURL}/projects/${projectId}/reports`);
-      if (!response.ok) {
-        throw new Error(response.statusText);
-      }
-
+    return fetchGuard(async () => {
+      const response = await fetchOK(`${environment.apiBaseURL}/projects/${projectId}/reports`);
       const reports: Report[] = await response.json();
       return reports;
-    } catch (error) {
-      throw new Error(error);
-    }
+    })
   }
 
   async create(projectId: number, executionCycleIds: number[]): Promise<Report> {
     console.log(`api ---- ReportService#create(${projectId}, ${executionCycleIds})`);
-    try {
-      const response = await fetch(`${environment.apiBaseURL}/projects/${projectId}/reports`, {
+    return fetchGuard(async () => {
+      const response = await fetchOK(`${environment.apiBaseURL}/projects/${projectId}/reports`, {
         body: JSON.stringify(executionCycleIds),
         headers: {
           'Content-Type': 'application/json'
@@ -29,14 +24,8 @@ export class ReportService {
         method: 'POST'
       });
 
-      if (!response.ok) {
-        throw new Error(response.statusText);
-      }
-
       const report: Report = await response.json();
       return report;
-    } catch (error) {
-      throw new Error(error);
-    }
+    });
   }
 }

@@ -1,6 +1,7 @@
 import { JMeterFileUploadState } from "../NewProjectWizard/domain";
 import environment from "../environment";
 import { reviver } from "./JMeterService";
+import { fetchGuard, fetchOK } from "./fetch-adapter";
 
 export class JMeterValidationService {
 
@@ -8,8 +9,8 @@ export class JMeterValidationService {
     autoStop: boolean;
   }> {
     console.log(`api ---- JMeterValidationService#create(${attrs})`);
-    try {
-      const response = await fetch(`${environment.apiBaseURL}/jmeter_validations`, {
+    return fetchGuard(async () => {
+      const response = await fetchOK(`${environment.apiBaseURL}/jmeter_validations`, {
         body: JSON.stringify(attrs),
         headers: {
           'Content-Type': 'application/json'
@@ -17,18 +18,12 @@ export class JMeterValidationService {
         method: 'POST'
       });
 
-      if (!response.ok) {
-        throw new Error(response.statusText);
-      }
-
       const responseText = await response.text();
       const data = JSON.parse(responseText, (key, value) => {
         return value === null ? undefined : reviver(key, value)
       });
 
       return data;
-    } catch (error) {
-      throw new Error(error);
-    }
+    });
   }
 }

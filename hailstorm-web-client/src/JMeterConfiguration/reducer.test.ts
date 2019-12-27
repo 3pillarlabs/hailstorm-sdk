@@ -280,6 +280,26 @@ describe('reducer', () => {
     ]);
   });
 
+  it('should set first file as active on loading the configuration in the new project wizard', () => {
+    const plan = { name: 'a.jmx', id: 10, properties: new Map([["foo", "10"]]) };
+    const payload = {
+      version: "3.2",
+      files: [plan]
+    };
+
+    const nextState = reducer({
+      activeProject: {id: 1, code: 'a', title: 'A', running: false},
+      wizardState: {
+        activeTab: WizardTabTypes.JMeter,
+        done: {
+          [WizardTabTypes.Project]: true
+        }
+      }
+    }, new SetJMeterConfigurationAction(payload));
+
+    expect(nextState.wizardState!.activeJMeterFile).toEqual(plan);
+  });
+
   it('should set active the selected plan or file', () => {
     const payload = { name: 'a.jmx', id: 10, properties: new Map([["foo", "10"]]) };
     const dataFile = { name: 'a.csv', dataFile: true, id: 19 };

@@ -1,5 +1,6 @@
 import { Project, ExecutionCycleStatus, ExecutionCycle } from "../domain";
 import environvent from '../environment';
+import { fetchGuard, fetchOK } from "./fetch-adapter";
 
 export type ProjectActions = 'stop' | 'abort' | 'start' | 'terminate';
 
@@ -7,12 +8,8 @@ export class ProjectService {
 
   async list(): Promise<Project[]> {
     console.log(`api ---- ProjectService#list()`);
-    try {
-      const response = await fetch(`${environvent.apiBaseURL}/projects`);
-      if (!response.ok) {
-        throw(new Error(response.statusText));
-      }
-
+    return fetchGuard(async () => {
+      const response = await fetchOK(`${environvent.apiBaseURL}/projects`);
       const body = await response.text();
       const data: Project[] = JSON.parse(body, (key, value) => {
         if ((key === "startedAt" || key === "stoppedAt") && value !== undefined && value !== null) {
@@ -23,20 +20,13 @@ export class ProjectService {
       });
 
       return data;
-
-    } catch (error) {
-      throw(new Error(error));
-    }
+    });
   }
 
   async get(id: number): Promise<Project> {
     console.log(`api ---- ProjectService#get(${id})`);
-    try {
-      const response = await fetch(`${environvent.apiBaseURL}/projects/${id}`);
-      if (!response.ok) {
-        throw(new Error(response.statusText));
-      }
-
+    return fetchGuard(async () => {
+      const response = await fetchOK(`${environvent.apiBaseURL}/projects/${id}`);
       const body = await response.text();
       const data: Project = JSON.parse(body, (key, value) => {
         if ((key === "startedAt" || key === "stoppedAt") && value !== undefined && value !== null) {
@@ -47,9 +37,7 @@ export class ProjectService {
       });
 
       return data;
-    } catch (error) {
-      throw(new Error(error));
-    }
+    });
   }
 
   async update(id: number, attributes: {
@@ -58,8 +46,8 @@ export class ProjectService {
     action?: ProjectActions;
   }): Promise<number> {
     console.log(`api ---- ProjectService#update(${id}, ${Object.keys(attributes)}, ${Object.values(attributes)})`);
-    try {
-      const response = await fetch(`${environvent.apiBaseURL}/projects/${id}`, {
+    return fetchGuard(async () => {
+      const response = await fetchOK(`${environvent.apiBaseURL}/projects/${id}`, {
         headers: {
           'Content-Type': 'application/json'
         },
@@ -67,39 +55,27 @@ export class ProjectService {
         method: 'PATCH'
       });
 
-      if (!response.ok) {
-        throw new Error(response.statusText);
-      }
-
       return response.status;
-    } catch (error) {
-      throw new Error(error);
-    }
+    });
   }
 
   async delete(id: number) {
     console.log(`api ---- ProjectService#delete(${id})`);
-    try {
+    return fetchGuard(async () => {
       const response = await fetch(`${environvent.apiBaseURL}/projects/${id}`, {
         method: 'DELETE'
       });
 
-      if (!response.ok) {
-        throw new Error(response.statusText);
-      }
-
       return response.status;
-    } catch (error) {
-      throw new Error(error);
-    }
+    });
   }
 
   async create(attributes: {
     [K in keyof Project]?: Project[K];
   }): Promise<Project> {
     console.log(`api ---- ProjectService#create(${attributes})`);
-    try {
-      const response = await fetch(`${environvent.apiBaseURL}/projects`, {
+    return fetchGuard(async () => {
+      const response = await fetchOK(`${environvent.apiBaseURL}/projects`, {
         headers: {
           'Content-Type': 'application/json'
         },
@@ -107,15 +83,8 @@ export class ProjectService {
         method: 'POST'
       });
 
-      if (!response.ok) {
-        throw new Error(response.statusText);
-      }
-
       const created: Project = await response.json();
       return created;
-
-    } catch (error) {
-      throw new Error(error);
-    }
+    });
   }
 }

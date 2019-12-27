@@ -45,7 +45,7 @@ describe('JMeterService', () => {
     ])));
 
     const service = new JMeterService();
-    service.update(1, 100, {
+    await service.update(1, 100, {
       properties: new Map([["foo", "1"], ["bar", "2"], ["baz", "3"]])
     });
 

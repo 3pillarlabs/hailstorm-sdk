@@ -1,5 +1,5 @@
 import { ProjectService } from './ProjectService';
-import { Project } from '../domain';
+import { Project, ExecutionCycleStatus } from '../domain';
 import { subMinutes } from 'date-fns';
 
 describe('ProjectService', () => {
@@ -34,8 +34,33 @@ describe('ProjectService', () => {
   });
 
   it('should fetch a project', async () => {
-    const project: Project = {id: 1, code: 'a', title: 'A', running: false}
-    const responsePromise = Promise.resolve(new Response(new Blob([JSON.stringify(project)])));
+    const project: Project = {
+      id: 1,
+      code: 'a',
+      title: 'A',
+      running: false,
+      currentExecutionCycle: {
+        id: 123,
+        projectId: 1,
+        startedAt: subMinutes(new Date(), 45),
+        threadsCount: 100
+      },
+      lastExecutionCycle: {
+        id: 122,
+        projectId: 1,
+        startedAt: subMinutes(new Date(), 180),
+        stoppedAt: subMinutes(new Date(), 120),
+        threadsCount: 90,
+        responseTime: 12345.45,
+        status: ExecutionCycleStatus.STOPPED,
+        throughput: 123.67
+      }
+    };
+
+    const responsePromise = Promise.resolve(new Response(new Blob([JSON.stringify(project, (key: string, value: any) => (
+      value && value instanceof Date ? value.getMilliseconds() : value
+    ))])));
+
     const fetchSpy = jest.spyOn(window, 'fetch').mockReturnValue(responsePromise);
     const service = new ProjectService();
     const payload = await service.get(1);

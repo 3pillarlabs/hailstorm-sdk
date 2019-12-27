@@ -11,7 +11,8 @@ module Seed
           execution_cycle_idx: id_counter(205),
           project_idx: id_counter(8),
           report_idx: id_counter(4),
-          jmeter_plan_idx: id_counter(11)
+          jmeter_plan_idx: id_counter(11),
+          cluster_idx: id_counter(228)
       },
 
       projects: [
@@ -57,7 +58,8 @@ module Seed
                   projectId: 4,
                   threadsCount: 3000
               },
-              autoStop: true
+              autoStop: true,
+              incomplete: true
           },
           {
               id: 5,
@@ -131,6 +133,37 @@ module Seed
           {id: 5, name: 'acme-60-burst.jmx', properties: [["baz", "100"]], path: "12545", projectId: 4},
           {id: 6, name: 'hailstorm-basic.jmx', properties: [["users", "100"]], path: "12545", projectId: 6},
           {id: 7, name: 'cadent.jmx', properties: [["groups", "10"]], path: "12545", projectId: 7},
+      ],
+
+      clusters: [
+          {id: 223, title: 'AWS us-east-1', type: 'AWS', code: 'aws-223', projectId: 1},
+          {id: 224, title: 'AWS us-west-1', type: 'AWS', code: 'aws-224', projectId: 2},
+          {id: 225, title: 'AWS us-east-1', type: 'AWS', code: 'aws-225', projectId: 3},
+          {id: 226, title: 'AWS us-east-1', type: 'AWS', code: 'aws-226', projectId: 6},
+          {id: 227, title: 'AWS us-west-1', type: 'AWS', code: 'aws-227', projectId: 7},
+      ],
+
+      amazon_clouds: [
+          {
+              id: 223, accessKey: 'A', secretKey: 'S', instanceType: 't2.small', maxThreadsByInstance: 25,
+              region: 'us-east-1'
+          },
+          {
+              id: 224, accessKey: 'A', secretKey: 'S', instanceType: 'm5a.xlarge', maxThreadsByInstance: 1000,
+              region: 'us-west-1'
+          },
+          {
+              id: 225, accessKey: 'A', secretKey: 'S', instanceType: 'm5a.2xlarge', maxThreadsByInstance: 2000,
+              region: 'us-east-1'
+          },
+          {
+              id: 227, accessKey: 'A', secretKey: 'S', instanceType: 'm5a.xlarge', maxThreadsByInstance: 1000,
+              region: 'us-west-1'
+          }
+      ],
+
+      data_centers: [
+
       ]
   }
 end

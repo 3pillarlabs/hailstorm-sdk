@@ -5,7 +5,7 @@ import { AppState } from '../store';
 import { WizardTabTypes } from '../NewProjectWizard/domain';
 import { AppStateContext } from '../appStateContext';
 import { AWSInstanceChoiceOption, AWSRegionList } from './domain';
-import { ClusterService } from '../api';
+import { ClusterService } from "../services/ClusterService";
 import { AWSRegionService } from "../services/AWSRegionService";
 import { AWSEC2PricingService } from "../services/AWSEC2PricingService";
 import { render as renderComponent, fireEvent, wait} from '@testing-library/react';
@@ -36,7 +36,8 @@ describe('<ClusterConfiguration />', () => {
             { id: 10, name: 'a.jmx', properties: new Map([["foo", "10"]]) },
             { id: 11, name: 'a.csv', dataFile: true }
           ]
-        }
+        },
+        clusters: []
       },
 
       runningProjects: [],
@@ -88,8 +89,21 @@ describe('<ClusterConfiguration />', () => {
     );
   }
 
-  it('should render without crashing', () => {
-    render(createComponent());
+  function mockClusterList(list: AmazonCluster[]) {
+    const listPromise: Promise<AmazonCluster[]> = Promise.resolve(list);
+    return [jest.spyOn(ClusterService.prototype, 'list').mockReturnValue(listPromise), listPromise];
+  }
+
+  it('should render without crashing', async () => {
+    delete appState.activeProject!.clusters;
+    const [spy, listPromise] = mockClusterList([{
+      accessKey: 'A', instanceType: 't2.small', maxThreadsByInstance: 25, region: 'us-east-1', secretKey: 's', title: 'aws-us-east-1',
+      type: "AWS", code: 'aws-223', id: 223
+    } as AmazonCluster]);
+    const component = mount(createComponent());
+    component.update();
+    await listPromise;
+    expect(spy).toBeCalled();
   });
 
   describe('when no clusters have been added', () => {
@@ -101,8 +115,14 @@ describe('<ClusterConfiguration />', () => {
   });
 
   describe('when no cluster is active', () => {
-    it('should show empty message', () => {
+    it('should show empty message', async () => {
+      delete appState.activeProject!.clusters;
+      const [spy, listPromise] = mockClusterList([]);
       const component = mount(createComponent());
+      component.update();
+      await listPromise;
+      expect(spy).toBeCalled();
+      component.update();
       expect(component.text()).toMatch(/no clusters yet/i);
     });
 
@@ -185,13 +205,21 @@ describe('<ClusterConfiguration />', () => {
       expect(component).toContainExactlyOneMatchingElement('AWSRegionChoice');
     });
 
-    it('should remove an active cluster', () => {
+    it('should remove an active cluster', async () => {
+      delete appState.activeProject!.clusters;
+      const [spy, listPromise] = mockClusterList([]);
       const component = mount(createComponent());
+      component.update();
+      await listPromise;
+      expect(spy).toBeCalled();
+      component.update();
       const remove = component.find('button[role="Remove Cluster"]');
       remove.simulate('click');
       expect(dispatch).toBeCalled();
       appState.wizardState!.activeCluster = undefined;
       component.setProps({value: {appState, dispatch}});
+      component.update();
+      await listPromise;
       expect(component.text()).toMatch(/no clusters yet/i);
     });
 

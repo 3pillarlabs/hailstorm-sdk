@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { AppStateContext } from '../appStateContext';
 import { ClusterSetupCompletedAction } from '../NewProjectWizard/actions';
 import { CancelLink, BackLink } from '../NewProjectWizard/WizardControls';
@@ -8,15 +8,35 @@ import { selector } from '../NewProjectWizard/reducer';
 import { Project, Cluster, AmazonCluster, DataCenterCluster } from '../domain';
 import clusterStyles from './ClusterConfiguration.module.scss';
 import { ClusterList } from '../ClusterList';
-import { ActivateClusterAction, ChooseClusterOptionAction } from './actions';
+import { ActivateClusterAction, ChooseClusterOptionAction, SetClusterConfigurationAction } from './actions';
 import { AWSForm } from './AWSForm';
 import { AWSView } from './AWSView';
 import { DataCenterForm } from './DataCenterForm';
 import { DataCenterView } from './DataCenterView';
+import { ApiFactory } from '../api';
+import { Loader, LoaderSize } from '../Loader/Loader';
 
 export const ClusterConfiguration: React.FC = () => {
   const {appState, dispatch} = useContext(AppStateContext);
+  const [showLoader, setShowLoader] = useState(false);
   const state = selector(appState);
+
+  useEffect(() => {
+    if (state.activeProject && state.activeProject.clusters === undefined) {
+      setShowLoader(true);
+      ApiFactory()
+        .clusters()
+        .list(state.activeProject.id)
+        .then((clusters) => {
+          dispatch(new SetClusterConfigurationAction(clusters));
+          setShowLoader(false);
+        });
+    }
+  }, []);
+
+  if (showLoader) {
+    return (<Loader size={LoaderSize.APP} />);
+  }
 
   return (
     <>
