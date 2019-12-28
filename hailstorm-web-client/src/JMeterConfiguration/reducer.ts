@@ -117,6 +117,9 @@ export function reducer(state: NewProjectWizardState, action: JMeterConfiguratio
       const activeProject = {...state.activeProject!};
       if (activeProject.jmeter) {
         activeProject.jmeter.files = activeProject.jmeter.files.filter((value) => value.id !== action.payload.id);
+        if (activeProject.jmeter.files.some((value) => !value.dataFile) === false) {
+          activeProject.incomplete = true;
+        }
       }
 
       const wizardState = {...state.wizardState!};

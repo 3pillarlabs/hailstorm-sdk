@@ -81,7 +81,7 @@ const TopNavWithoutRouter: React.FC<RouteComponentProps> = ({location}) => {
 
           {!isLocationProjectList ? (
           <div className={`navbar-start ${styles.projectBar}`}>
-            <div className="has-text-info navbar-item">Running now</div>
+            {appState.runningProjects.length > 0 && (<div className="has-text-info navbar-item">Running now</div>)}
             <ProjectBar maxItems={5} runningProjects={appState.runningProjects} />
           </div>
           ) : null}

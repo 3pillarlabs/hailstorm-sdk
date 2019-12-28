@@ -192,6 +192,36 @@ describe('reducer', () => {
     expect(nextState.wizardState!.modifiedAfterReview).toBeTruthy();
   });
 
+  it('should mark a project as incomplete when the last cluster is removed', () => {
+    const cluster: Cluster = { id: 23, type: 'DataCenter', title: 'RACK 1' };
+    const jmeterFile = { id: 12, name: 'a.jmx', properties: new Map([["foo", "1"]]) };
+    const nextState = reducer({
+      activeProject: {
+        id: 1,
+        code: 'a',
+        title: 'A',
+        running: false,
+        clusters: [ cluster ],
+        jmeter: {
+          files: [ jmeterFile ]
+        }
+      },
+      wizardState: {
+        activeTab: WizardTabTypes.Cluster,
+        done: {
+          [WizardTabTypes.Project]: true,
+          [WizardTabTypes.JMeter]: true,
+          [WizardTabTypes.Cluster]: true,
+          [WizardTabTypes.Review]: true
+        },
+        activeCluster: { ...cluster },
+        activeJMeterFile: jmeterFile
+      }
+    }, new RemoveClusterAction({...cluster}));
+
+    expect(nextState.activeProject!.incomplete).toBeTruthy();
+  });
+
   it('should mark a completed project as modified if a cluster is added', () => {
     const cluster: Cluster = { id: 23, type: 'DataCenter', title: 'RACK 1' };
     const jmeterFile = { id: 12, name: 'a.jmx', properties: new Map([["foo", "1"]]) };

@@ -42,7 +42,7 @@ function projectItem(project: Project): JSX.Element {
       { running: runningTime(now, project.currentExecutionCycle!.startedAt) },
       { threads: project.currentExecutionCycle!.threadsCount }
     );
-  } else if (project.lastExecutionCycle) {
+  } else if (project.lastExecutionCycle && !project.incomplete) {
     stats.push(
       { started: format(project.lastExecutionCycle!.startedAt, 'MM/dd HH:mm') },
       { duration: runningTime(project.lastExecutionCycle.stoppedAt!, project.lastExecutionCycle!.startedAt) },

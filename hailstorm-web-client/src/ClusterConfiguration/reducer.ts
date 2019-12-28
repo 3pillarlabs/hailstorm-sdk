@@ -23,6 +23,7 @@ export function reducer(state: NewProjectWizardState, action: ClusterConfigurati
         activeProject.clusters = activeProject.clusters.filter((value) => value.id !== action.payload!.id);
         if (activeProject.clusters.length === 0) {
           activeProject.clusters = undefined;
+          activeProject.incomplete = true;
         }
       }
 

@@ -59,23 +59,19 @@ function StepHeader({
   dispatch: React.Dispatch<any>;
 }) {
   return (
-    <div className={`level ${styles.stepHeader}`}>
-      <div className="level-left">
-        <div className="level-item">
-          <h3 className="title is-3">{activeProject.title} &mdash; Clusters</h3>
-        </div>
+    <div className={`columns ${styles.stepHeader}`}>
+      <div className="column is-10">
+        <h3 className="title is-3">{activeProject.title} &mdash; Clusters</h3>
       </div>
-      <div className="level-right">
-        <div className="level-item">
-          <button
-            role="Add Cluster"
-            className="button is-link is-medium"
-            disabled={wizardState.activeCluster === undefined || wizardState.activeCluster.id === undefined}
-            onClick={() => dispatch(new ChooseClusterOptionAction())}
-          >
-            Add Cluster
-          </button>
-        </div>
+      <div className="column is-2">
+        <button
+          role="Add Cluster"
+          className="button is-link is-medium is-pulled-right"
+          disabled={wizardState.activeCluster === undefined || wizardState.activeCluster.id === undefined}
+          onClick={() => dispatch(new ChooseClusterOptionAction())}
+        >
+          Add Cluster
+        </button>
       </div>
     </div>
   );

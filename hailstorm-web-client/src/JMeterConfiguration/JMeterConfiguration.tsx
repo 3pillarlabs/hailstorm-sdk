@@ -54,12 +54,13 @@ export const JMeterConfiguration: React.FC = () => {
     return (<Loader size={LoaderSize.APP}/>);
   }
 
+  const state = selector(appState);
   return (
     <>
-    <StepHeader {...{state: appState, setDisableAbort, dispatch, handleFileUpload, setUploadAborted, uploadAborted}} />
+    <StepHeader {...{state, setDisableAbort, dispatch, handleFileUpload, setUploadAborted, uploadAborted}} />
     <div className={styles.stepBody}>
-      <StepContent {...{dispatch, state: appState, setShowModal, setUploadAborted, disableAbort}} />
-      <StepFooter {...{dispatch, state: appState}} />
+      <StepContent {...{dispatch, state, setShowModal, setUploadAborted, disableAbort}} />
+      <StepFooter {...{dispatch, state}} />
     </div>
     <FileRemoveConfirmation file={appState.wizardState!.activeJMeterFile!} {...{showModal, setShowModal, handleFileRemove}} />
     </>
@@ -82,42 +83,38 @@ function StepHeader({
   uploadAborted: boolean;
 }) {
   return (
-    <div className={`level ${styles.stepHeader}`}>
-      <div className="level-left">
-        <div className="level-item">
-          <h3 className="title is-3">{state.activeProject!.title} &mdash; JMeter</h3>
-        </div>
+    <div className={`columns ${styles.stepHeader}`}>
+      <div className="column is-10">
+        <h3 className="title is-3">{state.activeProject!.title} &mdash; JMeter</h3>
       </div>
-      <div className="level-right">
-        <div className="level-item">
-          <FileUpload
-            onAccept={(file) => {
-              setDisableAbort(true);
-              const dataFile: boolean = !file.name.match(/\.jmx$/);
-              dispatch(new AddJMeterFileAction({ name: file.name, dataFile }));
-              setTimeout(() => {
-                setDisableAbort(false);
-              }, UPLOAD_ABORT_ENABLE_DELAY_MS);
-            }}
-            onFileUpload={handleFileUpload}
-            onUploadError={(file, error) => {
-              dispatch(new AbortJMeterFileUploadAction({ name: file.name, uploadError: error }));
-              setUploadAborted(false);
-              setDisableAbort(true);
-            }}
+      <div className="column is-2">
+        <FileUpload
+          onAccept={(file) => {
+            setDisableAbort(true);
+            const dataFile: boolean = !file.name.match(/\.jmx$/);
+            dispatch(new AddJMeterFileAction({ name: file.name, dataFile }));
+            setTimeout(() => {
+              setDisableAbort(false);
+            }, UPLOAD_ABORT_ENABLE_DELAY_MS);
+          }}
+          onFileUpload={handleFileUpload}
+          onUploadError={(file, error) => {
+            dispatch(new AbortJMeterFileUploadAction({ name: file.name, uploadError: error }));
+            setUploadAborted(false);
+            setDisableAbort(true);
+          }}
+          disabled={isUploadInProgress(state.wizardState!.activeJMeterFile)}
+          abort={uploadAborted}
+          pathPrefix={state.activeProject!.id.toString()}
+        >
+          <button
+            className="button is-link is-medium is-pulled-right"
+            title="Upload .jmx and data files (like .csv)"
             disabled={isUploadInProgress(state.wizardState!.activeJMeterFile)}
-            abort={uploadAborted}
-            pathPrefix={state.activeProject!.id.toString()}
           >
-            <button
-              className="button is-link is-medium"
-              title="Upload .jmx and data files (like .csv)"
-              disabled={isUploadInProgress(state.wizardState!.activeJMeterFile)}
-            >
-              Upload
-            </button>
-          </FileUpload>
-        </div>
+            Upload
+          </button>
+        </FileUpload>
       </div>
     </div>
   );

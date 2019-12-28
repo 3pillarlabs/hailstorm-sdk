@@ -25,6 +25,8 @@ post '/projects/:project_id/jmeter_plans' do |project_id|
   jmeter_plan.merge!({properties: data['properties']}) if data['properties']
   jmeter_plan.merge!({dataFile: true}) if data['dataFile']
   Seed::DB[:jmeter_plans].push(jmeter_plan)
+  found_project.delete(:incomplete)
+
   JSON.dump(jmeter_plan)
 end
 
@@ -42,6 +44,10 @@ end
 
 delete '/projects/:project_id/jmeter_plans/:id' do |project_id, id|
   sleep 0.3
-  Seed::DB[:jmeter_plans].reject! { |jp| jp[:id] == id.to_i && jp[:projectId] == project_id.to_i }
+  found_project = Seed::DB[:projects].find { |p| p[:id] == project_id.to_i }
+  return not_found unless found_project
+
+  Seed::DB[:jmeter_plans].reject! { |jp| jp[:id] == id.to_i && jp[:projectId] == found_project[:id] }
+  found_project[:incomplete] = Seed::DB[:jmeter_plans].count { |jp| jp[:projectId] == found_project[:id] } == 0
   204
 end

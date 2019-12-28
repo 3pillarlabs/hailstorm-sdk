@@ -35,14 +35,6 @@ module Seed
               code: "acme_30_burst",
               title: "Acme 30 Burst",
               running: false,
-              lastExecutionCycle: {
-                  id: 10,
-                  startedAt: Time.now - 20.minutes,
-                  stoppedAt: Time.now,
-                  status: Hailstorm::Model::ExecutionCycle::States::STOPPED,
-                  projectId: 3,
-                  threadsCount: 25
-              },
               autoStop: false
           },
           {
@@ -50,14 +42,6 @@ module Seed
               code: "acme_60_burst",
               title: "Acme 60 Burst",
               running: false,
-              lastExecutionCycle: {
-                  id: 23,
-                  startedAt: Time.mktime(2019, 11, 31, 10, 40, 18, 489) - 45.minutes,
-                  stoppedAt: Time.mktime(2019, 11, 31, 10, 40, 18, 489),
-                  status: Hailstorm::Model::ExecutionCycle::States::ABORTED,
-                  projectId: 4,
-                  threadsCount: 3000
-              },
               autoStop: true,
               incomplete: true
           },
@@ -74,14 +58,6 @@ module Seed
               code: "hailstorm_basic",
               title: "Hailstorm Basic",
               running: false,
-              lastExecutionCycle: {
-                  id: 12,
-                  startedAt: Time.mktime(2019, 6, 30, 23, 30, 0, 897) - 4320.minutes,
-                  stoppedAt: Time.mktime(2019, 6, 30, 23, 30, 0, 897),
-                  status: Hailstorm::Model::ExecutionCycle::States::ABORTED,
-                  projectId: 6,
-                  threadsCount: 50
-              },
               autoStop: true
           },
           {
@@ -116,7 +92,33 @@ module Seed
               throughput: 12.34
           },
           {id: 203, projectId: 2, startedAt: Time.now - 15.minutes, threadsCount: 10},
-          {id: 204, projectId: 1, startedAt: Time.now - 5.minutes, threadsCount: 100}
+          {id: 204, projectId: 1, startedAt: Time.now - 5.minutes, threadsCount: 100},
+          {
+              id: 10,
+              projectId: 3,
+              startedAt: Time.now - 20.minutes,
+              stoppedAt: Time.now,
+              status: Hailstorm::Model::ExecutionCycle::States::STOPPED,
+              threadsCount: 50,
+              responseTime: 178.78,
+              throughput: 15.47
+          },
+          {
+              id: 23,
+              projectId: 4,
+              startedAt: Time.mktime(2019, 11, 31, 10, 40, 18, 489) - 45.minutes,
+              stoppedAt: Time.mktime(2019, 11, 31, 10, 40, 18, 489),
+              status: Hailstorm::Model::ExecutionCycle::States::ABORTED,
+              threadsCount: 3000
+          },
+          {
+              id: 12,
+              projectId: 6,
+              startedAt: Time.mktime(2019, 6, 30, 23, 30, 0, 897) - 4320.minutes,
+              stoppedAt: Time.mktime(2019, 6, 30, 23, 30, 0, 897),
+              status: Hailstorm::Model::ExecutionCycle::States::ABORTED,
+              threadsCount: 50
+          }
       ],
 
       reports: [
@@ -154,6 +156,10 @@ module Seed
           },
           {
               id: 225, accessKey: 'A', secretKey: 'S', instanceType: 'm5a.2xlarge', maxThreadsByInstance: 2000,
+              region: 'us-east-1'
+          },
+          {
+              id: 226, accessKey: 'A', secretKey: 'S', instanceType: 'm5a.2xlarge', maxThreadsByInstance: 2000,
               region: 'us-east-1'
           },
           {

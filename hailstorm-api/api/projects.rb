@@ -8,25 +8,25 @@ get '/projects' do
       # @type [Hash] project
       |project|
 
-    project_with_execution_cycle = project.clone
+    response_data = project.clone
     current_execution_cycle = Seed::DB[:executionCycles].find { |x| x[:projectId] == project[:id] && x[:stoppedAt].nil? }
     unless current_execution_cycle.nil?
-      project_with_execution_cycle[:currentExecutionCycle] = current_execution_cycle.clone
-      project_with_execution_cycle[:currentExecutionCycle][:startedAt] =
-          project_with_execution_cycle[:currentExecutionCycle][:startedAt].to_i * 1000
+      response_data[:currentExecutionCycle] = current_execution_cycle.clone
+      response_data[:currentExecutionCycle][:startedAt] =
+          response_data[:currentExecutionCycle][:startedAt].to_i * 1000
     end
 
-    unless project_with_execution_cycle[:lastExecutionCycle].nil?
-      project_with_execution_cycle[:lastExecutionCycle] = project_with_execution_cycle[:lastExecutionCycle].clone
-      project_with_execution_cycle[:lastExecutionCycle][:startedAt] =
-          project_with_execution_cycle[:lastExecutionCycle][:startedAt].to_i * 1000
-      if project_with_execution_cycle[:lastExecutionCycle][:stoppedAt]
-        project_with_execution_cycle[:lastExecutionCycle][:stoppedAt] =
-            project_with_execution_cycle[:lastExecutionCycle][:stoppedAt].to_i * 1000
-      end
+    last_execution_cycle = Seed::DB[:executionCycles]
+                               .select { |x| x[:projectId] == project[:id] && x[:stoppedAt] }
+                               .sort { |a, b| b[:stoppedAt].to_i <=> a[:stoppedAt].to_i }
+                               .first
+    if last_execution_cycle
+      response_data[:lastExecutionCycle] = last_execution_cycle.clone
+      response_data[:lastExecutionCycle][:startedAt] = last_execution_cycle[:startedAt].to_i * 1000
+      response_data[:lastExecutionCycle][:stoppedAt] = last_execution_cycle[:stoppedAt].to_i * 1000
     end
 
-    project_with_execution_cycle
+    response_data
   })
 end
 

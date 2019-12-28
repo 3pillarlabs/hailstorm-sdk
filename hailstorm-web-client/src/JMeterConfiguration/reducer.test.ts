@@ -353,6 +353,23 @@ describe('reducer', () => {
     expect(nextState.activeProject!.jmeter).toBeUndefined();
   });
 
+  it('should set active project as incomplete if there are no JMeter plans', () => {
+    const testPlan = { name: 'a.jmx', id: 10, properties: new Map([["foo", "10"]]) };
+    const dataFile = { name: 'a.csv', id: 11, dataFile: true };
+    const nextState = reducer({
+      activeProject: {id: 1, code: 'a', title: 'A', running: false, jmeter: { files: [testPlan, dataFile]}},
+      wizardState: {
+        activeTab: WizardTabTypes.JMeter,
+        done: {
+          [WizardTabTypes.Project]: true,
+        },
+        activeJMeterFile: testPlan
+      }
+    }, new RemoveJMeterFileAction(testPlan));
+
+    expect(nextState.activeProject!.incomplete).toBeTruthy();
+  });
+
   it('should set active file to being removed', () => {
     const nextState = reducer({
       activeProject: {id: 1, code: 'a', title: 'A', running: false, autoStop: false},
