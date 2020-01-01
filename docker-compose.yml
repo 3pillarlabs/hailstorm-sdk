@@ -22,9 +22,25 @@ services:
       - type: volume
         source: fileStore
         target: /hailstorm
+  
+  hailstorm-db:
+    image: "mysql:5"
+    hostname: "hailstorm-db"
+    ports:
+      - "3306:3306"
+    networks:
+      - hailstorm
+    volumes:
+      - type: volume
+        source: hailstorm-db-vol
+        target: /var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 'i r baboon'
 
 networks:
   dmz:
+  hailstorm:
 
 volumes:
   fileStore:
+  hailstorm-db-vol:

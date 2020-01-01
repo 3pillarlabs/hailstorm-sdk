@@ -19,7 +19,7 @@ module Hailstorm::Behavior::FileStore
     # application directory.
     #
     # @param [String] _project_code
-    # @return [String] Array of names.
+    # @return [Array<String>] Array of names.
     def fetch_jmeter_plans(_project_code)
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end

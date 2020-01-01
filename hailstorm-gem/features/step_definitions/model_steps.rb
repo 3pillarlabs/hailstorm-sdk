@@ -1,7 +1,7 @@
 # Steps invoked by initializing and calling Hailstorm
 include ModelHelper
 
-Given(/^(?:Hailstorm is initialized with a project '(.+?)'|the ['"]([^'"]*)['"] project(?:| is active))$/) do |project_code|
+Given(/^(?:Hailstorm is initialized with a project|the) ['"]([^'"]+)['"](?:| project(?:| is active))$/) do |project_code|
   require 'hailstorm/model/project'
   @project = find_project(project_code)
   require 'hailstorm/support/configuration'
@@ -20,7 +20,7 @@ end
 
 When(/^(?:I |)configure JMeter with following properties$/) do |table|
   @hailstorm_config.jmeter.properties do |map|
-    table.hashes.each { |kvp| map[kvp.keys.first] = kvp.values.first }
+    table.hashes.each { |kvp| map[kvp['property']] = kvp['value'].to_i }
   end
 end
 
@@ -46,8 +46,9 @@ When(/^(?:I |)configure following data centers?$/) do |table|
 end
 
 When(/^(?:I |)configure following amazon clusters$/) do |table|
+  access_key, secret_key = aws_keys
   table.hashes
-      .collect { |e| e.merge(cluster_type: :amazon_cloud) }
+      .collect { |e| e.merge(cluster_type: :amazon_cloud, access_key: access_key, secret_key: secret_key) }
       .each do |amz_attrs|
 
     # @type [Hailstorm::Support::Configuration] @hailstorm_config
@@ -91,6 +92,51 @@ When(/^(?:I |)generate a report$/) do
   @project.results(:report, config: @hailstorm_config)
 end
 
+When(/^import results from '(.+)'$/) do |jtl_path|
+  abs_jtl_path = File.expand_path(jtl_path, __FILE__)
+  @project.settings_modified = true
+  require 'hailstorm/behavior/file_store'
+  fs = Object.new.extend(Hailstorm::Behavior::FileStore)
+  class << fs
+    JMX_PATH = File.expand_path('../../data/hailstorm-site-basic.jmx', __FILE__)
+
+    attr_writer :jtl_path
+    attr_reader :report_path
+
+    def fetch_jmeter_plans(*_args)
+      ['hailstorm-site-basic']
+    end
+
+    def app_dir_tree(*_args)
+      { data: nil }.stringify_keys
+    end
+
+    def transfer_jmeter_artifacts(_project_code, to_dir_path)
+      FileUtils.cp(JMX_PATH, "#{to_dir_path}/hailstorm-site-basic.jmx")
+    end
+
+    def copy_jtl(_project_code, from_path:, to_path:)
+      jtl_file = File.basename(@jtl_path)
+      copied_path = "#{to_path}/#{jtl_file}"
+      FileUtils.cp(@jtl_path, copied_path)
+      copied_path
+    end
+
+    def export_report(_project_code, local_path)
+      file_name = File.basename(local_path)
+      export_path = File.expand_path('../../../build', __FILE__)
+      @report_path = File.join(export_path, file_name)
+      FileUtils.cp(local_path, @report_path)
+    end
+  end
+
+  fs.jtl_path = abs_jtl_path
+  Hailstorm.fs = fs
+  require 'hailstorm/middleware/command_execution_template'
+  template = Hailstorm::Middleware::CommandExecutionTemplate.new(@project, @hailstorm_config)
+  template.results(false, nil, :import, [[abs_jtl_path], nil])
+end
+
 Then(/^(\d+) (active |)load agents? should exist$/) do |expected_load_agent_count, active|
   require 'hailstorm/model/load_agent'
   query = Hailstorm::Model::LoadAgent
@@ -108,11 +154,11 @@ Then(/^(\d+) Jmeter instances? should be running$/) do |expected_pid_count|
 end
 
 Then /^(\d+) (total|reportable) execution cycles? should exist$/ do |expected_count, total|
-  conditions = { project: {id: @project.id} }
+  conditions = { projects: {id: @project.id} }
   conditions.merge!(status: 'stopped') if total.to_sym == :reportable
   expect(Hailstorm::Model::ExecutionCycle.joins(:project).where(conditions).count).to be == expected_count.to_i
 end
 
 Then(/^a report file should be created$/) do
-  pending
+  expect(File.exist?(Hailstorm.fs.report_path)).to be_true
 end

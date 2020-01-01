@@ -131,7 +131,11 @@ class Hailstorm::Model::Project < ActiveRecord::Base
 
   def results(operation, cycle_ids: nil, format: nil, config:)
     logger.debug { "#{self.class}##{__method__}" }
-    selected_execution_cycles = Hailstorm::Model::ExecutionCycle.execution_cycles_for_report(self, cycle_ids)
+    selected_execution_cycles = if operation != :import
+                                  Hailstorm::Model::ExecutionCycle.execution_cycles_for_report(self, cycle_ids)
+                                else
+                                  []
+                                end
     executor = ResultsOperationExecutor.new(self, cycle_ids, selected_execution_cycles, format)
     executor.logger = logger
     executor.config = config

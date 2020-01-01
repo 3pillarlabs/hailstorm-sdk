@@ -321,7 +321,6 @@ describe Hailstorm::Model::Project do
         project = Hailstorm::Model::Project.create!(project_code: 'product_spec')
         project.stub!(:setup)
         project.settings_modified = false
-        Hailstorm::Model::ExecutionCycle.stub!(:execution_cycles_for_report).and_return([])
         exec_cycle = mock(Hailstorm::Model::ExecutionCycle)
         project.execution_cycles.stub(:where).and_return([exec_cycle])
 
@@ -347,7 +346,6 @@ describe Hailstorm::Model::Project do
       end
 
       it 'should import from results_import_dir' do
-        Hailstorm::Model::ExecutionCycle.stub!(:execution_cycles_for_report)
         jtl_path = File.join(RSpec.configuration.build_path, 'a.jtl')
         FileUtils.touch(jtl_path)
         project = Hailstorm::Model::Project.new(project_code: 'project_spec')
