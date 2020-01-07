@@ -17,7 +17,7 @@ ENV['HAILSTORM_ENV'] = 'cucumber'
 
 connection_spec = {
   adapter: 'jdbcmysql',
-  database: "hailstorm_#{ENV['HAILSTORM_ENV']}",
+  database: "hailstorm_gem_#{ENV['HAILSTORM_ENV']}",
   username: 'hailstorm_dev',
   password: 'hailstorm_dev'
 }
@@ -34,5 +34,3 @@ Hailstorm::Support::Schema.create_schema
 def data_path
   @data_path ||= File.expand_path('../../data', __FILE__)
 end
-
-Dir['lib/*.rb'].each { |helper| load(helper) }

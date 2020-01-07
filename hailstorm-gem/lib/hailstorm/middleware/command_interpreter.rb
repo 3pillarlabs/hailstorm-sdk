@@ -52,10 +52,11 @@ class Hailstorm::Middleware::CommandInterpreter
       options = args.last
       ca = (options[:args] || []).join(' ')
       command = "#{options[:command]} #{ca}".strip.to_sym
-      format = options[:format].to_s.to_sym
+      format = options[:format].to_s.to_sym if options[:format]
     else
       command = args.last.to_sym
     end
+    logger.debug { [command, format] }
     [command, format]
   end
 

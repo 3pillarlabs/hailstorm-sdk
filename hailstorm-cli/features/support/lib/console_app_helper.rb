@@ -1,7 +1,5 @@
 require 'pty'
 
-require 'active_support/all'
-
 module ConsoleAppHelper
 
   mattr_accessor :read_fd_hailstorm_pty, :write_fd_hailstorm_pty, :pid_hailstorm_pty
@@ -13,7 +11,7 @@ module ConsoleAppHelper
     self.class.read_fd_hailstorm_pty = r
     self.class.write_fd_hailstorm_pty = w
     self.class.pid_hailstorm_pty = pid
-    Process.detach(pid)
+    # Process.detach(pid)
   end
 
   def hailstorm_spawned?(pid = false)
@@ -23,11 +21,12 @@ module ConsoleAppHelper
 
   def write_hailstorm_pty(str, no_response = false)
     self.class.write_fd_hailstorm_pty.puts(str)
-    read_hailstorm_pty unless no_response
+    # sleep 3
+    # read_hailstorm_pty unless no_response
   end
 
   def read_hailstorm_pty
-    self.class.read_fd_hailstorm_pty.read_nonblock(2048)
+    self.class.read_fd_hailstorm_pty.read_nonblock(4096) rescue ''
   end
 
   def hailstorm_exit_ok?

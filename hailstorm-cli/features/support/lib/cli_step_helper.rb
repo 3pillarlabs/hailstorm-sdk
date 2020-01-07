@@ -1,10 +1,10 @@
 module CliStepHelper
   def tmp_path
-    File.expand_path('../../../build', __FILE__)
+    File.expand_path('../../../../build', __FILE__)
   end
 
   def data_path
-    File.expand_path('../../data', __FILE__)
+    File.expand_path('../../../data', __FILE__)
   end
 
   def current_project(new_project = nil)

@@ -1,10 +1,10 @@
-require 'rubygems'
 require 'bundler/setup'
-require 'simplecov'
+require 'active_support/all'
+require 'cucumber/rspec/doubles'
 
-$LOAD_PATH.push(File.expand_path('../../lib', __FILE__))
-$CLASSPATH << File.expand_path('../../data', __FILE__)
+BUILD_PATH = File.join(File.expand_path('../../../..', __FILE__), 'build').freeze
+FileUtils.rm_rf(BUILD_PATH)
+FileUtils.mkdir_p(BUILD_PATH)
+
 ENV['HAILSTORM_ENV'] = 'cucumber'
 
-require 'hailstorm/initializer'
-require 'hailstorm/initializer/eager_load'

@@ -55,6 +55,10 @@ describe Hailstorm::Middleware::CommandInterpreter do
         args = { args: %w[export 1-3], command: 'results', format: 'json' }
         expect(@app.interpret_command(args)).to eq [:results, false, :json, :export, [1, 2, 3]]
       end
+
+      it 'should interpret command' do
+        expect(@app.interpret_command({command: 'help'})).to eq([:help])
+      end
     end
     context 'help' do
       it 'should interpret \'help\'' do

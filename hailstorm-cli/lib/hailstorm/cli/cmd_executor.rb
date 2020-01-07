@@ -2,9 +2,11 @@ require 'hailstorm/cli'
 require 'hailstorm/cli/help_doc'
 require 'hailstorm/cli/view_renderer'
 require 'hailstorm/middleware/command_execution_template'
+require 'hailstorm/behavior/loggable'
 
 # Command executor for CLI
 class Hailstorm::Cli::CmdExecutor
+  include Hailstorm::Behavior::Loggable
 
   attr_reader :middleware
   attr_reader :project
@@ -33,6 +35,7 @@ class Hailstorm::Cli::CmdExecutor
       method_args[3] = find_files(*method_args[3]) if method_args[2] == :import # command is 'results import [jmeter=1]'
     end
     values = command_execution_template.send(method_name, *method_args)
+    logger.debug { ['command_execution_template', method_name, *method_args] }
     render_method = "render_#{method_name}".to_sym
     render_args = values.is_a?(Array) ? values : [values]
     if view_renderer.respond_to?(render_method)
@@ -78,7 +81,7 @@ class Hailstorm::Cli::CmdExecutor
 
   private
 
-  def find_files(file_path, options)
+  def find_files(file_path = nil, options = nil)
     if file_path.nil?
       glob = File.join(Hailstorm.root, Hailstorm.results_import_dir, '*.jtl')
       [Dir[glob].sort, options]
