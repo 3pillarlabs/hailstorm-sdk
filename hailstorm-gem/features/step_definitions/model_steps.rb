@@ -14,6 +14,7 @@ When(/^the JMeter version for the project is '(.+?)'$/) do |jmeter_version|
 end
 
 When(/^(?:the |)[jJ][mM]eter installer URL for the project is '(.+?)'$/) do |jmeter_installer_url|
+  @project.jmeter_version = nil
   @project.custom_jmeter_installer_url = jmeter_installer_url
   @project.send(:set_defaults)
 end

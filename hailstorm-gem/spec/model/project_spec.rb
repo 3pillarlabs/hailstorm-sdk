@@ -22,6 +22,15 @@ describe Hailstorm::Model::Project do
         expect(project.project_code).to be == 'z_x_a_0b_c_txt'
       end
     end
+
+    context 'with :custom_jmeter_installer_url' do
+      it 'should extract the JMeter version' do
+        project = Hailstorm::Model::Project.new(project_code: 'project_spec',
+                                                custom_jmeter_installer_url: 'http://whodunit.org/my-jmeter-3.2_rhode.tgz')
+        project.save!
+        expect(project.jmeter_version).to eq '3.2_rhode'
+      end
+    end
   end
 
   context '#setup' do

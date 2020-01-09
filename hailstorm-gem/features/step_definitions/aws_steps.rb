@@ -34,13 +34,14 @@ end
 
 Then(/^installed JMeter version should be '(.+?)'$/) do |expected_jmeter_version|
   require 'hailstorm/support/ssh'
-  jmeter_version_out = nil
-  Hailstorm::Support::SSH.start(@load_agent.public_ip_address, @aws.user_name, @aws.ssh_options) do |ssh|
-    ssh.exec!("$HOME/jmeter/bin/jmeter --version | grep '3.2'") do |ch, stream, data|
-      jmeter_version_out = data if stream == :stdout
+  jmeter_version_out = ''
+  Hailstorm::Support::SSH.start((@load_agent || @ec2_instance).public_ip_address, @aws.user_name, @aws.ssh_options) do |ssh|
+    ssh.exec!("$HOME/jmeter/bin/jmeter --version | grep '3.2'") do |_ch, stream, data|
+      jmeter_version_out << data if stream == :stdout
     end
   end
-  expect(jmeter_version_out).to_not be_nil
+
+  expect(jmeter_version_out).to_not be_blank
   expect(jmeter_version_out).to include(expected_jmeter_version)
 end
 
@@ -110,4 +111,17 @@ And(/^an agent AMI '(.+?)' exists$/) do |agent_ami|
   ami_ids = avail_amis.collect(&:id)
   expect(ami_ids).to include(agent_ami)
   @aws.agent_ami = agent_ami
+end
+
+Then(/^Java must be installed$/) do
+  require 'hailstorm/support/ssh'
+  java_cmd_out = ''
+  Hailstorm::Support::SSH.start(@ec2_instance.public_ip_address, @aws.user_name, @aws.ssh_options) do |ssh|
+    ssh.exec!("java -version") do |_ch, _stream, data|
+      java_cmd_out << data
+    end
+  end
+
+  expect(java_cmd_out).to_not be_blank
+  expect(java_cmd_out).to match(/1\.8/)
 end
