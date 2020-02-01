@@ -68,6 +68,7 @@ if [ ! -e $vagrant_user_home/insecure_key.pub ]; then
 	sudo -u $vagrant_user mkdir -p $vagrant_user_home/.ssh
 	sudo -u $vagrant_user chmod 700 $vagrant_user_home/.ssh
 	sudo -u $vagrant_user cat /vagrant/setup/hailstorm-site/insecure_key.pub >> $vagrant_user_home/.ssh/authorized_keys
+	chown $vagrant_user:$vagrant_user $vagrant_user_home/.ssh/authorized_keys
 	sudo -u $vagrant_user chmod 400 $vagrant_user_home/.ssh/authorized_keys
 	sudo -u $vagrant_user cp /vagrant/setup/hailstorm-site/insecure_key.pub $vagrant_user_home/.
 fi

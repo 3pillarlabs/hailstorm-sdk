@@ -116,7 +116,7 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
         needs_term = true
 
       else
-        raise(Hailstorm::Exception, "Jmeter is still running! Run 'abort' if you really mean to stop.")
+        raise(Hailstorm::JMeterRunningException)
       end
     else
       update_pid = true

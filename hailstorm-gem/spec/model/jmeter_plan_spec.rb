@@ -11,6 +11,7 @@ describe Hailstorm::Model::JmeterPlan do
   def app_file_fixture
     io = File.open(SOURCE_JMX_PATH, 'r')
     mock_workspace = mock(Hailstorm::Support::Workspace)
+    mock_workspace.stub!(:create_file_layout)
     mock_workspace.stub!(:open_app_file).and_yield(io)
     Hailstorm.stub!(:workspace).and_return(mock_workspace)
     [io, mock_workspace]

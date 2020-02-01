@@ -1,4 +1,4 @@
-Feature: Process commands
+Feature: Process commands one at a time
 
   Background: CLI project is already created
     Given I have Hailstorm installed
@@ -6,12 +6,27 @@ Feature: Process commands
     And the "console_app" command line processor is ready
 
 
-  Scenario: Import results by specifying path to *.jtl files
-    Given I have a log file on the local filesystem
-    When I import results from 'jmeter_log_sample.jtl'
-    Then the log file should be imported
+  Scenario: See current setup
+    When I capture the output of the command "show"
+    Then output should be shown
 
-  Scenario: Import results from log files in import directory
-    Given I have a log file in import directory
-    When I import results
-    Then the log file should be imported
+  Scenario: Setup with inactive cluster and monitoring
+    When I configure JMeter with following properties
+      | property       | value |
+      | NumUsers       |    10 |
+      | Duration       |   180 |
+      | RampUp         |     0 |
+    And configure following amazon clusters
+      | region    | max_threads_per_agent |  active |
+      | us-east-1 |                       |  false  |
+    And finalize the configuration
+    And capture the output of the command "setup"
+    Then output should be shown
+
+  Scenario: View active elements
+    When I capture the output of the command "show"
+    Then output should not be shown matching "us-east-1"
+
+  Scenario: View all elements
+    When I capture the output of the command "show all"
+    Then output should be shown matching "us-east-1"

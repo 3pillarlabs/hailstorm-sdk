@@ -9,9 +9,7 @@ Given(/^'(.+?)' is up and accessible in AWS region '(.+?)'$/) do |instance_tagge
 end
 
 
-Given(/^'Hailstorm Site' is up and accessible at an IP address$/) do
-  site_ip = File.read(local_site_ip_path)
-  expect(site_ip).to_not be_nil
+Given(/^'Hailstorm Site' is up and accessible at "([^"]+)"$/) do |site_ip|
   res = Net::HTTP.get_response(URI("http://#{site_ip}"))
   expect(res).to be_kind_of(Net::HTTPSuccess)
   write_site_server_url(site_ip)

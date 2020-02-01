@@ -1,0 +1,1 @@
+- [Bug] ``results`` fails in random ways if log collection was not successful for some reason when tests are stopped.

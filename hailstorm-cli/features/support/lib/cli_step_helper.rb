@@ -1,6 +1,6 @@
 module CliStepHelper
   def tmp_path
-    File.expand_path('../../../../build', __FILE__)
+    build_path
   end
 
   def data_path
@@ -8,7 +8,7 @@ module CliStepHelper
   end
 
   def current_project(new_project = nil)
-    @current_project ||= new_project
+    @app_name ||= new_project
   end
 
   def jmeter_properties(hashes = nil)
@@ -44,7 +44,7 @@ module CliStepHelper
     engine.assign(:properties => jmeter_properties.push(site_server_property),
                   :clusters => clusters,
                   :monitor_host => site_server_url,
-                  :monitor_active => monitor_active)
+                  :monitor_active => monitor_active || false)
     File.open(File.join(tmp_path, current_project,
                         Hailstorm.config_dir, 'environment.rb'), 'w') do |env_file|
       env_file.print(engine.render(:file => File.join(data_path, 'environment')))
@@ -62,32 +62,16 @@ module CliStepHelper
     }
   end
 
-  def tagged_instance(tag_value, region = 'us-east-1', status = :running, tag_key = :Name)
-    require 'aws-sdk-v1'
-    config = {}
-    config[:access_key_id], config[:secret_access_key] = aws_keys()
-    @ec2 = AWS::EC2.new(config).regions[region]
-    @ec2.instances
-        .select {|instance| instance.status == status }
-        .find {|instance| instance.tags[tag_key] =~ Regexp.new(tag_value, Regexp::IGNORECASE)}
-  end
-
   def site_server_url_path
     File.join(tmp_path, 'site_server.txt')
-  end
-
-  def write_site_server_url(server_name)
-    require 'fileutils'
-    FileUtils.mkdir_p(File.dirname(site_server_url_path))
-    File.open(site_server_url_path, 'w') do |file|
-      file.print(server_name)
-    end
   end
 
   def site_server_url
     File.open(site_server_url_path) do |file|
       file.read.chomp
     end
+  rescue Errno::ENOENT
+    'integration.hailstorm.org'
   end
 
   def local_site_ip_path

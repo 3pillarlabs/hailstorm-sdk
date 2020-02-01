@@ -5,3 +5,7 @@
 <%= view_item.terminal_table %>
 
 <%- end %>
+<%- if @clustered_load_agents.size == 0 %>
+  None
+
+<%- end %>

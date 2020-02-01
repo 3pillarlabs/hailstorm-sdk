@@ -36,6 +36,8 @@ class Hailstorm::Model::Project < ActiveRecord::Base
 
   after_initialize { |project| project.settings_modified = false }
 
+  after_create :create_workspace
+
   # Sets up the project for first time or subsequent use
   # @param [Boolean] force
   # @param [Boolean] invoked_from_start
@@ -52,6 +54,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       configure_clusters(config, force)
       configure_target_hosts(config)
       self.reload
+      self.settings_modified = false
     rescue Exception
       self.update_column(:serial_version, nil)
       raise
@@ -75,9 +78,11 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       rescue Exception
         self.current_execution_cycle.aborted!
         raise
+      ensure
+        self.reload
       end
-      self.reload
     end
+
     self.current_execution_cycle.started!
 
     begin
@@ -86,6 +91,8 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     rescue Exception
       self.current_execution_cycle.aborted!
       raise
+    ensure
+      self.reload
     end
   end
 
@@ -94,6 +101,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     logger.debug { "#{self.class}##{__method__}" }
     raise(Hailstorm::ExecutionCycleNotExistsException) if current_execution_cycle.nil?
 
+    stop_target_monitoring = true
     begin
       Hailstorm::Model::Cluster.stop_load_generation(self, wait, options, aborted)
       # Update the stopped_at now, so that target monitoring
@@ -104,14 +112,23 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       else
         current_execution_cycle.aborted!
       end
-    rescue Exception
-      current_execution_cycle.aborted!
+
+    rescue Exception => exception
+      if exception.is_a?(Hailstorm::ThreadJoinException) and
+          exception.exceptions.all? { |ex| ex.is_a?(Hailstorm::JMeterRunningException) }
+        stop_target_monitoring = false
+      else
+        current_execution_cycle.aborted!
+      end
+
       raise
     ensure
       Hailstorm::Model::TargetHost
         .stop_all_monitoring(self,
                              current_execution_cycle,
-                             create_target_stat: !(aborted || current_execution_cycle.aborted?))
+                             create_target_stat: !(aborted ||
+                                 current_execution_cycle.aborted?)) if stop_target_monitoring
+      self.reload
     end
   end
 
@@ -127,6 +144,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     Hailstorm::Model::TargetHost.terminate(self)
     current_execution_cycle.terminated! unless current_execution_cycle.nil?
     self.update_column(:serial_version, nil)
+    self.reload
   end
 
   def results(operation, cycle_ids: nil, format: nil, config:)
@@ -210,6 +228,10 @@ class Hailstorm::Model::Project < ActiveRecord::Base
                               strategy_klass.extract_jmeter_version(self.custom_jmeter_installer_url)
                             end
     self.project_code.gsub!(/[\W]+/, '_')
+  end
+
+  def create_workspace
+    Hailstorm.workspace(self.project_code).create_file_layout
   end
 
   # Executes results operations

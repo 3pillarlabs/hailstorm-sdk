@@ -147,7 +147,7 @@ module Hailstorm::Behavior::Clusterable
             agent_instance.save!
             mutex.synchronize { activated_agents.push(agent_instance) }
           rescue Hailstorm::Exception => e
-            logger.warn(e)
+            logger.warn(e.message)
           end
         end
       else
@@ -156,7 +156,7 @@ module Hailstorm::Behavior::Clusterable
           agent.save!
           activated_agents.push(agent)
         rescue Hailstorm::Exception => e
-          logger.warn(e)
+          logger.warn(e.message)
         end
       end
     end

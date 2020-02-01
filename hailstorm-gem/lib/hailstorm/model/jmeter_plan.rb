@@ -24,10 +24,6 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
 
   JTL_FILE_EXTN = 'jtl'.freeze
 
-  APP_DIR = 'jmeter'.freeze
-
-  LOG_DIR = 'log'.freeze
-
   belongs_to :project
 
   has_many :load_agents, dependent: :nullify
@@ -246,7 +242,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
       logger.debug { "#{self.class}##{__method__}" }
       layout = {}
       layout[self.project.project_code] = {}
-      layout[self.project.project_code][LOG_DIR] = nil
+      layout[self.project.project_code][Hailstorm.log_dir] = nil
       layout[self.project.project_code].merge!(Hailstorm.fs.app_dir_tree(self.project.project_code))
       layout
     end
@@ -267,7 +263,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     end
 
     def remote_log_dir
-      @remote_log_dir ||= [self.project.project_code, LOG_DIR].join('/')
+      @remote_log_dir ||= [self.project.project_code, Hailstorm.log_dir].join('/')
     end
 
     def remote_log_file(slave = false, execution_cycle = nil)
@@ -283,12 +279,12 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
 
     def remote_working_dir
       # FIXME: use File.dirname(test_plan_path)
-      [self.project.project_code, APP_DIR, File.dirname("#{self.test_plan_name}.jmx")].join('/')
+      [self.project.project_code, Hailstorm.app_dir, File.dirname("#{self.test_plan_name}.jmx")].join('/')
     end
 
     def remote_test_plan
       # FIXME: use File.dirname(test_plan_path)
-      [self.project.project_code, APP_DIR, "#{self.test_plan_name}.jmx"].join('/')
+      [self.project.project_code, Hailstorm.app_dir, "#{self.test_plan_name}.jmx"].join('/')
     end
   end
 

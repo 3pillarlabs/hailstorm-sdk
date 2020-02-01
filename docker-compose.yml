@@ -10,6 +10,7 @@ services:
       true
     depends_on:
       - file-server
+      - hailstorm-db
 
   file-server:
     image: "hailstorm/hailstorm-file-server"
@@ -36,7 +37,7 @@ services:
         target: /var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: 'i r baboon'
-
+  
 networks:
   dmz:
   hailstorm:

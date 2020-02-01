@@ -3,3 +3,4 @@ build/
 .ruby-version
 coverage/
 .jrubyrc
+keys.yml

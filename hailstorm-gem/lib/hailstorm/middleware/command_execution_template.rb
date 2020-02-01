@@ -6,8 +6,8 @@ class Hailstorm::Middleware::CommandExecutionTemplate
 
   include Hailstorm::Behavior::Loggable
 
-  attr_reader :model_delegate
-  attr_reader :config
+  attr_accessor :model_delegate
+  attr_accessor :config
 
   # @param [Object] new_model_delegate
   # @param [Hailstorm::Support::Configuration] new_config

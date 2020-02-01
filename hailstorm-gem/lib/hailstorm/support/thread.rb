@@ -1,5 +1,6 @@
 require 'hailstorm/support'
 require 'hailstorm/behavior/loggable'
+require 'hailstorm/exceptions'
 
 # Wrapper class providing convenient access and application specific handling
 # @author Sayantam Dey
@@ -17,7 +18,7 @@ class Hailstorm::Support::Thread
       begin
         yield(*thread_args)
       rescue Object => e
-        logger.error(e.message)
+        logger.error(e.message) unless e.is_a?(Hailstorm::Exception)
         logger.debug { "\n".concat(e.backtrace.join("\n")) }
         raise
       ensure

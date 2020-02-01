@@ -14,7 +14,7 @@ class Hailstorm::LocalFileStore
   end
 
   # pick app sub-directories
-  def app_dir_tree
+  def app_dir_tree(_project_code = nil)
     tree_dir(File.join(Hailstorm.root, Hailstorm.app_dir))
   end
 
@@ -104,7 +104,9 @@ class Hailstorm::LocalFileStore
 
   def copy_jtl(_project_code, from_path:, to_path:)
     file_name = File.basename(from_path)
-    FileUtils.cp(from_path, File.join(to_path, file_name))
+    copied_path = File.join(to_path, file_name)
+    FileUtils.cp(from_path, copied_path)
+    copied_path
   end
 
   def export_report(_project_code, local_path)

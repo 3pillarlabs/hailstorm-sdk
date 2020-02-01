@@ -881,4 +881,96 @@ describe Hailstorm::Model::AmazonCloud do
       end
     end
   end
+
+  context '#create_or_enable' do
+    context 'with 1 existing load agent' do
+      context 'with 2 load agents needed' do
+        it 'should create 1 new load agent' do
+          stub_aws!(@aws)
+          @aws.stub!(:start_agent)
+          @aws.project = Hailstorm::Model::Project.create!(project_code: 'amazon_cloud_spec')
+          @aws.access_key = 'foo'
+          @aws.secret_key = 'bar'
+          @aws.max_threads_per_agent = 25
+          @aws.save!
+
+          jmeter_plan = Hailstorm::Model::JmeterPlan.create!(
+              project: @aws.project,
+              test_plan_name: 'sample',
+              content_hash: 'A',
+              active: false
+          )
+
+          jmeter_plan.update_column(:active, true)
+
+          Hailstorm::Model::LoadAgent.any_instance.stub(:upload_scripts)
+          agent = Hailstorm::Model::MasterAgent.create!(
+            clusterable_id: @aws.id,
+            clusterable_type: @aws.class.name,
+            jmeter_plan: jmeter_plan
+          )
+
+          jmeter_plan.stub!(:num_threads).and_return(30)
+
+          @aws.create_or_enable({ jmeter_plan_id: jmeter_plan.id, active: true }, jmeter_plan, :master_agents)
+
+          expect(Hailstorm::Model::MasterAgent.count).to eq(2)
+          expect(Hailstorm::Model::MasterAgent.all.map(&:id)).to include(agent.id)
+        end
+      end
+    end
+  end
+
+  context '#provision_agents' do
+    context 'when reconfiguring with multiple JMeter plans and load agents in a cluster' do
+      it 'should start the correct load agents' do
+        Hailstorm::Model::JmeterPlan.any_instance.stub(:num_threads).and_return(50)
+        Hailstorm::Model::LoadAgent.any_instance.stub(:upload_scripts)
+        stub_aws!(@aws)
+        @aws.unstub!(:provision_agents)
+
+        @aws.stub!(:start_agent)
+        @aws.project = Hailstorm::Model::Project.create!(project_code: 'amazon_cloud_spec')
+        @aws.access_key = 'foo'
+        @aws.secret_key = 'bar'
+        @aws.max_threads_per_agent = 50
+        @aws.save!
+
+        jmeter_plan_1 = Hailstorm::Model::JmeterPlan.create!(
+            project: @aws.project,
+            test_plan_name: 'sample A',
+            content_hash: 'A',
+            active: false
+        )
+
+        jmeter_plan_1.update_column(:active, true)
+
+        jmeter_plan_2 = Hailstorm::Model::JmeterPlan.create!(
+            project: @aws.project,
+            test_plan_name: 'sample B',
+            content_hash: 'B',
+            active: false
+        )
+
+        jmeter_plan_2.update_column(:active, true)
+
+        @aws.update_column(:active, true)
+        @aws.provision_agents
+        expect(Hailstorm::Model::MasterAgent.count).to be == 2
+
+        jmeter_plan_2.update_attribute(:active, false)
+
+        @aws.update_column(:active, false)
+        @aws.max_threads_per_agent = 25
+        @aws.save!
+
+        @aws.update_column(:active, true)
+        @aws.provision_agents
+        expect(Hailstorm::Model::MasterAgent.count).to be == 3
+        expect(Hailstorm::Model::MasterAgent.where(jmeter_plan_id: jmeter_plan_2.id).count).to be == 1
+        expect(Hailstorm::Model::MasterAgent.where(jmeter_plan_id: jmeter_plan_2.id).first).to_not be_active
+        expect(Hailstorm::Model::MasterAgent.where(jmeter_plan_id: jmeter_plan_1.id, active: true).count).to be == 2
+      end
+    end
+  end
 end

@@ -19,7 +19,7 @@ require 'hailstorm/support/thread'
 require 'hailstorm/support/log4j_backed_logger'
 require 'hailstorm/behavior/file_store'
 
-ENV['HAILSTORM_ENV'] = 'test'
+ENV['HAILSTORM_ENV'] = 'test' unless ENV['HAILSTORM_ENV']
 
 # disable threading in unit tests
 class Hailstorm::Support::Thread
@@ -28,7 +28,7 @@ class Hailstorm::Support::Thread
   end
 end
 
-BUILD_PATH = File.join(File.expand_path('../..', __FILE__), 'build').freeze
+BUILD_PATH = File.join(File.expand_path('../..', __FILE__), 'build', 'spec').freeze
 FileUtils.rm_rf(BUILD_PATH)
 FileUtils.mkdir_p(BUILD_PATH)
 
@@ -47,7 +47,7 @@ RSpec.configure do |config|
   config.prepend_before(:suite) do
     connection_spec = {
       adapter: 'jdbcmysql',
-      database: ENV['HAILSTORM_SPEC_DB'] || 'hailstorm_test',
+      database: "hailstorm_#{ENV['HAILSTORM_ENV']}",
       username: 'hailstorm_dev',
       password: 'hailstorm_dev'
     }
@@ -63,6 +63,10 @@ RSpec.configure do |config|
     end
 
     Hailstorm::Support::Schema.create_schema
+
+    at_exit do
+      ActiveRecord::Base.connection.disconnect! if ActiveRecord::Base.connected?
+    end
   end
 
   config.append_after(:suite) do

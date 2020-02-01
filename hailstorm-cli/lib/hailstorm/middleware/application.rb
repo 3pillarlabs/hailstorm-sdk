@@ -59,6 +59,7 @@ class Hailstorm::Middleware::Application
     Hailstorm::Support::Schema.create_schema
   ensure
     ActiveRecord::Base.clear_all_connections!
+    at_exit { ActiveRecord::Base.connection.disconnect! if ActiveRecord::Base.connected? }
   end
 
   # Writer for @connection_spec
@@ -89,7 +90,7 @@ class Hailstorm::Middleware::Application
   private
 
   def database_name
-    @database_name ||= Hailstorm.production? ? 'hailstorm_production' : 'hailstorm_development'
+    @database_name ||= "hailstorm_#{Hailstorm.env}"
   end
 
   def create_database_if_not_exists

@@ -7,3 +7,4 @@ vagrant-site.yml
 .DS_Store
 cc-test-reporter
 coverage-overall/
+.python-version

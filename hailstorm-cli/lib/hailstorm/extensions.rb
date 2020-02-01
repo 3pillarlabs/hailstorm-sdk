@@ -50,15 +50,6 @@ module Hailstorm
     'db'
   end
 
-  # Directory name for application specific (JMeter) artifacts
-  def self.app_dir
-    'jmeter'
-  end
-
-  def self.log_dir
-    'log'
-  end
-
   def self.tmp_dir
     'tmp'
   end
@@ -89,10 +80,6 @@ module Hailstorm
 
   def self.environment_file_path
     File.join(self.root, self.config_dir, 'environment.rb')
-  end
-
-  def self.env
-    (ENV['HAILSTORM_ENV'] || PRODUCTION_ENV).to_sym
   end
 
   def self.results_import_dir

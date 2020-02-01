@@ -20,6 +20,7 @@ class Hailstorm::Cli::ViewTemplate
   def render_load_agents(enumerable, only_active = true)
     clustered_load_agents = []
     enumerable.each do |cluster|
+      next if only_active && !cluster.cluster_instance.active
       clustered_load_agents.push(clusterable_to_view_model(cluster, only_active))
     end
     render_view('cluster', clustered_load_agents: clustered_load_agents, only_active: only_active)

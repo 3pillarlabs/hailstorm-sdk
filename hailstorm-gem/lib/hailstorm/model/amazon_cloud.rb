@@ -291,7 +291,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     end
 
     def identity_file_name
-      [self.ssh_identity.gsub(/\.pem/, ''), self.region].join('_').concat('.pem')
+      [File.basename(self.ssh_identity).gsub(/\.pem/, ''), self.region].join('_').concat('.pem')
     end
   end
 
@@ -487,8 +487,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       logger.info("Searching available AMI on #{self.region}...")
       ex_ami = ec2.images.with_owner(:self).find { |e| e.state == :available && rexp.match(e.name) }
       if ex_ami
-        logger.info("Using AMI #{self.agent_ami} for #{self.region}...")
         self.agent_ami = ex_ami.id
+        logger.info("Using AMI #{self.agent_ami} for #{self.region}...")
       end
       ex_ami
     end

@@ -49,32 +49,29 @@ describe Hailstorm::Controller::Cli do
       Readline.stub!(:readline) { |_p, _h| cmds_ite.next }
       @app.process_commands
     end
-    context "'start' command" do
-      it 'should modify the readline prompt' do
-        @middleware.stub!(:config_serial_version).and_return('A')
-        @app.stub!(:settings_modified?).and_return(false)
-        cmds_ite = ['start', nil].each_with_index
-        Readline.stub!(:readline) do |_p, _h|
-          cmd, idx = cmds_ite.next
-          expect(_p).to match(/\*\s+$/) if idx > 0
-          cmd
+
+    context '#enhanced_prompt'  do
+      before(:each) do
+        @project = Hailstorm::Model::Project.new
+        expect(@project).to respond_to(:current_execution_cycle)
+        @app.stub!(:current_project).and_return(@project)
+      end
+
+      context 'when tests are running' do
+        it 'should display an indented prompt' do
+          @project.stub!(:current_execution_cycle).and_return(Hailstorm::Model::ExecutionCycle.new)
+          expect(@app.send(:enhanced_prompt)).to match(/\*\s+$/)
         end
-        @app.cmd_executor.stub!(:interpret_execute).and_return(:start)
-        @app.process_commands
+      end
+
+      context 'when tests are not running' do
+        it 'should remove the indentation from the prompt' do
+          @project.stub!(:current_execution_cycle).and_return(nil)
+          expect(@app.send(:enhanced_prompt)).to_not match(/\*\s+$/)
+        end
       end
     end
-    context "'stop', 'abort' command" do
-      it 'should modify the readline prompt' do
-        cmds_ite = ['stop', 'abort', nil].each_with_index
-        Readline.stub!(:readline) do |_p, _h|
-          cmd, idx = cmds_ite.next
-          expect(_p).to_not match(/\*\s+$/) if idx > 0
-          cmd
-        end
-        @app.cmd_executor.stub!(:interpret_execute) { |cmds| cmds[0].to_sym }
-        @app.process_commands
-      end
-    end
+
     it 'should rescue IncorrectCommandException' do
       @app.cmd_history.should_receive(:save_history).with('help coffee')
       cmds_ite = ['help coffee', nil].each

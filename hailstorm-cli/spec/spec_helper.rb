@@ -14,7 +14,7 @@ require 'active_record/base'
 require 'hailstorm/support/thread'
 
 $CLASSPATH << File.dirname(__FILE__)
-ENV['HAILSTORM_ENV'] = 'test'
+ENV['HAILSTORM_ENV'] = 'test' unless ENV['HAILSTORM_ENV']
 
 # disable threading in unit tests
 class Hailstorm::Support::Thread
@@ -35,7 +35,7 @@ RSpec.configure do |config|
   config.order = 'random'
 
   config.prepend_before(:suite) do
-    build_path = File.join(File.expand_path('../..', __FILE__), 'build')
+    build_path = File.join(File.expand_path('../..', __FILE__), 'build', 'spec')
     FileUtils.rm_rf(build_path)
     FileUtils.mkdir_p(build_path)
     boot_file_path = File.join(build_path, 'config', 'boot.rb')
@@ -44,7 +44,7 @@ RSpec.configure do |config|
     FileUtils.touch(File.join(build_path, Hailstorm.tmp_dir, 'remove_file'))
     Hailstorm::Initializer.create_middleware('hailstorm_spec', boot_file_path, {
       adapter: 'jdbcmysql',
-      database: ENV['HAILSTORM_SPEC_DB'] || 'hailstorm_test',
+      database: "hailstorm_#{ENV['HAILSTORM_ENV']}",
       username: 'hailstorm_dev',
       password: 'hailstorm_dev'
     }, Hailstorm::Support::Configuration.new)
