@@ -10,7 +10,7 @@ class Hailstorm::LocalFileStore
   def fetch_jmeter_plans(_project_code)
     file_prefix = File.join(Hailstorm.root, Hailstorm.app_dir).concat(File::SEPARATOR)
     Dir[File.join(Hailstorm.root, Hailstorm.app_dir, '**', '*.jmx')]
-      .map { |n| n.split(file_prefix).last.gsub(/\.jmx$/, '') }
+      .map { |n| File.strip_ext(n.split(file_prefix).last) }
   end
 
   # pick app sub-directories

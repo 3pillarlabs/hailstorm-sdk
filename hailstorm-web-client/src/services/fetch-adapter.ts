@@ -9,7 +9,8 @@ export async function fetchOK(input: RequestInfo, init?: RequestInit): Promise<R
   }
 
   if (!response.ok) {
-    throw new Error(response.statusText);
+    const text = await response.text();
+    throw new Error(JSON.stringify({statusText: response.statusText, status: response.status, text}));
   }
 
   return response;

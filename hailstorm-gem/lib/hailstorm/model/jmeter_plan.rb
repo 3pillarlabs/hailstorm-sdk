@@ -36,6 +36,8 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
 
   before_save :set_content_hash, if: proc { |r| r.active? }
 
+  before_save :calculate_latest_threads, if: proc { |r| r.active? }
+
   after_update :disable_load_agents, unless: proc { |r| r.active? }
 
   scope :active, -> { where(active: true) }
@@ -99,7 +101,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   def self.to_jmeter_plans(jmeter_config, project, test_plans)
     instances = test_plans.map do |plan|
       properties = jmeter_config.properties(test_plan: plan)
-      jmeter_plan = self.where(test_plan_name: plan, project_id: project.id).first_or_initialize
+      jmeter_plan = self.where(test_plan_name: File.strip_ext(plan), project_id: project.id).first_or_initialize
       jmeter_plan.validate_plan = true
       jmeter_plan.active = true
       jmeter_plan.properties = properties.to_json
@@ -297,7 +299,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
         unknown.push(name) if properties_map[name].blank?
       end
       unless unknown.empty?
-        self.errors.add(:test_plan_name, "Unknown properties: #{unknown.join(',')} in #{self.test_plan_name}")
+        self.errors.add(:properties, "Unknown properties: #{unknown.join(',')} in #{self.test_plan_name}")
       end
 
       # check presence of simple data writer
@@ -336,7 +338,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
           test_plan = doc.xpath('//TestPlan').first
           @plan_name = test_plan['testname']
         end
-        @plan_name = self.test_plan_name if @plan_name.blank? || @plan_name == 'Test Plan'
+        @plan_name = File.basename(self.test_plan_name).titlecase if @plan_name.blank? || @plan_name == 'Test Plan'
       end
 
       @plan_name
@@ -518,6 +520,19 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   # Adapter to low level Nokogiri API
   module NokogiriAdapter
 
+    attr_writer :jmeter_plan_io
+
+    # @return [IO]
+    def jmeter_plan_io(&block)
+      if @jmeter_plan_io
+        yield @jmeter_plan_io
+      else
+        Hailstorm.workspace(self.project.project_code).open_app_file(self.test_plan_name) do |io|
+          block.call(io)
+        end
+      end
+    end
+
     private
 
     # Parses the associated Jmeter file and yields a Nokogiri document or returns
@@ -525,7 +540,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     def jmeter_document
       logger.debug { "#{self.class}##{__method__}" }
       if @jmeter_document.nil?
-        Hailstorm.workspace(self.project.project_code).open_app_file(self.test_plan_name) do |io|
+        jmeter_plan_io do |io|
           @jmeter_document = Nokogiri::XML.parse(io)
         end
       end
@@ -566,5 +581,9 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   def extract_property_name(property_content)
     rexp_matcher = PROPERTY_NAME_REXP.match(property_content.strip)
     rexp_matcher.nil? ? nil : rexp_matcher[1]
+  end
+
+  def calculate_latest_threads
+    self.latest_threads_count = num_threads
   end
 end

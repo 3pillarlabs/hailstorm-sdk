@@ -7,3 +7,4 @@ require 'hailstorm/version'
 ActiveRecord::Base.raise_in_transactional_callbacks = true
 
 require 'hailstorm/model/nmon'
+require 'hailstorm/initializer/file_extn'

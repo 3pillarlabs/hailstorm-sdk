@@ -35,6 +35,7 @@ class Hailstorm::Support::Schema
 
   def self.create_schema
     schema = self.new
+    yield schema if block_given?
     schema.create
     schema.update
   end
@@ -88,6 +89,7 @@ class Hailstorm::Support::Schema
     def create_projects
       ActiveRecord::Migration.create_table(:projects) do |t|
         t.string  :project_code, null: false
+        t.string  :title, default: nil
         t.boolean :master_slave_mode, null: false
         t.string  :samples_breakup_interval, null: false
         t.string  :jmeter_version, null: false
@@ -184,6 +186,7 @@ class Hailstorm::Support::Schema
         t.string      :status, null: false
         t.timestamp   :started_at, null: false
         t.timestamp   :stopped_at, default: nil
+        t.integer     :threads_count, null: false, default: 0
       end
     end
 

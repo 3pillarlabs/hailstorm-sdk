@@ -1,6 +1,6 @@
 require 'sinatra'
 require 'json'
-require 'config/db/seed'
+require 'db/seed'
 
 post '/projects/:project_id/jtl_exports' do |project_id|
   sleep 3

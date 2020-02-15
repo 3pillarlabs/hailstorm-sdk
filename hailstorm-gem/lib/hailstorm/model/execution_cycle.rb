@@ -80,11 +80,6 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     self.stopped_at.strftime('%Y-%m-%d %H:%M')
   end
 
-  # @return [Integer] sum of thread_counts in client_stats for this execution_cycle
-  def total_threads_count
-    @total_threads_count ||= self.client_stats.sum(:threads_count)
-  end
-
   # @return [Float] a rough cut average of 90 %tile response time across all client cycles
   def avg_90_percentile
     self.client_stats.average(:aggregate_ninety_percentile)
@@ -178,6 +173,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   def import_results(jmeter_plan, cluster_instance, result_file_path)
     logger.debug { "#{self.class}.#{__method__}" }
     jmeter_plan.update_column(:latest_threads_count, jmeter_plan.num_threads)
+    self.increment!(:threads_count, jmeter_plan.num_threads)
     client_stat, = Hailstorm::Model::ClientStat.create_client_stat(self, jmeter_plan.id,
                                                                    cluster_instance,
                                                                    [result_file_path])
@@ -241,7 +237,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     end
 
     def add_domain_label(domain_labels)
-      domain_label = self.total_threads_count.to_s
+      domain_label = self.threads_count.to_s
       # repeated total_threads_count(domain_label)
       domain_label.concat("-#{self.id}") if domain_labels.include?(domain_label)
       domain_labels.push(domain_label)
@@ -267,7 +263,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     end
 
     def create
-      self.builder.title = project.project_code.humanize
+      self.builder.title = project.title || project.project_code.humanize
 
       add_execution_cycles
 
@@ -288,7 +284,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
         add_test_summary(execution_cycle)
 
         self.builder.execution_detail_items do |execution_item|
-          execution_item.total_threads_count = execution_cycle.total_threads_count
+          execution_item.total_threads_count = execution_cycle.threads_count
           add_clusters(execution_cycle, execution_item)
           add_time_series(execution_cycle, execution_item)
           add_target_stats(execution_cycle, execution_item)
@@ -300,7 +296,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
       self.builder.test_summary_rows do |row|
         row.jmeter_plans = execution_cycle.jmeter_plans.collect(&:plan_name).join(', ')
         row.test_duration = execution_cycle.execution_duration
-        row.total_threads_count = execution_cycle.total_threads_count
+        row.total_threads_count = execution_cycle.threads_count
         row.target_hosts = execution_cycle.target_hosts
       end
     end

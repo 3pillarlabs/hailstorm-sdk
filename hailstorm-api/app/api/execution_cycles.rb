@@ -1,6 +1,6 @@
 require 'sinatra'
 require 'json'
-require 'config/db/seed'
+require 'db/seed'
 
 get '/projects/:id/execution_cycles' do |project_id|
   sleep 0.3

@@ -19,7 +19,7 @@ describe('JMeterService', () => {
     expect(spy).toHaveBeenCalled();
     expect(jmeter.files.length).toEqual(2);
     expect(jmeter.files[0].properties).toBeInstanceOf(Map);
-    expect(jmeter.files[0].properties.size).toEqual(3);
+    expect(jmeter.files[0].properties!.size).toEqual(3);
   });
 
   it('should create JMeter plan in project', async () => {
@@ -34,7 +34,7 @@ describe('JMeterService', () => {
       properties: new Map([["foo", "1"], ["bar", "2"], ["baz", "3"]])
     });
 
-    const reqBody = JSON.parse(spy.mock.calls[0][1].body as string);
+    const reqBody = JSON.parse(spy.mock.calls[0][1]!.body as string);
     expect(reqBody.properties).toEqual([["foo", "1"], ["bar", "2"], ["baz", "3"]]);
     expect(jmeterFile.id).toBeDefined();
   });
@@ -49,7 +49,7 @@ describe('JMeterService', () => {
       properties: new Map([["foo", "1"], ["bar", "2"], ["baz", "3"]])
     });
 
-    const reqBody = JSON.parse(spy.mock.calls[0][1].body as string);
+    const reqBody = JSON.parse(spy.mock.calls[0][1]!.body as string);
     expect(reqBody.properties).toEqual([["foo", "1"], ["bar", "2"], ["baz", "3"]]);
   });
 

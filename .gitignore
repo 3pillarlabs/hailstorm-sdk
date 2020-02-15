@@ -8,3 +8,5 @@ vagrant-site.yml
 cc-test-reporter
 coverage-overall/
 .python-version
+keys.yml
+

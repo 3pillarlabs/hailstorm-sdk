@@ -303,8 +303,8 @@ describe Hailstorm::Model::ExecutionCycle do
         execution_cycle = Hailstorm::Model::ExecutionCycle.create!(project: project,
                                                                    status: :stopped,
                                                                    started_at: t,
-                                                                   stopped_at: t + index.hours)
-        execution_cycle.stub!(:total_threads_count).and_return(threads_count)
+                                                                   stopped_at: t + index.hours,
+                                                                   threads_count: threads_count)
 
         Hailstorm::Model::TargetStat.any_instance.stub(:write_blobs)
         2.times do

@@ -38,7 +38,7 @@ export const JMeterConfiguration: React.FC = () => {
   const handleFileUpload = (file: SavedFile) => {
     const jmeterPlan = file.originalName.match(/\.jmx$/);
     if (jmeterPlan) {
-      validateJMeterPlan({ file, dispatch });
+      validateJMeterPlan({ file, dispatch, projectId: appState.activeProject!.id });
     } else {
       saveDataFile({ dispatch, file, projectId: appState.activeProject!.id });
     }
@@ -278,14 +278,17 @@ async function saveDataFile({ dispatch, file, projectId }: { dispatch: React.Dis
   }
 }
 
-async function validateJMeterPlan({ file, dispatch }: { file: SavedFile; dispatch: React.Dispatch<any>; }) {
+async function validateJMeterPlan({ file, dispatch, projectId }: { file: SavedFile; dispatch: React.Dispatch<any>; projectId: any}) {
   try {
-    const data = await ApiFactory().jmeterValidation().create({ name: file.originalName, path: file.id });
+    const data = await ApiFactory().jmeterValidation().create({ name: file.originalName, path: file.id, projectId });
     return dispatch(new CommitJMeterFileAction({ name: file.originalName, properties: data.properties!, path: file.id }));
   }
   catch (reason) {
     if (Object.keys(reason).includes('validationErrors')) {
-      const validationErrors = (reason['validationErrors'] as ValidationNotice[]);
+      const validationErrors: ValidationNotice[] = (reason['validationErrors'] as string[]).map((message) => ({
+        type: 'error', message
+      }));
+
       dispatch(new AbortJMeterFileUploadAction({ name: file.originalName, validationErrors }));
     }
     else {

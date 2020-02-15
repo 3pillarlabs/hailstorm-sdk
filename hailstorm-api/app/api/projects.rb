@@ -1,33 +1,13 @@
 require 'sinatra'
 require 'json'
-require 'config/db/seed'
+require 'db/seed'
+require 'helpers/projects_helper'
+
+include ProjectsHelper
 
 get '/projects' do
-  sleep 0.3
-  JSON.dump(Seed::DB[:projects].map {
-      # @type [Hash] project
-      |project|
-
-    response_data = project.clone
-    current_execution_cycle = Seed::DB[:executionCycles].find { |x| x[:projectId] == project[:id] && x[:stoppedAt].nil? }
-    unless current_execution_cycle.nil?
-      response_data[:currentExecutionCycle] = current_execution_cycle.clone
-      response_data[:currentExecutionCycle][:startedAt] =
-          response_data[:currentExecutionCycle][:startedAt].to_i * 1000
-    end
-
-    last_execution_cycle = Seed::DB[:executionCycles]
-                               .select { |x| x[:projectId] == project[:id] && x[:stoppedAt] }
-                               .sort { |a, b| b[:stoppedAt].to_i <=> a[:stoppedAt].to_i }
-                               .first
-    if last_execution_cycle
-      response_data[:lastExecutionCycle] = last_execution_cycle.clone
-      response_data[:lastExecutionCycle][:startedAt] = last_execution_cycle[:startedAt].to_i * 1000
-      response_data[:lastExecutionCycle][:stoppedAt] = last_execution_cycle[:stoppedAt].to_i * 1000
-    end
-
-    response_data
-  })
+  list = list_projects(Hailstorm::Model::Project.all).map(&method(:deep_camelize_keys))
+  JSON.dump(list)
 end
 
 get '/projects/:id' do |id|
@@ -97,23 +77,24 @@ patch '/projects/:id' do |id|
 end
 
 post '/projects' do
-  sleep 0.1
   request.body.rewind
   # @type [Hash]
   data = JSON.parse(request.body.read)
   return 402 unless data.key?('title')
 
-  project = {
-      id: Seed::DB[:sys][:project_idx].call,
-      autoStop: false,
-      code: data['title'].to_s.downcase.gsub(/\s+/, '-'),
-      title: data['title'],
-      running: false,
-      incomplete: true
-  }
+  project = Hailstorm::Model::Project.create!(
+    project_code: project_code_from(title: data['title']),
+    title: data['title']
+  )
 
-  Seed::DB[:projects].push(project)
-  JSON.dump(project)
+  project_attrs = project.attributes.symbolize_keys.except(:project_code).merge(
+    id: project.id,
+    running: false,
+    incomplete: true,
+    code: project.project_code
+  )
+
+  JSON.dump(deep_camelize_keys(project_attrs))
 end
 
 delete '/projects/:id' do |id|

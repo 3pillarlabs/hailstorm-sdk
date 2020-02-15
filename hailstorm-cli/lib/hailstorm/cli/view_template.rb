@@ -81,7 +81,7 @@ class Hailstorm::Cli::ViewTemplate
   def exec_cycle_to_attrs(execution_cycle)
     {
       execution_cycle_id: execution_cycle.id,
-      total_threads_count: execution_cycle.total_threads_count,
+      total_threads_count: execution_cycle.threads_count,
       avg_90_percentile: execution_cycle.avg_90_percentile,
       avg_tps: execution_cycle.avg_tps.round(2),
       started_at: execution_cycle.formatted_started_at,

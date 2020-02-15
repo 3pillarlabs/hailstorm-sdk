@@ -72,6 +72,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
 
     # add an execution_cycle
     build_current_execution_cycle.save! # buildABC is provided by has_one :ABC relation
+    self.current_execution_cycle.update_column(:threads_count, self.jmeter_plans.sum(:latest_threads_count))
     if settings_modified?
       begin
         setup(invoked_from_start: true, config: config, force: true)

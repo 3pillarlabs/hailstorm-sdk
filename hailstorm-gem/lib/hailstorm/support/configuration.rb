@@ -22,11 +22,20 @@ class Hailstorm::Support::Configuration
     # JMeter scripts to setup and execute. If left unset all files in app/jmx will be processed
     # for load generation. Multiple files can be specified using an array. File extensions
     # are not needed. If only one test plan is present, this configuration is not needed.
+    # @param [Array<String>] test_plans
     attr_accessor :test_plans
+
+    # Relative file paths from application directory for data files used by JMeter plans.
+    # This is an optional property.
+    attr_accessor :data_files
 
     # URL for a custom JMeter installer. The installer file must be a tar gzip and match:
     # /^[a-zA-Z][a-zA-Z0-9_\-\.]*\.ta?r?\.?gz/
     attr_accessor :custom_installer_url
+
+    def initialize
+      self.data_files = []
+    end
 
     # Generic or test_plan specific properties. These will be used when constructing
     # and issuing a JMeter command
@@ -42,11 +51,20 @@ class Hailstorm::Support::Configuration
       end
     end
 
+    # @param [String] test_plan
+    # @return [Array<String>]
+    def add_test_plan(test_plan)
+      @test_plans = [] if @test_plans.nil?
+      @test_plans.push(File.strip_ext(test_plan))
+      @test_plans
+    end
+
     private
 
     def properties_context(options)
       if options.key?(:test_plan)
-        @properties[:all].merge(@properties[:test_plan][options[:test_plan]] || {})
+        test_plan_name = File.strip_ext(options[:test_plan])
+        @properties[:all].merge(@properties[:test_plan][test_plan_name] || {})
       else
         @properties[:all]
       end
@@ -54,7 +72,7 @@ class Hailstorm::Support::Configuration
 
     def yield_properties(options)
       if options.key?(:test_plan)
-        test_plan_name = options[:test_plan].gsub(/\.jmx$/, '')
+        test_plan_name = File.strip_ext(options[:test_plan])
         @properties[:test_plan][test_plan_name] = {}
         @properties[:test_plan][test_plan_name]
       else

@@ -341,7 +341,7 @@ describe Hailstorm::Model::JmeterPlan do
         </test>
         XML
         @jmeter_plan.stub!(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
-        expect(@jmeter_plan.plan_name).to be == @jmeter_plan.test_plan_name
+        expect(@jmeter_plan.plan_name).to be == @jmeter_plan.test_plan_name.titlecase
       end
     end
     context 'name in JMeter plan is == "Test Plan"' do
@@ -352,7 +352,7 @@ describe Hailstorm::Model::JmeterPlan do
         </test>
         XML
         @jmeter_plan.stub!(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
-        expect(@jmeter_plan.plan_name).to be == @jmeter_plan.test_plan_name
+        expect(@jmeter_plan.plan_name).to be == @jmeter_plan.test_plan_name.titlecase
       end
     end
     it 'should be same as name in JMeter plan' do

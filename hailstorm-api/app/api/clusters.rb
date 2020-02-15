@@ -1,6 +1,6 @@
 require 'sinatra'
 require 'json'
-require 'config/db/seed'
+require 'db/seed'
 
 post '/projects/:project_id/clusters' do |project_id|
   sleep 0.3
