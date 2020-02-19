@@ -1,6 +1,7 @@
 require 'digest'
 require 'hailstorm/model/project'
 require 'hailstorm/model/execution_cycle'
+require 'model/project_configuration'
 
 module ProjectsHelper
 
@@ -48,7 +49,13 @@ module ProjectsHelper
         project_attrs[:auto_stop] = project.jmeter_plans.all.reduce(true) { |s, jp| s &&= !jp.loop_forever? }
       end
 
-      if project.jmeter_plans.count == 0 || project.clusters.count == 0
+      project_config = ProjectConfiguration.where(project_id: project.id).first
+      if project_config
+        hailstorm_config = deep_decode(project_config.stringified_config)
+        if hailstorm_config.jmeter.test_plans.size == 0 || hailstorm_config.clusters.size == 0
+          project_attrs[:incomplete] = true
+        end
+      else
         project_attrs[:incomplete] = true
       end
 

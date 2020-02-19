@@ -55,4 +55,22 @@ describe('ExecutionCycleService', () => {
     expect(fetchSpy).toHaveBeenCalled();
     expect(updated.status).toEqual(ExecutionCycleStatus.EXCLUDED);
   });
+
+  it('should get status of current execution cycle', async () => {
+    const executionCycle: ExecutionCycle = {
+      id: 200,
+      projectId: 1,
+      startedAt: new Date(),
+      threadsCount: 100
+    };
+
+    const fetchSpy = jest.spyOn(window, 'fetch').mockResolvedValue(new Response(new Blob([JSON.stringify({
+      ...executionCycle,
+      noRunningTests: true
+    })])));
+
+    const service = new ExecutionCycleService();
+    const actual = await service.get(1);
+    expect(actual.noRunningTests).toBeTruthy();
+  });
 });

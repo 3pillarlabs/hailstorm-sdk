@@ -15,10 +15,10 @@ Feature: Generate load from AWS
       | Duration       |   180 |
       | RampUp         |     0 |
     And configure following amazon clusters
-      | region    | max_threads_per_agent |
+      | region    | maxThreadsPerAgent |
       | us-east-1 |                       |
     And finalize the configuration
-    And I start load generation
+    And start load generation
     Then 1 test should be running
 
   @smoke
@@ -35,8 +35,8 @@ Feature: Generate load from AWS
       | Duration       |   180 |
       | RampUp         |     0 |
     And configure following amazon clusters
-      | region    | max_threads_per_agent |
-      | us-east-1 |                       |
+      | region    | maxThreadsPerAgent |
+      | us-east-1 |                    |
     And finalize the configuration
     And start load generation
     Then 1 test should be running
@@ -54,8 +54,8 @@ Feature: Generate load from AWS
       | Duration       |   180 |
       | RampUp         |     0 |
     And configure following amazon clusters
-      | region    | max_threads_per_agent |
-      | us-east-1 | 25                    |
+      | region    | maxThreadsPerAgent |
+      | us-east-1 | 25                 |
     And finalize the configuration
     And start load generation
     Then 1 test should be running
@@ -72,8 +72,8 @@ Feature: Generate load from AWS
       | Duration       |   180 |
       | RampUp         |     0 |
     And configure following amazon clusters
-      | region    | max_threads_per_agent |
-      | us-east-1 | 25                    |
+      | region    | maxThreadsPerAgent |
+      | us-east-1 | 25                 |
     And finalize the configuration
     And start load generation
     And wait for 10 seconds

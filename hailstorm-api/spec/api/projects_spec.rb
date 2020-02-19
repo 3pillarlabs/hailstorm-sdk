@@ -5,6 +5,8 @@ require 'app/api/projects'
 require 'hailstorm/model/project'
 require 'hailstorm/model/jmeter_plan'
 require 'hailstorm/model/execution_cycle'
+require 'hailstorm/model/cluster'
+require 'hailstorm/model/target_host'
 
 describe 'api/projects' do
   before(:each) do
@@ -39,9 +41,9 @@ describe 'api/projects' do
       last_execution_cycle.stub!(:avg_90_percentile).and_return(678.45)
       last_execution_cycle.stub!(:avg_tps).and_return(14.56)
       Hailstorm::Model::Project
-          .any_instance
-          .stub_chain(:execution_cycles, :where, :order, :limit)
-          .and_return([last_execution_cycle])
+        .any_instance
+        .stub_chain(:execution_cycles, :where, :order, :limit)
+        .and_return([last_execution_cycle])
 
       jmeter_plan = Hailstorm::Model::JmeterPlan.new(
         project: project,
@@ -81,6 +83,31 @@ describe 'api/projects' do
       entity = JSON.parse(@browser.last_response.body).symbolize_keys
       expect(entity[:id]).to_not be_blank
       expect(Hailstorm::Model::Project.first.title).to eq(params[:title])
+    end
+  end
+
+  context 'PATCH /projects/:id' do
+    context 'action=terminate' do
+      it 'should terminate the setup' do
+        project = Hailstorm::Model::Project.create!(project_code: 'acme_priming')
+        ProjectConfiguration.create!(
+          project_id: project.id,
+          stringified_config: deep_encode(Hailstorm::Support::Configuration.new)
+        )
+
+        Hailstorm::Model::ExecutionCycle.create!(
+            project: project,
+            status: Hailstorm::Model::ExecutionCycle::States::STARTED,
+            started_at: Time.now - 60.minutes,
+            threads_count: 30
+        )
+
+        Hailstorm::Model::Cluster.stub!(:terminate)
+        Hailstorm::Model::TargetHost.stub!(:terminate)
+        @browser.patch("/projects/#{project.id}", JSON.dump({action: 'terminate'}))
+        expect(@browser.last_response).to be_successful
+        expect(Hailstorm::Model::ExecutionCycle.first.status).to eq(Hailstorm::Model::ExecutionCycle::States::TERMINATED.to_s)
+      end
     end
   end
 end

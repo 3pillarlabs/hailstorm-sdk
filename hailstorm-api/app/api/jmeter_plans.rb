@@ -1,6 +1,5 @@
 require 'sinatra'
 require 'json'
-require 'db/seed'
 require 'hailstorm/model/project'
 require 'hailstorm/support/configuration'
 require 'model/project_configuration'
@@ -13,14 +12,14 @@ get '/projects/:project_id/jmeter_plans' do |project_id|
   return JSON.dump([]) unless project_config
 
   # @type [Hailstorm::Support::Configuration]
-  hailstorm_config = Marshal.load(project_config.stringified_config)
+  hailstorm_config = deep_decode(project_config.stringified_config)
   JSON.dump(
     (
       (hailstorm_config.jmeter.test_plans || []).map { |e| {test_plan_name: e, jmx_file: true} } +
       (hailstorm_config.jmeter.data_files || []).map { |e| {test_plan_name: e, jmx_file: false} }
     )
-      .map
-      .with_index { |partial_attrs, index| to_jmeter_attributes(hailstorm_config, project_id, partial_attrs, index) })
+      .map { |partial_attrs| to_jmeter_attributes(hailstorm_config, project_id, partial_attrs) }
+  )
 end
 
 post '/projects/:project_id/jmeter_plans' do |project_id|
@@ -31,11 +30,14 @@ post '/projects/:project_id/jmeter_plans' do |project_id|
   data = JSON.parse(request.body.read)
   project_config = ProjectConfiguration
                      .where(project_id: found_project.id)
-                     .first_or_create!(stringified_config: Marshal.dump(Hailstorm::Support::Configuration.new))
+                     .first_or_create!(stringified_config: deep_encode(Hailstorm::Support::Configuration.new))
 
-  hailstorm_config = Marshal.load(project_config.stringified_config)
+  logger.debug { project_config.stringified_config }
+  hailstorm_config = deep_decode(project_config.stringified_config)
   test_plan_name = "#{data['path']}/#{data['name']}"
+  file_id = nil
   if jmx_file?(test_plan_name)
+    file_id = File.strip_ext(test_plan_name).to_java_string.hash_code
     hailstorm_config.jmeter do |jmeter|
       jmeter.add_test_plan(test_plan_name)
       if data['properties']
@@ -43,13 +45,14 @@ post '/projects/:project_id/jmeter_plans' do |project_id|
       end
     end
   else
+    file_id = test_plan_name.to_java_string.hash_code
     hailstorm_config.jmeter.data_files.push(test_plan_name)
   end
 
-  project_config.update_attributes!(stringified_config: Marshal.dump(hailstorm_config))
+  project_config.update_attributes!(stringified_config: deep_encode(hailstorm_config))
 
   jmeter_plan = {
-    id: "#{found_project.id}#{hailstorm_config.jmeter.test_plans.size}",
+    id: file_id,
     name: data['name'],
     path: data['path'],
     projectId: found_project.id
@@ -68,18 +71,13 @@ patch '/projects/:project_id/jmeter_plans/:id' do |project_id, id|
   request.body.rewind
   # @type [Hash]
   data = JSON.parse(request.body.read)
-  hailstorm_config = Marshal.load(project_config.stringified_config)
-  matched_index = -1
-  hailstorm_config.jmeter.test_plans.each_index do |index|
-    matched_index = index if "#{project_id}#{index + 1}" == id.to_s
-  end
+  hailstorm_config = deep_decode(project_config.stringified_config)
+  test_plan_name = hailstorm_config.jmeter.test_plans.find { |e| e.to_java_string.hash_code == id.to_i }
+  return not_found unless test_plan_name
 
-  return not_found if matched_index < 0
-
-  test_plan_name = hailstorm_config.jmeter.test_plans[matched_index]
   hailstorm_config.jmeter.properties(test_plan: test_plan_name) { |map| update_map(map, data) }
   JSON.dump({
-    id: "#{project_id}#{matched_index + 1}",
+    id: test_plan_name.to_java_string.hash_code,
     name: "#{File.basename(test_plan_name)}.jmx",
     path: File.dirname(test_plan_name),
     properties: hailstorm_config.jmeter.properties(test_plan: test_plan_name).entries
@@ -90,15 +88,14 @@ delete '/projects/:project_id/jmeter_plans/:id' do |project_id, id|
   project_config = ProjectConfiguration.where(project_id: project_id).first
   return not_found unless project_config
 
-  hailstorm_config = Marshal.load(project_config.stringified_config)
-  matched_index = -1
-  hailstorm_config.jmeter.test_plans.each_index do |index|
-    matched_index = index if "#{project_id}#{index + 1}" == id.to_s
+  hailstorm_config = deep_decode(project_config.stringified_config)
+  test_plan_name = hailstorm_config.jmeter.test_plans.find { |e| e.to_java_string.hash_code == id.to_i }
+  hailstorm_config.jmeter.test_plans.reject! { |e| e == test_plan_name } if test_plan_name
+  if hailstorm_config.jmeter.data_files
+    data_file_name = hailstorm_config.jmeter.data_files.find { |e| e.to_java_string.hash_code == id.to_i }
+    hailstorm_config.jmeter.data_files.reject! { |e| e == data_file_name } if data_file_name
   end
 
-  return not_found if matched_index < 0
-
-  hailstorm_config.jmeter.test_plans = hailstorm_config.jmeter.test_plans.select.with_index { |_e, i| i != matched_index }
-  project_config.update_attributes!(stringified_config: Marshal.dump(hailstorm_config))
+  project_config.update_attributes!(stringified_config: deep_encode(hailstorm_config))
   204
 end

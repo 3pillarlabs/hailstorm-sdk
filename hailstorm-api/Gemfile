@@ -8,6 +8,7 @@ gem 'hailstorm', path: '../hailstorm-gem'
 gem 'sinatra', '~> 1.4'
 gem 'puma'
 gem 'activerecord-jdbcmysql-adapter'
+gem 'redis'
 group :test, :development do
   gem 'rspec', '~> 2.13.0'
   gem 'rubocop', '~> 0.59.2'

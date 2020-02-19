@@ -37,6 +37,14 @@ services:
         target: /var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: 'i r baboon'
+
+  hailstorm-mq:
+    image: "redis:5.0.7-alpine"
+    hostname: "hailstorm-mq"
+    ports:
+      - "6379:6379"
+    networks:
+      - hailstorm
   
 networks:
   dmz:

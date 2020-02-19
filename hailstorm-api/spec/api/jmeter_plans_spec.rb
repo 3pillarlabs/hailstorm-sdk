@@ -57,7 +57,7 @@ describe 'api/jmeter_plans' do
         jmeter.data_files = %W[234/foo.csv]
       end
 
-      ProjectConfiguration.create!(project_id: project.id, stringified_config: Marshal.dump(hailstorm_config))
+      ProjectConfiguration.create!(project_id: project.id, stringified_config: deep_encode(hailstorm_config))
 
       @browser.get("/projects/#{project.id}/jmeter_plans")
       expect(@browser.last_response).to be_ok
@@ -115,7 +115,7 @@ describe 'api/jmeter_plans' do
   end
 
   context 'DELETE /projects/:project_id/jmeter_plans/:id' do
-    it 'should delete the plan' do
+    it 'should delete a plan' do
       project = Hailstorm::Model::Project.create!(project_code: 'api_jmeter_plans_spec')
       hailstorm_config = Hailstorm::Support::Configuration.new
       hailstorm_config.jmeter do |jmeter|
@@ -137,16 +137,43 @@ describe 'api/jmeter_plans' do
 
       project_config = ProjectConfiguration.create!(
         project_id: project.id,
-        stringified_config: Marshal.dump(hailstorm_config)
+        stringified_config: deep_encode(hailstorm_config)
       )
 
-      @browser.delete("/projects/#{project.id}/jmeter_plans/#{project.id}2")
+      id = '2/b'.to_java_string.hash_code
+      @browser.delete("/projects/#{project.id}/jmeter_plans/#{id}")
       expect(@browser.last_response).to be_successful
       project_config.reload
-      updated_hailstorm_config = Marshal.load(project_config.stringified_config)
+      updated_hailstorm_config = deep_decode(project_config.stringified_config)
       expect(updated_hailstorm_config.jmeter.test_plans.size).to eq(2)
       expect(updated_hailstorm_config.jmeter.test_plans.first).to eq('1/a')
       expect(updated_hailstorm_config.jmeter.test_plans.second).to eq('3/c')
+    end
+
+    it 'should delete a data file' do
+      project = Hailstorm::Model::Project.create!(project_code: 'api_jmeter_plans_spec')
+      hailstorm_config = Hailstorm::Support::Configuration.new
+      hailstorm_config.jmeter do |jmeter|
+        jmeter.add_test_plan('1/a.jmx')
+        jmeter.properties(test_plan: '1/a.jmx') do |map|
+          map['NumUsers'] = 100
+        end
+
+        jmeter.data_files.push('2/a.csv')
+      end
+
+      project_config = ProjectConfiguration.create!(
+        project_id: project.id,
+        stringified_config: deep_encode(hailstorm_config)
+      )
+
+      id = '2/a.csv'.to_java_string.hash_code
+      @browser.delete("/projects/#{project.id}/jmeter_plans/#{id}")
+      expect(@browser.last_response).to be_successful
+      project_config.reload
+      updated_hailstorm_config = deep_decode(project_config.stringified_config)
+      expect(updated_hailstorm_config.jmeter.test_plans.size).to eq(1)
+      expect(updated_hailstorm_config.jmeter.data_files.size).to eq(0)
     end
   end
 end

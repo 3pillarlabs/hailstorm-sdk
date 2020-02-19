@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { ButtonStateLookup, CheckedExecutionCycle } from './ControlPanel';
 import { ResultActions, ApiFactory } from '../api';
 import { ProjectActions } from '../services/ProjectService';
@@ -7,6 +7,8 @@ import { Modal } from '../Modal';
 import { InterimProjectState } from '../domain';
 import { SetInterimStateAction, UnsetInterimStateAction, SetRunningAction } from '../ProjectWorkspace/actions';
 import { AppStateContext } from '../appStateContext';
+import { interval, Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 export interface ToolBarProps {
   gridButtonStates: ButtonStateLookup;
@@ -17,6 +19,7 @@ export interface ToolBarProps {
   setExecutionCycles: React.Dispatch<React.SetStateAction<CheckedExecutionCycle[]>>;
   setReloadGrid: React.Dispatch<React.SetStateAction<boolean>>;
   reloadReports: () => void;
+  statusCheckInterval?: number;
 }
 
 export const ToolBar: React.FC<ToolBarProps> = (props) => {
@@ -28,7 +31,8 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
     executionCycles,
     setExecutionCycles,
     setReloadGrid,
-    reloadReports
+    reloadReports,
+    statusCheckInterval
   } = props;
 
   const {appState, dispatch} = useContext(AppStateContext);
@@ -45,6 +49,7 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
       abort: nextState ? true : !project.running,
       start: nextState ? true : project.running
     });
+
     if (nextState) {
       setExecutionCycles(executionCycles.map((exCycle) => ({...exCycle, checked: false})));
     }
@@ -115,6 +120,33 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
       }
     };
   };
+
+  useEffect(() => {
+    console.debug('ToolBar#useEffect(project)');
+    if (project.running && project.autoStop) {
+      const period = statusCheckInterval || 3 * 60 * 1000;  // emit every 3 minutes by default
+      const tick$ = interval(period);
+      const subject = new Subject<void>();
+      tick$
+        .pipe(
+          takeUntil(subject)
+        )
+        .subscribe(async () => {
+          try {
+            const exCycleStatus = await ApiFactory().executionCycles().get(project.id);
+            if (exCycleStatus.noRunningTests) {
+              subject.next();
+              subject.complete();
+              toggleRunning(false, 'stop')();
+            }
+          } catch (error) {
+            console.error(`Error getting status of current tests: ${error.message}`);
+            subject.next();
+            subject.complete();
+          }
+      });
+    }
+  }, [project]);
 
   return (
     <>

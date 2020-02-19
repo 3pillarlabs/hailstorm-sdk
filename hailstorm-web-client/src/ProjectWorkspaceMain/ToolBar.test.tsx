@@ -10,6 +10,7 @@ import { ModalProps } from '../Modal';
 import { act } from '@testing-library/react';
 import { SetRunningAction, SetInterimStateAction } from '../ProjectWorkspace/actions';
 import { AppStateContext } from '../appStateContext';
+import { ExecutionCycleService } from '../services/ExecutionCycleService';
 
 jest.mock('../Modal', () => {
   return {
@@ -30,6 +31,10 @@ jest.mock('./JtlDownloadModal', () => {
 });
 
 describe('<ToolBar />', () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
   const setExecutionCycles = jest.fn();
   const setGridButtonStates = jest.fn();
   const setReloadGrid = jest.fn();
@@ -40,8 +45,9 @@ describe('<ToolBar />', () => {
   const createToolBar: (attrs: {
     executionCycles: CheckedExecutionCycle[],
     buttonStates: ButtonStateLookup,
-    viewTrash: boolean
-  }) => JSX.Element = ({ executionCycles, buttonStates, viewTrash }) => (
+    viewTrash: boolean,
+    statusCheckInterval?: number,
+  }) => JSX.Element = ({ executionCycles, buttonStates, viewTrash, statusCheckInterval }) => (
     <ToolBar
       executionCycles={executionCycles}
       gridButtonStates={buttonStates}
@@ -51,6 +57,7 @@ describe('<ToolBar />', () => {
       setReloadGrid={setReloadGrid}
       setViewTrash={setViewTrash}
       viewTrash={viewTrash}
+      statusCheckInterval={statusCheckInterval}
     />
   );
 
@@ -62,8 +69,9 @@ describe('<ToolBar />', () => {
     project: Project,
     buttonStates?: {[K in keyof ButtonStateLookup]?: ButtonStateLookup[K]},
     viewTrash?: boolean,
-    executionCycles?: ExecutionCycle[]
-  }) => JSX.Element = ({project, buttonStates, viewTrash}) => (
+    executionCycles?: ExecutionCycle[],
+    statusCheckInterval?: number
+  }) => JSX.Element = ({project, buttonStates, viewTrash, statusCheckInterval}) => (
 
     <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: project}, dispatch}}>
       {createToolBar({
@@ -77,7 +85,8 @@ describe('<ToolBar />', () => {
           report: true,
           ...buttonStates
         },
-        viewTrash: viewTrash ? viewTrash : false
+        viewTrash: viewTrash ? viewTrash : false,
+        statusCheckInterval: statusCheckInterval
       })}
     </AppStateContext.Provider>
   );
@@ -214,5 +223,22 @@ describe('<ToolBar />', () => {
       done();
       expect(component).toContainExactlyOneMatchingElement('#JtlDownloadModal');
     }, 0);
+  });
+
+  it('should start status checks if project is autoStop and running', (done) => {
+    const exCycle: ExecutionCycle = {id: 20, projectId: 1, startedAt: new Date(), threadsCount: 20};
+    const projectApiPromise = Promise.resolve(200);
+    const projectApiSpy = jest.spyOn(ProjectService.prototype, 'update').mockReturnValue(projectApiPromise);
+    jest
+      .spyOn(ExecutionCycleService.prototype, 'get')
+      .mockResolvedValueOnce({ noRunningTests: false, ...exCycle })
+      .mockResolvedValueOnce({ noRunningTests: false, ...exCycle })
+      .mockResolvedValueOnce({ noRunningTests: true, ...exCycle });
+    const project = createProject({running: true, autoStop: true});
+    mount(createToolBarHierarchy({project, statusCheckInterval: 1}));
+    setTimeout(() => {
+      done();
+      expect(projectApiSpy).toHaveBeenCalled();
+    }, 50);
   });
 });

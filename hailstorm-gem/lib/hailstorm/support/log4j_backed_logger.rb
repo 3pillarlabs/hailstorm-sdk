@@ -129,6 +129,17 @@ class Hailstorm::Support::Log4jBackedLogger
     super
   end
 
+  @@logger_levels = nil
+  def self.logger_levels
+    @@logger_levels ||= %i[
+      debug
+      info
+      warn
+      error
+      fatal
+    ]
+  end
+
   private
 
   def map_severity(severity)

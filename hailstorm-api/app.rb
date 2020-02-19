@@ -1,5 +1,5 @@
 require 'bundler/setup'
-require 'app/initializer/api_config'
+require 'initializer/api_config'
 
 require 'api/projects'
 require 'api/execution_cycles'

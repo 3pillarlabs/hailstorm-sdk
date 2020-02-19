@@ -36,4 +36,18 @@ export class ExecutionCycleService {
       return data;
     });
   }
+
+  /**
+   * Fetch status of running tests of current execution cycle
+   * @param projectId
+   */
+  async get(projectId: number): Promise<ExecutionCycle & { noRunningTests: boolean }> {
+    console.log(`api ---- ExecutionCycleService#get(${projectId})`);
+    return fetchGuard(async () => {
+      const response = await fetchOK(`${environment.apiBaseURL}/projects/${projectId}/execution_cycles/current`);
+      const responseText = await response.text();
+      const data: ExecutionCycle & { noRunningTests: boolean } = JSON.parse(responseText, reviver);
+      return data;
+    });
+  }
 }

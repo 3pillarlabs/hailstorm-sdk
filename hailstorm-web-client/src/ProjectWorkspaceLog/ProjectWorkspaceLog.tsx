@@ -16,7 +16,7 @@ export const ProjectWorkspaceLog: React.FC = () => {
 
   useEffect(() => {
     console.debug('ProjectWorkspaceLog#useEffect');
-    if (!project.running && !project.interimState) return;
+    // if (!project.running && !project.interimState) return;
 
     const subscription = LogStream.observe(project).subscribe({
       next: (log) => {

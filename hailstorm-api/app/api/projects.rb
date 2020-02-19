@@ -2,6 +2,10 @@ require 'sinatra'
 require 'json'
 require 'db/seed'
 require 'helpers/projects_helper'
+require 'hailstorm/model/project'
+require 'hailstorm/support/configuration'
+require 'model/project_configuration'
+require 'hailstorm/middleware/command_execution_template'
 
 include ProjectsHelper
 
@@ -12,7 +16,7 @@ end
 
 get '/projects/:id' do |id|
   sleep 0.5
-  found_project = Seed::DB[:projects].find { |project| project[:id] == id.to_s.to_i }
+  found_project = Seed::DB[:projects].first# .find { |project| project[:id] == id.to_s.to_i }
   return not_found unless found_project
 
   found_project = found_project.clone
@@ -27,15 +31,17 @@ end
 
 patch '/projects/:id' do |id|
   key_identity = id.to_s.to_i
-  sleep 0.1
   found_project = Seed::DB[:projects].find { |project| project[:id] == key_identity }
-  return not_found unless found_project
 
   request.body.rewind
   # @type [Hash]
   data = JSON.parse(request.body.read)
-  found_project[:title] = data['title'] if data.key?('title')
-  found_project[:running] = data['running'] == 'true' if data.key?('running')
+
+  if found_project
+    found_project[:title] = data['title'] if data.key?('title')
+    found_project[:running] = data['running'] == 'true' if data.key?('running')
+  end
+
   wait_duration = 0
   if data.key?('action')
     case data['action'].to_sym
@@ -61,7 +67,7 @@ patch '/projects/:id' do |id|
       current_execution_cycle[:throughput] = 10.24
       found_project[:running] = false
 
-    when :abort, :terminated
+    when :abort
       wait_duration = 1.5
       current_execution_cycle = Seed::DB[:executionCycles].find { |x| x[:projectId] == key_identity && x[:stoppedAt].nil? }
       raise(ArgumentError("No running execution cycle found for project_id: #{id}")) unless current_execution_cycle
@@ -69,6 +75,15 @@ patch '/projects/:id' do |id|
       current_execution_cycle[:stoppedAt] = Time.now.to_i
       current_execution_cycle[:status] = Hailstorm::Model::ExecutionCycle::States::ABORTED
       found_project[:running] = false
+
+    when :terminate
+      found_project = Hailstorm::Model::Project.find(id)
+      project_config = ProjectConfiguration.where(project_id: found_project.id).first
+      return not_found unless project_config
+
+      hailstorm_config = deep_decode(project_config.stringified_config)
+      cmd_template = Hailstorm::Middleware::CommandExecutionTemplate.new(found_project, hailstorm_config)
+      cmd_template.terminate
     end
   end
 

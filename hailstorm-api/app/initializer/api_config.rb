@@ -1,9 +1,9 @@
 require 'hailstorm/initializer/eager_load'
 require 'initializer/log_config'
+require 'initializer/logger_redis_ext'
 require 'hailstorm/initializer/java_classpath'
 require 'initializer/db_config'
 require 'initializer/migrations'
-require 'hailstorm/support/log4j_backed_logger'
 require 'web_file_store'
 
 Hailstorm.fs = WebFileStore.new
@@ -42,4 +42,8 @@ set :show_exceptions, :after_handler
 require 'active_record/errors'
 error ActiveRecord::RecordNotFound do
   not_found
+end
+
+error do
+  logger.error(env['sinatra.error'].message)
 end

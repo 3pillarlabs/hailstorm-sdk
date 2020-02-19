@@ -1,7 +1,10 @@
 package com.tpg.labs.hailstorm.clientexchange;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
+import io.lettuce.core.pubsub.api.reactive.RedisPubSubReactiveCommands;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
@@ -9,7 +12,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
-import java.time.Duration;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -19,10 +22,16 @@ public class LogsServiceImpl implements LogsService, InitializingBean {
 
     private final List<LogEvent> cache = new ArrayList<>();
     private ObjectMapper objectMapper;
+    private StatefulRedisPubSubConnection<String, String> connection;
 
     @Autowired
     public void setObjectMapper(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
+    }
+
+    @Autowired
+    public void setConnection(StatefulRedisPubSubConnection<String, String> connection) {
+        this.connection = connection;
     }
 
     @Override
@@ -34,6 +43,18 @@ public class LogsServiceImpl implements LogsService, InitializingBean {
 
     @Override
     public Flux<LogEvent> logStream() {
-        return Flux.just(cache.toArray(new LogEvent[] {})).delayElements(Duration.ofSeconds(1));
+        RedisPubSubReactiveCommands<String, String> reactiveCommands = connection.reactive();
+        reactiveCommands.subscribe("hailstorm-logs").subscribe();
+        return reactiveCommands.observeChannels().map(channelMessage -> {
+            String message = channelMessage.getMessage();
+            LogEvent logEvent = null;
+            try {
+                logEvent = objectMapper.readValue(message, LogEvent.class);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+
+            return logEvent;
+        });
     }
 }
