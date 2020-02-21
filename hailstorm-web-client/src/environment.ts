@@ -1,11 +1,13 @@
 type Config = {
-  fileServerBaseURL: string;
-  apiBaseURL: string;
+  fileServerBaseURL: string,
+  apiBaseURL: string,
+  streamURL: string
 }
 
 const common: Config = {
   fileServerBaseURL: "http://localhost:8080",
-  apiBaseURL: "http://localhost:4567"
+  apiBaseURL: "http://localhost:4567",
+  streamURL: "ws://localhost:9100"
 };
 
 const dev: Config = {

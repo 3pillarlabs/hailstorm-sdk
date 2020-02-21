@@ -2,44 +2,14 @@ package com.tpg.labs.hailstorm.clientexchange;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import java.time.Clock;
-
 public class LogEvent {
-
-    @JsonIgnore
-    private static final String[] LEVEL_LABELS = new String[] {
-            "DEBUG",
-            "INFO",
-            "WARN",
-            "ERROR",
-            "FATAL"
-    };
 
     private String projectCode;
     private long timestamp;
     private int priority;
     private String level;
     private String message;
-
-    public LogEvent() {
-
-    }
-
-    public LogEvent(String projectCode, long timestamp, int priority, String level, String message) {
-        this.projectCode = projectCode;
-        this.timestamp = timestamp;
-        this.priority = priority;
-        this.level = level;
-        this.message = message;
-    }
-
-    public LogEvent(String projectCode, int priority, String message) {
-        this(projectCode,
-                Clock.systemUTC().millis(),
-                priority,
-                LEVEL_LABELS[priority],
-                message);
-    }
+    private long id;
 
     public String getProjectCode() {
         return projectCode;
@@ -81,10 +51,17 @@ public class LogEvent {
         this.message = message;
     }
 
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
+    }
+
     @JsonIgnore
-    public LogEvent decorate(double jitter) {
-        this.timestamp = System.currentTimeMillis() + new Double(jitter * 1000000).longValue();
-        this.level = LEVEL_LABELS[this.priority];
-        return this;
+    public static LogEvent build(LogEvent original) {
+        original.setId(original.getTimestamp() * new Double(Math.ceil(Math.random() * 1000)).longValue());
+        return original;
     }
 }

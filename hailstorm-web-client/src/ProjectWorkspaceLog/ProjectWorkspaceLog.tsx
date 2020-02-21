@@ -45,7 +45,7 @@ export const ProjectWorkspaceLog: React.FC = () => {
           </div>
           <div className={`panel-block ${styles.logBox}`} ref={logBox}>
             {logs.map((log) => (
-              <React.Fragment key={log.timestamp}>[{log.level.toUpperCase()}] {log.message} <br/></React.Fragment>
+              <div key={log.id || log.timestamp} className={styles[log.level]}>[{log.level.toUpperCase()}] {log.message}</div>
             ))}
           </div>
         </div>

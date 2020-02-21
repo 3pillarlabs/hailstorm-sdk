@@ -4,6 +4,7 @@ import { Observable, Subscriber } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { RSocketClient, JsonSerializer, IdentitySerializer} from 'rsocket-core';
 import RSocketWebSocketClient from 'rsocket-websocket-client';
+import environment from './environment';
 
 const MAX_REQUEST_VALUE = 2147483647;
 
@@ -24,7 +25,7 @@ export const LogStream: {
         keepAlive: 60000,
         lifetime: 180000
       },
-      transport: new RSocketWebSocketClient({url: "ws://localhost:8080/rsocket"})
+      transport: new RSocketWebSocketClient({url: `${environment.streamURL}/rsocket`})
     });
 
     return new Observable((subscriber: Subscriber<LogEvent>) => {

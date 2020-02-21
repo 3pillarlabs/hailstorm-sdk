@@ -52,6 +52,7 @@ export enum InterimProjectState {
 }
 
 export interface LogEvent {
+  id?: number;
   projectCode?: string;
   timestamp: number;
   priority: number;

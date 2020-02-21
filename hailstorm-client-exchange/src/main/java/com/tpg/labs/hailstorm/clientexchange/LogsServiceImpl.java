@@ -1,28 +1,33 @@
 package com.tpg.labs.hailstorm.clientexchange;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
+import io.lettuce.core.pubsub.api.reactive.ChannelMessage;
 import io.lettuce.core.pubsub.api.reactive.RedisPubSubReactiveCommands;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class LogsServiceImpl implements LogsService, InitializingBean {
 
-    private final List<LogEvent> cache = new ArrayList<>();
+    private static final String DEFAULT_CHANNEL_PATTERN = "hailstorm-logs";
+
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
     private ObjectMapper objectMapper;
     private StatefulRedisPubSubConnection<String, String> connection;
+    private String channelPattern = DEFAULT_CHANNEL_PATTERN;
+    private Flux<String> eventSource;
 
     @Autowired
     public void setObjectMapper(ObjectMapper objectMapper) {
@@ -34,27 +39,38 @@ public class LogsServiceImpl implements LogsService, InitializingBean {
         this.connection = connection;
     }
 
+    public void setChannelPattern(String channelPattern) {
+        this.channelPattern = channelPattern;
+    }
+
+    public void setEventSource(Flux<String> eventSource) {
+        this.eventSource = eventSource;
+    }
+
     @Override
     public void afterPropertiesSet() throws Exception {
-        Resource eventsFile = new ClassPathResource("fake-events.json");
-        cache.addAll(objectMapper.readValue(eventsFile.getFile(), new TypeReference<List<LogEvent>>() {})
-                .stream().map(logEvent -> logEvent.decorate(Math.random())).collect(Collectors.toList()));
+        RedisPubSubReactiveCommands<String, String> reactiveCommands = connection.reactive();
+        reactiveCommands.subscribe(channelPattern).toFuture().get();
+        eventSource = reactiveCommands.observeChannels().map(ChannelMessage::getMessage);
+        logger.debug("Event source configured");
     }
 
     @Override
     public Flux<LogEvent> logStream() {
-        RedisPubSubReactiveCommands<String, String> reactiveCommands = connection.reactive();
-        reactiveCommands.subscribe("hailstorm-logs").subscribe();
-        return reactiveCommands.observeChannels().map(channelMessage -> {
-            String message = channelMessage.getMessage();
-            LogEvent logEvent = null;
-            try {
-                logEvent = objectMapper.readValue(message, LogEvent.class);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
+        logger.debug("logStream");
+        return eventSource
+                .map(message -> {
+                    LogEvent logEvent = null;
+                    try {
+                        logEvent = objectMapper.readValue(message, LogEvent.class);
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
 
-            return logEvent;
-        });
+                    return LogEvent.build(logEvent);
+                })
+                .onErrorContinue((throwable, o) -> {
+                    logger.warn(throwable.getMessage());
+                });
     }
 }

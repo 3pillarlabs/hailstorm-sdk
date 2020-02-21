@@ -10,6 +10,7 @@ services:
       true
     depends_on:
       - file-server
+      - client-exchange
       - hailstorm-db
 
   file-server:
@@ -23,7 +24,7 @@ services:
       - type: volume
         source: fileStore
         target: /hailstorm
-  
+
   hailstorm-db:
     image: "mysql:5"
     hostname: "hailstorm-db"
@@ -45,7 +46,23 @@ services:
       - "6379:6379"
     networks:
       - hailstorm
-  
+
+  client-exchange:
+    image: "hailstorm/hailstorm-client-exchange"
+    hostname: "hailstorm-client-exchange"
+    ports:
+      - "9100:8080"
+    networks:
+      - hailstorm
+      - dmz
+    depends_on:
+      - hailstorm-mq
+    entrypoint:
+      - "java"
+      - "-jar"
+      - "/app.jar"
+      - "--redisHost=hailstorm-mq"
+
 networks:
   dmz:
   hailstorm:
