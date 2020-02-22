@@ -96,8 +96,17 @@ When("start load generation", function() {
 });
 
 Then("{int} test should be running", function(numRows) {
-  browser.waitUntil(() => $$('tr.notification').length === numRows);
+  browser.waitUntil(() => $$('tr.notification').length === numRows, 30 * 60 * 1000, "waiting for test to start", 5 * 60 * 1000);
   expect($('//button[@name="stop"]').isEnabled()).to.not.be.true;
+});
+
+When("I wait for load generation to stop", function () {
+  browser.waitUntil(() => $('//button[@name="stop"]').isEnabled(), 10 * 60 * 1000, "waiting for test to stop", 5 * 60 * 1000);
+  expect($$('tr').length).to.be.greaterThan(0);
+});
+
+Then("{int} test should exist", function (numRows) {
+  expect($$('tr').length).to.equal(numRows);
 });
 
 When("wait for {int} seconds", function(int) {

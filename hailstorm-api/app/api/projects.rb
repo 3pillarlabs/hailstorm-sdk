@@ -30,64 +30,51 @@ get '/projects/:id' do |id|
 end
 
 patch '/projects/:id' do |id|
-  key_identity = id.to_s.to_i
-  found_project = Seed::DB[:projects].find { |project| project[:id] == key_identity }
+  found_project = Hailstorm::Model::Project.find(id)
 
   request.body.rewind
   # @type [Hash]
   data = JSON.parse(request.body.read)
 
-  if found_project
-    found_project[:title] = data['title'] if data.key?('title')
-    found_project[:running] = data['running'] == 'true' if data.key?('running')
+  if data.key?('title')
+    return 422 if data['title'].blank?
+    found_project.update_column(:title, data['title'])
   end
 
-  wait_duration = 0
   if data.key?('action')
+    project_config = ProjectConfiguration.find_by_project_id(found_project.id)
+    return 422 unless project_config
+
+    # @type [Hailstorm::Support::Configuration] hailstorm_config
+    hailstorm_config = deep_decode(project_config.stringified_config)
+    cmd_template = Hailstorm::Middleware::CommandExecutionTemplate.new(found_project, hailstorm_config)
+
     case data['action'].to_sym
     when :start
-      wait_duration = 3
-      Seed::DB[:executionCycles].push({
-          id: Seed::DB[:sys][:execution_cycle_idx].call,
-          startedAt: Time.now.to_i,
-          threadsCount: 100,
-          projectId: key_identity
-      })
+      digest = Digest::SHA1.new
+      digest.update(project_config.stringified_config)
+      current_serial_version = digest.hexdigest
+      if found_project.serial_version.nil? || found_project.serial_version != current_serial_version
+        found_project.settings_modified = true
+        found_project.update_attribute(:serial_version, current_serial_version)
+      end
 
-      found_project[:running] = true
+      cmd_template.start('redeploy')
 
     when :stop
-      wait_duration = 3
-      current_execution_cycle = Seed::DB[:executionCycles].find { |x| x[:projectId] == key_identity && x[:stoppedAt].nil? }
-      raise(ArgumentError("No running execution cycle found for project_id: #{id}")) unless current_execution_cycle
-
-      current_execution_cycle[:stoppedAt] = Time.now.to_i
-      current_execution_cycle[:responseTime] = 234.56
-      current_execution_cycle[:status] = Hailstorm::Model::ExecutionCycle::States::STOPPED
-      current_execution_cycle[:throughput] = 10.24
-      found_project[:running] = false
+      cmd_template.stop
 
     when :abort
-      wait_duration = 1.5
-      current_execution_cycle = Seed::DB[:executionCycles].find { |x| x[:projectId] == key_identity && x[:stoppedAt].nil? }
-      raise(ArgumentError("No running execution cycle found for project_id: #{id}")) unless current_execution_cycle
-
-      current_execution_cycle[:stoppedAt] = Time.now.to_i
-      current_execution_cycle[:status] = Hailstorm::Model::ExecutionCycle::States::ABORTED
-      found_project[:running] = false
+      cmd_template.abort
 
     when :terminate
-      found_project = Hailstorm::Model::Project.find(id)
-      project_config = ProjectConfiguration.where(project_id: found_project.id).first
-      return not_found unless project_config
-
-      hailstorm_config = deep_decode(project_config.stringified_config)
-      cmd_template = Hailstorm::Middleware::CommandExecutionTemplate.new(found_project, hailstorm_config)
       cmd_template.terminate
+
+    else
+      return 422
     end
   end
 
-  sleep(wait_duration) if wait_duration > 0
   204
 end
 

@@ -1,1 +1,5 @@
-- [Bug] ``results`` fails in random ways if log collection was not successful for some reason when tests are stopped.
+- [Bug] CLI - ``results`` fails in random ways if log collection was not successful for some reason when tests are stopped.
+- [Bug] Web - without any projects, the project listing page spinner spins forever. Expect to move to New Project dialog.
+- [Bug] Web - default instance type in SPA works only in VPC.
+- [Task] Web - optimize react effects (too many triggered for false positives)
+- [Bug] Gem - sometimes logs fail to download from the Web interface (exception is in a thread making it hard to track down); but there's no apparent issue.

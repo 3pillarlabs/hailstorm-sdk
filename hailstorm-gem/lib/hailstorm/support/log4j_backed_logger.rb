@@ -54,7 +54,7 @@ class Hailstorm::Support::Log4jBackedLogger
 
   def error(msg = nil)
     if block_given?
-      log_message(:warn, yield) if error?
+      log_message(:error, yield) if error?
     else
       log_message(:error, msg)
     end
@@ -96,13 +96,17 @@ class Hailstorm::Support::Log4jBackedLogger
                        msg
                      end
     logger_message.chomp! unless logger_message.frozen?
-    with_context { @log4j_logger.send(log_method_sym, logger_message) }
+    with_context do
+      @log4j_logger.send(log_method_sym, logger_message)
+      [log_method_sym, logger_message]
+    end
   end
 
   def with_context
     logger_mdc_impl.put('caller', caller(3).first)
     begin
-      yield
+      args = yield
+      extended_logging(*args)
     ensure
       logger_mdc_impl.remove('caller')
     end
@@ -118,6 +122,12 @@ class Hailstorm::Support::Log4jBackedLogger
 
   def logger_mdc_impl
     org.apache.log4j.MDC
+  end
+
+  # @param [Symbol] _log_level
+  # @param [String] _message
+  def extended_logging(_log_level, _message)
+    # noop
   end
 
   def method_missing(method_name, *_args)

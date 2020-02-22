@@ -161,8 +161,8 @@ exports.config = {
       const fs = require('fs');
       const path = require('path')
       const buildPath = path.resolve('build')
-      // rimraf.sync(buildPath);
-      // fs.mkdirSync(buildPath);
+      rimraf.sync(buildPath);
+      fs.mkdirSync(buildPath);
     },
     /**
      * Gets executed just before initialising the webdriver session and test framework. It allows you

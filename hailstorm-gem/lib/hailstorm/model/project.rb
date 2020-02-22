@@ -72,7 +72,6 @@ class Hailstorm::Model::Project < ActiveRecord::Base
 
     # add an execution_cycle
     build_current_execution_cycle.save! # buildABC is provided by has_one :ABC relation
-    self.current_execution_cycle.update_column(:threads_count, self.jmeter_plans.sum(:latest_threads_count))
     if settings_modified?
       begin
         setup(invoked_from_start: true, config: config, force: true)
@@ -89,10 +88,17 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     begin
       Hailstorm::Model::TargetHost.monitor_all(self)
       Hailstorm::Model::Cluster.generate_all_load(self, redeploy)
+
     rescue Exception
       self.current_execution_cycle.aborted!
       raise
+
     ensure
+      self.current_execution_cycle.update_attribute(
+          :threads_count,
+          self.jmeter_plans.sum(:latest_threads_count)
+      )
+
       self.reload
     end
   end

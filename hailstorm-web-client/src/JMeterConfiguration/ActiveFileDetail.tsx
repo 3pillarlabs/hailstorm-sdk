@@ -27,6 +27,7 @@ export function ActiveFileDetail({ state, dispatch, setShowModal, setUploadAbort
         .jmeter()
         .create(state.activeProject!.id, {
           name: state.wizardState!.activeJMeterFile!.name,
+          path: state.wizardState!.activeJMeterFile!.path,
           properties: new Map(Object.entries(values)),
           dataFile: state.wizardState!.activeJMeterFile!.dataFile
         }) :

@@ -32,7 +32,9 @@ export const ExecutionCycleGrid: React.FC<ExecutionCycleGridProps> = (props) => 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.debug('ExecutionCycleGrid#useEffect(loading, reloadGrid, project)');
+    console.debug('ExecutionCycleGrid#useEffect(reloadGrid, project)');
+    if (project.interimState !== undefined) return;
+
     ApiFactory()
       .executionCycles()
       .list(project.id)
@@ -50,7 +52,7 @@ export const ExecutionCycleGrid: React.FC<ExecutionCycleGridProps> = (props) => 
       })
       .then(() => setLoading(false))
       .then(() => setReloadGrid(false));
-  }, [loading, reloadGrid, project]);
+  }, [reloadGrid, project]);
 
   useEffect(() => {
     console.debug('ExecutionCycleGrid#useEffect(executionCycles)');

@@ -87,26 +87,69 @@ describe 'api/projects' do
   end
 
   context 'PATCH /projects/:id' do
-    context 'action=terminate' do
-      it 'should terminate the setup' do
-        project = Hailstorm::Model::Project.create!(project_code: 'acme_priming')
+    context 'with "action" param ' do
+      before(:each) do
+        @project = Hailstorm::Model::Project.create!(project_code: 'acme_priming')
         ProjectConfiguration.create!(
-          project_id: project.id,
+          project_id: @project.id,
           stringified_config: deep_encode(Hailstorm::Support::Configuration.new)
         )
+      end
 
-        Hailstorm::Model::ExecutionCycle.create!(
-            project: project,
+      context 'action=terminate' do
+        it 'should terminate the setup' do
+          Hailstorm::Model::ExecutionCycle.create!(
+            project: @project,
             status: Hailstorm::Model::ExecutionCycle::States::STARTED,
             started_at: Time.now - 60.minutes,
             threads_count: 30
-        )
+          )
 
-        Hailstorm::Model::Cluster.stub!(:terminate)
-        Hailstorm::Model::TargetHost.stub!(:terminate)
-        @browser.patch("/projects/#{project.id}", JSON.dump({action: 'terminate'}))
+          Hailstorm::Model::Cluster.stub!(:terminate)
+          Hailstorm::Model::TargetHost.stub!(:terminate)
+          @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'terminate'}))
+          expect(@browser.last_response).to be_successful
+          expect(Hailstorm::Model::ExecutionCycle.first.status).to eq(Hailstorm::Model::ExecutionCycle::States::TERMINATED.to_s)
+        end
+      end
+
+      context 'action=start' do
+        it 'should invoke action on model delegate' do
+          @project.update_column(:serial_version, 'a')
+          Hailstorm::Model::Project.any_instance.stub(:start)
+          @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'start'}))
+          expect(@browser.last_response).to be_successful
+        end
+      end
+
+      context 'action=stop' do
+        it 'should invoke action on model delegate' do
+          Hailstorm::Model::Project.any_instance.stub(:stop)
+          @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'stop'}))
+          expect(@browser.last_response).to be_successful
+        end
+      end
+
+      context 'action=abort' do
+        it 'should invoke action on model delegate' do
+          Hailstorm::Model::Project.any_instance.stub(:stop)
+          @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'abort'}))
+          expect(@browser.last_response).to be_successful
+        end
+      end
+    end
+
+    context 'with "title" param' do
+      before(:each) do
+        @project = Hailstorm::Model::Project.create!(project_code: 'acme_priming', title: 'Acme Priming')
+      end
+
+      it 'should update the project title but not the title' do
+        @browser.patch("/projects/#{@project.id}", JSON.dump({title: 'Acme Priming 32'}))
         expect(@browser.last_response).to be_successful
-        expect(Hailstorm::Model::ExecutionCycle.first.status).to eq(Hailstorm::Model::ExecutionCycle::States::TERMINATED.to_s)
+        @project.reload
+        expect(@project.title).to be == 'Acme Priming 32'
+        expect(@project.project_code).to be == 'acme_priming'
       end
     end
   end

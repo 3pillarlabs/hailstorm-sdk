@@ -2,6 +2,8 @@ package com.tpg.labs.hailstorm.clientexchange;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import java.time.Duration;
+
 public class LogEvent {
 
     private String projectCode;
@@ -61,7 +63,8 @@ public class LogEvent {
 
     @JsonIgnore
     public static LogEvent build(LogEvent original) {
-        original.setId(original.getTimestamp() * new Double(Math.ceil(Math.random() * 1000)).longValue());
+        original.setId(original.getTimestamp() * new Double(Math.ceil(Math.random() * 10000)).longValue() +
+                original.message.hashCode());
         return original;
     }
 }

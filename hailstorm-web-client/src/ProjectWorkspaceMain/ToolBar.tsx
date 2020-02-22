@@ -80,7 +80,11 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
         .update(project.id, { running: endState, action })
         .then(() => dispatch(new UnsetInterimStateAction()))
         .then(() => dispatch(new SetRunningAction(endState)))
-        .then(() => setReloadGrid(true));
+        .then(() => setReloadGrid(true))
+        .catch((reason) => {
+          console.error(reason);
+          dispatch(new UnsetInterimStateAction());
+        });
     };
   }
 
@@ -123,6 +127,7 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
 
   useEffect(() => {
     console.debug('ToolBar#useEffect(project)');
+    let cb: (() => void) | undefined = undefined;
     if (project.running && project.autoStop) {
       const period = statusCheckInterval || 3 * 60 * 1000;  // emit every 3 minutes by default
       const tick$ = interval(period);
@@ -145,7 +150,15 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
             subject.complete();
           }
       });
+
+      cb = () => {
+        subject.next();
+        subject.complete();
+      };
     }
+
+    return cb;
+
   }, [project]);
 
   return (

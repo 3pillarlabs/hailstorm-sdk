@@ -36,6 +36,12 @@ module Hailstorm::Behavior::FileStore
     def transfer_jmeter_artifacts(_project_code, _to_path)
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
+
+    # Override this file if the file_path to a test plan or data file should be altered
+    # before persistence. The default is to not make any modifications.
+    def normalize_file_path(file_path)
+      file_path
+    end
   end
 
   # File methods for ExecutionCycle

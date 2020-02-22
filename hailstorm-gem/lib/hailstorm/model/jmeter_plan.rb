@@ -101,7 +101,8 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   def self.to_jmeter_plans(jmeter_config, project, test_plans)
     instances = test_plans.map do |plan|
       properties = jmeter_config.properties(test_plan: plan)
-      jmeter_plan = self.where(test_plan_name: File.strip_ext(plan), project_id: project.id).first_or_initialize
+      test_plan_name = File.strip_ext(Hailstorm.fs.normalize_file_path(plan))
+      jmeter_plan = self.where(test_plan_name: test_plan_name, project_id: project.id).first_or_initialize
       jmeter_plan.validate_plan = true
       jmeter_plan.active = true
       jmeter_plan.properties = properties.to_json
@@ -395,7 +396,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
         @num_threads = 0
 
         threadgroups_threads_count_properties.each do |property_name|
-          value = properties_map[property_name]
+          value = properties_map[property_name].to_i
           logger.debug("#{property_name} -> #{value}")
 
           if serialize_threadgroups?

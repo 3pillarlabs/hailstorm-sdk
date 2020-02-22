@@ -29,7 +29,7 @@ module ProjectsHelper
       last_execution_cycles = project
                                .execution_cycles
                                .where(status: Hailstorm::Model::ExecutionCycle::States::STOPPED)
-                               .order(:stopped_at, :desc)
+                               .order(stopped_at: :desc)
                                .limit(1)
       if last_execution_cycles.size > 0
         last_execution_cycle = last_execution_cycles.first

@@ -39,11 +39,21 @@ require 'helpers/api_helper'
 helpers ApiHelper
 
 set :show_exceptions, :after_handler
+
 require 'active_record/errors'
 error ActiveRecord::RecordNotFound do
   not_found
 end
 
+require 'hailstorm/exceptions'
 error do
-  logger.error(env['sinatra.error'].message)
+  bubbled_error = env['sinatra.error']
+  logger.error(bubbled_error.message)
+  if bubbled_error.is_a?(Hailstorm::ThreadJoinException)
+    bubbled_error.exceptions.each do |inner_error|
+      logger.error(inner_error)
+    end
+  end
+
+  500
 end

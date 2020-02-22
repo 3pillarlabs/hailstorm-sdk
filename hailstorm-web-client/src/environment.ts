@@ -12,6 +12,7 @@ const common: Config = {
 
 const dev: Config = {
   ...common,
+  fileServerBaseURL: "http://localhost:9000"
 };
 
 const prod: Config = {

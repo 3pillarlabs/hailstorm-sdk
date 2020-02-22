@@ -76,10 +76,13 @@ patch '/projects/:project_id/jmeter_plans/:id' do |project_id, id|
   return not_found unless test_plan_name
 
   hailstorm_config.jmeter.properties(test_plan: test_plan_name) { |map| update_map(map, data) }
+  project_config.update_attributes!(stringified_config: deep_encode(hailstorm_config))
+  
+  path, name = test_plan_name.split('/')
   JSON.dump({
     id: test_plan_name.to_java_string.hash_code,
-    name: "#{File.basename(test_plan_name)}.jmx",
-    path: File.dirname(test_plan_name),
+    name: "#{name}.jmx",
+    path: path,
     properties: hailstorm_config.jmeter.properties(test_plan: test_plan_name).entries
   })
 end
