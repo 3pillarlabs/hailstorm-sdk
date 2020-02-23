@@ -12,45 +12,46 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Optional;
+import java.util.List;
 
 @Controller
-public class HailstormFsController {
+public class ReportsController {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-    private final StorageService storageService;
+    private final ReportFileService reportFileService;
 
     @Autowired
-    public HailstormFsController(StorageService storageService) {
-        this.storageService = storageService;
+    public ReportsController(ReportFileService reportFileService) {
+        this.reportFileService = reportFileService;
     }
 
-    @PostMapping("/upload")
+    @PostMapping("/reports")
     public ResponseEntity<FileMetaData> uploadFile(@RequestParam("file") MultipartFile file,
-                                                   @RequestParam(value = "prefix",
-                                                           required = false) String pathPrefix) throws IOException {
+                                                   @RequestParam("prefix") String pathPrefix) throws IOException {
 
-        FileMetaData fileMetaData = FileMetaDataBuilder.build(file, pathPrefix);
+        final FileMetaData fileMetaData = FileMetaDataBuilder.build(file, pathPrefix);
         logger.debug("fileMetaData: {}", fileMetaData);
-        String path = storageService.saveFile(fileMetaData, file::transferTo);
+        String path = reportFileService.saveFile(fileMetaData, file::transferTo);
         return ResponseEntity.ok().body(fileMetaData.withId(path));
     }
 
-    @DeleteMapping("/{fileId}")
-    public ResponseEntity deleteFile(@PathVariable("fileId") String fileId) {
-        logger.debug("path: {}", fileId);
-        storageService.deleteFile(fileId);
-        return ResponseEntity.ok().build();
+    @GetMapping("/reports/{prefix}")
+    public ResponseEntity<List<ReportMetaData>> getProjectReports(
+            @PathVariable("prefix") String prefix) throws IOException {
+
+        List<ReportMetaData> reports = reportFileService.getReportMetaDataList(prefix);
+        return ResponseEntity.ok().body(reports);
     }
 
-    @GetMapping("/{fileId}/{fileName}")
+    @GetMapping("/reports/{prefix}/{fileId}/{fileName}")
     @ResponseBody
-    public ResponseEntity<Resource> serveFile(@PathVariable("fileId") String fileId,
+    public ResponseEntity<Resource> serveFile(@PathVariable("prefix") String prefix,
+                                              @PathVariable("fileId") String fileId,
                                               @PathVariable("fileName") String fileName) {
-        logger.debug("fileId: {}, fileName: {}", fileId, fileName);
+
         Resource file = null;
         try {
-            file = storageService.getFile(fileId, fileName);
+            file = reportFileService.getReport(prefix, fileId, fileName);
         } catch (FileNotFoundException e) {
             return ResponseEntity.notFound().build();
         }

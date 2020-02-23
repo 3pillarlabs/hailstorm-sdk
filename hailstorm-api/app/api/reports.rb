@@ -1,22 +1,26 @@
 require 'sinatra'
 require 'json'
-require 'db/seed'
+require 'uri'
+require 'hailstorm/model/project'
+require 'model/project_configuration'
 
 get '/projects/:project_id/reports' do |project_id|
-  sleep 0.4
-  JSON.dump(Seed::DB[:reports].select { |r|  r[:projectId] == project_id.to_s.to_i })
+  project = Hailstorm::Model::Project.find(project_id)
+  reports = Hailstorm.fs.fetch_reports(project.project_code)
+                .map { |attrs| attrs.merge({projectId: project.id}) }
+
+  JSON.dump(reports)
 end
 
 post '/projects/:project_id/reports' do |project_id|
-  sleep 3
-  project = Seed::DB[:projects].find { |p| p[:id] == project_id.to_s.to_i }
-  return 404 unless project
+  project = Hailstorm::Model::Project.find(project_id)
+  project_config = ProjectConfiguration.find_by_project_id!(project.id)
+  hailstorm_config = deep_decode(project_config.stringified_config)
 
   request.body.rewind
   data = JSON.parse(request.body.read).sort
-  first_x_cid, last_x_cide = data[0], data[-1]
-  title = "#{project[:code]}-#{first_x_cid}-#{last_x_cide}"
-  report = { id: Seed::DB[:sys][:report_idx].call, projectId: project_id.to_s.to_i, title: title }
-  Seed::DB[:reports].push(report)
+  uri_path, id = project.results(:report, cycle_ids: data.map(&:to_i), config: hailstorm_config)
+  uri = URI(uri_path)
+  report = { id: id, projectId: project.id, title: File.basename(uri.path), uri: uri }
   JSON.dump(report)
 end

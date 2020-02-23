@@ -12,7 +12,7 @@ describe('<ReportsList />', () => {
 
   it('should reload reports list', (done) => {
     const apiSpy = jest.spyOn(ReportService.prototype, 'list').mockResolvedValue([
-      { id: 1, projectId: 1, title: 'a.docx' }
+      { id: 1, projectId: 1, title: 'a.docx', uri: 'http://fake.org/reports/123/a.docx' }
     ]);
 
     const Wrapper: React.FC = () => {

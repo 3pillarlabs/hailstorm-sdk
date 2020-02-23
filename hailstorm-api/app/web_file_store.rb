@@ -1,6 +1,9 @@
 require 'net/http'
 require 'uri'
 require 'yaml'
+require 'rack'
+require 'net/http'
+require 'json'
 
 require 'hailstorm/behavior/loggable'
 require 'hailstorm/behavior/file_store'
@@ -74,7 +77,37 @@ class WebFileStore
   end
 
   def export_report(project_code, internal_path)
-    logger.debug { internal_path }
+    logger.debug { "#{self.class}#{__method__}(#{internal_path})" }
+    reports_uri = URI.parse("http://#{file_server_config[:host]}:#{file_server_config[:port]}/reports")
+    http = Net::HTTP.new(reports_uri.host, reports_uri.port)
+    request = Net::HTTP::Post.new(reports_uri.request_uri)
+    request.body = Rack::Multipart::Generator.new({
+      file: Rack::Multipart::UploadedFile.new(internal_path),
+      prefix: project_code
+    }.stringify_keys).dump
+
+    request.content_type = "multipart/form-data, boundary=#{Rack::Multipart::MULTIPART_BOUNDARY}"
+    # @type [Net::HTTPResponse]
+    response = http.request(request)
+    raise(Net::HTTPError.new("Failed upload to #{reports_uri}", response)) unless response.is_a?(Net::HTTPSuccess)
+
+    data = JSON.parse(response.body).symbolize_keys
+    ["#{reports_uri}/#{project_code}/#{data[:id]}/#{data[:originalName]}", data[:id]]
+  end
+
+  # @param [String] project_code
+  # @return [Array<Hash>] hash.keys = %w[id, title, uri]
+  def fetch_reports(project_code)
+    scheme_host_port = "http://#{file_server_config[:host]}:#{file_server_config[:port]}"
+    uri_path = "#{scheme_host_port}/reports/#{project_code}"
+    reports_uri = URI.parse(uri_path)
+    response = Net::HTTP.get_response(reports_uri)
+    raise(Net::HTTPError.new("Failed to fetch #{reports_uri}", response)) unless response.is_a?(Net::HTTPSuccess)
+
+    JSON.parse(response.body).map do |attrs|
+      symbol_attrs = attrs.symbolize_keys
+      symbol_attrs.merge(uri: "#{uri_path}/#{symbol_attrs[:id]}/#{symbol_attrs[:title]}")
+    end
   end
 
   private

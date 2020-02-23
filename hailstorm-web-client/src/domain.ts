@@ -36,6 +36,7 @@ export interface Report {
   id: number;
   projectId: number;
   title: string;
+  uri: string;
 }
 
 export interface JtlFile {

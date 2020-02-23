@@ -8,6 +8,7 @@ module Hailstorm::Behavior::FileStore
   #
   # @param [String] _project_code
   # @param [String] _local_path
+  # @return [String] URI to exported resource
   def export_report(_project_code, _local_path)
     raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end

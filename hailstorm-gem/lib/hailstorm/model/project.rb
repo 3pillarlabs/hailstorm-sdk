@@ -299,7 +299,9 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     def report
       logger.info('Creating report for stopped tests...')
       local_report_path = Hailstorm::Model::ExecutionCycle.create_report(project, cycle_ids)
-      Hailstorm.fs.export_report(project.project_code, local_report_path) unless local_report_path.blank?
+      return if local_report_path.blank?
+
+      Hailstorm.fs.export_report(project.project_code, local_report_path)
     end
 
     private

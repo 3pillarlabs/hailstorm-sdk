@@ -123,6 +123,7 @@ describe Hailstorm::Model::JmeterPlan do
       end
       jmx_files = %w[a b]
       Hailstorm.fs.stub!(:fetch_jmeter_plans).and_return(jmx_files)
+      Hailstorm.fs.stub!(:normalize_file_path) { |args| args }
       Hailstorm::Model::JmeterPlan.setup(@project, config)
       jmx_files.pop
       @project.reload
@@ -142,6 +143,7 @@ describe Hailstorm::Model::JmeterPlan do
           end
           jmx_files = %w[a b]
           Hailstorm.fs.stub!(:fetch_jmeter_plans).and_return(jmx_files)
+          Hailstorm.fs.stub!(:normalize_file_path) { |args| args }
           saved_plans = Hailstorm::Model::JmeterPlan.setup(@project, config)
           expect(saved_plans.size).to be == jmx_files.size
         end
@@ -170,6 +172,7 @@ describe Hailstorm::Model::JmeterPlan do
             end
           end
           Hailstorm.fs.stub!(:fetch_jmeter_plans).and_return(jmx_files)
+          Hailstorm.fs.stub!(:normalize_file_path) { |args| args }
           saved_plans = Hailstorm::Model::JmeterPlan.setup(@project, config)
           expect(saved_plans.size).to be == jmx_files.size
         end

@@ -45,7 +45,7 @@ module ProjectsHelper
         )
       end
 
-      if project.jmeter_plans.all.size > 0
+      if project.jmeter_plans.count > 0
         project_attrs[:auto_stop] = project.jmeter_plans.all.reduce(true) { |s, jp| s &&= !jp.loop_forever? }
       end
 

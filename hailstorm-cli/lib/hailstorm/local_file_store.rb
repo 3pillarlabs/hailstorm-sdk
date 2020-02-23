@@ -112,7 +112,9 @@ class Hailstorm::LocalFileStore
   def export_report(_project_code, local_path)
     file_name = File.basename(local_path)
     export_path = File.join(Hailstorm.root, Hailstorm.reports_dir)
-    FileUtils.cp(local_path, File.join(export_path, file_name))
+    to_path = File.join(export_path, file_name)
+    FileUtils.cp(local_path, to_path)
     logger.info { "Report generated to: #{export_path}" }
+    "file://#{to_path}"
   end
 end

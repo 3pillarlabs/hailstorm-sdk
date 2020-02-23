@@ -20,7 +20,7 @@ export const ReportsList: React.FC<ReportListProps> = (props) => {
     ApiFactory()
       .reports()
       .list(project.id)
-      .then((fetched) => setReports(fetched))
+      .then((fetched) => setReports(fetched.sort((a, b) => b.title.localeCompare(a.title))))
       .then(() => setLoadReports(false))
   }, [loadReports]);
 
@@ -32,8 +32,8 @@ export const ReportsList: React.FC<ReportListProps> = (props) => {
       {loadReports ?
       <Loader /> :
       (reports.length ?
-      reports.map(({title}) => (
-        <a className="panel-block" key={title}>
+      reports.map(({title, uri}) => (
+        <a className="panel-block" key={title} href={uri} target="_blank">
           <span className="panel-icon">
             <i className="far fa-file-word" aria-hidden="true"></i>
           </span>

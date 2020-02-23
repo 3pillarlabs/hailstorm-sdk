@@ -1,8 +1,5 @@
 package com.tpg.labs.hailstormfs;
 
-import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.codec.cli.Digest;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -14,12 +11,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.FileSystemUtils;
 
 import javax.validation.constraints.NotNull;
-import java.io.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.nio.file.Paths;
-import java.security.MessageDigest;
 import java.util.List;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
+
+import static com.tpg.labs.hailstormfs.FileMetaData.calculateHash;
 
 @Service
 public class LocalStorageServiceImpl implements StorageService, InitializingBean {
@@ -64,24 +62,22 @@ public class LocalStorageServiceImpl implements StorageService, InitializingBean
 
     @Override
     public String saveFile(FileMetaData fileMetaData, FileTransferDelegate fileTransferDelegate) throws IOException {
+        return saveFile(fileMetaData, fileTransferDelegate, baseURI);
+    }
+
+    @Override
+    public String saveFile(FileMetaData fileMetaData,
+                           FileTransferDelegate fileTransferDelegate,
+                           String parentPath) throws IOException {
+
         String hash = calculateHash(fileMetaData);
-        File dest = new File(baseURI, hash);
+        File dest = new File(parentPath, hash);
         if (!dest.exists()) {
             dest.mkdirs();
         }
 
         fileTransferDelegate.doTransfer(new File(dest, fileMetaData.getOriginalName()));
         return hash;
-    }
-
-    String calculateHash(FileMetaData fileMetaData) throws IOException {
-        MessageDigest messageDigest = DigestUtils.getSha1Digest();
-        messageDigest = DigestUtils.updateDigest(messageDigest, fileMetaData.getInputStream());
-        if (fileMetaData.getPathPrefix() != null) {
-            messageDigest = DigestUtils.updateDigest(messageDigest, fileMetaData.getPathPrefix());
-        }
-
-        return Hex.encodeHexString(messageDigest.digest(), true);
     }
 
     @Override
@@ -94,11 +90,26 @@ public class LocalStorageServiceImpl implements StorageService, InitializingBean
 
     @Override
     public Resource getFile(String fileId, String fileName) throws FileNotFoundException {
-        File file = Paths.get(baseURI, fileId, fileName).toFile();
+        return getFile(fileId, fileName, baseURI);
+    }
+
+    @Override
+    public Resource getFile(String fileId, String fileName, String parentPath) throws FileNotFoundException {
+        File file = Paths.get(parentPath, fileId, fileName).toFile();
         if (!file.exists()) {
             throw new FileNotFoundException(String.format("Not found %s/%s", fileId, fileName));
         }
 
         return new FileSystemResource(file);
+    }
+
+    @Override
+    public File makePath(String... components) {
+        File path = Paths.get(baseURI, components).toFile();
+        if (!path.exists()) {
+            path.mkdirs();
+        }
+
+        return path;
     }
 }

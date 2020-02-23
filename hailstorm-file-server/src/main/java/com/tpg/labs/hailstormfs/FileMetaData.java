@@ -1,9 +1,13 @@
 package com.tpg.labs.hailstormfs;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.codec.digest.DigestUtils;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
+import java.security.MessageDigest;
 import java.util.Optional;
 import java.util.StringJoiner;
 
@@ -75,4 +79,16 @@ public class FileMetaData {
                 .add("size=" + size)
                 .toString();
     }
+
+    @JsonIgnore
+    public static String calculateHash(FileMetaData fileMetaData) throws IOException {
+        MessageDigest messageDigest = DigestUtils.getSha1Digest();
+        messageDigest = DigestUtils.updateDigest(messageDigest, fileMetaData.getInputStream());
+        if (fileMetaData.getPathPrefix() != null) {
+            messageDigest = DigestUtils.updateDigest(messageDigest, fileMetaData.getPathPrefix());
+        }
+
+        return Hex.encodeHexString(messageDigest.digest(), true);
+    }
+
 }
