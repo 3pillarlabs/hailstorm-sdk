@@ -15,10 +15,18 @@ module Hailstorm
   def self.workspace(project_code)
     current_thread = Thread.current
     unless current_thread.thread_variable?(PROJECT_WORKSPACE_KEY)
-      current_thread.thread_variable_set(PROJECT_WORKSPACE_KEY, Hailstorm::Support::Workspace.new(project_code))
+      current_thread.thread_variable_set(PROJECT_WORKSPACE_KEY, {})
     end
 
-    current_thread.thread_variable_get(PROJECT_WORKSPACE_KEY)
+    # @type [Hash] project_workspace
+    project_workspace = current_thread.thread_variable_get(PROJECT_WORKSPACE_KEY)
+    unless project_workspace.key?(project_code)
+      require 'hailstorm/support/workspace'
+      project_workspace[project_code] = Hailstorm::Support::Workspace.new(project_code)
+      current_thread.thread_variable_set(PROJECT_WORKSPACE_KEY, project_workspace)
+    end
+
+    project_workspace[project_code]
   end
 
   # @return [String] path to templates directory
