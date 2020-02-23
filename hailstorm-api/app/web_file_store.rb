@@ -66,11 +66,15 @@ class WebFileStore
 
   # @param [String] file_path
   def normalize_file_path(file_path)
-    file_path.split('/').second
+    file_path.split('/').second || file_path
   end
 
   def read_identity_file(_file_path, _project_code = nil)
     super
+  end
+
+  def export_report(project_code, internal_path)
+    logger.debug { internal_path }
   end
 
   private
