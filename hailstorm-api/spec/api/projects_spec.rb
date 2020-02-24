@@ -153,4 +153,15 @@ describe 'api/projects' do
       end
     end
   end
+
+  context 'GET /projects/:id' do
+    it 'should get project attributes' do
+      project = Hailstorm::Model::Project.create!(title: 'Acme Priming', project_code: 'acme_priming')
+      @browser.get("/projects/#{project.id}")
+      expect(@browser.last_response).to be_successful
+      attrs = JSON.parse(@browser.last_response.body)
+      expect(attrs.keys).to include('code')
+      expect(attrs.keys).to include('id')
+    end
+  end
 end

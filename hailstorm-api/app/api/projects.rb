@@ -15,18 +15,8 @@ get '/projects' do
 end
 
 get '/projects/:id' do |id|
-  sleep 0.5
-  found_project = Seed::DB[:projects].first# .find { |project| project[:id] == id.to_s.to_i }
-  return not_found unless found_project
-
-  found_project = found_project.clone
-  current_execution_cycle = Seed::DB[:executionCycles].find { |x| x[:projectId] == id && x[:stoppedAt].nil? }
-  if current_execution_cycle
-    found_project[:currentExecutionCycle] = current_execution_cycle.clone
-    found_project[:currentExecutionCycle][:startedAt] = found_project[:currentExecutionCycle][:startedAt].to_i * 1000
-  end
-
-  JSON.dump(found_project)
+  found_project = Hailstorm::Model::Project.find(id)
+  JSON.dump(deep_camelize_keys(project_attributes(found_project)))
 end
 
 patch '/projects/:id' do |id|
