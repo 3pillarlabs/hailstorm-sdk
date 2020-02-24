@@ -4,6 +4,9 @@ import { Loader } from '../Loader';
 import { ExecutionCycleStatus } from '../domain';
 import { ApiFactory } from '../api';
 import { AppStateContext } from '../appStateContext';
+import styles from './ExecutionCycleGrid.module.scss';
+import { formatRelative } from 'date-fns';
+import { FixedDate } from './FixedDate';
 
 export interface ExecutionCycleGridProps {
   executionCycles: CheckedExecutionCycle[];
@@ -101,51 +104,55 @@ export const ExecutionCycleGrid: React.FC<ExecutionCycleGridProps> = (props) => 
                                                     x.status === ExecutionCycleStatus.EXCLUDED :
                                                     x.status !== ExecutionCycleStatus.EXCLUDED);
 
+  const dateNow = new FixedDate(new Date());
+
   return (
-    <table className="table is-fullwidth is-striped">
-      <thead>
-        <tr>
-          <th><input type="checkbox" checked={selectAll} onChange={handleSelectAll} disabled={viewTrash || loading || executionCycles.length === 0} /></th>
-          <th>Threads</th>
-          <th className="is-gtk">90th Percentile (ms)</th>
-          <th className="is-gtk">Throughput (tps)</th>
-          <th>Started</th>
-          <th>Duration (mins)</th>
-          <th className="is-gtk"></th>
-        </tr>
-      </thead>
-      {loading ? <tbody><tr><td colSpan={7}><Loader /></td></tr></tbody> : (
-      <tbody>
-        {shownCycles.length > 0 ?
-        shownCycles.map(({id, threadsCount, responseTime, throughput, startedAt, stoppedAt, checked}) => (
-        <tr key={id} className={stoppedAt ? undefined : 'notification is-warning'}>
-          <td>{stoppedAt && !viewTrash ? <input type="checkbox" checked={checked || false} onChange={toggleCheck(id)}/> : null}</td>
-          <td>{threadsCount}</td>
-          <td className="is-gtk">{responseTime}</td>
-          <td className="is-gtk">{throughput}</td>
-          <td>{startedAt.toDateString()}</td>
-          <td>{stoppedAt ? dateDiff(stoppedAt, startedAt) : ''}</td>
-          <td className="is-gtk">
-          {stoppedAt ?
-            <a className="is-danger" onClick={trashHandler(id)}>
-            {viewTrash ?
-              <i className="fas fa-undo"></i> :
-              <i className="fas fa-trash"></i>
+    <div className={`${styles.scrollableTable}`}>
+      <table className="table is-fullwidth is-striped">
+        <thead>
+          <tr>
+            <th><input type="checkbox" checked={selectAll} onChange={handleSelectAll} disabled={viewTrash || loading || executionCycles.length === 0} /></th>
+            <th>Threads</th>
+            <th className="is-gtk">90th Percentile (ms)</th>
+            <th className="is-gtk">Throughput (tps)</th>
+            <th>Started</th>
+            <th>Duration (mins)</th>
+            <th className="is-gtk"></th>
+          </tr>
+        </thead>
+        {loading ? <tbody><tr><td colSpan={7}><Loader /></td></tr></tbody> : (
+        <tbody>
+          {shownCycles.length > 0 ?
+          shownCycles.map(({id, threadsCount, responseTime, throughput, startedAt, stoppedAt, checked}) => (
+          <tr key={id} className={stoppedAt ? undefined : 'notification is-warning'}>
+            <td>{stoppedAt && !viewTrash ? <input type="checkbox" checked={checked || false} onChange={toggleCheck(id)}/> : null}</td>
+            <td>{threadsCount}</td>
+            <td className="is-gtk">{responseTime}</td>
+            <td className="is-gtk">{new Number(throughput).toFixed(2)}</td>
+            <td>{dateNow.formatDistance(startedAt)}</td>
+            <td>{stoppedAt ? dateDiff(stoppedAt, startedAt) : ''}</td>
+            <td className="is-gtk">
+            {stoppedAt ?
+              <a className="is-danger" onClick={trashHandler(id)}>
+              {viewTrash ?
+                <i className="fas fa-undo"></i> :
+                <i className="fas fa-trash"></i>
+              }
+              </a> :
+              null
             }
-            </a> :
-            null
-          }
-          </td>
-        </tr>)) :
-        (<tr>
-          <td colSpan={7}>
-            <div className="notification is-info">
-              {viewTrash ? "No items in trash." : "No tests to show."}
-            </div>
-          </td>
-        </tr>)}
-      </tbody>)}
-    </table>
+            </td>
+          </tr>)) :
+          (<tr>
+            <td colSpan={7}>
+              <div className="notification is-info">
+                {viewTrash ? "No items in trash." : "No tests to show."}
+              </div>
+            </td>
+          </tr>)}
+        </tbody>)}
+      </table>
+    </div>
   );
 }
 
