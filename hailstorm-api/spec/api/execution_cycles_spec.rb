@@ -9,7 +9,7 @@ describe 'api/execution_cycles' do
     @browser = Rack::Test::Session.new(Sinatra::Application)
   end
 
-  context '/projects/:id/execution_cycles' do
+  context 'GET /projects/:id/execution_cycles' do
     it 'should list execution cycles of a project' do
       project = Hailstorm::Model::Project.create!(project_code: File.strip_ext(File.basename(__FILE__)))
       epoch_time = Time.now
@@ -73,7 +73,7 @@ describe 'api/execution_cycles' do
     end
   end
 
-  context '/projects/:project_id/execution_cycles/current' do
+  context 'GET /projects/:project_id/execution_cycles/current' do
     before(:each) do
       @project = Hailstorm::Model::Project.create!(project_code: File.strip_ext(File.basename(__FILE__)))
 
@@ -137,6 +137,42 @@ describe 'api/execution_cycles' do
       expect(@browser.last_response).to be_ok
       res = JSON.parse(@browser.last_response.body)
       expect(res['noRunningTests']).to eq(true)
+    end
+  end
+
+  context 'PATCH /projects/:projectId/execution_cycles/:id' do
+    it 'should exclude an execution cycle' do
+      project = Hailstorm::Model::Project.create!(project_code: 'execution_cycles_spec')
+      execution_cycle = Hailstorm::Model::ExecutionCycle.create!(
+          project_id: project.id,
+          status: Hailstorm::Model::ExecutionCycle::States::STOPPED,
+          started_at: Time.now.ago(70.minutes),
+          stopped_at: Time.now.ago(60.minutes),
+          threads_count: 30
+      )
+
+      @browser.patch("/projects/#{project.id}/execution_cycles/#{execution_cycle.id}",
+                     JSON.dump({status: 'excluded'}))
+      expect(@browser.last_response).to be_ok
+      res = JSON.parse(@browser.last_response.body)
+      expect(res['status']).to eq(Hailstorm::Model::ExecutionCycle::States::EXCLUDED.to_s)
+    end
+
+    it 'should include back an execution cycle' do
+      project = Hailstorm::Model::Project.create!(project_code: 'execution_cycles_spec')
+      execution_cycle = Hailstorm::Model::ExecutionCycle.create!(
+          project_id: project.id,
+          status: Hailstorm::Model::ExecutionCycle::States::EXCLUDED,
+          started_at: Time.now.ago(70.minutes),
+          stopped_at: Time.now.ago(60.minutes),
+          threads_count: 30
+      )
+
+      @browser.patch("/projects/#{project.id}/execution_cycles/#{execution_cycle.id}",
+                     JSON.dump({status: 'stopped'}))
+      expect(@browser.last_response).to be_ok
+      res = JSON.parse(@browser.last_response.body)
+      expect(res['status']).to eq(Hailstorm::Model::ExecutionCycle::States::STOPPED.to_s)
     end
   end
 end
