@@ -81,4 +81,61 @@ describe WebFileStore do
       end
     end
   end
+
+  context '#normalize_file_path' do
+    it 'should return second component or original' do
+      wfs = WebFileStore.new
+      expect(wfs.normalize_file_path('123/foo.jtl')).to eq('foo.jtl')
+      expect(wfs.normalize_file_path('foo.jtl')).to eq('foo.jtl')
+    end
+  end
+
+  context '#export_report' do
+    it 'should upload report to file server' do
+      mock_response = mock(Net::HTTPResponse)
+      mock_response.stub!(:body).and_return(JSON.dump(id: 123, originalName: 'foo.docx'))
+      mock_response.stub!(:is_a?).and_return(Net::HTTPSuccess)
+      Net::HTTP.any_instance.stub(:request).and_return(mock_response)
+      wfs = WebFileStore.new
+      data = wfs.export_report('acme_test', __FILE__)
+      expect(data.size).to be == 2
+      expect(data[0]).to be == 'http://webfs.hailstorm:9000/reports/acme_test/123/foo.docx'
+    end
+  end
+
+  context '#fetch_reports' do
+    it 'should fetch report list from file server' do
+      mock_response = mock(Net::HTTPResponse)
+      mock_response.stub!(:body).and_return(
+        JSON.dump(
+          [
+            { id: 123, title: 'a.docx' },
+            { id: 456, title: 'b.docx' },
+          ]
+        )
+      )
+
+      mock_response.stub!(:is_a?).and_return(Net::HTTPSuccess)
+      Net::HTTP.stub!(:get_response).and_return(mock_response)
+      wfs = WebFileStore.new
+      data = wfs.fetch_reports('acme_test')
+      expect(data.size).to be == 2
+      expect(data[0].keys.sort).to eq(%i[id uri title].sort)
+      expect(data[0][:uri]).to be == 'http://webfs.hailstorm:9000/reports/acme_test/123/a.docx'
+      expect(data[1][:uri]).to be == 'http://webfs.hailstorm:9000/reports/acme_test/456/b.docx'
+    end
+  end
+
+  context '#export_jtl' do
+    it 'should upload the jtl to the file server' do
+      mock_response = mock(Net::HTTPResponse)
+      mock_response.stub!(:body).and_return(JSON.dump(id: 123, originalName: 'foo.jtl'))
+      mock_response.stub!(:is_a?).and_return(Net::HTTPSuccess)
+      Net::HTTP.any_instance.stub(:request).and_return(mock_response)
+      wfs = WebFileStore.new
+      data = wfs.export_jtl('acme_test', __FILE__)
+      expect(data.keys.sort).to eq(%i[title url].sort)
+      expect(data[:url]).to be == 'http://webfs.hailstorm:9000/123/foo.jtl'
+    end
+  end
 end

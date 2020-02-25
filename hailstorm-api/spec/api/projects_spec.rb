@@ -137,6 +137,14 @@ describe 'api/projects' do
           expect(@browser.last_response).to be_successful
         end
       end
+
+      context 'unknown action' do
+        it 'should return 422 status' do
+          Hailstorm::Model::Project.any_instance.stub(:stop)
+          @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'random'}))
+          expect(@browser.last_response.status).to be == 422
+        end
+      end
     end
 
     context 'with "title" param' do

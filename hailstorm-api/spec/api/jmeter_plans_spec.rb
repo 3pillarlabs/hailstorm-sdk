@@ -31,7 +31,7 @@ describe 'api/jmeter_plans' do
     it 'should add data file' do
       project = Hailstorm::Model::Project.create!(project_code: 'api_jmeter_plans_spec')
       params = {
-        name: 'hailstorm.jmx',
+        name: 'data.csv',
         path: '1234',
         dataFile: true
       }

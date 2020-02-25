@@ -13,13 +13,11 @@ get '/projects/:project_id/jmeter_plans' do |project_id|
 
   # @type [Hailstorm::Support::Configuration]
   hailstorm_config = deep_decode(project_config.stringified_config)
-  JSON.dump(
-    (
-      (hailstorm_config.jmeter.test_plans || []).map { |e| {test_plan_name: e, jmx_file: true} } +
-      (hailstorm_config.jmeter.data_files || []).map { |e| {test_plan_name: e, jmx_file: false} }
-    )
-      .map { |partial_attrs| to_jmeter_attributes(hailstorm_config, project_id, partial_attrs) }
-  )
+  test_plans_attrs = (hailstorm_config.jmeter.test_plans || []).map { |e| { test_plan_name: e, jmx_file: true } }
+  data_files_attrs = (hailstorm_config.jmeter.data_files || []).map { |e| { test_plan_name: e, jmx_file: false } }
+  files_attrs = test_plans_attrs + data_files_attrs
+  data_attrs = files_attrs.map { |partial_attrs| to_jmeter_attributes(hailstorm_config, project_id, partial_attrs) }
+  JSON.dump(data_attrs)
 end
 
 post '/projects/:project_id/jmeter_plans' do |project_id|

@@ -3,6 +3,7 @@ require 'api/execution_cycles'
 require 'hailstorm/model/amazon_cloud'
 require 'hailstorm/model/jmeter_plan'
 require 'hailstorm/model/master_agent'
+require 'hailstorm/exceptions'
 
 describe 'api/execution_cycles' do
   before(:each) do
@@ -138,6 +139,16 @@ describe 'api/execution_cycles' do
       res = JSON.parse(@browser.last_response.body)
       expect(res['noRunningTests']).to eq(true)
     end
+
+    it 'should return internal server error if check for status fails' do
+      Hailstorm::Model::MasterAgent
+        .any_instance
+        .stub(:check_status)
+        .and_raise(Hailstorm::ThreadJoinException, 'mock thread exception')
+
+      @browser.get("/projects/#{@project.id}/execution_cycles/current")
+      expect(@browser.last_response.status).to be == 500
+    end
   end
 
   context 'PATCH /projects/:projectId/execution_cycles/:id' do
@@ -173,6 +184,21 @@ describe 'api/execution_cycles' do
       expect(@browser.last_response).to be_ok
       res = JSON.parse(@browser.last_response.body)
       expect(res['status']).to eq(Hailstorm::Model::ExecutionCycle::States::STOPPED.to_s)
+    end
+
+    it 'should return unprocessable entity status if status is not known' do
+      project = Hailstorm::Model::Project.create!(project_code: 'execution_cycles_spec')
+      execution_cycle = Hailstorm::Model::ExecutionCycle.create!(
+          project_id: project.id,
+          status: Hailstorm::Model::ExecutionCycle::States::EXCLUDED,
+          started_at: Time.now.ago(70.minutes),
+          stopped_at: Time.now.ago(60.minutes),
+          threads_count: 30
+      )
+
+      @browser.patch("/projects/#{project.id}/execution_cycles/#{execution_cycle.id}",
+                     JSON.dump({status: 'random'}))
+      expect(@browser.last_response.status).to be == 422
     end
   end
 end

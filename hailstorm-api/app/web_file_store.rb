@@ -77,20 +77,8 @@ class WebFileStore
   end
 
   def export_report(project_code, internal_path)
-    logger.debug { "#{self.class}#{__method__}(#{internal_path})" }
     reports_uri = URI.parse("http://#{file_server_config[:host]}:#{file_server_config[:port]}/reports")
-    http = Net::HTTP.new(reports_uri.host, reports_uri.port)
-    request = Net::HTTP::Post.new(reports_uri.request_uri)
-    request.body = Rack::Multipart::Generator.new({
-      file: Rack::Multipart::UploadedFile.new(internal_path),
-      prefix: project_code
-    }.stringify_keys).dump
-
-    request.content_type = "multipart/form-data, boundary=#{Rack::Multipart::MULTIPART_BOUNDARY}"
-    # @type [Net::HTTPResponse]
-    response = http.request(request)
-    raise(Net::HTTPError.new("Failed upload to #{reports_uri}", response)) unless response.is_a?(Net::HTTPSuccess)
-
+    response = upload_file(internal_path, reports_uri, project_code)
     data = JSON.parse(response.body).symbolize_keys
     ["#{reports_uri}/#{project_code}/#{data[:id]}/#{data[:originalName]}", data[:id]]
   end
@@ -110,7 +98,36 @@ class WebFileStore
     end
   end
 
+  # @param [String] project_code
+  # @param [String] abs_jtl_path path to JTL file
+  # @return [Hash] hash.keys = %w[title url]
+  def export_jtl(project_code, abs_jtl_path)
+    scheme_host_port = "http://#{file_server_config[:host]}:#{file_server_config[:port]}"
+    uri = URI("#{scheme_host_port}/upload")
+    response = upload_file(abs_jtl_path, uri, project_code)
+    data = JSON.parse(response.body).symbolize_keys
+    {
+      title: data[:originalName],
+      url: "#{scheme_host_port}/#{data[:id]}/#{data[:originalName]}"
+    }
+  end
+
   private
+
+  # @return [Net::HTTPResponse]
+  def upload_file(file_path, uri, prefix)
+    http = Net::HTTP.new(uri.host, uri.port)
+    request = Net::HTTP::Post.new(uri.request_uri)
+    request.body = Rack::Multipart::Generator.new({
+      file: Rack::Multipart::UploadedFile.new(file_path),
+      prefix: prefix
+    }.stringify_keys).dump
+
+    request.content_type = "multipart/form-data, boundary=#{Rack::Multipart::MULTIPART_BOUNDARY}"
+    response = http.request(request)
+    raise(Net::HTTPError.new("Failed upload to #{uri}", response)) unless response.is_a?(Net::HTTPSuccess)
+    response
+  end
 
   def project_config(project_code)
     project = Hailstorm::Model::Project.find_by_project_code!(project_code)
