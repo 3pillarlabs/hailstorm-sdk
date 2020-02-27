@@ -135,7 +135,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   # Mark the execution cycle as started now or at given time
   # @param [Time] time
   def started!(time = nil)
-    self.started_at = (time || Time.now) if self.started_at.nil?
+    self.started_at = (time || Time.now)
   end
 
   # Mark the execution cycle as stopped
