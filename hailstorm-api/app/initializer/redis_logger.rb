@@ -38,7 +38,9 @@ class RedisLogger
       end
     rescue Redis::BaseError => redis_error
       self.skip_message_count = @break_for - 1
-      puts "[WARN] #{redis_error.message}"
+      puts "[WARN] #{__FILE__}:#{__LINE__} #{redis_error.message}"
+    rescue StandardError => other_error
+      puts "[WARN] #{__FILE__}:#{__LINE__} #{other_error.message}"
     end
   end
 end

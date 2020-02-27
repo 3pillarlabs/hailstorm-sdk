@@ -19,7 +19,7 @@ describe RedisLogger do
     @redis_logger.publish(log_params)
   end
   
-  context 'when a message publish fails' do
+  context 'when a message publish fails due to a redis error' do
     before(:each) do
       @mock_redis.stub!(:publish).and_raise(Redis::BaseError, 'mock redis client error')
     end
@@ -39,6 +39,14 @@ describe RedisLogger do
       @mock_redis.unstub!(:publish)
       @mock_redis.stub!(:publish)
       @redis_logger.publish(priority: 1, level: :info, message: 'message 1')
+    end
+  end
+
+  context 'when a message publish fails due to a runtime error' do
+    it 'should ignore the error' do
+      @mock_redis.stub!(:publish).and_raise(Encoding::UndefinedConversionError, '"\xC4" from ASCII-8BIT to UTF-8')
+      @mock_redis.should_receive(:publish).once
+      expect { @redis_logger.publish(priority: 1, level: :info, message: 'message 1') }.to_not raise_error
     end
   end
 end
