@@ -50,6 +50,7 @@ def clusterables_stub!
     before_destroy_load_agent
     after_destroy_load_agent
     purge
+    assign_vpc_subnet
   ]
 
   methods.each do |m|

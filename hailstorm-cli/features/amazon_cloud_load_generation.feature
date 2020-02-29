@@ -16,7 +16,7 @@ Feature: Generate load from AWS
       | RampUp         |     0 |
     And configure following amazon clusters
       | region    | max_threads_per_agent |
-      | us-east-1 |                       |
+      | us-east-2 |                       |
     And finalize the configuration
     And setup the project
     Then 1 active load agent should exist
@@ -43,7 +43,7 @@ Feature: Generate load from AWS
       | RampUp         |     0 |
     And configure following amazon clusters
       | region    | max_threads_per_agent |
-      | us-east-1 |                       |
+      | us-east-2 |                       |
     And finalize the configuration
     And start load generation
     Then 1 active load agent should exist
@@ -64,7 +64,7 @@ Feature: Generate load from AWS
       | RampUp         |     0 |
     And configure following amazon clusters
       | region    | max_threads_per_agent |
-      | us-east-1 | 25                    |
+      | us-east-2 | 25                    |
     And finalize the configuration
     And start load generation
     Then 2 active load agents should exist
@@ -84,7 +84,7 @@ Feature: Generate load from AWS
       | RampUp         |     0 |
     And configure following amazon clusters
       | region    | max_threads_per_agent |
-      | us-east-1 | 25                    |
+      | us-east-2 | 25                    |
     And finalize the configuration
     And start load generation
     Then 1 active load agent should exist
@@ -103,7 +103,7 @@ Feature: Generate load from AWS
       | RampUp         |     0 |
     And configure following amazon clusters
       | region    | max_threads_per_agent |
-      | us-east-1 | 25                    |
+      | us-east-2 | 25                    |
     And finalize the configuration
     And start load generation
     And wait for 10 seconds

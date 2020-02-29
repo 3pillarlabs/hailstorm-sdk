@@ -33,6 +33,10 @@ FileUtils.rm_rf(BUILD_PATH)
 FileUtils.mkdir_p(BUILD_PATH)
 
 RSpec.configure do |config|
+  def logger
+    @logger ||= Hailstorm::Support::Log4jBackedLogger.get_logger(RSpec)
+  end
+
   config.treat_symbols_as_metadata_keys_with_true_values = true
   config.run_all_when_everything_filtered = true
   config.filter_run :focus

@@ -18,6 +18,7 @@ describe Hailstorm::Model::AmazonCloud do
     aws.stub(:provision_agents, nil)
     aws.stub(:secure_identity_file, nil)
     aws.stub(:create_security_group, nil)
+    aws.stub(:assign_vpc_subnet, nil)
   end
 
   def mock_ec2_instance(ec2, load_agent, states = nil, public_ip_address = nil, private_ip_address = nil)
@@ -40,7 +41,7 @@ describe Hailstorm::Model::AmazonCloud do
     @aws.send(:region_base_ami_map).should_not be_empty
   end
 
-  it 'should be valid with project and the keys' do
+  it 'should be valid with project, vpc_subnet_id and the keys' do
     @aws.project = Hailstorm::Model::Project.new(project_code: 'amazon_cloud_spec')
     @aws.access_key = 'foo'
     @aws.secret_key = 'bar'
@@ -51,8 +52,9 @@ describe Hailstorm::Model::AmazonCloud do
 
   context '#default_max_threads_per_agent' do
     it 'should increase with instance class and type' do
+      pricing_options = []
       all_results = []
-      %i[t2 m4 m3 c4 c3 r4 r3 d2 i2 i3 x1].each do |instance_class|
+      %i[t2 t3 t3a m4 m5 m5a m5ad m5d m5dn m5n].each do |instance_class|
         iclass_results = []
         [:nano, :micro, :small, :medium, :large, :xlarge, '2xlarge'.to_sym, '4xlarge'.to_sym, '10xlarge'.to_sym,
          '16xlarge'.to_sym, '32xlarge'.to_sym].each do |instance_size|
@@ -62,12 +64,12 @@ describe Hailstorm::Model::AmazonCloud do
           iclass_results << default_threads
           expect(iclass_results).to eql(iclass_results.sort)
           all_results << default_threads
+          pricing_options << "#{instance_class}.#{instance_size}: #{default_threads}"
         end
       end
+
       expect(all_results).to_not include(nil)
       expect(all_results).to_not include(0)
-      expect(all_results.min).to be >= 3
-      expect(all_results.max).to be <= 10000
     end
   end
 
@@ -132,10 +134,32 @@ describe Hailstorm::Model::AmazonCloud do
         aws.should_receive(:set_availability_zone)
         aws.should_receive(:create_agent_ami)
         aws.should_receive(:provision_agents)
+        aws.should_receive(:assign_vpc_subnet) { aws.vpc_subnet_id = 'subnet-1234' }
 
         aws.active = true
         aws.setup
         expect(aws).to be_persisted
+      end
+
+      context 'vpc_subnet_id is present' do
+        it 'should not create new subnet' do
+          aws = Hailstorm::Model::AmazonCloud.new
+          aws.project = Hailstorm::Model::Project.where(project_code: 'amazon_cloud_spec').first_or_create!
+          aws.access_key = 'dummy'
+          aws.secret_key = 'dummy'
+          aws.region = 'ua-east-1'
+          aws.vpc_subnet_id = 'subnet-1234'
+
+          stub_aws!(aws)
+          aws.should_receive(:identity_file_exists)
+          aws.should_receive(:set_availability_zone)
+          aws.should_receive(:create_agent_ami)
+          aws.should_receive(:provision_agents)
+          aws.should_not_receive(:assign_vpc_subnet)
+
+          aws.active = true
+          aws.setup
+        end
       end
     end
     context '#active=false' do
@@ -152,6 +176,7 @@ describe Hailstorm::Model::AmazonCloud do
         aws.should_not_receive(:create_agent_ami)
         aws.should_not_receive(:provision_agents)
         aws.should_not_receive(:secure_identity_file)
+        aws.should_not_receive(:assign_vpc_subnet)
 
         aws.active = false
         aws.setup
@@ -215,6 +240,7 @@ describe Hailstorm::Model::AmazonCloud do
         @aws.project = Hailstorm::Model::Project.where(project_code: 'amazon_cloud_spec').first_or_create!
         @aws.access_key = 'dummy'
         @aws.secret_key = 'dummy'
+        @aws.vpc_subnet_id = 'subnet-1234'
         stub_aws!(@aws)
         @aws.active = true
       end
@@ -308,6 +334,7 @@ describe Hailstorm::Model::AmazonCloud do
       @aws.access_key = 'dummy'
       @aws.secret_key = 'dummy'
       @aws.region = 'ua-east-1'
+      @aws.vpc_subnet_id = 'subnet-1234'
       @aws.save!
 
       Hailstorm::Model::Cluster.create!(project: @aws.project, cluster_type: @aws.class.name, clusterable_id: @aws.id)
@@ -329,6 +356,7 @@ describe Hailstorm::Model::AmazonCloud do
         @aws.access_key = 'dummy'
         @aws.secret_key = 'dummy'
         @aws.region = 'ua-east-1'
+        @aws.vpc_subnet_id = 'subnet-1234'
         @aws.save!
 
         @required_load_agent_count = 2
@@ -365,6 +393,7 @@ describe Hailstorm::Model::AmazonCloud do
       @aws.access_key = 'dummy'
       @aws.secret_key = 'dummy'
       @aws.region = 'ua-east-1'
+      @aws.vpc_subnet_id = 'subnet-1234'
       @aws.save!
 
       @jmeter_plan = Hailstorm::Model::JmeterPlan.create!(project: @aws.project, test_plan_name: 'A',
@@ -578,13 +607,16 @@ describe Hailstorm::Model::AmazonCloud do
         @aws.instance_type = 'm1.small'
         @aws.region = 'us-east-1'
         @aws.security_group = 'sg-12345'
+        @aws.vpc_subnet_id = 'subnet-1234'
         mock_ec2 = mock(AWS::EC2)
         @mock_ec2_image = mock(AWS::EC2::Image, id: 'ami-12334', state: :available, name: 'hailstorm/whodunit')
         mock_ec2.stub_chain(:images, :with_owner).and_return([@mock_ec2_image])
         mock_security_group_collection = mock(AWS::EC2::SecurityGroupCollection)
         mock_security_group = mock(AWS::EC2::SecurityGroup, id: @aws.security_group)
         mock_security_group_collection.stub!(:filter).and_return([mock_security_group])
-        mock_ec2.stub!(:security_groups).and_return(mock_security_group_collection)
+        mock_vpc = mock(AWS::EC2::VPC)
+        mock_vpc.stub!(:security_groups).and_return(mock_security_group_collection)
+        mock_ec2.stub_chain(:subnets, :[], :vpc).and_return(mock_vpc)
         # TODO use helper method
         @mock_instance = mock(AWS::EC2::Instance, id: 'i-23456', public_ip_address: '10.34.56.45')
         mock_ec2.stub_chain(:instances, :create).and_return(@mock_instance)
@@ -734,6 +766,7 @@ describe Hailstorm::Model::AmazonCloud do
     it 'should start the agents' do
       @aws.access_key = 'dummy'
       @aws.secret_key = 'dummy'
+      @aws.vpc_subnet_id = 'subnet-1234'
       @aws.project = Hailstorm::Model::Project.new(project_code: __FILE__)
       stub_aws!(@aws)
       jmeter_plan = Hailstorm::Model::JmeterPlan.create!(
@@ -892,6 +925,7 @@ describe Hailstorm::Model::AmazonCloud do
           @aws.access_key = 'foo'
           @aws.secret_key = 'bar'
           @aws.max_threads_per_agent = 25
+          @aws.vpc_subnet_id = 'subnet-1234'
           @aws.save!
 
           jmeter_plan = Hailstorm::Model::JmeterPlan.create!(
@@ -933,6 +967,7 @@ describe Hailstorm::Model::AmazonCloud do
         @aws.project = Hailstorm::Model::Project.create!(project_code: 'amazon_cloud_spec')
         @aws.access_key = 'foo'
         @aws.secret_key = 'bar'
+        @aws.vpc_subnet_id = 'subnet-1234'
         @aws.max_threads_per_agent = 50
         @aws.save!
 
@@ -971,6 +1006,35 @@ describe Hailstorm::Model::AmazonCloud do
         expect(Hailstorm::Model::MasterAgent.where(jmeter_plan_id: jmeter_plan_2.id).first).to_not be_active
         expect(Hailstorm::Model::MasterAgent.where(jmeter_plan_id: jmeter_plan_1.id, active: true).count).to be == 2
       end
+    end
+  end
+
+  context '#assign_vpc_subnet' do
+    it 'should create a Hailstorm public subnet if it does not exist' do
+      ec2 = mock(AWS::EC2)
+      @aws.stub!(:ec2).and_return(ec2)
+      ec2.stub_chain(:subnets, :with_tag).and_return([])
+      ec2.stub_chain(:client, :modify_vpc_attribute)
+      vpc = mock(AWS::EC2::VPC, state: :available, vpc_id: 'vpc-123')
+      vpc.stub!(:tag)
+      ec2.stub_chain(:vpcs, :create).and_return(vpc)
+      subnet = mock(AWS::EC2::Subnet, state: :available, subnet_id: 'subnet-123')
+      subnet.stub!(:tag)
+      subnet.stub!(:route_table=)
+      vpc.stub_chain(:subnets, :create).and_return(subnet)
+      ec2.stub_chain(:client, :modify_subnet_attribute)
+      igw = mock(AWS::EC2::InternetGateway, internet_gateway_id: 'igw-123')
+      igw.stub!(:tag)
+      igw.stub!(:attach)
+      ec2.stub_chain(:internet_gateways, :create).and_return(igw)
+      route_table = mock(AWS::EC2::RouteTable, route_table_id: 'route-123')
+      route_table.stub!(:create_route)
+      ec2.stub_chain(:route_tables, :create).and_return(route_table)
+      route = mock(AWS::EC2::RouteTable::Route, state: :active)
+      route_table.stub!(:routes).and_return([route])
+
+      @aws.send(:assign_vpc_subnet)
+      expect(@aws.vpc_subnet_id).to be == subnet.subnet_id
     end
   end
 end
