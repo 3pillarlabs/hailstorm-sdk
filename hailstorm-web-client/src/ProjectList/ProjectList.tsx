@@ -9,6 +9,7 @@ import { AppStateContext } from '../appStateContext';
 import { SetRunningProjectsAction } from '../TopNav/actions';
 import { History } from 'history';
 import { WizardTabTypes } from '../NewProjectWizard/domain';
+import { ProjectSetupAction } from '../NewProjectWizard/actions';
 
 const RECENT_MINUTES = 60;
 
@@ -131,6 +132,10 @@ export const ProjectList: React.FC = () => {
         .then((fetchedProjects) => {
           setProjects(fetchedProjects);
           dispatch(new SetRunningProjectsAction(fetchedProjects.filter((p) => p.running)));
+          if (fetchedProjects.length === 0) {
+            dispatch(new ProjectSetupAction());
+          }
+
           setLoading(false);
         })
         .catch((reason) => console.error(reason));
