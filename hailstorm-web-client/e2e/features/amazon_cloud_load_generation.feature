@@ -5,10 +5,9 @@ Feature: Generate load from AWS
 
   @smoke
   @end-to-end
-  @focus
   Scenario: Start with 10 threads
     When I have Hailstorm open
-    And I created the project "Full Integration 12"
+    And I created the project "Full Integration 24"
     And I configure JMeter with following properties
       | property       | value |
       | NumUsers       |    10 |
@@ -79,7 +78,8 @@ Feature: Generate load from AWS
       | us-east-2 | 25                 |
     And finalize the configuration
     And start load generation
-    And abort the load generation after 10 seconds
+    And abort the load generation after 60 seconds
+    And wait for tests to abort
     Then 3 tests should exist
 
   @smoke

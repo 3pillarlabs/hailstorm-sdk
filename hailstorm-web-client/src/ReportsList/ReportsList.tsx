@@ -25,7 +25,7 @@ export const ReportsList: React.FC<ReportListProps> = (props) => {
   }, [loadReports]);
 
   return (
-    <div className="panel">
+    <div className="panel" data-testid="Reports List">
       <div className="panel-heading">
         <i className="fas fa-chart-pie"></i> Reports
       </div>
@@ -33,7 +33,7 @@ export const ReportsList: React.FC<ReportListProps> = (props) => {
       <Loader /> :
       (reports.length ?
       reports.map(({title, uri}) => (
-        <a className="panel-block" key={title} href={uri} target="_blank">
+        <a className="panel-block force-wrap" key={title} href={uri} target="_blank">
           <span className="panel-icon">
             <i className="far fa-file-word" aria-hidden="true"></i>
           </span>

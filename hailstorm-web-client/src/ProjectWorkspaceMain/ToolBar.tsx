@@ -5,7 +5,7 @@ import { ProjectActions } from '../services/ProjectService';
 import { JtlDownloadContentProps, JtlDownloadModal } from './JtlDownloadModal';
 import { Modal } from '../Modal';
 import { InterimProjectState } from '../domain';
-import { SetInterimStateAction, UnsetInterimStateAction, SetRunningAction } from '../ProjectWorkspace/actions';
+import { SetInterimStateAction, UnsetInterimStateAction, SetRunningAction, UpdateProjectAction } from '../ProjectWorkspace/actions';
 import { AppStateContext } from '../appStateContext';
 import { interval, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -78,6 +78,8 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
       ApiFactory()
         .projects()
         .update(project.id, { running: endState, action })
+        .then(() => ApiFactory().projects().get(project.id))
+        .then((project) => dispatch(new UpdateProjectAction(project)))
         .then(() => dispatch(new UnsetInterimStateAction()))
         .then(() => dispatch(new SetRunningAction(endState)))
         .then(() => setReloadGrid(true))

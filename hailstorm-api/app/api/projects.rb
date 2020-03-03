@@ -10,7 +10,7 @@ require 'hailstorm/middleware/command_execution_template'
 include ProjectsHelper
 
 get '/projects' do
-  list = list_projects(Hailstorm::Model::Project.all).map(&method(:deep_camelize_keys))
+  list = list_projects(Hailstorm::Model::Project.order(id: :desc).all).map(&method(:deep_camelize_keys))
   JSON.dump(list)
 end
 

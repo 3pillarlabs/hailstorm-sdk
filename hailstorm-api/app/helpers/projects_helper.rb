@@ -10,7 +10,16 @@ module ProjectsHelper
   # @param [Array<Hailstorm::Model::Project>] projects
   # @return [Array<Hailstorm::Model::Project>]
   def list_projects(projects)
-    projects.map(&method(:project_attributes))
+    project_attrs_list = projects.map(&method(:project_attributes))
+    run_before, never_run = project_attrs_list.partition do |attrs|
+      attrs.key?(:current_execution_cycle) || attrs.key?(:last_execution_cycle)
+    end
+
+    run_before.sort do |a,b|
+      b_ex_cycle = b[:current_execution_cycle] || b[:last_execution_cycle]
+      a_ex_cycle = a[:current_execution_cycle] || a[:last_execution_cycle]
+      b_ex_cycle[:started_at] <=> a_ex_cycle[:started_at]
+    end + never_run
   end
 
   def project_attributes(project)

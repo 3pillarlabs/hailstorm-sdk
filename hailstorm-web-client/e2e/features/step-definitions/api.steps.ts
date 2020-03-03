@@ -1,6 +1,11 @@
 import { Then } from "cucumber";
+import { expect } from 'chai';
+import * as http from 'http';
+import config from 'environment.e2e';
+import axios from 'axios';
 
-Then("{int} load agents should exist", function(int) {
-  // Write code here that turns the phrase above into concrete actions
-  return "pending";
+Then("{int} load agents should exist", async function(loadAgentCount) {
+  const response = await axios.get(`${config.apiBaseURL}/projects/${this.projectId}/load_agents`);
+  expect(response.status).to.equal(200);
+  expect(response.data.length).to.equal(loadAgentCount);
 });

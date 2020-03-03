@@ -19,7 +19,7 @@ export const JMeterPlanList: React.FC<JMeterPlanListProps> = ({
   onEdit
 }) => {
   return (
-    <div className="panel">
+    <div className="panel" data-testid="JMeter Plans">
       <div className="panel-heading">
         <div className="level">
           <div className="level-left">
@@ -64,14 +64,14 @@ function renderPlanList(
 
     return handleSelect ? (
       <a
-        className={`panel-block${activeFile && activeFile.id === plan.id ? ' is-active' : ''}`}
+        className={`panel-block${activeFile && activeFile.id === plan.id ? ' is-active' : ''} force-wrap`}
         key={plan.name}
         onClick={() => handleSelect(plan)}
       >
         {item}
       </a>
     ) : (
-      <div className="panel-block" key={plan.name}>
+      <div className="panel-block force-wrap" key={plan.name}>
         {item}
       </div>
     )
