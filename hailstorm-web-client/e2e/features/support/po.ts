@@ -130,19 +130,13 @@ class AmazonConfig extends WizardBase {
   }
 
   private selectRegion(region: string) {
-    // const awsRegions = await axios.get(`${config.apiBaseURL}/aws_regions`);
-    // expect(awsRegions.status).to.equal(200);
-    // const regions: any[] = awsRegions.data.regions;
-
-    // const levelOneRegion = regions.find((levelOne) => levelOne.regions.find((levelTwo) => levelTwo.code === region));
-    // console.info(this.editRegion);
+    const [levelOneRegion, levelTwoRegion] = region.split('/');
     this.editRegion.click();
-    const levelOne = this.regionOptions.find((region) => region.getText() === 'North America');
+    const levelOne = this.regionOptions.find((region) => region.getText() === levelOneRegion);
     levelOne.click();
-    // const levelTwoRegion = levelOneRegion.regions.find((levelTwo) => levelTwo.code === region);
-    const levelTwo = this.regionOptions.find((region) => region.getText() === 'US East (Ohio)');
+    const levelTwo = this.regionOptions.find((region) => region.getText() === levelTwoRegion);
     levelTwo.click();
-    browser.waitUntil(() => $(`//input[@value="US East (Ohio)"]`).isExisting());
+    browser.waitUntil(() => $(`//input[@value="${levelTwoRegion}"]`).isExisting());
   }
 
   proceedToNextStep() {

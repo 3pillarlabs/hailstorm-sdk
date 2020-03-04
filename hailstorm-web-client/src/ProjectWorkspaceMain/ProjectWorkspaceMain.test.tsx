@@ -6,6 +6,8 @@ import { ClusterService } from "../services/ClusterService";
 import { JMeterService } from "../services/JMeterService";
 import { JMeter, Cluster, AmazonCluster, InterimProjectState } from '../domain';
 import { MemoryRouter, Route } from 'react-router';
+import { ReportService } from '../services/ReportService';
+import { ExecutionCycleService } from '../services/ExecutionCycleService';
 
 describe('<ProjectWorkspaceMain />', () => {
   let jmeterPromise: Promise<JMeter>;
@@ -39,6 +41,14 @@ describe('<ProjectWorkspaceMain />', () => {
     ]);
 
     jest.spyOn(ClusterService.prototype, "list").mockReturnValue(clustersPromise);
+  });
+
+  beforeEach(() => {
+    jest.spyOn(ExecutionCycleService.prototype, 'list').mockResolvedValue([]);
+  })
+
+  beforeEach(() => {
+    jest.spyOn(ReportService.prototype, 'list').mockResolvedValue([]);
   });
 
   it('should render without crashing', () => {

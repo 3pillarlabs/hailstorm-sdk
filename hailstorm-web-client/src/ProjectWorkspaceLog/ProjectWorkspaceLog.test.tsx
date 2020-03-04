@@ -1,9 +1,9 @@
 import React from 'react';
-import { shallow, mount, render } from 'enzyme';
+import { mount, render } from 'enzyme';
 import { ProjectWorkspaceLog } from './ProjectWorkspaceLog';
 import { Project } from '../domain';
 import { LogStream } from '../stream';
-import { of, empty } from 'rxjs';
+import { of } from 'rxjs';
 import { AppStateContext } from '../appStateContext';
 
 describe('<ProjectWorkspaceLog />', () => {
@@ -37,17 +37,5 @@ describe('<ProjectWorkspaceLog />', () => {
     setTimeout(() => {
       expect(component).toContainMatchingElements(3, '.logBox br');
     }, 0);
-  });
-
-  it('should not subcribe for updates if project is not running', () => {
-    const logStreamSpy = jest.spyOn(LogStream, '_logSource').mockImplementation(() => empty());
-    const project: Project = {id: 1, code: 'a', title: 'A', running: false, autoStop: false};
-    mount(
-      <AppStateContext.Provider value={{appState: {activeProject: project, runningProjects: []}, dispatch: jest.fn()}}>
-        <ProjectWorkspaceLog />
-      </AppStateContext.Provider>
-    );
-
-    expect(logStreamSpy).not.toHaveBeenCalled();
   });
 });

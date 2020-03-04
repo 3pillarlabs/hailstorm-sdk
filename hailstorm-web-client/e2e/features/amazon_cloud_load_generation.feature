@@ -7,7 +7,7 @@ Feature: Generate load from AWS
   @end-to-end
   Scenario: Start with 10 threads
     When I have Hailstorm open
-    And I created the project "Full Integration 24"
+    And I created the project "Full Integration 25"
     And I configure JMeter with following properties
       | property       | value |
       | NumUsers       |    10 |
@@ -15,7 +15,7 @@ Feature: Generate load from AWS
       | RampUp         |     0 |
     And configure following amazon clusters
       | region    | maxThreadsPerAgent |
-      | us-east-2 |                    |
+      | North America/US East (Ohio) | |
     And finalize the configuration
     And start load generation
     Then 1 test should be running
@@ -36,7 +36,7 @@ Feature: Generate load from AWS
       | RampUp         |     0 |
     And configure following amazon clusters
       | region    | maxThreadsPerAgent |
-      | us-east-2 |                    |
+      | North America/US East (Ohio) | |
     And finalize the configuration
     And start load generation
     Then 1 test should be running
@@ -55,8 +55,8 @@ Feature: Generate load from AWS
       | Duration       |   180 |
       | RampUp         |     0 |
     And configure following amazon clusters
-      | region    | maxThreadsPerAgent |
-      | us-east-2 | 25                 |
+      | region    | maxThreadsPerAgent    |
+      | North America/US East (Ohio) | 25 |
     And finalize the configuration
     And start load generation
     Then 1 test should be running
@@ -74,8 +74,8 @@ Feature: Generate load from AWS
       | Duration       |   180 |
       | RampUp         |     0 |
     And configure following amazon clusters
-      | region    | maxThreadsPerAgent |
-      | us-east-2 | 25                 |
+      | region    | maxThreadsPerAgent    |
+      | North America/US East (Ohio) | 25 |
     And finalize the configuration
     And start load generation
     And abort the load generation after 60 seconds

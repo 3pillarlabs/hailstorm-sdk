@@ -1,4 +1,4 @@
-import { Project, ExecutionCycleStatus, ExecutionCycle } from "../domain";
+import { Project } from "../domain";
 import environvent from '../environment';
 import { fetchGuard, fetchOK } from "./fetch-adapter";
 

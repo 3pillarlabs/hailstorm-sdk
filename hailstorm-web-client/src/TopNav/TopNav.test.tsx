@@ -8,6 +8,7 @@ import { Project } from '../domain';
 import { ProjectBarProps } from '../ProjectBar/ProjectBar';
 import { ModifyRunningProjectAction } from './actions';
 import { WizardTabTypes } from "../NewProjectWizard/domain";
+import { ProjectService } from '../services/ProjectService';
 
 jest.mock('../ProjectBar', () => {
   return {
@@ -26,6 +27,12 @@ jest.mock('../ProjectBar', () => {
 });
 
 describe('<TopNav />', () => {
+  let projectSpy: jest.SpyInstance<Promise<Project[]>>;
+
+  beforeEach(() => {
+    projectSpy = jest.spyOn(ProjectService.prototype, 'list').mockResolvedValue([]);
+  })
+
   afterEach(() => {
     jest.resetAllMocks();
   });
@@ -54,10 +61,11 @@ describe('<TopNav />', () => {
         </MemoryRouter>
       </AppStateContext.Provider>
     );
+
+    expect(projectSpy).toBeCalled();
   });
 
   it('should not reload running projects if location is projects list', () => {
-    const reloadRunningProjects = jest.fn();
     mount(
       <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: undefined}, dispatch: jest.fn()}}>
         <MemoryRouter initialEntries={['/projects']}>
@@ -66,7 +74,7 @@ describe('<TopNav />', () => {
       </AppStateContext.Provider>
     );
 
-    expect(reloadRunningProjects).not.toBeCalled();
+    expect(projectSpy).not.toBeCalled();
   });
 
   it('should disable new project button in new project wizard', () => {

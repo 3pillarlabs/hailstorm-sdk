@@ -115,59 +115,67 @@ describe('<ToolBar />', () => {
   it('should set interim state on start', (done) => {
     const project: Project = createProject();
     const component = mount(createToolBarHierarchy({project}));
-    const apiSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
+    const projectUpdateSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
+    const projectGetSpy = jest.spyOn(ProjectService.prototype, 'get').mockResolvedValue(createProject({running: true}));
     component.find('button[name="start"]').simulate('click');
-    expect(apiSpy).toBeCalled();
+    expect(projectUpdateSpy).toBeCalled();
     setTimeout(() => {
       done();
+      expect(projectGetSpy).toBeCalled();
       expect(setGridButtonStates).toBeCalled();
-      expect(dispatch).toBeCalledTimes(3);
+      expect(dispatch).toBeCalledTimes(4);
       expect(dispatch.mock.calls[0][0]).toBeInstanceOf(SetInterimStateAction);
       expect((dispatch.mock.calls[0][0] as SetInterimStateAction).payload).toEqual(InterimProjectState.STARTING);
-      expect(dispatch.mock.calls[2][0]).toBeInstanceOf(SetRunningAction);
-      expect((dispatch.mock.calls[2][0] as SetRunningAction).payload).toBeTruthy();
+      expect(dispatch.mock.calls[3][0]).toBeInstanceOf(SetRunningAction);
+      expect((dispatch.mock.calls[3][0] as SetRunningAction).payload).toBeTruthy();
     }, 0);
   });
 
   it('should reload running projects on start', (done) => {
     const project: Project = createProject();
     const component = mount(createToolBarHierarchy({project}));
-    const apiSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
+    const projectUpdateSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
+    const projectGetSpy = jest.spyOn(ProjectService.prototype, 'get').mockResolvedValue(createProject({running: true}));
     component.find('button[name="start"]').simulate('click');
-    expect(apiSpy).toBeCalled();
+    expect(projectUpdateSpy).toBeCalled();
     setTimeout(() => {
       done();
+      expect(projectGetSpy).toBeCalled();
       expect(dispatch).toBeCalled();
-      expect(dispatch.mock.calls[2][0]).toBeInstanceOf(SetRunningAction);
-      expect((dispatch.mock.calls[2][0] as SetRunningAction).payload).toBeTruthy();
+      expect(dispatch.mock.calls[3][0]).toBeInstanceOf(SetRunningAction);
+      expect((dispatch.mock.calls[3][0] as SetRunningAction).payload).toBeTruthy();
     }, 0);
   });
 
   it('should reload running projects on stop', (done) => {
     const project: Project = createProject({running: true});
     const component = mount(createToolBarHierarchy({project, buttonStates: {stop: false}}));
-    const apiSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
+    const projectUpdateSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
+    const projectGetSpy = jest.spyOn(ProjectService.prototype, 'get').mockResolvedValue(createProject({running: true}));
     component.find('button[name="stop"]').simulate('click');
-    expect(apiSpy).toBeCalled();
+    expect(projectUpdateSpy).toBeCalled();
     setTimeout(() => {
       done();
+      expect(projectGetSpy).toBeCalled();
       expect(dispatch).toBeCalled();
-      expect(dispatch.mock.calls[2][0]).toBeInstanceOf(SetRunningAction);
-      expect((dispatch.mock.calls[2][0] as SetRunningAction).payload).toBeFalsy();
+      expect(dispatch.mock.calls[3][0]).toBeInstanceOf(SetRunningAction);
+      expect((dispatch.mock.calls[3][0] as SetRunningAction).payload).toBeFalsy();
     }, 0);
   });
 
   it('should reload running projects on abort', (done) => {
     const project: Project = createProject({running: true});
     const component = mount(createToolBarHierarchy({project, buttonStates: {abort: false}}));
-    const apiSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
+    const projectUpdateSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
+    const projectGetSpy = jest.spyOn(ProjectService.prototype, 'get').mockResolvedValue(createProject({running: false}));
     component.find('button[name="abort"]').simulate('click');
-    expect(apiSpy).toBeCalled();
+    expect(projectUpdateSpy).toBeCalled();
     setTimeout(() => {
       done();
+      expect(projectGetSpy).toBeCalled();
       expect(dispatch).toBeCalled();
-      expect(dispatch.mock.calls[2][0]).toBeInstanceOf(SetRunningAction);
-      expect((dispatch.mock.calls[2][0] as SetRunningAction).payload).toBeFalsy();
+      expect(dispatch.mock.calls[3][0]).toBeInstanceOf(SetRunningAction);
+      expect((dispatch.mock.calls[3][0] as SetRunningAction).payload).toBeFalsy();
     }, 0);
   });
 
@@ -202,7 +210,13 @@ describe('<ToolBar />', () => {
   it('should report results on Report', (done) => {
     const project: Project = createProject();
     const component = mount(createToolBarHierarchy({project, buttonStates: {report: false}}));
-    const apiSpy = jest.spyOn(ReportService.prototype, 'create').mockResolvedValue({id: 200, projectId: 1, title: 'a'});
+    const apiSpy = jest.spyOn(ReportService.prototype, 'create').mockResolvedValue({
+      id: 200,
+      projectId: 1,
+      title: 'a',
+      uri: 'http://hailstorm.fs/reports/1/223/a.docx'
+    });
+
     component.find('button[name="report"]').simulate('click');
     expect(apiSpy).toBeCalled();
     setTimeout(() => {
