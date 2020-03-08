@@ -6,7 +6,7 @@ import { ControlPanel } from './ControlPanel';
 import { AppStateContext } from '../appStateContext';
 import { ApiFactory } from '../api';
 import { SetJMeterConfigurationAction } from '../JMeterConfiguration/actions';
-import { SetClusterConfigurationAction } from '../ClusterConfiguration/actions';
+import { SetClusterConfigurationAction, UnsetClustersAction } from '../ClusterConfiguration/actions';
 import { WizardTabTypes } from '../NewProjectWizard/domain';
 import { Redirect } from 'react-router';
 
@@ -38,6 +38,7 @@ export const ProjectWorkspaceMain: React.FC = () => {
     if (redirectLocation === WizardTabTypes.JMeter) {
       pathname = `/wizard/projects/${appState.activeProject!.id}/jmeter_plans`;
     } else if (redirectLocation === WizardTabTypes.Cluster) {
+      dispatch(new UnsetClustersAction());
       pathname = `/wizard/projects/${appState.activeProject!.id}/clusters`;
     } else {
       pathname = `/wizard/projects/${appState.activeProject!.id}`

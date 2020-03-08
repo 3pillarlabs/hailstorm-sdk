@@ -1,5 +1,6 @@
 import React from 'react';
 import { Cluster } from '../domain';
+import styles from '../ClusterConfiguration/ClusterConfiguration.module.scss';
 
 export const ClusterList: React.FC<{
   clusters?: Cluster[];
@@ -8,7 +9,13 @@ export const ClusterList: React.FC<{
   activeCluster?: Cluster;
   disableEdit?: boolean;
   onEdit?: () => void;
-}> = ({clusters, showEdit, onSelectCluster, activeCluster, disableEdit, onEdit}) => {
+  showDisabledCluster?: boolean;
+}> = ({clusters, showEdit, onSelectCluster, activeCluster, disableEdit, onEdit, showDisabledCluster}) => {
+
+  let displayedClusters: Cluster[] | undefined = undefined;
+  if (clusters) {
+    displayedClusters = showDisabledCluster ? clusters : clusters.filter((value) => !value.disabled);
+  }
 
   return (
     <div className="panel">
@@ -30,21 +37,19 @@ export const ClusterList: React.FC<{
           </div>
         </div>
       </div>
-      {clusters !== undefined && clusters.length > 0 ? (
-      clusters.map(cluster => (
+      {displayedClusters !== undefined && displayedClusters.length > 0 ? (
+      displayedClusters.map(cluster => (
         (onSelectCluster ? (
         <a
           className={`panel-block${activeCluster && activeCluster.id === cluster.id ? " is-active": ""}`}
           key={cluster.id}
           onClick={() => onSelectCluster(cluster)}
         >
-          <PanelItemIcon {...{cluster}} />
-          {cluster.title}
+          <PanelItem {...{cluster}} />
         </a>
         ) : (
         <div className="panel-block" key={cluster.id} >
-          <PanelItemIcon {...{cluster}} />
-          {cluster.title}
+          <PanelItem {...{cluster}} />
         </div>
         ))
       ))
@@ -69,5 +74,19 @@ function PanelItemIcon({
     <span className="panel-icon">
       <i className={cluster.type === 'AWS' ? "fab fa-aws" : "fas fa-network-wired"} aria-hidden="true"></i>
     </span>
+  );
+}
+
+function PanelItem({
+  cluster
+}: {
+  cluster: Cluster
+}) {
+  return (
+    <>
+    <PanelItemIcon {...{cluster}} />
+    {cluster.title}
+    {cluster.disabled && (<span className={`tag is-dark ${styles.titleLabel}`}>disabled</span>)}
+    </>
   );
 }

@@ -37,4 +37,33 @@ export class ClusterService {
       })
     });
   }
+
+  async update(
+    projectId: number,
+    id: number,
+    attributes: {[K in keyof AmazonCluster]?: AmazonCluster[K]} & {[K in keyof DataCenterCluster]?: DataCenterCluster[K]}
+  ): Promise<Cluster> {
+    console.debug(`api ---- ClusterService#update(${projectId}, ${id})`);
+    return fetchGuard<Cluster>(async () => {
+      const response = await fetchOK(`${environment.apiBaseURL}/projects/${projectId}/clusters/${id}`, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(Object.entries(attributes).reduce((s, e) => {
+          const [key, value] = e;
+          if (key === 'disabled') {
+            s['active'] = !value;
+          } else {
+            s[key] = value
+          }
+
+          return s;
+        }, {} as any)),
+        method: 'PATCH'
+      });
+
+      const data: Cluster = await response.json();
+      return data;
+    })
+  }
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, mount } from 'enzyme';
+import { mount } from 'enzyme';
 import { ClusterConfiguration } from './ClusterConfiguration';
 import { AppState } from '../store';
 import { WizardTabTypes } from '../NewProjectWizard/domain';
@@ -9,9 +9,11 @@ import { ClusterService } from "../services/ClusterService";
 import { AWSRegionService } from "../services/AWSRegionService";
 import { AWSEC2PricingService } from "../services/AWSEC2PricingService";
 import { render as renderComponent, fireEvent, wait} from '@testing-library/react';
-import { AmazonCluster, Cluster, DataCenterCluster } from '../domain';
+import { AmazonCluster, Cluster, DataCenterCluster, ExecutionCycleStatus } from '../domain';
 import { FileServer } from '../FileUpload/fileServer';
 import { ClusterSetupCompletedAction } from '../NewProjectWizard/actions';
+import { subMinutes } from 'date-fns';
+import { RemoveClusterAction, ActivateClusterAction } from './actions';
 
 describe('<ClusterConfiguration />', () => {
   let appState: AppState;
@@ -305,6 +307,7 @@ describe('<ClusterConfiguration />', () => {
       expect(destroySpy).toBeCalled();
       await destroyPromise;
       expect(dispatch).toBeCalled();
+      expect(dispatch.mock.calls[0][0]).toBeInstanceOf(RemoveClusterAction);
     });
 
     it('should enable Add Cluster', async () => {
@@ -342,6 +345,34 @@ describe('<ClusterConfiguration />', () => {
       fireEvent.click(nextButton);
       expect(dispatch).toBeCalled();
       expect(dispatch.mock.calls[0][0]).toBeInstanceOf(ClusterSetupCompletedAction);
+    });
+
+    it('should disable a cluster with existing tests', async () => {
+      savedCluster.clientStatsCount = 3;
+      const updatePromise = Promise.resolve(savedCluster);
+      const destroySpy = jest.spyOn(ClusterService.prototype, 'update').mockReturnValue(updatePromise);
+      const {findByRole} = renderComponent(createComponent());
+      const remove = await findByRole('Disable Cluster');
+      expect(remove.textContent).toMatch(/disable/i);
+      fireEvent.click(remove);
+      expect(destroySpy).toBeCalled();
+      await updatePromise;
+      expect(dispatch).toBeCalled();
+      expect(dispatch.mock.calls[0][0]).toBeInstanceOf(RemoveClusterAction);
+    });
+
+    it('should enable a disabled cluster', async () => {
+      savedCluster.loadAgentsCount = 1;
+      const updatePromise = Promise.resolve({...savedCluster});
+      const updateApiSpy = jest.spyOn(ClusterService.prototype, 'update').mockReturnValue(updatePromise);
+      savedCluster.disabled = true;
+      const {findByRole} = renderComponent(createComponent());
+      const enable = await findByRole('Enable Cluster');
+      fireEvent.click(enable);
+      await updatePromise;
+      expect(updateApiSpy).toBeCalledWith(1, 23, { disabled: false });
+      expect(dispatch).toBeCalled();
+      expect(dispatch.mock.calls[0][0]).toBeInstanceOf(ActivateClusterAction);
     });
   });
 
@@ -420,9 +451,11 @@ describe('<ClusterConfiguration />', () => {
         expect(errorMessage).toBeDefined();
       };
 
-      expectError('title');
-      expectError('userName');
-      expectError('sshPort', '-1');
+      setTimeout(() => {
+        expectError('title');
+        expectError('userName');
+        expectError('sshPort', '-1');
+      }, 10);
     });
 
     it('should display validation errors from api', async () => {

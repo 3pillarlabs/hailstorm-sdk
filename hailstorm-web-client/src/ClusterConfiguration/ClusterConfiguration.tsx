@@ -93,6 +93,7 @@ function StepContent({
           clusters={activeProject.clusters}
           onSelectCluster={(cluster) => dispatch(new ActivateClusterAction(cluster))}
           activeCluster={wizardState.activeCluster}
+          showDisabledCluster={true}
         />
       </div>
       <div className="column is-three-fifths">
@@ -224,7 +225,7 @@ function StepFooter({
     </div>
     <div className="level-right">
       <button
-        disabled={activeProject.clusters === undefined || activeProject.clusters.length === 0}
+        disabled={activeProject.clusters === undefined || activeProject.clusters.every((value) => value.disabled)}
         className="button is-primary"
         onClick={() => dispatch(new ClusterSetupCompletedAction())}
       >

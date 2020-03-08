@@ -4,11 +4,15 @@
   height: 60vh;
   overflow-y: auto;
   width: 100%;
-}
 
-.scrollableTable thead tr th {
-  position: sticky;
-  top: 0;
-  background-color: $white;
-  border-bottom: 2px solid $grey-light;
+  thead tr th {
+    position: sticky;
+    top: 0;
+    background-color: $white;
+    border-bottom: 2px solid $grey-light;
+  }
+
+  th.narrow {
+    width: 5%;
+  }
 }

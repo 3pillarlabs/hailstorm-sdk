@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { DataCenterCluster, Project } from '../domain';
-import { ApiFactory } from '../api';
-import { RemoveClusterAction } from './actions';
+import { RemoveCluster } from './RemoveCluster';
 
 export function DataCenterView({
   cluster,
@@ -12,7 +11,6 @@ export function DataCenterView({
   dispatch?: React.Dispatch<any>;
   activeProject?: Project;
 }) {
-  const [disableRemove, setDisableRemove] = useState(false);
 
   return (
     <div className="card">
@@ -88,25 +86,7 @@ export function DataCenterView({
         </div>
       </div>
       {activeProject && dispatch && (<div className="card-footer">
-        <div className="card-footer-item">
-          <button
-            type="button"
-            className="button is-warning"
-            role="Remove Cluster"
-            disabled={disableRemove}
-            onClick={() => {
-              setDisableRemove(true);
-              ApiFactory()
-                .clusters()
-                .destroy(activeProject.id, cluster.id!)
-                .then(() => {
-                  dispatch(new RemoveClusterAction(cluster));
-                });
-            }}
-          >
-            Remove
-          </button>
-        </div>
+        <RemoveCluster {...{activeProject, cluster, dispatch}} />
       </div>)}
     </div>
   )

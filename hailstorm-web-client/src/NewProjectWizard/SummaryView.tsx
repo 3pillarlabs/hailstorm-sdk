@@ -109,7 +109,7 @@ function ClusterSection({
     <div className="card">
       <div className="card-content">
         <div className="content">
-        {clusters.map((cluster) => (
+        {clusters.filter((value) => !value.disabled).map((cluster) => (
           <ClusterDetailView {...{cluster}} key={cluster.id} />
         ))}
         </div>

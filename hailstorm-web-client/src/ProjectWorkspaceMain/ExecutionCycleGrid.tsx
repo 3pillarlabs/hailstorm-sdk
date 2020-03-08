@@ -5,7 +5,6 @@ import { ExecutionCycleStatus } from '../domain';
 import { ApiFactory } from '../api';
 import { AppStateContext } from '../appStateContext';
 import styles from './ExecutionCycleGrid.module.scss';
-import { formatRelative } from 'date-fns';
 import { FixedDate } from './FixedDate';
 
 export interface ExecutionCycleGridProps {
@@ -111,13 +110,13 @@ export const ExecutionCycleGrid: React.FC<ExecutionCycleGridProps> = (props) => 
       <table className="table is-fullwidth is-striped">
         <thead>
           <tr>
-            <th><input type="checkbox" checked={selectAll} onChange={handleSelectAll} disabled={viewTrash || loading || executionCycles.length === 0} /></th>
+            <th className={styles.narrow}><input type="checkbox" checked={selectAll} onChange={handleSelectAll} disabled={viewTrash || loading || executionCycles.length === 0} /></th>
             <th>Threads</th>
             <th className="is-gtk">90th Percentile (ms)</th>
             <th className="is-gtk">Throughput (tps)</th>
             <th>Started</th>
             <th>Duration (mins)</th>
-            <th className="is-gtk"></th>
+            <th className={`${styles.narrow} is-gtk`}></th>
           </tr>
         </thead>
         {loading ? <tbody><tr><td colSpan={7}><Loader /></td></tr></tbody> : (
@@ -128,8 +127,8 @@ export const ExecutionCycleGrid: React.FC<ExecutionCycleGridProps> = (props) => 
             <td>{stoppedAt && !viewTrash ? <input type="checkbox" checked={checked || false} onChange={toggleCheck(id)}/> : null}</td>
             <td>{threadsCount}</td>
             <td className="is-gtk">{responseTime}</td>
-            <td className="is-gtk">{new Number(throughput).toFixed(2)}</td>
-            <td>{dateNow.formatDistance(startedAt)}</td>
+            <td className="is-gtk">{throughput && new Number(throughput).toFixed(2)}</td>
+            <td title={startedAt.toDateString()}>{dateNow.formatDistance(startedAt)}</td>
             <td>{stoppedAt ? dateDiff(stoppedAt, startedAt) : ''}</td>
             <td className="is-gtk">
             {stoppedAt ?

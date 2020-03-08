@@ -96,7 +96,10 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     ensure
       self.current_execution_cycle.update_attribute(
           :threads_count,
-          self.jmeter_plans.sum(:latest_threads_count)
+          self.jmeter_plans.sum(:latest_threads_count) * self.clusters
+                                                             .map(&:cluster_instance)
+                                                             .select(&:active?)
+                                                             .size
       )
 
       self.reload
@@ -116,6 +119,8 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       current_execution_cycle.set_stopped_at
       if !aborted
         current_execution_cycle.stopped!
+        total_threads_count = self.current_execution_cycle.client_stats.sum(:threads_count)
+        self.current_execution_cycle.update_attribute(:threads_count, total_threads_count)
       else
         current_execution_cycle.aborted!
       end

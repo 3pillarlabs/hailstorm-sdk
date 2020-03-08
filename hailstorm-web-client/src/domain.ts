@@ -86,6 +86,8 @@ export interface Cluster {
   id?: number;
   code?: string;
   disabled?: boolean;
+  clientStatsCount?: number;
+  loadAgentsCount?: number;
 }
 
 export interface AmazonCluster extends Cluster {

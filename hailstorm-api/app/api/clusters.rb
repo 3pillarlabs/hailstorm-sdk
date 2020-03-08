@@ -38,27 +38,78 @@ post '/projects/:project_id/clusters' do |project_id|
 end
 
 get '/projects/:project_id/clusters' do |project_id|
+  project = Hailstorm::Model::Project.find(project_id)
   project_config = ProjectConfiguration.where(project_id: project_id).first
   return not_found unless project_config
 
   # @type [Hailstorm::Support::Configuration] hailstorm_config
   hailstorm_config = deep_decode(project_config.stringified_config)
-  JSON.dump(hailstorm_config.clusters.map { |e| to_cluster_attributes(e).merge(projectId: project_id) }
-                                     .map { |e| e.merge(code: "cluster-#{e[:id]}") })
+  JSON.dump(hailstorm_config.clusters
+                            .map { |e| to_cluster_attributes(e, project: project).merge(projectId: project_id) })
 end
 
 delete '/projects/:project_id/clusters/:id' do |project_id, id|
-  sleep 0.3
-  found_project = Seed::DB[:projects].find { |p| p[:id] == project_id.to_i }
-  return not_found unless found_project
+  found_project = Hailstorm::Model::Project.find(project_id)
+  project_config = ProjectConfiguration.find_by_project_id!(found_project.id)
 
-  found_cluster = Seed::DB[:clusters].find { |cl| cl[:id] == id.to_i && cl[:projectId] == found_project[:id] }
-  return not_found unless found_cluster
+  # @type [Hailstorm::Support::Configuration] hailstorm_config
+  hailstorm_config = deep_decode(project_config.stringified_config)
+  matched_cluster_cfg = hailstorm_config.clusters.find do |cluster_cfg|
+    cluster_cfg.cluster_type.to_sym != :amazon_cloud ?
+      id.to_i == cluster_cfg.title.to_java_string.hash_code :
+      id.to_i == aws_cluster_title(cluster_cfg.region).to_java_string.hash_code
+  end
 
-  Seed::DB[:clusters].reject! { |cl| cl[:id] == found_cluster[:id] }
-  polymorphic_table = found_cluster[:type] == 'AWS' ? :amazon_clouds : :data_centers
-  Seed::DB[polymorphic_table].reject { |cl| cl[:id] == found_cluster[:id] }
+  return 404 unless matched_cluster_cfg
 
-  found_project[:incomplete] = Seed::DB[:clusters].count { |cl| cl[:projectId] == found_project[:id] } == 0
+  cluster = Hailstorm::Model::Cluster.where(project: found_project)
+                                     .find_by_cluster_code(matched_cluster_cfg.cluster_code)
+  if cluster
+    clusterable = cluster.cluster_instance
+    if clusterable.client_stats.count > 0 || clusterable.load_agents.count > 0
+      matched_cluster_cfg.active = false
+    else
+      clusterable.destroy!
+      cluster.destroy!
+    end
+  end
+
+  if !cluster || matched_cluster_cfg.active.nil? || matched_cluster_cfg.active == true
+    hailstorm_config.clusters.reject! do |cluster_cfg|
+      cluster_cfg.cluster_type.to_sym != :amazon_cloud ?
+        id.to_i == matched_cluster_cfg.title.to_java_string.hash_code :
+        id.to_i == aws_cluster_title(cluster_cfg.region).to_java_string.hash_code
+    end
+  end
+
+  project_config.update_attributes!(stringified_config: deep_encode(hailstorm_config))
   204
+end
+
+patch '/projects/:project_id/clusters/:id' do |project_id, id|
+  found_project = Hailstorm::Model::Project.find(project_id)
+  project_config = ProjectConfiguration.find_by_project_id!(found_project.id)
+
+  # @type [Hailstorm::Support::Configuration] hailstorm_config
+  hailstorm_config = deep_decode(project_config.stringified_config)
+  matched_cluster_cfg = hailstorm_config.clusters.find do |cluster_cfg|
+    cluster_cfg.cluster_type.to_sym != :amazon_cloud ?
+      id.to_i == cluster_cfg.title.to_java_string.hash_code :
+      id.to_i == aws_cluster_title(cluster_cfg.region).to_java_string.hash_code
+  end
+
+  return 404 unless matched_cluster_cfg
+
+  request.body.rewind
+  # @type [Hash]
+  data = JSON.parse(request.body.read)
+  data.each_pair { |key, value| matched_cluster_cfg.send("#{key}=", value) }
+  project_config.update_attributes!(stringified_config: deep_encode(hailstorm_config))
+
+  JSON.dump(
+    to_cluster_attributes(
+      matched_cluster_cfg,
+      project: found_project
+    ).merge(project_id: found_project.id)
+  )
 end

@@ -2,6 +2,10 @@ import { ClusterService } from "./ClusterService";
 import { AmazonCluster } from "../domain";
 
 describe('ClusterService', () => {
+  beforeEach(() => {
+    jest.resetAllMocks()
+  });
+
   it('should create a cluster', async () => {
     const attrs: AmazonCluster = {
       type: "AWS",
@@ -77,4 +81,28 @@ describe('ClusterService', () => {
 
     expect(spy).toHaveBeenCalled();
   });
+
+  it('should enable a cluster', async () => {
+    const attrs: {[K in keyof AmazonCluster]?: AmazonCluster[K]} = {
+      type: "AWS",
+      accessKey: "A",
+      secretKey: "s",
+      instanceType: "t2.small",
+      maxThreadsByInstance: 25,
+      region: "us-east-1",
+      id: 223,
+      title: "AWS us-east-1",
+      code: "aws-223"
+    };
+
+    const spy = jest.spyOn(window, 'fetch').mockResolvedValueOnce(new Response(new Blob([
+      JSON.stringify({...attrs})
+    ])));
+
+    const service = new ClusterService();
+    const createdCluster = await service.update(1, 223, {disabled: false, maxThreadsByInstance: 50});
+    expect(spy).toBeCalled();
+    expect(JSON.parse(spy.mock.calls[0][1]!.body!.toString()).active).toEqual(true);
+    expect(createdCluster).toBeDefined();
+  })
 });

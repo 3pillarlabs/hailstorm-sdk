@@ -2,13 +2,14 @@ require 'hailstorm/model/amazon_cloud'
 
 module ClustersHelper
 
-  # @param [Hailstorm::Support::Configuration::ClusterBase] cluster
+  # @param [Hailstorm::Support::Configuration::ClusterBase] cluster_cfg
+  # @param [Hailstorm::Model::Project] project
   # @return [Hash]
-  def to_cluster_attributes(cluster)
-    case cluster.cluster_type
+  def to_cluster_attributes(cluster_cfg, project: nil)
+    attrs = case cluster_cfg.cluster_type
     when :amazon_cloud
       # @type [Hailstorm::Support::Configuration::AmazonCloud] amz
-      amz = cluster
+      amz = cluster_cfg
       title = aws_cluster_title(amz.region)
       {
         type: 'AWS',
@@ -18,11 +19,12 @@ module ClustersHelper
         secretKey: amz.secret_key,
         instanceType: amz.instance_type,
         maxThreadsByInstance: amz.max_threads_per_agent,
-        region: amz.region
+        region: amz.region,
+        vpcSubnetId: amz.vpc_subnet_id
       }
     when :data_center
       # @type [Hailstorm::Support::Configuration::DataCenter] dc
-      dc = cluster
+      dc = cluster_cfg
       {
         type: 'DataCenter',
         title: dc.title,
@@ -35,6 +37,22 @@ module ClustersHelper
     else
       {}
     end
+
+    attrs[:code] = cluster_cfg.cluster_code
+    if cluster_cfg.active == false
+      attrs[:disabled] = true
+    end
+
+    if project
+      cluster = Hailstorm::Model::Cluster.where(project: project)
+                                         .find_by_cluster_code(cluster_cfg.cluster_code)
+      if cluster
+        attrs[:client_stats_count] = cluster.cluster_instance.client_stats.count
+        attrs[:load_agents_count] = cluster.cluster_instance.load_agents.count
+      end
+    end
+
+    deep_camelize_keys(attrs)
   end
 
   # @param [String] api_cluster_type
@@ -60,6 +78,7 @@ module ClustersHelper
     amz.instance_type = api_params[:instanceType].presence
     amz.max_threads_per_agent = api_params[:maxThreadsByInstance] if api_params[:maxThreadsByInstance]
     amz.region = api_params[:region].presence
+    amz.vpc_subnet_id = api_params[:vpcSubnetId].presence
     amz
   end
 

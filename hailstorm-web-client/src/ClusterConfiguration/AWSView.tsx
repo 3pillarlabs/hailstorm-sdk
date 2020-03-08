@@ -1,14 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Project, AmazonCluster } from '../domain';
-import { RemoveClusterAction } from './actions';
-import { ApiFactory } from '../api';
+import { RemoveCluster } from './RemoveCluster';
+import styles from './ClusterConfiguration.module.scss';
 
 export function AWSView({ cluster, dispatch, activeProject }: {
   cluster: AmazonCluster;
   dispatch?: React.Dispatch<any>;
   activeProject?: Project;
 }) {
-  const [disableRemove, setDisableRemove] = useState(false);
 
   return (<div className="card">
     <header className="card-header">
@@ -17,7 +16,7 @@ export function AWSView({ cluster, dispatch, activeProject }: {
         {cluster.title}
       </p>
     </header>
-    <div className="card-content">
+    <div className={`card-content${cluster.disabled ? ` ${styles.disabledContent}` : ''}`}>
       <div className="content">
         <div className="field">
           <label className="label">AWS Access Key</label>
@@ -77,25 +76,7 @@ export function AWSView({ cluster, dispatch, activeProject }: {
       </div>
     </div>
     {activeProject && dispatch && (<div className="card-footer">
-      <div className="card-footer-item">
-        <button
-          type="button"
-          className="button is-warning"
-          role="Remove Cluster"
-          disabled={disableRemove}
-          onClick={() => {
-            setDisableRemove(true);
-            ApiFactory()
-              .clusters()
-              .destroy(activeProject.id, cluster.id!)
-              .then(() => {
-                dispatch(new RemoveClusterAction(cluster));
-              });
-          }}
-        >
-          Remove
-        </button>
-      </div>
+      <RemoveCluster {...{activeProject, cluster, dispatch}} />
     </div>)}
   </div>);
 }

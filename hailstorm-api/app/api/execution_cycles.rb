@@ -10,6 +10,7 @@ get '/projects/:project_id/execution_cycles' do |project_id|
   project = Hailstorm::Model::Project.find(project_id)
   execution_cycles_attrs = project.execution_cycles
                                .where.not(status: Hailstorm::Model::ExecutionCycle::States::ABORTED)
+                               .where.not(status: Hailstorm::Model::ExecutionCycle::States::TERMINATED)
                                .order(started_at: :desc)
                                .map(&method(:execution_cycle_attributes))
                                .map(&method(:deep_camelize_keys))
@@ -44,8 +45,8 @@ get '/projects/:project_id/execution_cycles/current' do |project_id|
 
   running_agents = project.check_status
   JSON.dump(deep_camelize_keys(current_cycle.attributes.merge(
-      id: current_cycle.id,
-      started_at: current_cycle.started_at.to_i * 1000,
-      noRunningTests: running_agents.empty?
+    id: current_cycle.id,
+    started_at: current_cycle.started_at.to_i * 1000,
+    noRunningTests: running_agents.empty?
   )))
 end

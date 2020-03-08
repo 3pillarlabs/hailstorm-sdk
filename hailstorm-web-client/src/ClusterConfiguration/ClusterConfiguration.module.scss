@@ -1,3 +1,5 @@
+@import "~bulma/sass/utilities/_all.sass";
+
 .choiceCard {
 
   .cardButton {
@@ -9,4 +11,12 @@
       margin-bottom: 0.5rem;
     }
   }
+}
+
+.disabledContent {
+  background-color: $white-ter;
+}
+
+.titleLabel {
+  margin-left: 1rem;
 }
