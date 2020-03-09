@@ -212,6 +212,18 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   include AgentHelper
 
+  # @param [String] instance_type
+  # @return [Integer]
+  def self.calc_max_threads_per_instance(instance_type:)
+    iclass, itype = instance_type.split(/\./).collect(&:to_sym)
+    iclass ||= :t3a
+    itype ||= :small
+    itype_index = Defaults::KNOWN_INSTANCE_TYPES.find_index(itype).to_i - 2 # :small is 0th index, :nano is -2
+    itype_factor = Defaults::INSTANCE_TYPE_SCALE_FACTOR ** itype_index
+    iclass_factor = Defaults::INSTANCE_CLASS_SCALE_FACTOR[iclass] || Defaults::INSTANCE_CLASS_SCALE_FACTOR[:t3a]
+    self.round_off_max_threads_per_agent(iclass_factor * itype_factor * Defaults::MIN_THREADS_ONE_AGENT)
+  end
+
   ######################### PRIVATE METHODS ####################################
   private
 
@@ -260,13 +272,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   end
 
   def default_max_threads_per_agent
-    iclass, itype = self.instance_type.split(/\./).collect(&:to_sym)
-    iclass ||= :m5a
-    itype ||= :small
-    itype_index = Defaults::KNOWN_INSTANCE_TYPES.find_index(itype).to_i - 2 # :small is 0th index, :nano is -2
-    itype_factor = Defaults::INSTANCE_TYPE_SCALE_FACTOR ** itype_index
-    iclass_factor = Defaults::INSTANCE_CLASS_SCALE_FACTOR[iclass] || Defaults::INSTANCE_CLASS_SCALE_FACTOR[:m5a]
-    self.class.round_off_max_threads_per_agent(iclass_factor * itype_factor * Defaults::MIN_THREADS_ONE_AGENT)
+    self.class.calc_max_threads_per_instance(instance_type: self.instance_type)
   end
 
   # Helper methods for SSH identity
@@ -647,7 +653,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     }.freeze
     INSTANCE_TYPE_SCALE_FACTOR = 2
     KNOWN_INSTANCE_TYPES = [:nano, :micro, :small, :medium, :large, :xlarge, '2xlarge'.to_sym, '4xlarge'.to_sym,
-                            '10xlarge'.to_sym, '16xlarge'.to_sym, '32xlarge'.to_sym].freeze
+                            '8xlarge'.to_sym, '10xlarge'.to_sym, '12xlarge'.to_sym, '16xlarge'.to_sym,
+                            '24xlarge'.to_sym, :metal].freeze
 
     MIN_THREADS_ONE_AGENT = 10
     SSH_PORT = Hailstorm::Behavior::SSHable::Defaults::SSH_PORT

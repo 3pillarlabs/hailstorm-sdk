@@ -1,15 +1,30 @@
 require 'sinatra'
+require 'model/aws_ec2_price'
+require 'helpers/aws_ec2_pricing_helper'
+require 'hailstorm/model/amazon_cloud'
 
-get '/aws_ec2_pricing_options/:region_code' do |_region_code|
-  sleep 0.5
-  JSON.dump([
-      { instanceType: "m5a.large", maxThreadsByInstance: 500, hourlyCostByInstance: 0.096, numInstances: 1 },
-      { instanceType: "m5a.xlarge", maxThreadsByInstance: 1000, hourlyCostByInstance: 0.192, numInstances: 1 },
-      { instanceType: "m5a.2xlarge", maxThreadsByInstance: 2000, hourlyCostByInstance: 0.3440, numInstances: 1 },
-      { instanceType: "m5a.4xlarge", maxThreadsByInstance: 5000, hourlyCostByInstance: 0.6880, numInstances: 1 },
-      { instanceType: "m5a.8xlarge", maxThreadsByInstance: 10000, hourlyCostByInstance: 1.3760, numInstances: 1 },
-      { instanceType: "m5a.12xlarge", maxThreadsByInstance: 15000, hourlyCostByInstance: 2.0640, numInstances: 1 },
-      { instanceType: "m5a.16xlarge", maxThreadsByInstance: 20000, hourlyCostByInstance: 2.7520, numInstances: 1 },
-      { instanceType: "m5a.24xlarge", maxThreadsByInstance: 30000, hourlyCostByInstance: 4.1280, numInstances: 1 }
-  ])
+include AwsEc2PricingHelper
+
+get '/aws_ec2_pricing_options/:region_code' do |region_code|
+  timestamp = Time.now
+  region_price = AwsEc2Price.where(region: region_code).first
+  if region_price.nil? || timestamp - region_price.next_update >= 0
+    raw_prices_data = fetch_ec2_prices(region: region_code, timestamp: timestamp)
+    if region_price.nil?
+      AwsEc2Price.create!(region: region_code, raw_data: raw_prices_data, next_update: timestamp.next_quarter)
+    else
+      region_price.update_attributes!(raw_data: raw_prices_data, next_update: timestamp.next_quarter)
+    end
+
+  else
+    raw_prices_data = region_price.raw_data
+  end
+
+  prices_data = JSON.parse(raw_prices_data)
+  prices_with_max_threads = prices_data.map do |item|
+    max_threads = Hailstorm::Model::AmazonCloud.calc_max_threads_per_instance(instance_type: item['instanceType'])
+    item.merge(maxThreadsByInstance: max_threads, numInstances: 1)
+  end
+
+  JSON.dump(prices_with_max_threads.sort { |a, b| a['hourlyCostByInstance'] <=> b['hourlyCostByInstance'] })
 end

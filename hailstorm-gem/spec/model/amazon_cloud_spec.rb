@@ -57,7 +57,7 @@ describe Hailstorm::Model::AmazonCloud do
       %i[t2 t3 t3a m4 m5 m5a m5ad m5d m5dn m5n].each do |instance_class|
         iclass_results = []
         [:nano, :micro, :small, :medium, :large, :xlarge, '2xlarge'.to_sym, '4xlarge'.to_sym, '10xlarge'.to_sym,
-         '16xlarge'.to_sym, '32xlarge'.to_sym].each do |instance_size|
+         '16xlarge'.to_sym].each do |instance_size|
 
           @aws.instance_type = "#{instance_class}.#{instance_size}"
           default_threads = @aws.send(:default_max_threads_per_agent)
