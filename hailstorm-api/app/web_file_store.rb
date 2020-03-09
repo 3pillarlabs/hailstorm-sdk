@@ -22,7 +22,7 @@ class WebFileStore
   # @param [String] to_path
   # @return [String] full path to copied file
   def fetch_file(file_id:, file_name:, to_path:)
-    uri = URI("http://#{file_server_config[:host]}:#{file_server_config[:port]}/#{file_id}/#{file_name}")
+    uri = build_fs_url(file_id: file_id, file_name: file_name)
     response = Net::HTTP.get_response(uri)
     raise(Net::HTTPError.new("Failed to fetch #{uri}", response)) unless response.is_a?(Net::HTTPSuccess)
     File.open("#{to_path}/#{file_name}", 'w') do |out|
@@ -72,8 +72,19 @@ class WebFileStore
     file_path.split('/').second || file_path
   end
 
-  def read_identity_file(_file_path, _project_code = nil)
-    super
+  def read_identity_file(file_path, _project_code = nil)
+    logger.debug { file_path }
+    file_id, file_name = file_path.split('/')
+    uri = build_fs_url(file_id: file_id, file_name: file_name)
+    Net::HTTP.start(uri.hostname, uri.port) do |http|
+      req = Net::HTTP::Get.new(uri)
+      http.request(req) do |res|
+        raise(Net::HTTPError.new("Failed to fetch #{uri}", res)) unless res.is_a?(Net::HTTPSuccess)
+
+        content = res.body
+        yield StringIO.new(content)
+      end
+    end
   end
 
   def export_report(project_code, internal_path)
@@ -113,6 +124,10 @@ class WebFileStore
   end
 
   private
+
+  def build_fs_url(file_id:, file_name:)
+    URI("http://#{file_server_config[:host]}:#{file_server_config[:port]}/#{file_id}/#{file_name}")
+  end
 
   # @return [Net::HTTPResponse]
   def upload_file(file_path, uri, prefix)

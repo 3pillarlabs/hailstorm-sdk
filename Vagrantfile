@@ -227,6 +227,7 @@ Vagrant.configure(2) do |config|
       end
       
       hsdc.vm.network 'private_network', ip: "192.168.20.#{serial * 10}"
+			hsdc.vm.hostname = "data-center-agent-#{serial}"
       
       hsdc.vm.provision 'java', type: :shell do |s|
         s.inline = <<-X

@@ -138,4 +138,19 @@ describe WebFileStore do
       expect(data[:url]).to be == 'http://webfs.hailstorm:9000/123/foo.jtl'
     end
   end
+
+  context '#read_identity_file' do
+    it 'should yield the response' do
+      http_response = mock(Net::HTTPResponse)
+      http_response.stub!(:is_a?).and_return(true)
+      http_response.stub!(:read).and_return('---')
+      http = mock(Net::HTTP)
+      http.stub!(:request).and_yield(http_response)
+      Net::HTTP.stub!(:start).and_yield(http)
+      wfs = WebFileStore.new
+      wfs.read_identity_file('123/foo.pem') do |io|
+        expect(io.read).to eq('---')
+      end
+    end
+  end
 end

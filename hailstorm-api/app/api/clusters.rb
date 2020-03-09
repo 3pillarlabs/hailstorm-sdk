@@ -1,6 +1,5 @@
 require 'sinatra'
 require 'json'
-require 'db/seed'
 require 'helpers/clusters_helper'
 require 'hailstorm/support/configuration'
 require 'hailstorm/model/project'

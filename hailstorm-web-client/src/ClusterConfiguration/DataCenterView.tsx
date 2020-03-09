@@ -1,6 +1,7 @@
 import React from 'react';
 import { DataCenterCluster, Project } from '../domain';
 import { RemoveCluster } from './RemoveCluster';
+import styles from './ClusterConfiguration.module.scss';
 
 export function DataCenterView({
   cluster,
@@ -20,7 +21,7 @@ export function DataCenterView({
           {cluster.title}
         </p>
       </header>
-      <div className="card-content">
+      <div className={`card-content${cluster.disabled ? ` ${styles.disabledContent}` : ''}`}>
         <div className="content">
           <div className="field">
             <label className="label">Username</label>
