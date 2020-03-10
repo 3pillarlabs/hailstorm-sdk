@@ -1,5 +1,5 @@
 import { reducer } from "./reducer";
-import { ProjectSetupAction, ProjectSetupCancelAction, ConfirmProjectSetupCancelAction, StayInProjectSetupAction, CreateProjectAction, ClusterSetupCompletedAction, JMeterSetupCompletedAction, ActivateTabAction, ReviewCompletedAction, EditInProjectWizard, UnsetProjectAction, UpdateProjectTitleAction } from "./actions";
+import { ProjectSetupAction, ProjectSetupCancelAction, ConfirmProjectSetupCancelAction, StayInProjectSetupAction, CreateProjectAction, ClusterSetupCompletedAction, JMeterSetupCompletedAction, ActivateTabAction, ReviewCompletedAction, EditInProjectWizard, UnsetProjectAction, UpdateProjectTitleAction, SetProjectDeletedAction } from "./actions";
 import { WizardTabTypes, NewProjectWizardProgress } from "./domain";
 import { Project } from "../domain";
 import { SaveClusterAction } from "../ClusterConfiguration/actions";
@@ -365,5 +365,26 @@ describe('reducer', () => {
     }, new ReviewCompletedAction());
 
     expect(nextState.activeProject!.incomplete).toBeFalsy();
+  });
+
+  it ('should mark a project as destroyed', () => {
+    const nextState = reducer({
+      activeProject: {
+        id: 1,
+        code: 'a',
+        title: 'A',
+        running: false,
+        incomplete: true
+      },
+
+      wizardState: {
+        activeTab: WizardTabTypes.Project,
+        done: {
+          [WizardTabTypes.Project]: true,
+        }
+      }
+    }, new SetProjectDeletedAction());
+
+    expect(nextState.activeProject!.destroyed).toBeTruthy();
   });
 });

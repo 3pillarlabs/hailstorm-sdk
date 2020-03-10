@@ -98,7 +98,7 @@ describe('<TerminateProject />', () => {
 
   describe('when modal is confirmed', () => {
     it('should set interim state before api invocation', () => {
-      let apiSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(undefined);
+      let apiSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
       const dispatch = jest.fn();
       const component = mount(buildComponent({dispatch}))
       act(() => {

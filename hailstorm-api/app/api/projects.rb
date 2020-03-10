@@ -1,6 +1,5 @@
 require 'sinatra'
 require 'json'
-require 'db/seed'
 require 'helpers/projects_helper'
 require 'hailstorm/model/project'
 require 'hailstorm/support/configuration'
@@ -90,7 +89,12 @@ post '/projects' do
 end
 
 delete '/projects/:id' do |id|
-  sleep 0.3
-  Seed::DB[:projects].reject! { |project| project[:id] == id.to_s.to_i }
+  found_project = Hailstorm::Model::Project.find(id)
+  Hailstorm::Model::Project.transaction do
+    project_configuration = ProjectConfiguration.where(project: found_project).first
+    project_configuration.destroy! if project_configuration
+    found_project.destroy!
+  end
+
   204
 end

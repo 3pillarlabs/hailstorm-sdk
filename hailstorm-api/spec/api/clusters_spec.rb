@@ -56,7 +56,7 @@ describe 'api/clusters' do
       expect(@browser.last_response).to be_ok
       res = JSON.parse(@browser.last_response.body)
       expect(res.size).to eq(2)
-      expect(res[0].keys.sort).to eq(%W[id title type projectId accessKey secretKey instanceType maxThreadsByInstance region code].sort)
+      expect(res[0].keys.sort).to eq(%W[id title type projectId accessKey secretKey instanceType maxThreadsByInstance region code vpcSubnetId].sort)
       expect(res[1].keys.sort).to eq(%W[id title type projectId userName sshIdentity machines port code].sort)
       expect(res[0]['type']).to eq('AWS')
       expect(res[1]['type']).to eq('DataCenter')

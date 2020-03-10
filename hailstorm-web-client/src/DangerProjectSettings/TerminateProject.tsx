@@ -3,7 +3,7 @@ import { InterimProjectState } from '../domain';
 import { SetInterimStateAction, UnsetInterimStateAction, SetRunningAction } from '../ProjectWorkspace/actions';
 import { ApiFactory } from '../api';
 import { Modal } from '../Modal/Modal';
-import styles from './ProjectWorkspaceFooter.module.scss';
+import styles from './DangerProjectSettings.module.scss';
 import { AppStateContext } from '../appStateContext';
 
 export const TerminateProject: React.FC = () => {

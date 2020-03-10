@@ -8,6 +8,13 @@ import { WizardTabTypes } from "../NewProjectWizard/domain";
 import { AppStateContext } from '../appStateContext';
 import { CreateProjectAction, ConfirmProjectSetupCancelAction, UpdateProjectTitleAction } from '../NewProjectWizard/actions';
 
+jest.mock('../DangerProjectSettings', () => ({
+  __esModule: true,
+  DangerProjectSettings: () => (
+    <div id="DangerProjectSettings"></div>
+  )
+}));
+
 describe('<ProjectConfiguration />', () => {
   it('should render without crashing', () => {
     shallow(<ProjectConfiguration />);
@@ -110,7 +117,7 @@ describe('<ProjectConfiguration />', () => {
     });
 
     it('should update project title', async () => {
-      const updateSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(undefined);
+      const updateSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
       const appState: AppState = {
         runningProjects: [],
         activeProject: {id: 1, code: 'a', title: 'Yamamoto', running: false, autoStop: true},

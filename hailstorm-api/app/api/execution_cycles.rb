@@ -9,11 +9,11 @@ include ExecutionCyclesHelper
 get '/projects/:project_id/execution_cycles' do |project_id|
   project = Hailstorm::Model::Project.find(project_id)
   execution_cycles_attrs = project.execution_cycles
-                               .where.not(status: Hailstorm::Model::ExecutionCycle::States::ABORTED)
-                               .where.not(status: Hailstorm::Model::ExecutionCycle::States::TERMINATED)
-                               .order(started_at: :desc)
-                               .map(&method(:execution_cycle_attributes))
-                               .map(&method(:deep_camelize_keys))
+                                  .where.not(status: Hailstorm::Model::ExecutionCycle::States::ABORTED)
+                                  .where.not(status: Hailstorm::Model::ExecutionCycle::States::TERMINATED)
+                                  .order(started_at: :desc)
+                                  .map(&method(:execution_cycle_attributes))
+                                  .map(&method(:deep_camelize_keys))
 
   JSON.dump(execution_cycles_attrs)
 end

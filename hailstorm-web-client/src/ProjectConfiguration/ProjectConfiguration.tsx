@@ -7,6 +7,7 @@ import { AppStateContext } from '../appStateContext';
 import { CreateProjectAction, UpdateProjectTitleAction } from '../NewProjectWizard/actions';
 import { CancelLink, NextLink } from '../NewProjectWizard/WizardControls';
 import { WizardTabTypes } from "../NewProjectWizard/domain";
+import { DangerProjectSettings } from '../DangerProjectSettings';
 
 export const ProjectConfiguration: React.FC = () => {
   const {dispatch, appState} = useContext(AppStateContext);
@@ -67,6 +68,10 @@ export const ProjectConfiguration: React.FC = () => {
             </>
           )}
         />
+
+        {appState.activeProject && (<div className={styles.dangerSettings}>
+          <DangerProjectSettings noTerminate={true} />
+        </div>)}
       </div>
     </>
   );

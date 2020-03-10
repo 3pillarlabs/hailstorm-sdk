@@ -4,14 +4,14 @@ import { ProjectWorkspaceFooter } from './ProjectWorkspaceFooter';
 import { render, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 
-jest.mock('./TerminateProject', () => ({
+jest.mock('../DangerProjectSettings/TerminateProject', () => ({
   __esModule: true,
   TerminateProject: () => (
     <div id="terminateProject"></div>
   )
 }));
 
-jest.mock('./DeleteProject', () => ({
+jest.mock('../DangerProjectSettings/DeleteProject', () => ({
   __esModule: true,
   DeleteProject: () => (
     <div id="deleteProject"></div>

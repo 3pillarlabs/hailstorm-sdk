@@ -242,7 +242,11 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   end
 
   def destroy_clusterable
-    cluster_instance.destroy! unless cluster_instance.new_record?
+    begin
+      cluster_instance.destroy! unless cluster_instance.new_record?
+    rescue ActiveRecord::RecordNotFound => e
+      logger.warn(e.message)
+    end
   end
 
   def purge

@@ -12,6 +12,7 @@ export interface Project {
   jmeter?: JMeter;
   clusters?: Cluster[];
   incomplete?: boolean;
+  destroyed?: boolean;
 }
 
 export interface ExecutionCycle {

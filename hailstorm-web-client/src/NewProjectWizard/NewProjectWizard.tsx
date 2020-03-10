@@ -82,7 +82,12 @@ const RouterlessNewProjectWizard: React.FC<RouteComponentProps> = ({history, loc
   useEffect(() => {
     console.debug('NewProjectWizard#useEffect()');
     setLoading(false);
-    return () => dispatch(new ProjectSetupCancelAction());
+
+    return () => {
+      if (!(appState.activeProject && appState.activeProject.destroyed)) {
+        dispatch(new ProjectSetupCancelAction());
+      }
+    }
   }, []);
 
   if (redirectOnCompletion) {

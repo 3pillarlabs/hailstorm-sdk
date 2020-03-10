@@ -15,6 +15,7 @@ export enum NewProjectWizardActionTypes {
   UpdateProjectTitle = '[NewProjectWizard] UpdateProjectTitle',
   EditInProjectWizard = '[NewProjectWizard] EditInProjectWizard',
   UnsetProject = '[ProjectWorkspace] UnsetProject',
+  SetProjectDeleted = '[ProjectWorkspace] SetProjectDeleted'
 }
 
 export class ProjectSetupAction implements Action {
@@ -69,6 +70,10 @@ export class UnsetProjectAction implements Action {
   readonly type = NewProjectWizardActionTypes.UnsetProject;
 }
 
+export class SetProjectDeletedAction implements Action {
+  readonly type = NewProjectWizardActionTypes.SetProjectDeleted;
+}
+
 export type NewProjectWizardActions =
   | ProjectSetupAction
   | ProjectSetupCancelAction
@@ -81,4 +86,5 @@ export type NewProjectWizardActions =
   | StayInProjectSetupAction
   | UpdateProjectTitleAction
   | EditInProjectWizard
-  | UnsetProjectAction;
+  | UnsetProjectAction
+  | SetProjectDeletedAction;

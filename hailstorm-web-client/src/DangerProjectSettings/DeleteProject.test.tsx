@@ -68,13 +68,26 @@ describe('<DeleteProject />', () => {
       component.find('button').simulate('click');
     });
     component.update();
-    const apiUpdateSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(undefined);
-    const apiDeleteSpy = jest.spyOn(ProjectService.prototype, 'delete').mockResolvedValue(undefined);
+    const apiDeleteSpy = jest.spyOn(ProjectService.prototype, 'delete').mockResolvedValue(204);
     component.find('#modal button.is-danger').simulate('click');
     expect(dispatch).toBeCalled();
-    expect(apiUpdateSpy).toBeCalled();
     setTimeout(() => {
       done();
+      expect(apiDeleteSpy).toBeCalled();
+    }, 0);
+  });
+
+  it('should terminate a project before delete if it is pre-configured', (done) => {
+    component = mount(buildComponent({clusters: [{title: 'one', type: 'DataCenter'}]}));
+    component.find('button').simulate('click');
+    component.update();
+    const apUpdateSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
+    const apiDeleteSpy = jest.spyOn(ProjectService.prototype, 'delete').mockResolvedValue(204);
+    component.find('#modal button.is-danger').simulate('click');
+    expect(dispatch).toBeCalled();
+    setTimeout(() => {
+      done();
+      expect(apUpdateSpy).toBeCalled();
       expect(apiDeleteSpy).toBeCalled();
     }, 0);
   });

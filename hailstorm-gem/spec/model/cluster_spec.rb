@@ -436,6 +436,25 @@ describe Hailstorm::Model::Cluster do
       Hailstorm::Model::Cluster.first.destroy!
       expect(Hailstorm::Model::AmazonCloud.count).to be_zero
     end
+
+    it 'should not raise if record not found' do
+      config = Hailstorm::Support::Configuration.new
+      config.clusters(:amazon_cloud) do |aws|
+        aws.access_key = 'key-1'
+        aws.secret_key = 'secret-1'
+        aws.region = 'us-east-1'
+        aws.active = true
+      end
+
+      clusterables_stub!
+      Hailstorm::Model::AmazonCloud
+        .any_instance
+        .stub(:destroy!)
+        .and_raise(ActiveRecord::RecordNotFound, 'mock not found error')
+
+      Hailstorm::Model::Cluster.configure_all(@project, config)
+      expect { Hailstorm::Model::Cluster.first.destroy! }.to_not raise_error``
+    end
   end
 
   context '#cluster_instance' do

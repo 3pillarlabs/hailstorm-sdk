@@ -143,7 +143,7 @@ describe WebFileStore do
     it 'should yield the response' do
       http_response = mock(Net::HTTPResponse)
       http_response.stub!(:is_a?).and_return(true)
-      http_response.stub!(:read).and_return('---')
+      http_response.stub!(:body).and_return('---')
       http = mock(Net::HTTP)
       http.stub!(:request).and_yield(http_response)
       Net::HTTP.stub!(:start).and_yield(http)

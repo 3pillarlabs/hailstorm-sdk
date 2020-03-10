@@ -3,9 +3,10 @@ import { Modal } from '../Modal';
 import { SetInterimStateAction, UnsetInterimStateAction } from '../ProjectWorkspace/actions';
 import { InterimProjectState } from '../domain';
 import { ApiFactory } from '../api';
-import styles from './ProjectWorkspaceFooter.module.scss';
+import styles from './DangerProjectSettings.module.scss';
 import { Redirect } from 'react-router';
 import { AppStateContext } from '../appStateContext';
+import { SetProjectDeletedAction } from '../NewProjectWizard/actions';
 
 const REDIRECT_DELAY_MS: number = 3000;
 
@@ -18,15 +19,23 @@ export const DeleteProject: React.FC = () => {
   const handleDelete = () => {
     setShowModal(false);
     dispatch(new SetInterimStateAction(InterimProjectState.DELETING));
-    ApiFactory()
-      .projects()
-      .update(project.id, {action: 'terminate'})
+    let firstPromise: Promise<number>;
+    if (project.jmeter || project.clusters) {
+      firstPromise = ApiFactory().projects().update(project.id, {action: 'terminate'});
+    } else {
+      firstPromise = Promise.resolve(200);
+    }
+
+    firstPromise
       .then(() => dispatch(new UnsetInterimStateAction()))
       .then(() => ApiFactory().projects().delete(project.id))
       .then(() => {
         setShowRedirectNotice(true);
         setShowModal(true);
-        setTimeout(() => setDoRedirect(true), REDIRECT_DELAY_MS);
+        setTimeout(() => {
+          setDoRedirect(true);
+          dispatch(new SetProjectDeletedAction());
+        }, REDIRECT_DELAY_MS);
       });
   };
 

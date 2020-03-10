@@ -1,6 +1,7 @@
 import { NewProjectWizardActions, NewProjectWizardActionTypes } from "./actions";
 import { NewProjectWizardState, WizardTabTypes, NewProjectWizardProgress } from "./domain";
 import { AppState } from "../store";
+import { Project } from "../domain";
 
 export function reducer(state: NewProjectWizardState, action: NewProjectWizardActions): NewProjectWizardState {
   switch (action.type) {
@@ -135,6 +136,17 @@ export function reducer(state: NewProjectWizardState, action: NewProjectWizardAc
     case NewProjectWizardActionTypes.UnsetProject: {
       if (state.wizardState === undefined) {
         return {...state, activeProject: undefined};
+      }
+
+      return state;
+    }
+
+    case NewProjectWizardActionTypes.SetProjectDeleted: {
+      if (state.wizardState && state.activeProject) {
+        const activeProject:Project = {...state.activeProject, destroyed: true};
+        const nextState = {...state, activeProject};
+        delete nextState.wizardState;
+        return nextState;
       }
 
       return state;

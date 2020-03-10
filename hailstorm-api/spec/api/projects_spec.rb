@@ -42,7 +42,7 @@ describe 'api/projects' do
       last_execution_cycle.stub!(:avg_tps).and_return(14.56)
       Hailstorm::Model::Project
         .any_instance
-        .stub_chain(:execution_cycles, :where, :order, :limit)
+        .stub_chain(:execution_cycles, :where, :not, :order, :limit)
         .and_return([last_execution_cycle])
 
       jmeter_plan = Hailstorm::Model::JmeterPlan.new(
