@@ -5,6 +5,7 @@ require 'active_record/errors'
 
 require 'hailstorm/behavior/loggable'
 
+# Creates the configured database as per current configuration in <code>config/database.yml</code>.
 class DbConfig
   include Hailstorm::Behavior::Loggable
 
@@ -14,7 +15,8 @@ class DbConfig
     database_properties.symbolize_keys!
     connection_spec = eval(ERB.new(database_properties[Hailstorm.env].to_s).result)
     connection_spec.symbolize_keys!
-    connection_spec.merge!(pool: 50, wait_timeout: 30.minutes)
+    connection_spec[:pool] = 50
+    connection_spec[:wait_timeout] = 30.minutes
     ActiveRecord::Base.establish_connection(connection_spec)
     create_database_if_not_exists(connection_spec)
     at_exit { ActiveRecord::Base.connection.disconnect! if ActiveRecord::Base.connected? }

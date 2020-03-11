@@ -1,5 +1,4 @@
 require 'spec_helper'
-require 'rspec'
 require 'tmpdir'
 require 'hailstorm/support/file_helper'
 

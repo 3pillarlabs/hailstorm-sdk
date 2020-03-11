@@ -3,8 +3,9 @@ require 'hailstorm/support/log4j_backed_logger'
 
 return if Hailstorm.env == :test
 
-$redis = RedisLogger.new
+REDIS_LOGGER = RedisLogger.new
 
+# The standard Hailstorm logger extended to publish to Redis.
 class Hailstorm::Support::Log4jBackedLogger
 
   # @param [Symbol] log_level
@@ -19,6 +20,6 @@ class Hailstorm::Support::Log4jBackedLogger
 
     return if filters.include?(true)
 
-    $redis.publish(priority: self.class.logger_levels.find_index(log_level), level: log_level, message: message)
+    REDIS_LOGGER.publish(priority: self.class.logger_levels.find_index(log_level), level: log_level, message: message)
   end
 end

@@ -17,22 +17,22 @@ helpers do
 end
 
 before do
-  response.headers['Access-Control-Allow-Origin'] = "*"
+  response.headers['Access-Control-Allow-Origin'] = '*'
 end
 
 after do
   content_type :json
 end
 
-options "*" do
-  response.headers["Access-Control-Allow-Origin"] = "*"
-  response.headers["Access-Control-Allow-Methods"] = "GET, PUT, POST, DELETE, PATCH, OPTIONS"
-  response.headers["Access-Control-Allow-Headers"] = "Content-Type, Accept"
+options '*' do
+  response.headers['Access-Control-Allow-Origin'] = '*'
+  response.headers['Access-Control-Allow-Methods'] = 'GET, PUT, POST, DELETE, PATCH, OPTIONS'
+  response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
   200
 end
 
-get "/" do
-  JSON.dump(%W[/projects /execution_cycles])
+get '/' do
+  JSON.dump(%w[/projects /execution_cycles])
 end
 
 require 'helpers/api_helper'

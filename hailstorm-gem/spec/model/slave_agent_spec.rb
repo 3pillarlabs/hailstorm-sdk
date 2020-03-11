@@ -1,5 +1,4 @@
 require 'spec_helper'
-require 'rspec'
 
 require 'hailstorm/model/slave_agent'
 require 'hailstorm/model/jmeter_plan'

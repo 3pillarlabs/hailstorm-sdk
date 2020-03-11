@@ -75,7 +75,6 @@ class Hailstorm::Support::Workspace
     @workspace_path ||= File.join(user_home,
                                   ROOT_DIR,
                                   WORKSPACE_DIR, self.project_code)
-                                  # WORKSPACE_DIR, "#{self.project_code}-#{Thread.current.object_id}")
   end
 
   # @return [String]

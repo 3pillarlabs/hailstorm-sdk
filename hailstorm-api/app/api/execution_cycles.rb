@@ -45,8 +45,8 @@ get '/projects/:project_id/execution_cycles/current' do |project_id|
 
   running_agents = project.check_status
   JSON.dump(deep_camelize_keys(current_cycle.attributes.merge(
-    id: current_cycle.id,
-    started_at: current_cycle.started_at.to_i * 1000,
-    noRunningTests: running_agents.empty?
-  )))
+                                 id: current_cycle.id,
+                                 started_at: current_cycle.started_at.to_i * 1000,
+                                 noRunningTests: running_agents.empty?
+                               )))
 end

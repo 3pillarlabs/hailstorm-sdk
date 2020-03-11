@@ -85,10 +85,10 @@ Type help to get started...
 
   def post_process(method_name)
     handle_exit(method_name) if %i[quit exit].include?(method_name)
-    if current_project.destroyed?
-      @current_project = nil
-      cmd_executor.project = current_project
-    end
+    return unless current_project.destroyed?
+
+    @current_project = nil
+    cmd_executor.project = current_project
   end
 
   def handle_unknown_command(instr)
@@ -132,7 +132,7 @@ Type help to get started...
   end
 
   def enhanced_prompt
-    if self.current_project&.current_execution_cycle
+    if self.current_project && self.current_project.current_execution_cycle
       self.prompt.gsub(/\s$/, '*  ')
     else
       self.prompt

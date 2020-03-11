@@ -49,9 +49,9 @@ class Hailstorm::Support::JavaInstaller
 
     def instructions
       [
-          'add-apt-repository -y ppa:openjdk-r/ppa',
-          'apt-get update',
-          'apt-get install -y openjdk-8-jre-headless'
+        'add-apt-repository -y ppa:openjdk-r/ppa',
+        'apt-get update',
+        'apt-get install -y openjdk-8-jre-headless'
       ]
     end
 

@@ -81,7 +81,6 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         .select('access_key, secret_key')
         .each do |item|
 
-      logger.debug { item }
       cleaner ||= Hailstorm::Support::AmazonAccountCleaner.new(access_key_id: item.access_key,
                                                                secret_access_key: item.secret_key)
       regions = []
@@ -219,7 +218,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     iclass ||= :t3a
     itype ||= :small
     itype_index = Defaults::KNOWN_INSTANCE_TYPES.find_index(itype).to_i - 2 # :small is 0th index, :nano is -2
-    itype_factor = Defaults::INSTANCE_TYPE_SCALE_FACTOR ** itype_index
+    itype_factor = Defaults::INSTANCE_TYPE_SCALE_FACTOR**itype_index
     iclass_factor = Defaults::INSTANCE_CLASS_SCALE_FACTOR[iclass] || Defaults::INSTANCE_CLASS_SCALE_FACTOR[:t3a]
     self.round_off_max_threads_per_agent(iclass_factor * itype_factor * Defaults::MIN_THREADS_ONE_AGENT)
   end
@@ -459,7 +458,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       cmd_out = ''
       success = ssh_channel_exec_instr(ssh, 'java -version', ->(data) { cmd_out << data })
       logger.debug { cmd_out }
-      raise(Hailstorm::JavaInstallationException.new(self.region, cmd_out)) unless (success && cmd_out =~ /version/)
+      raise(Hailstorm::JavaInstallationException.new(self.region, cmd_out)) unless success && cmd_out =~ /version/
     end
   end
 
@@ -576,6 +575,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     end
   end
 
+  # Create VPC and associated infrastructure
   module VpcHelper
     def assign_vpc_subnet
       hailstorm_subnet = ec2.subnets.with_tag('Name', Defaults::SUBNET_NAME).first || create_hailstorm_subnet
@@ -604,8 +604,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         hailstorm_vpc.state.to_sym == :available
       end
 
-      ec2.client.modify_vpc_attribute(vpc_id: hailstorm_vpc.vpc_id, enable_dns_support: { value: true } )
-      ec2.client.modify_vpc_attribute(vpc_id: hailstorm_vpc.vpc_id, enable_dns_hostnames: { value: true } )
+      ec2.client.modify_vpc_attribute(vpc_id: hailstorm_vpc.vpc_id, enable_dns_support: { value: true })
+      ec2.client.modify_vpc_attribute(vpc_id: hailstorm_vpc.vpc_id, enable_dns_hostnames: { value: true })
       hailstorm_vpc.tag('Name', value: Defaults::VPC_NAME)
       logger.info { "Created #{Defaults::VPC_NAME} VPC - #{hailstorm_vpc.vpc_id}" }
       hailstorm_vpc
@@ -649,7 +649,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     SSH_IDENTITY        = 'hailstorm'.freeze
     INSTANCE_TYPE       = 'm5a.large'.freeze
     INSTANCE_CLASS_SCALE_FACTOR = {
-      t2: 2, t3: 2, t3a: 2, m4: 4,  m5: 5, m5a: 6, m5ad: 7, m5d: 8, m5dn: 9, m5n: 10
+      t2: 2, t3: 2, t3a: 2, m4: 4, m5: 5, m5a: 6, m5ad: 7, m5d: 8, m5dn: 9, m5n: 10
     }.freeze
     INSTANCE_TYPE_SCALE_FACTOR = 2
     KNOWN_INSTANCE_TYPES = [:nano, :micro, :small, :medium, :large, :xlarge, '2xlarge'.to_sym, '4xlarge'.to_sym,

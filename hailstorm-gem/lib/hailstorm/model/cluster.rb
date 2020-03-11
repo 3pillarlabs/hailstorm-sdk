@@ -139,8 +139,9 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
       cluster_attributes[:project_id] = self.project.id
       clusterable = cluster_klass.where(cluster_attributes).first_or_initialize
       clusterable.active = cluster_config.active
-      clusterable.max_threads_per_agent =
-          cluster_config.max_threads_per_agent if cluster_config.respond_to?(:max_threads_per_agent)
+      if cluster_config.respond_to?(:max_threads_per_agent)
+        clusterable.max_threads_per_agent = cluster_config.max_threads_per_agent
+      end
 
       clusterable
     end
@@ -242,11 +243,9 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   end
 
   def destroy_clusterable
-    begin
-      cluster_instance.destroy! unless cluster_instance.new_record?
-    rescue ActiveRecord::RecordNotFound => e
-      logger.warn(e.message)
-    end
+    cluster_instance.destroy! unless cluster_instance.new_record?
+  rescue ActiveRecord::RecordNotFound => e
+    logger.warn(e.message)
   end
 
   def purge

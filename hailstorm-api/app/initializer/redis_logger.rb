@@ -1,11 +1,16 @@
 require 'redis'
 require 'json'
 
+# Logs/publishes messages to Redis.
+#
+# This acts as a simple circuit-breaker when it fails to send a message to Redis. The next set of messages
+# (a configurable number) are skipped, and the message after is tried again for publishing. The implicit
+# assumption is the message transmission can be lossy without affecting system availability.
 class RedisLogger
 
   BREAK_FOR = 10
 
-  CHANNEL = 'hailstorm-logs'
+  CHANNEL = 'hailstorm-logs'.freeze
 
   # @return [Redis]
   attr_reader :redis
@@ -31,7 +36,7 @@ class RedisLogger
     }
 
     begin
-      if self.skip_message_count == 0
+      if self.skip_message_count.zero?
         self.redis.publish(CHANNEL, JSON.dump(log_event))
       else
         self.skip_message_count -= 1

@@ -7,7 +7,7 @@ post '/projects/:project_id/jtl_exports' do |project_id|
 
   request.body.rewind
   # @type [Array]
-  params = JSON.parse(request.body.read).sort { |a, b| a.to_i <=> b.to_i }
+  params = JSON.parse(request.body.read).sort_by(&:to_i)
   data = project.results(:export, cycle_ids: params, format: :zip, config: nil)
   JSON.dump(data)
 end

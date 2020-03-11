@@ -6,6 +6,7 @@ Hailstorm::Support::Schema.create_schema do |schema|
     :aws_ec2_prices
   )
 
+  # Tables for API
   module ApiExtensions
     def create_project_configurations
       ActiveRecord::Migration.create_table(:project_configurations) do |t|

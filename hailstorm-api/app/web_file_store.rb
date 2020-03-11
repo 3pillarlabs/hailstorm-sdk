@@ -11,6 +11,7 @@ require 'hailstorm/model/project'
 require 'model/project_configuration'
 require 'helpers/api_helper'
 
+# <code>Hailstorm::Behavior::FileStore</code> implementation that uses a file server for storing files
 class WebFileStore
   include Hailstorm::Behavior::Loggable
   include Hailstorm::Behavior::FileStore
@@ -25,13 +26,14 @@ class WebFileStore
     uri = build_fs_url(file_id: file_id, file_name: file_name)
     response = Net::HTTP.get_response(uri)
     raise(Net::HTTPError.new("Failed to fetch #{uri}", response)) unless response.is_a?(Net::HTTPSuccess)
+
     File.open("#{to_path}/#{file_name}", 'w') do |out|
       out.write(response.body)
     end
 
     "#{to_path}/#{file_name}"
   end
-  
+
   def fetch_jmeter_plans(project_code)
     project_config = project_config(project_code)
     return [] unless project_config
@@ -141,6 +143,7 @@ class WebFileStore
     request.content_type = "multipart/form-data, boundary=#{Rack::Multipart::MULTIPART_BOUNDARY}"
     response = http.request(request)
     raise(Net::HTTPError.new("Failed upload to #{uri}", response)) unless response.is_a?(Net::HTTPSuccess)
+
     response
   end
 

@@ -1,5 +1,6 @@
 require 'hailstorm/model/amazon_cloud'
 
+# Helper for Clusters API.
 module ClustersHelper
 
   # @param [Hailstorm::Support::Configuration::ClusterBase] cluster_cfg
@@ -7,36 +8,13 @@ module ClustersHelper
   # @return [Hash]
   def to_cluster_attributes(cluster_cfg, project: nil)
     attrs = case cluster_cfg.cluster_type
-    when :amazon_cloud
-      # @type [Hailstorm::Support::Configuration::AmazonCloud] amz
-      amz = cluster_cfg
-      title = aws_cluster_title(amz.region)
-      {
-        type: 'AWS',
-        title: title,
-        id: title.to_java_string.hash_code,
-        accessKey: amz.access_key,
-        secretKey: amz.secret_key,
-        instanceType: amz.instance_type,
-        maxThreadsByInstance: amz.max_threads_per_agent,
-        region: amz.region,
-        vpcSubnetId: amz.vpc_subnet_id
-      }
-    when :data_center
-      # @type [Hailstorm::Support::Configuration::DataCenter] dc
-      dc = cluster_cfg
-      {
-        type: 'DataCenter',
-        title: dc.title,
-        id: dc.title.to_java_string.hash_code,
-        userName: dc.user_name,
-        sshIdentity: { name: File.basename(dc.ssh_identity), path: File.dirname(dc.ssh_identity) },
-        machines: dc.machines,
-        port: dc.ssh_port
-      }
-    else
-      {}
-    end
+            when :amazon_cloud
+              amazon_cloud_attrs(cluster_cfg)
+            when :data_center
+              data_center_attrs(cluster_cfg)
+            else
+              {}
+            end
 
     attrs[:code] = cluster_cfg.cluster_code
     if cluster_cfg.active == false
@@ -99,5 +77,61 @@ module ClustersHelper
   # @return [String]
   def aws_cluster_title(region)
     "AWS #{region}"
+  end
+
+  # @param [Hailstorm::Support::Configuration::ClusterBase] cluster_cfg
+  # @return [Integer]
+  def compute_title_id(cluster_cfg)
+    if cluster_cfg.cluster_type.to_sym != :amazon_cloud
+      string_to_id(cluster_cfg.title)
+    else
+      string_to_id(aws_cluster_title(cluster_cfg.region))
+    end
+  end
+
+  # @param [Hailstorm::Support::Configuration] hailstorm_config
+  # @param [Integer] cluster_id
+  # @return [Hailstorm::Support::Configuration::ClusterBase]
+  def find_cluster_cfg(hailstorm_config, cluster_id)
+    hailstorm_config.clusters.find { |cluster_cfg| cluster_id.to_i == compute_title_id(cluster_cfg) }
+  end
+
+  private
+
+  def data_center_attrs(cluster_cfg)
+    # @type [Hailstorm::Support::Configuration::DataCenter] dc
+    dc = cluster_cfg
+    {
+      type: 'DataCenter',
+      title: dc.title,
+      id: string_to_id(dc.title),
+      userName: dc.user_name,
+      sshIdentity: { name: File.basename(dc.ssh_identity), path: File.dirname(dc.ssh_identity) },
+      machines: dc.machines,
+      port: dc.ssh_port
+    }
+  end
+
+  def amazon_cloud_attrs(cluster_cfg)
+    # @type [Hailstorm::Support::Configuration::AmazonCloud] amz
+    amz = cluster_cfg
+    title = aws_cluster_title(amz.region)
+    {
+      type: 'AWS',
+      title: title,
+      id: string_to_id(title),
+      accessKey: amz.access_key,
+      secretKey: amz.secret_key,
+      instanceType: amz.instance_type,
+      maxThreadsByInstance: amz.max_threads_per_agent,
+      region: amz.region,
+      vpcSubnetId: amz.vpc_subnet_id
+    }
+  end
+
+  # @param [String] str
+  # @return [Integer]
+  def string_to_id(str)
+    str.to_java_string.hash_code
   end
 end

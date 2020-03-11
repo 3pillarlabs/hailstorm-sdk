@@ -5,6 +5,7 @@ require 'hailstorm/model/project'
 require 'hailstorm/support/configuration'
 require 'model/project_configuration'
 require 'hailstorm/middleware/command_execution_template'
+require 'hailstorm/exceptions'
 
 include ProjectsHelper
 
@@ -27,6 +28,7 @@ patch '/projects/:id' do |id|
 
   if data.key?('title')
     return 422 if data['title'].blank?
+
     found_project.update_column(:title, data['title'])
   end
 
@@ -37,29 +39,9 @@ patch '/projects/:id' do |id|
     # @type [Hailstorm::Support::Configuration] hailstorm_config
     hailstorm_config = deep_decode(project_config.stringified_config)
     cmd_template = Hailstorm::Middleware::CommandExecutionTemplate.new(found_project, hailstorm_config)
-
-    case data['action'].to_sym
-    when :start
-      digest = Digest::SHA1.new
-      digest.update(project_config.stringified_config)
-      current_serial_version = digest.hexdigest
-      if found_project.serial_version.nil? || found_project.serial_version != current_serial_version
-        found_project.settings_modified = true
-        found_project.update_attribute(:serial_version, current_serial_version)
-      end
-
-      cmd_template.start('redeploy')
-
-    when :stop
-      cmd_template.stop
-
-    when :abort
-      cmd_template.abort
-
-    when :terminate
-      cmd_template.terminate
-
-    else
+    begin
+      process_action(cmd_template, data, found_project, project_config)
+    rescue Hailstorm::UnknownCommandException
       return 422
     end
   end

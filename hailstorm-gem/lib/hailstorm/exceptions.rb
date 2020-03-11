@@ -173,7 +173,8 @@ module Hailstorm
       'Nothing to stop... no tests running'
     end
   end
-  
+
+  # JMeter was expected to be stopped, but it is still running.
   class JMeterRunningException < DiagnosticAwareException
 
     def diagnostics

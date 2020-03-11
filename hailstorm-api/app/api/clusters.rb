@@ -21,8 +21,11 @@ post '/projects/:project_id/clusters' do |project_id|
 
   hailstorm_config = deep_decode(project_config.stringified_config)
   hailstorm_config.clusters(api_to_config_cluster_type(record_data[:type])) do |cluster_config|
-    cluster_config.cluster_type == :amazon_cloud ? amazon_cloud_config(cluster_config, record_data) :
-                                                   data_center_config(cluster_config, record_data)
+    if cluster_config.cluster_type == :amazon_cloud
+      amazon_cloud_config(cluster_config, record_data)
+    else
+      data_center_config(cluster_config, record_data)
+    end
 
     record_data[:title] = aws_cluster_title(cluster_config.region) if cluster_config.cluster_type == :amazon_cloud
     record_data[:id] = record_data[:title].to_java_string.hash_code
@@ -32,7 +35,6 @@ post '/projects/:project_id/clusters' do |project_id|
 
   record_data[:projectId] = found_project.id
   project_config.update_attributes!(stringified_config: deep_encode(hailstorm_config))
-  logger.debug { project_config.stringified_config }
   JSON.dump(record_data)
 end
 
@@ -53,12 +55,7 @@ delete '/projects/:project_id/clusters/:id' do |project_id, id|
 
   # @type [Hailstorm::Support::Configuration] hailstorm_config
   hailstorm_config = deep_decode(project_config.stringified_config)
-  matched_cluster_cfg = hailstorm_config.clusters.find do |cluster_cfg|
-    cluster_cfg.cluster_type.to_sym != :amazon_cloud ?
-      id.to_i == cluster_cfg.title.to_java_string.hash_code :
-      id.to_i == aws_cluster_title(cluster_cfg.region).to_java_string.hash_code
-  end
-
+  matched_cluster_cfg = find_cluster_cfg(hailstorm_config, id)
   return 404 unless matched_cluster_cfg
 
   cluster = Hailstorm::Model::Cluster.where(project: found_project)
@@ -75,9 +72,7 @@ delete '/projects/:project_id/clusters/:id' do |project_id, id|
 
   if !cluster || matched_cluster_cfg.active.nil? || matched_cluster_cfg.active == true
     hailstorm_config.clusters.reject! do |cluster_cfg|
-      cluster_cfg.cluster_type.to_sym != :amazon_cloud ?
-        id.to_i == matched_cluster_cfg.title.to_java_string.hash_code :
-        id.to_i == aws_cluster_title(cluster_cfg.region).to_java_string.hash_code
+      id.to_i == compute_title_id(cluster_cfg)
     end
   end
 
@@ -91,12 +86,7 @@ patch '/projects/:project_id/clusters/:id' do |project_id, id|
 
   # @type [Hailstorm::Support::Configuration] hailstorm_config
   hailstorm_config = deep_decode(project_config.stringified_config)
-  matched_cluster_cfg = hailstorm_config.clusters.find do |cluster_cfg|
-    cluster_cfg.cluster_type.to_sym != :amazon_cloud ?
-      id.to_i == cluster_cfg.title.to_java_string.hash_code :
-      id.to_i == aws_cluster_title(cluster_cfg.region).to_java_string.hash_code
-  end
-
+  matched_cluster_cfg = find_cluster_cfg(hailstorm_config, id)
   return 404 unless matched_cluster_cfg
 
   request.body.rewind

@@ -172,4 +172,31 @@ describe 'api/projects' do
       expect(attrs.keys).to include('id')
     end
   end
+
+  context 'DELETE /projects/:id' do
+    before(:each) do
+      @project = Hailstorm::Model::Project.create!(title: 'Acme Priming', project_code: 'acme_priming')
+    end
+
+    context 'existing ProjectConfiguration' do
+      it 'should destroy the project' do
+        ProjectConfiguration.create!(
+          project: @project,
+          stringified_config: deep_encode(Hailstorm::Support::Configuration.new)
+        )
+
+        @browser.delete("/projects/#{@project.id}")
+        expect(@browser.last_response).to be_successful
+        expect { Hailstorm::Model::Project.find(@project.id) }.to raise_error(ActiveRecord::RecordNotFound)
+      end
+    end
+
+    context 'no ProjectConfiguration' do
+      it 'should destroy the project' do
+        @browser.delete("/projects/#{@project.id}")
+        expect(@browser.last_response).to be_successful
+        expect { Hailstorm::Model::Project.find(@project.id) }.to raise_error(ActiveRecord::RecordNotFound)
+      end
+    end
+  end
 end

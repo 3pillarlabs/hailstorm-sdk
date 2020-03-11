@@ -38,41 +38,159 @@ class Hailstorm::Model::Project < ActiveRecord::Base
 
   after_create :create_workspace
 
-  # Sets up the project for first time or subsequent use
-  # @param [Boolean] force
-  # @param [Boolean] invoked_from_start
-  # @param [Hailstorm::Support::Configuration] config
-  def setup(config:, force: false, invoked_from_start: false)
-    unless invoked_from_start || settings_modified? || force
-      raise(Hailstorm::Exception, 'No changes to project configuration detected.')
+  # Services for commands
+  module ServiceInterface
+    # Sets up the project for first time or subsequent use
+    # @param [Boolean] force
+    # @param [Boolean] invoked_from_start
+    # @param [Hailstorm::Support::Configuration] config
+    def setup(config:, force: false, invoked_from_start: false)
+      unless invoked_from_start || settings_modified? || force
+        raise(Hailstorm::Exception, 'No changes to project configuration detected.')
+      end
+
+      logger.info('Setting up the project...')
+      save_config_attrs!(config)
+      begin
+        setup_jmeter_plans(config)
+        configure_clusters(config, force)
+        configure_target_hosts(config)
+        self.reload
+        self.settings_modified = false
+      rescue Exception
+        self.update_column(:serial_version, nil)
+        raise
+      end
     end
 
-    logger.info('Setting up the project...')
-    save_config_attrs!(config)
-    begin
-      setup_jmeter_plans(config)
-      configure_clusters(config, force)
-      configure_target_hosts(config)
-      self.reload
-      self.settings_modified = false
-    rescue Exception
+    # Starts the load generation and target monitoring tasks
+    def start(redeploy: false, config:)
+      logger.debug { "#{self.class}##{__method__}" }
+
+      # if one exists, user must stop/abort it first
+      unless self.current_execution_cycle.nil?
+        raise Hailstorm::ExecutionCycleExistsException, current_execution_cycle.started_at
+      end
+
+      # add an execution_cycle
+      build_current_execution_cycle.save! # buildABC is provided by has_one :ABC relation
+      redo_setup(config)
+      self.current_execution_cycle.started!
+
+      begin
+        Hailstorm::Model::TargetHost.monitor_all(self)
+        Hailstorm::Model::Cluster.generate_all_load(self, redeploy)
+      rescue Exception
+        self.current_execution_cycle.aborted!
+        raise
+      ensure
+        self.current_execution_cycle.update_attribute(:threads_count, estimate_threads_count)
+        self.reload
+      end
+    end
+
+    # Delegate to target_hosts and clusters
+    def stop(wait = false, options = nil, aborted = false)
+      logger.debug { "#{self.class}##{__method__}" }
+      raise(Hailstorm::ExecutionCycleNotExistsException) if current_execution_cycle.nil?
+
+      stop_target_monitoring = true
+      begin
+        Hailstorm::Model::Cluster.stop_load_generation(self, wait, options, aborted)
+        update_execution_cycle(aborted)
+      rescue Exception => exception
+        if jmeter_running_on_all?(exception)
+          stop_target_monitoring = false
+        else
+          current_execution_cycle.aborted!
+        end
+
+        raise
+      ensure
+        if stop_target_monitoring
+          did_abort = !(aborted || current_execution_cycle.aborted?)
+          Hailstorm::Model::TargetHost.stop_all_monitoring(self,
+                                                           current_execution_cycle,
+                                                           create_target_stat: did_abort)
+        end
+
+        self.reload
+      end
+    end
+
+    # Aborts everything immediately
+    def abort(options = nil)
+      logger.debug { "#{self.class}##{__method__}" }
+      stop(false, options, true)
+    end
+
+    def terminate
+      logger.debug { "#{self.class}##{__method__}" }
+      Hailstorm::Model::Cluster.terminate(self)
+      Hailstorm::Model::TargetHost.terminate(self)
+      current_execution_cycle.terminated! unless current_execution_cycle.nil?
       self.update_column(:serial_version, nil)
-      raise
-    end
-  end
-
-  # Starts the load generation and target monitoring tasks
-  def start(redeploy: false, config:)
-    logger.debug { "#{self.class}##{__method__}" }
-
-    # if one exists, user must stop/abort it first
-    unless self.current_execution_cycle.nil?
-      raise Hailstorm::ExecutionCycleExistsException, current_execution_cycle.started_at
+      self.reload
     end
 
-    # add an execution_cycle
-    build_current_execution_cycle.save! # buildABC is provided by has_one :ABC relation
-    if settings_modified?
+    def results(operation, cycle_ids: nil, format: nil, config:)
+      logger.debug { "#{self.class}##{__method__}" }
+      selected_execution_cycles = if operation != :import
+                                    Hailstorm::Model::ExecutionCycle.execution_cycles_for_report(self, cycle_ids)
+                                  else
+                                    []
+                                  end
+      executor = ResultsOperationExecutor.new(self, cycle_ids, selected_execution_cycles, format)
+      executor.logger = logger
+      executor.config = config
+      if operation && executor.respond_to?(operation)
+        executor.send(operation)
+      else
+        executor.report
+      end
+    end
+
+    def check_status
+      Hailstorm::Model::Cluster.check_status(self)
+    end
+
+    # Returns an array of load_agents as recorded in the database
+    def load_agents
+      self.clusters.map(&:cluster_instance).reduce([]) { |acc, e| acc.push(*e.load_agents) }
+    end
+
+    # Purges all clusters in the project
+    def purge_clusters
+      self.clusters.each(&:purge)
+    end
+
+    private
+
+    def jmeter_running_on_all?(exception)
+      exception.is_a?(Hailstorm::ThreadJoinException) &&
+        exception.exceptions.all? { |ex| ex.is_a?(Hailstorm::JMeterRunningException) }
+    end
+
+    # Update the stopped_at now, so that target monitoring
+    # statistics be collected from started_at to stopped_at
+    def update_execution_cycle(aborted)
+      current_execution_cycle.set_stopped_at
+      if !aborted
+        current_execution_cycle.stopped!
+        total_threads_count = self.current_execution_cycle.client_stats.sum(:threads_count)
+        self.current_execution_cycle.update_attribute(:threads_count, total_threads_count)
+      else
+        current_execution_cycle.aborted!
+      end
+    end
+
+    def estimate_threads_count
+      self.jmeter_plans.sum(:latest_threads_count) * self.clusters.map(&:cluster_instance).select(&:active?).size
+    end
+
+    def redo_setup(config)
+      return unless settings_modified?
+
       begin
         setup(invoked_from_start: true, config: config, force: true)
       rescue Exception
@@ -82,113 +200,9 @@ class Hailstorm::Model::Project < ActiveRecord::Base
         self.reload
       end
     end
-
-    self.current_execution_cycle.started!
-
-    begin
-      Hailstorm::Model::TargetHost.monitor_all(self)
-      Hailstorm::Model::Cluster.generate_all_load(self, redeploy)
-
-    rescue Exception
-      self.current_execution_cycle.aborted!
-      raise
-
-    ensure
-      self.current_execution_cycle.update_attribute(
-          :threads_count,
-          self.jmeter_plans.sum(:latest_threads_count) * self.clusters
-                                                             .map(&:cluster_instance)
-                                                             .select(&:active?)
-                                                             .size
-      )
-
-      self.reload
-    end
   end
 
-  # Delegate to target_hosts and clusters
-  def stop(wait = false, options = nil, aborted = false)
-    logger.debug { "#{self.class}##{__method__}" }
-    raise(Hailstorm::ExecutionCycleNotExistsException) if current_execution_cycle.nil?
-
-    stop_target_monitoring = true
-    begin
-      Hailstorm::Model::Cluster.stop_load_generation(self, wait, options, aborted)
-      # Update the stopped_at now, so that target monitoring
-      # statistics be collected from started_at to stopped_at
-      current_execution_cycle.set_stopped_at
-      if !aborted
-        current_execution_cycle.stopped!
-        total_threads_count = self.current_execution_cycle.client_stats.sum(:threads_count)
-        self.current_execution_cycle.update_attribute(:threads_count, total_threads_count)
-      else
-        current_execution_cycle.aborted!
-      end
-
-    rescue Exception => exception
-      if exception.is_a?(Hailstorm::ThreadJoinException) and
-          exception.exceptions.all? { |ex| ex.is_a?(Hailstorm::JMeterRunningException) }
-        stop_target_monitoring = false
-      else
-        current_execution_cycle.aborted!
-      end
-
-      raise
-    ensure
-      Hailstorm::Model::TargetHost
-        .stop_all_monitoring(self,
-                             current_execution_cycle,
-                             create_target_stat: !(aborted ||
-                                 current_execution_cycle.aborted?)) if stop_target_monitoring
-      self.reload
-    end
-  end
-
-  # Aborts everything immediately
-  def abort(options = nil)
-    logger.debug { "#{self.class}##{__method__}" }
-    stop(false, options, true)
-  end
-
-  def terminate
-    logger.debug { "#{self.class}##{__method__}" }
-    Hailstorm::Model::Cluster.terminate(self)
-    Hailstorm::Model::TargetHost.terminate(self)
-    current_execution_cycle.terminated! unless current_execution_cycle.nil?
-    self.update_column(:serial_version, nil)
-    self.reload
-  end
-
-  def results(operation, cycle_ids: nil, format: nil, config:)
-    logger.debug { "#{self.class}##{__method__}" }
-    selected_execution_cycles = if operation != :import
-                                  Hailstorm::Model::ExecutionCycle.execution_cycles_for_report(self, cycle_ids)
-                                else
-                                  []
-                                end
-    executor = ResultsOperationExecutor.new(self, cycle_ids, selected_execution_cycles, format)
-    executor.logger = logger
-    executor.config = config
-    if operation && executor.respond_to?(operation)
-      executor.send(operation)
-    else
-      executor.report
-    end
-  end
-
-  def check_status
-    Hailstorm::Model::Cluster.check_status(self)
-  end
-
-  # Returns an array of load_agents as recorded in the database
-  def load_agents
-    self.clusters.map(&:cluster_instance).reduce([]) { |acc, e| acc.push(*e.load_agents) }
-  end
-
-  # Purges all clusters in the project
-  def purge_clusters
-    self.clusters.each(&:purge)
-  end
+  include ServiceInterface
 
   def settings_modified?
     @settings_modified

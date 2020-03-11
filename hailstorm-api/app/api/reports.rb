@@ -6,8 +6,9 @@ require 'model/project_configuration'
 
 get '/projects/:project_id/reports' do |project_id|
   project = Hailstorm::Model::Project.find(project_id)
-  reports = Hailstorm.fs.fetch_reports(project.project_code)
-                .map { |attrs| attrs.merge({projectId: project.id}) }
+  reports = Hailstorm.fs
+                     .fetch_reports(project.project_code)
+                     .map { |attrs| attrs.merge(projectId: project.id) }
 
   JSON.dump(reports)
 end

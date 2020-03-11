@@ -22,43 +22,8 @@ end
 
 post '/projects/:project_id/jmeter_plans' do |project_id|
   found_project = Hailstorm::Model::Project.find(project_id)
-
   request.body.rewind
-  # @type [Hash]
-  data = JSON.parse(request.body.read)
-  project_config = ProjectConfiguration
-                     .where(project_id: found_project.id)
-                     .first_or_create!(stringified_config: deep_encode(Hailstorm::Support::Configuration.new))
-
-  logger.debug { project_config.stringified_config }
-  hailstorm_config = deep_decode(project_config.stringified_config)
-  test_plan_name = "#{data['path']}/#{data['name']}"
-  file_id = nil
-  if jmx_file?(test_plan_name)
-    file_id = File.strip_ext(test_plan_name).to_java_string.hash_code
-    hailstorm_config.jmeter do |jmeter|
-      jmeter.add_test_plan(test_plan_name)
-      if data['properties']
-        jmeter.properties(test_plan: test_plan_name) { |map| update_map(map, data) }
-      end
-    end
-  else
-    file_id = test_plan_name.to_java_string.hash_code
-    hailstorm_config.jmeter.data_files.push(test_plan_name)
-  end
-
-  project_config.update_attributes!(stringified_config: deep_encode(hailstorm_config))
-
-  jmeter_plan = {
-    id: file_id,
-    name: data['name'],
-    path: data['path'],
-    projectId: found_project.id
-  }
-
-  jmeter_plan.merge!({properties: data['properties']}) if data['properties']
-  jmeter_plan.merge!({dataFile: true}) if data['dataFile']
-
+  jmeter_plan = configure_jmeter(found_project, request)
   JSON.dump(jmeter_plan)
 end
 
@@ -75,14 +40,14 @@ patch '/projects/:project_id/jmeter_plans/:id' do |project_id, id|
 
   hailstorm_config.jmeter.properties(test_plan: test_plan_name) { |map| update_map(map, data) }
   project_config.update_attributes!(stringified_config: deep_encode(hailstorm_config))
-  
+
   path, name = test_plan_name.split('/')
-  JSON.dump({
+  JSON.dump(
     id: test_plan_name.to_java_string.hash_code,
     name: "#{name}.jmx",
     path: path,
     properties: hailstorm_config.jmeter.properties(test_plan: test_plan_name).entries
-  })
+  )
 end
 
 delete '/projects/:project_id/jmeter_plans/:id' do |project_id, id|

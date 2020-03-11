@@ -1,15 +1,10 @@
+# Helper for all APIs
 module ApiHelper
 
   # @param [Hash] input
   # @return [Hash]
   def deep_camelize_keys(input)
-    input.deep_transform_keys do |key|
-      begin
-        key.to_s.camelize(:lower)
-      rescue
-        key
-      end
-    end
+    input.deep_transform_keys { |key| key.to_s.camelize(:lower) }
   end
 
   # @param [Object] obj

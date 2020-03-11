@@ -26,5 +26,5 @@ get '/aws_ec2_pricing_options/:region_code' do |region_code|
     item.merge(maxThreadsByInstance: max_threads, numInstances: 1)
   end
 
-  JSON.dump(prices_with_max_threads.sort { |a, b| a['hourlyCostByInstance'] <=> b['hourlyCostByInstance'] })
+  JSON.dump(prices_with_max_threads.sort_by { |a| a['hourlyCostByInstance'] })
 end
