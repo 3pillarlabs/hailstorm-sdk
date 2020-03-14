@@ -453,7 +453,7 @@ describe Hailstorm::Model::Cluster do
         .and_raise(ActiveRecord::RecordNotFound, 'mock not found error')
 
       Hailstorm::Model::Cluster.configure_all(@project, config)
-      expect { Hailstorm::Model::Cluster.first.destroy! }.to_not raise_error``
+      expect { Hailstorm::Model::Cluster.first.destroy! }.to_not raise_error
     end
   end
 
@@ -498,7 +498,7 @@ describe Hailstorm::Model::Cluster do
         clusterable.start_master_process
       end
     end
-    
+
     context '#stop_master_process' do
       it 'should stop jmeter on all master agents' do
         clusterable = Hailstorm::Model::DataCenter.new

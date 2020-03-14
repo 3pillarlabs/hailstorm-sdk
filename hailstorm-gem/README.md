@@ -8,20 +8,12 @@ cd hailstorm-gem
 rvm gemset create hailstorm-dev
 rvm use @hailstorm-dev
 gem install --no-rdoc --no-ri bundler
-bundle install
+make install
 ```
-
-## Database User
-Create a MySQL user ``hailstorm_dev``:
-```bash
-mysql -uroot <<< 'grant all privileges on *.* to "hailstorm_dev"@"localhost" identified by "hailstorm_dev"'
-```
-
-You are all set.
 
 ## Unit tests (specs)
 ```bash
-rspec
+make test
 ```
 
 ## Integration tests
@@ -66,6 +58,6 @@ cucumber
 ### Unit test coverage
 
 ```bash
-HAILSTORM_COVERAGE=1 JRUBY_OPTS="--debug" rspec
+make coverage
 ```
 Coverage report is generated in ``coverage`` directory.

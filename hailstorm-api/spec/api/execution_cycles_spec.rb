@@ -150,7 +150,7 @@ describe 'api/execution_cycles' do
       Hailstorm::Model::MasterAgent
         .any_instance
         .stub(:check_status)
-        .and_raise(Hailstorm::ThreadJoinException, 'mock thread exception')
+        .and_raise(Hailstorm::ThreadJoinException.new(StandardError.new('mock thread exception')))
 
       @browser.get("/projects/#{@project.id}/execution_cycles/current")
       expect(@browser.last_response.status).to be == 500
