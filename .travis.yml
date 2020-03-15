@@ -10,11 +10,9 @@ env:
 
 stages:
   - name: test
-    # if: branch != master AND (NOT(branch = develop AND type = push))
-    if: branch = story/*
+    if: branch NOT IN (master, develop)
   - name: coverage
-    # if: branch = develop AND type = push
-    if: branch = develop
+    if: branch = develop AND type = pull_request
 
 jobs:
   include:
@@ -24,8 +22,6 @@ jobs:
       language: ruby
       rvm: jruby-9.1.9.0
       jdk: openjdk8
-      before_install:
-        - make install_aws
       install:
         - make PROJECT=gem install
       script:
@@ -36,8 +32,6 @@ jobs:
       language: ruby
       rvm: jruby-9.1.9.0
       jdk: openjdk8
-      before_install:
-        - make install_aws
       install:
         - make PROJECT=cli install
       script:
@@ -48,8 +42,6 @@ jobs:
       language: ruby
       rvm: jruby-9.1.9.0
       jdk: openjdk8
-      before_install:
-        - make install_aws
       install:
         - make PROJECT=api install
       script:
@@ -59,8 +51,6 @@ jobs:
       name: "hailstorm-file-server test"
       language: java
       jdk: openjdk8
-      before_install:
-        - make install_aws
       install:
         - make PROJECT=file-server install
       script:
@@ -70,8 +60,6 @@ jobs:
       name: "hailstorm-client-exchange test"
       language: java
       jdk: openjdk8
-      before_install:
-        - make install_aws
       install:
         - make PROJECT=client-exchange install
       script:
@@ -81,8 +69,6 @@ jobs:
       name: "hailstorm-web-client test"
       language: node_js
       node_js: lts/dubnium
-      before_install:
-        - make install_aws
       install:
         - make PROJECT=web-client install
       script:
