@@ -10,9 +10,11 @@ env:
 
 stages:
   - name: test
-    if: branch != master AND (NOT(branch = develop AND type = push))
+    # if: branch != master AND (NOT(branch = develop AND type = push))
+    if: branch = story/*
   - name: coverage
-    if: branch = develop AND type = push
+    # if: branch = develop AND type = push
+    if: branch = develop
 
 jobs:
   include:
