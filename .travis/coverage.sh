@@ -35,7 +35,7 @@ upload_coverage() {
   fi
 
   if [ $coverage_type = "jacoco" ]; then
-    JACOCO_SOURCE_PATH=src/main/java
+    export JACOCO_SOURCE_PATH=$TRAVIS_BUILD_DIR/$project/src/main/java
     coverage_dir=build/reports/jacoco/test
     coverage_file=$coverage_dir/jacocoTestReport.xml
   fi
