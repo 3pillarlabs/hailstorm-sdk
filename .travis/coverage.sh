@@ -24,6 +24,7 @@ upload_coverage() {
   local project=$1
   local coverage_type=$2
   local overall_cov_path=$TRAVIS_BUILD_DIR/coverage-overall
+  local coverage_dir=coverage
 
   if [ -z $coverage_type ]; then
     coverage_type="simplecov"
@@ -34,8 +35,9 @@ upload_coverage() {
   fi
 
   if [ $coverage_type = "jacoco" ]; then
-    JACOCO_SOURCE_PATH=$TRAVIS_BUILD_DIR/$project/src/main/java
-    coverage_file=build/reports/jacoco/test/jacocoTestReport.xml
+    JACOCO_SOURCE_PATH=src/main/java
+    coverage_dir=build/reports/jacoco/test
+    coverage_file=$coverage_dir/jacocoTestReport.xml
   fi
 
   if [ $coverage_type = "lcov" ]; then
@@ -47,10 +49,10 @@ upload_coverage() {
   $CC_TEST_REPORTER format-coverage \
     --add-prefix "$project" \
     -t $coverage_type \
-    -o $TRAVIS_BUILD_DIR/$project/coverage/codeclimate.$CI_NODE_INDEX.json \
+    -o $TRAVIS_BUILD_DIR/$project/$coverage_dir/codeclimate.$CI_NODE_INDEX.json \
     $TRAVIS_BUILD_DIR/$project/$coverage_file
 
-  cp $TRAVIS_BUILD_DIR/$project/coverage/codeclimate.$CI_NODE_INDEX.json $overall_cov_path
+  cp $TRAVIS_BUILD_DIR/$project/$coverage_dir/codeclimate.$CI_NODE_INDEX.json $overall_cov_path
 
   aws s3 sync $overall_cov_path/ s3://$S3_BUCKET_NAME/coverage/$TRAVIS_BUILD_NUMBER
   aws s3 sync s3://$S3_BUCKET_NAME/coverage/$TRAVIS_BUILD_NUMBER $overall_cov_path/
