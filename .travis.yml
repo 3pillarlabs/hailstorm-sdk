@@ -10,17 +10,18 @@ env:
 
 stages:
   - name: test
-  # - name: coverage
+    if: branch != master AND (NOT(branch = develop AND type = push))
+  - name: coverage
+    if: branch = develop AND type = push
 
 jobs:
   include:
+    # ------------ TEST STAGE ----------------------
     - stage: test
       name: "hailstorm-gem test"
       language: ruby
       rvm: jruby-9.1.9.0
       jdk: openjdk8
-      env:
-        - CI_NODE_INDEX=0
       before_install:
         - make install_aws
       install:
@@ -33,8 +34,6 @@ jobs:
       language: ruby
       rvm: jruby-9.1.9.0
       jdk: openjdk8
-      env:
-        - CI_NODE_INDEX=1
       before_install:
         - make install_aws
       install:
@@ -47,8 +46,6 @@ jobs:
       language: ruby
       rvm: jruby-9.1.9.0
       jdk: openjdk8
-      env:
-        - CI_NODE_INDEX=2
       before_install:
         - make install_aws
       install:
@@ -60,8 +57,6 @@ jobs:
       name: "hailstorm-file-server test"
       language: java
       jdk: openjdk8
-      env:
-        - CI_NODE_INDEX=3
       before_install:
         - make install_aws
       install:
@@ -73,8 +68,6 @@ jobs:
       name: "hailstorm-client-exchange test"
       language: java
       jdk: openjdk8
-      env:
-        - CI_NODE_INDEX=4
       before_install:
         - make install_aws
       install:
@@ -86,8 +79,6 @@ jobs:
       name: "hailstorm-web-client test"
       language: node_js
       node_js: lts/dubnium
-      env:
-        - CI_NODE_INDEX=5
       before_install:
         - make install_aws
       install:
@@ -96,18 +87,96 @@ jobs:
         - make PROJECT=web-client test
 
 
-    # - stage: coverage
-    #   name: "hailstorm-gem coverage"
-    #   language: ruby
-    #   rvm: jruby-9.1.9.0
-    #   jdk: openjdk8
-    #   env:
-    #     - CI_NODE_INDEX=0
-    #   before_install:
-    #     - make install_aws
-    #   install:
-    #     - make PROJECT=gem FORCE=yes install
-    #   script:
-    #     - make PROJECT=gem FORCE=yes coverage
-    #   after_script:
-    #     - make PROJECT=gem FORCE=yes cc_test_report
+    # ------------ COVERAGE -----------------------------------
+    - stage: coverage
+      name: "hailstorm-gem coverage"
+      language: ruby
+      rvm: jruby-9.1.9.0
+      jdk: openjdk8
+      env:
+        - CI_NODE_INDEX=0
+      before_install:
+        - make install_aws
+      install:
+        - make PROJECT=gem FORCE=yes install
+      script:
+        - make PROJECT=gem coverage
+      after_script:
+        - make PROJECT=gem cc_test_report
+
+    - stage: coverage
+      name: "hailstorm-cli coverage"
+      language: ruby
+      rvm: jruby-9.1.9.0
+      jdk: openjdk8
+      env:
+        - CI_NODE_INDEX=1
+      before_install:
+        - make install_aws
+      install:
+        - make PROJECT=cli FORCE=yes install
+      script:
+        - make PROJECT=cli coverage
+      after_script:
+        - make PROJECT=cli cc_test_report
+
+    - stage: coverage
+      name: "hailstorm-api coverage"
+      language: ruby
+      rvm: jruby-9.1.9.0
+      jdk: openjdk8
+      env:
+        - CI_NODE_INDEX=2
+      before_install:
+        - make install_aws
+      install:
+        - make PROJECT=api FORCE=yes install
+      script:
+        - make PROJECT=api coverage
+      after_script:
+        - make PROJECT=api cc_test_report
+
+    - stage: coverage
+      name: "hailstorm-file-server coverage"
+      language: java
+      jdk: openjdk8
+      env:
+        - CI_NODE_INDEX=3
+      before_install:
+        - make install_aws
+      install:
+        - make PROJECT=file-server FORCE=yes install
+      script:
+        - make PROJECT=file-server coverage
+      after_script:
+        - make PROJECT=file-server cc_test_report
+
+    - stage: coverage
+      name: "hailstorm-client-exchange coverage"
+      language: java
+      jdk: openjdk8
+      env:
+        - CI_NODE_INDEX=4
+      before_install:
+        - make install_aws
+      install:
+        - make PROJECT=client-exchange FORCE=yes install
+      script:
+        - make PROJECT=client-exchange coverage
+      after_script:
+        - make PROJECT=client-exchange cc_test_report
+
+    - stage: coverage
+      name: "hailstorm-web-client coverage"
+      language: node_js
+      node_js: lts/dubnium
+      env:
+        - CI_NODE_INDEX=5
+      before_install:
+        - make install_aws
+      install:
+        - make PROJECT=web-client FORCE=yes install
+      script:
+        - make PROJECT=web-client coverage
+      after_script:
+        - make PROJECT=web-client cc_test_report

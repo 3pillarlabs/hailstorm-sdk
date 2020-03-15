@@ -41,7 +41,7 @@ test:
 	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make test; fi
 
 coverage:
-	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make coverage; fi
+	cd ${PROJECT_PATH} && make coverage
 
 integration:
 	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make integration; fi
@@ -60,6 +60,9 @@ install_aws:
 	unzip awscli-bundle.zip
 	${TRAVIS_BUILD_DIR}/awscli-bundle/install -b ~/bin/aws
 	export PATH=~/bin:${PATH}
+
+cc_test_report:
+	cd ${PROJECT_PATH} && make cc_test_report
 
 # file_server:
 # 	cd hailstorm-file-server && \
