@@ -13,31 +13,6 @@ Vagrant.configure(2) do |config|
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://atlas.hashicorp.com/search.
 
-	# STACK
-	#
-	# +--------------------+   +------------------------------------------+
-	# |  ***************** |   |  *******************  *****************  |
-	# |  * hailstorm-web * |   |  * hailstorm-redis *  * hailstorm-gem *  |
-	# |  ***************** |   |  *******************  *****************  |
-	# |                    |   |                                          |
-	# |   ***********      |   |    ***********                           |
-	# |   * unicorn *      |   |    * sidekiq *                           |
-	# |   ***********      |   |    ***********                           |
-	# |                    |   |                                          |
-	# |ruby-2.14@hailstorm |   |           jruby-1.7.9@hailstorm          |
-	# |                    |   |               Oracle Java 7              |
-	# +--------------------+   +------------------------------------------+
-	#    *********                  ****************
-	#    * Nginx *                  * Redis Server *
-	#    *********                  ****************
-	#
-	#                  ****************
-	#                  * Mysql Server *
-	#                  ****************
-	# Tools:
-	#   git
-	#   npm
-
   config.vm.provision "apt", :type => :shell, :run => 'always', :inline => <<-SHELL
     last_apt_update_path=/var/cache/last_apt_update
     if [ ! -e $last_apt_update_path ] || [ `expr $(date "+%s") - $(stat -c "%Y" $last_apt_update_path)` -gt 86400 ]; then
@@ -68,53 +43,8 @@ Vagrant.configure(2) do |config|
     site_config.vm.provision "git", :type => :shell, :inline => 'sudo apt-get install -y git'
 
     # ruby-mri
-    site_config.vm.provision "mri", :type => :shell, :path => 'setup/ruby/install-ruby-mri.sh'    
+    site_config.vm.provision "mri", :type => :shell, :path => 'setup/ruby/install-ruby-mri.sh'
   end
-
-  # def common_provision(config)
-  # 	# redis-server
-  # 	config.vm.provision "redis", :type => :shell, :path => 'setup/redis/install-redis-server.sh'
-
-  # 	# oracle java
-  # 	config.vm.provision "java", :type => :shell, :path => 'setup/install-oracle-java.sh'
-
-  # 	# jruby
-  # 	config.vm.provision "jruby", :type => :shell, :path => 'setup/ruby/install-jruby.sh'
-
-  #   # hailstom-apps
-  # 	config.vm.provision "hailstorm_apps", :type => :shell, :path => 'setup/install-hailstorm-apps.sh', :run => 'always'
-
-  # 	# hailstorm-redis
-  # 	config.vm.provision "hailstorm_redis", :type => :shell, :path => 'setup/redis/install-hailstorm-redis.sh'
-
-  # 	# hailstorm-web
-  # 	config.vm.provision "hailstorm_web", :type => :shell, :path => 'setup/hailstorm-web/install-hailstorm-web.sh'
-
-  #   # hailstorm_gemdir
-  #   config.vm.provision "hailstorm_gemdir", :type => :shell, :inline => <<-SHELL
-  #     grep 'rvm use jruby@hailstorm' /home/vagrant/.bashrc
-  #     if [ $? -ne 0 ]; then
-  #       sudo -u vagrant sh -c "echo 'rvm use jruby@hailstorm' >> /home/vagrant/.bashrc"
-  #     fi
-  #   SHELL
-  # end
-
-  # config.vm.define "dev", :primary => true do |dev|
-  #   dev.vm.box = "ubuntu/xenial64"
-  # 	dev.vm.provider "virtualbox" do |vb|
-  #   #   # Display the VirtualBox GUI when booting the machine
-  #   #   vb.gui = true
-  #   #
-  # 		# Customize the amount of memory on the VM:
-  # 		vb.memory = "2048"
-  #     vb.cpus = 2
-  #     vb.customize ["modifyvm", :id, "--nictype1", "virtio"]
-  # 	end
-  #   dev.vm.network "private_network", ip: "192.168.17.10"
-  #   dev.vm.network 'forwarded_port', :guest => 80, :host => 8080, :autocorrect => true
-  #   dev.vm.network 'forwarded_port', :guest => 3306, :host => 3306
-  #   common_provision(dev)
-  # end
 
   def aws_keys
     credentials_file_path = File.join(ENV['HOME'], '.aws', 'credentials')
@@ -143,33 +73,6 @@ Vagrant.configure(2) do |config|
     end
   end
 
-  # config.vm.define "aws", autostart: false do |aws|
-  #   aws.vm.box = "dummy"
-  #   aws.vm.synced_folder ".", "/vagrant", type: "rsync", rsync__exclude: [".git/", ".gitignore/"]
-
-  #   aws.vm.provider :aws do |ec2, override|
-  #     ec2.ami = "ami-0f9cf087c1f27d9b1"
-  #     ec2.access_key_id, ec2.secret_access_key = aws_keys()
-  #     aws_conf = YAML.load_file('setup/vagrant-aws.yml').reduce({}) { |a, e| a.merge(e[0].to_sym => e[1]) }
-  #     ec2.keypair_name = aws_conf[:keypair_name]
-  #     ec2.instance_type = aws_conf[:instance_type] || "t2.medium"
-  #     ec2.elastic_ip = true
-  #     ec2.region = aws_conf[:region] || "us-east-1"
-  #     ec2.security_groups = aws_conf[:security_groups]
-  #     ec2.subnet_id = aws_conf[:subnet_id] if aws_conf.key?(:subnet_id)
-  #     ec2.tags = {
-  #       Name: "Vagrant - Hailstorm Web"
-  #     }
-  #     ec2.terminate_on_shutdown = false
-  #     ec2.block_device_mapping = [{"DeviceName" => "/dev/sda1", "Ebs.VolumeSize" => 80}]
-
-  #     override.ssh.username = "ubuntu"
-  #     override.ssh.private_key_path = aws_conf[:private_key_path]
-  #   end
-
-  #   common_provision(aws)
-  # end
-
   config.vm.define "aws-site", autostart: false do |site|
     site.vm.box = "dummy"
     site.vm.synced_folder ".", "/vagrant", type: "rsync", rsync__exclude: [".git/", ".gitignore/", "log/", "tmp/", "build/"]
@@ -188,6 +91,7 @@ Vagrant.configure(2) do |config|
       ec2.tags = {
         Name: "Vagrant - Hailstorm Site"
       }
+
       ec2.terminate_on_shutdown = false
 
       ec2.block_device_mapping = [{"DeviceName" => "/dev/sda1", "Ebs.VolumeSize" => 80}]
@@ -212,8 +116,8 @@ Vagrant.configure(2) do |config|
 			vb.cpus = 2
 			# vb.customize ["modifyvm", :id, "--nictype1", "virtio"]
 		end
-		site_local.vm.network "private_network", ip: "192.168.20.100"
 
+    site_local.vm.network "private_network", ip: "192.168.20.100"
     provision_site(site_local)
   	# hailstorm-site
   	site_local.vm.provision "hailstorm_site", :type => :shell, :path => 'setup/hailstorm-site/install-hailstorm-site.sh', :run => 'always'
@@ -225,10 +129,10 @@ Vagrant.configure(2) do |config|
       hsdc.vm.provider 'virtualbox' do |vb|
         vb.memory = 2048
       end
-      
+
       hsdc.vm.network 'private_network', ip: "192.168.20.#{serial * 10}"
 			hsdc.vm.hostname = "data-center-agent-#{serial}"
-      
+
       hsdc.vm.provision 'java', type: :shell do |s|
         s.inline = <<-X
           which java
@@ -238,7 +142,7 @@ Vagrant.configure(2) do |config|
           fi
         X
       end
-      
+
       hsdc.vm.provision 'jmeter', type: :shell do |s|
         s.inline = <<-X
           if [ ! -e /root/jmeter ]; then
@@ -249,7 +153,7 @@ Vagrant.configure(2) do |config|
           fi
         X
       end
-      
+
       hsdc.vm.provision 'ssh', type: :shell do |s|
         s.inline = <<-X
           if [ ! -e /root/insecure_key.pub ]; then
@@ -262,5 +166,4 @@ Vagrant.configure(2) do |config|
       end
     end
   end
-
 end
