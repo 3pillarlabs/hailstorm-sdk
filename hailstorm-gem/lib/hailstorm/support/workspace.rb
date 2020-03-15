@@ -89,7 +89,7 @@ class Hailstorm::Support::Workspace
   def make_tmp_dir(dir_name)
     path_to_make = File.join(tmp_path, dir_name)
     FileUtils.rm_rf(path_to_make)
-    FileUtils.mkdir(path_to_make)
+    FileUtils.mkdir_p(path_to_make)
     path_to_make
   end
 
