@@ -1,6 +1,7 @@
 import React from 'react';
 import { Cluster } from '../domain';
 import styles from '../ClusterConfiguration/ClusterConfiguration.module.scss';
+import { EmptyPanel } from '../EmptyPanel';
 
 export const ClusterList: React.FC<{
   clusters?: Cluster[];
@@ -54,11 +55,7 @@ export const ClusterList: React.FC<{
         ))
       ))
       ) : (
-      <>
-      <div className="panel-block"></div>
-      <div className="panel-block"></div>
-      <div className="panel-block"></div>
-      </>
+      <EmptyPanel />
       )}
     </div>
   );

@@ -2,6 +2,8 @@ import React from 'react';
 import { Project, AmazonCluster } from '../domain';
 import { RemoveCluster } from './RemoveCluster';
 import styles from './ClusterConfiguration.module.scss';
+import { ReadOnlyField } from './ReadOnlyField';
+import { ClusterViewHeader } from './ClusterViewHeader';
 
 export function AWSView({ cluster, dispatch, activeProject }: {
   cluster: AmazonCluster;
@@ -9,74 +11,24 @@ export function AWSView({ cluster, dispatch, activeProject }: {
   activeProject?: Project;
 }) {
 
-  return (<div className="card">
-    <header className="card-header">
-      <p className="card-header-title">
-        <span className="icon"><i className="fab fa-aws"></i></span>
-        {cluster.title}
-      </p>
-    </header>
-    <div className={`card-content${cluster.disabled ? ` ${styles.disabledContent}` : ''}`}>
-      <div className="content">
-        <div className="field">
-          <label className="label">AWS Access Key</label>
-          <div className="control">
-            <input
-              readOnly
-              type="text"
-              className="input is-static has-background-light has-text-dark is-size-5"
-              value={cluster.accessKey}
-            />
-          </div>
-        </div>
-        <div className="field">
-          <label className="label">VPC Subnet</label>
-          <div className="control">
-            <input
-              readOnly
-              type="text"
-              className="input is-static has-background-light has-text-dark is-size-5"
-              value={cluster.vpcSubnetId}
-            />
-          </div>
-        </div>
-        <div className="field">
-          <label className="label">AWS Region</label>
-          <div className="control">
-            <input
-              readOnly
-              type="text"
-              className="input is-static has-background-light has-text-dark is-size-5"
-              value={cluster.region}
-            />
-          </div>
-        </div>
-        <div className="field">
-          <label className="label">AWS Instance Type</label>
-          <div className="control">
-            <input
-              readOnly
-              type="text"
-              className="input is-static has-background-light has-text-dark is-size-5"
-              value={cluster.instanceType}
-            />
-          </div>
-        </div>
-        <div className="field">
-          <label className="label">Max. Users / Instance</label>
-          <div className="control">
-            <input
-              readOnly
-              type="text"
-              className="input is-static has-background-light has-text-dark is-size-5"
-              value={cluster.maxThreadsByInstance}
-            />
-          </div>
+  return (
+    <div className="card">
+      <ClusterViewHeader
+        title={cluster.title}
+        icon={(<i className="fab fa-aws"></i>)}
+      />
+      <div className={`card-content${cluster.disabled ? ` ${styles.disabledContent}` : ''}`}>
+        <div className="content">
+          <ReadOnlyField label="AWS Access Key" value={cluster.accessKey} />
+          <ReadOnlyField label="VPC Subnet" value={cluster.vpcSubnetId} />
+          <ReadOnlyField label="AWS Region" value={cluster.region} />
+          <ReadOnlyField label="AWS Instance Type" value={cluster.instanceType} />
+          <ReadOnlyField label="Max. Users / Instance" value={cluster.maxThreadsByInstance} />
         </div>
       </div>
+      {activeProject && dispatch && (<div className="card-footer">
+        <RemoveCluster {...{activeProject, cluster, dispatch}} />
+      </div>)}
     </div>
-    {activeProject && dispatch && (<div className="card-footer">
-      <RemoveCluster {...{activeProject, cluster, dispatch}} />
-    </div>)}
-  </div>);
+  );
 }

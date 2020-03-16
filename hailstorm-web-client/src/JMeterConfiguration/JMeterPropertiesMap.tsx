@@ -1,5 +1,6 @@
 import React from 'react';
 import { Formik, FormikActions, Field, Form, ErrorMessage } from 'formik';
+import { FormikActionsHandler } from './domain';
 
 export function JMeterPropertiesMap({
   properties,
@@ -8,7 +9,7 @@ export function JMeterPropertiesMap({
   headerTitle
 }: {
   properties: Map<string, any>;
-  onSubmit?: (values: {[key: string]: any}, actions: FormikActions<{[key: string]: any}>) => void;
+  onSubmit?: FormikActionsHandler;
   onRemove?: () => void;
   headerTitle?: string;
 }) {
@@ -88,7 +89,7 @@ function PropertiesForm({
   onRemove
 }: {
   properties: Map<string, any>;
-  onSubmit: (values: {[key: string]: any}, actions: FormikActions<{[key: string]: any}>) => void;
+  onSubmit: FormikActionsHandler;
   onRemove: () => void;
 }) {
   const initialValues: {[key: string]: any} = {};
@@ -108,7 +109,7 @@ function PropertiesForm({
     return errors;
   }
 
-  const handleSubmit: (values: {[key: string]: any}, actions: FormikActions<{[key: string]: any}>) => void = (values, actions) => {
+  const handleSubmit: FormikActionsHandler = (values, actions) => {
     const externalValues = Object.entries(values).reduce<{[key: string]: any}>((s, e) => {
       s[externalKey(e[0])] = e[1];
       return s;

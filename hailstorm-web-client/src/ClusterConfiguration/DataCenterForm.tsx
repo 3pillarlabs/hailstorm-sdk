@@ -5,8 +5,10 @@ import { MachineSet } from './MachineSet';
 import { FileServer } from '../FileUpload/fileServer';
 import { ApiFactory } from '../api';
 import { Project, DataCenterCluster } from '../domain';
-import { RemoveClusterAction, SaveClusterAction } from './actions';
+import { SaveClusterAction } from './actions';
 import { SavedFile } from '../FileUpload/domain';
+import { ClusterFormFooter } from './ClusterFormFooter';
+import { ClusterViewHeader } from './ClusterViewHeader';
 
 export function DataCenterForm({
   dispatch,
@@ -48,12 +50,10 @@ export function DataCenterForm({
 
   return (
     <div className="card">
-      <div className="card-header">
-        <div className="card-header-title">
-          <span className="icon"><i className="fas fa-network-wired"></i></span>
-          Create a new cluster in your Data Center
-        </div>
-      </div>
+      <ClusterViewHeader
+        title="Create a new cluster in your Data Center"
+        icon={(<i className="fas fa-network-wired"></i>)}
+      />
       <Formik
         isInitialValid={false}
         initialValues={{
@@ -219,21 +219,7 @@ export function DataCenterForm({
               </p>
             </div>
           </div>
-          <div className="card-footer">
-            <div className="card-footer-item">
-              <button
-                type="button"
-                className="button is-warning"
-                role="Remove Cluster"
-                onClick={() => dispatch(new RemoveClusterAction())}
-              >
-                Remove
-              </button>
-            </div>
-            <div className="card-footer-item">
-              <button type="submit" className="button is-dark" disabled={isSubmitting || !isValid}>Save</button>
-            </div>
-          </div>
+          <ClusterFormFooter {...{dispatch}} disabled={isSubmitting || !isValid} />
         </Form>
       )}
       </Formik>

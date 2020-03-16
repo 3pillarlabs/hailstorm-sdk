@@ -91,24 +91,15 @@ export function AWSInstanceChoice({
         </div>
         <hr/>
         <div className="level">
-          <div className="level-item has-text-centered">
-            <div>
-              <p className="heading">AWS Instance Type *</p>
-              <p className="title" data-testid="AWS Instance Type">{instanceType}</p>
-            </div>
-          </div>
-          <div className="level-item has-text-centered">
-            <div>
-              <p className="heading">Max. Users / Instance *</p>
-              <p className="title" data-testid="Max. Users / Instance">{maxThreadsByInstance}</p>
-            </div>
-          </div>
-          <div className="level-item has-text-centered">
-            <div>
-              <p className="heading"># Instances</p>
-              <p className="title">{numInstances}</p>
-            </div>
-          </div>
+          <CenteredLevelItem title="AWS Instance Type" starred={true}>
+            {instanceType}
+          </CenteredLevelItem>
+          <CenteredLevelItem title="Max. Users / Instance" starred={true}>
+            {maxThreadsByInstance}
+          </CenteredLevelItem>
+          <CenteredLevelItem title="# Instances">
+            {numInstances}
+          </CenteredLevelItem>
         </div>
         </>
         ) : (
@@ -157,6 +148,22 @@ export function AWSInstanceChoice({
         </div>
         </>
         )}
+      </div>
+    </div>
+  )
+}
+
+function CenteredLevelItem({
+  title,
+  children,
+  starred
+}: React.PropsWithChildren<{title: string, starred?: boolean}>) {
+  const heading = starred ? `${title} *` : title;
+  return (
+    <div className="level-item has-text-centered">
+      <div>
+        <p className="heading">{heading}</p>
+        <p className="title" data-testid={title}>{children}</p>
       </div>
     </div>
   )

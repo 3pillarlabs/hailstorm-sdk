@@ -1,159 +1,234 @@
-import { NewProjectWizardActions, NewProjectWizardActionTypes } from "./actions";
+import {
+  NewProjectWizardActions,
+  NewProjectWizardActionTypes,
+  ActivateTabAction,
+  CreateProjectAction,
+  EditInProjectWizard,
+  UpdateProjectTitleAction
+} from "./actions";
 import { NewProjectWizardState, WizardTabTypes, NewProjectWizardProgress } from "./domain";
 import { AppState } from "../store";
 import { Project } from "../domain";
 
 export function reducer(state: NewProjectWizardState, action: NewProjectWizardActions): NewProjectWizardState {
+  let nextState: NewProjectWizardState;
   switch (action.type) {
-    case NewProjectWizardActionTypes.ProjectSetup: {
-      const nextState: NewProjectWizardState = {...state, activeProject: undefined};
-      return {...nextState, wizardState: {activeTab: WizardTabTypes.Project, done: {}}};
-    }
+    case NewProjectWizardActionTypes.ProjectSetup:
+      nextState = onProjectSetup(state);
+      break;
 
-    case NewProjectWizardActionTypes.ProjectSetupCancel: {
-      const nextState: NewProjectWizardState = {...state, activeProject: undefined};
-      delete nextState.wizardState;
-      return nextState;
-    }
+    case NewProjectWizardActionTypes.ProjectSetupCancel:
+      nextState = onProjectSetupCancel(state);
+      break;
 
-    case NewProjectWizardActionTypes.ActivateTab: {
-      const wizardState: NewProjectWizardProgress = {...state.wizardState!, activeTab: action.payload};
-      return {...state, wizardState};
-    }
+    case NewProjectWizardActionTypes.ActivateTab:
+      nextState = onActivateTab(state, action);
+      break;
 
-    case NewProjectWizardActionTypes.CreateProject: {
-      const wizardState: NewProjectWizardProgress = {
-        ...state.wizardState!,
-        activeTab: WizardTabTypes.JMeter,
-        done: {
-          ...state.wizardState!.done,
-          [WizardTabTypes.Project]: true
-        }
-      };
+    case NewProjectWizardActionTypes.CreateProject:
+      nextState = onCreateProject(state, action);
+      break;
 
-      return {...state, wizardState, activeProject: action.payload};
-    }
+    case NewProjectWizardActionTypes.JMeterSetupCompleted:
+      nextState = onJMeterSetupCompleted(state);
+      break;
 
-    case NewProjectWizardActionTypes.JMeterSetupCompleted: {
-      const wizardState: NewProjectWizardProgress = {
-        ...state.wizardState!,
-        activeTab: WizardTabTypes.Cluster,
-        done: {
-          ...state.wizardState!.done,
-          [WizardTabTypes.JMeter]: true
-        }
-      };
+    case NewProjectWizardActionTypes.ClusterSetupCompleted:
+      nextState = onClusterSetupCompleted(state);
+      break;
 
-      return {...state, wizardState};
-    }
+    case NewProjectWizardActionTypes.ReviewCompleted:
+      nextState = onReviewCompleted(state);
+      break;
 
-    case NewProjectWizardActionTypes.ClusterSetupCompleted: {
-      const wizardState: NewProjectWizardProgress = {
-        ...state.wizardState!,
-        activeTab: WizardTabTypes.Review,
-        done: {
-          ...state.wizardState!.done,
-          [WizardTabTypes.Cluster]: true
-        }
-      };
+    case NewProjectWizardActionTypes.ConfirmProjectSetupCancel:
+      nextState = onConfirmProjectSetupCancel(state);
+      break;
 
-      return {...state, wizardState};
-    }
+    case NewProjectWizardActionTypes.StayInProjectSetup:
+      nextState = onStayInProjectSetup(state);
+      break;
 
-    case NewProjectWizardActionTypes.ReviewCompleted: {
-      const nextState = {...state};
-      if (state.activeProject!.incomplete) {
-        const activeProject = {...state.activeProject! }
-        delete activeProject.incomplete
-        nextState.activeProject = activeProject
-      }
+    case NewProjectWizardActionTypes.UpdateProjectTitle:
+      nextState = onUpdateProjectTitle(state, action);
+      break;
 
-      delete nextState.wizardState;
-      return nextState;
-    }
+    case NewProjectWizardActionTypes.EditInProjectWizard:
+      nextState = onEditInProjectWizard(state, action);
+      break;
 
-    case NewProjectWizardActionTypes.ConfirmProjectSetupCancel: {
-      if (
-        !state.activeProject || (
-          state.wizardState!.done[WizardTabTypes.Review] &&
-          !state.wizardState!.modifiedAfterReview
-        )
-      ) {
-        const nextState = {...state};
-        delete nextState.wizardState;
-        return nextState;
-      }
+    case NewProjectWizardActionTypes.UnsetProject:
+      nextState = onUnsetProject(state);
+      break;
 
-      const wizardState: NewProjectWizardProgress = {
-        ...state.wizardState!,
-        confirmCancel: true
-      }
+    case NewProjectWizardActionTypes.SetProjectDeleted:
+      nextState = onSetProjectDeleted(state);
+      break;
 
-      return {...state, wizardState};
-    }
+    default:
+      nextState = state;
+      break;
+  }
 
-    case NewProjectWizardActionTypes.StayInProjectSetup: {
-      const wizardState = {...state.wizardState!}
-      delete wizardState.confirmCancel;
-      return {...state, wizardState};
-    }
+  return nextState;
+}
 
-    case NewProjectWizardActionTypes.UpdateProjectTitle: {
-      const activeProject = {...state.activeProject!, title: action.payload};
-      const wizardState: NewProjectWizardProgress = {
-        ...state.wizardState!,
-        activeTab: WizardTabTypes.JMeter
-      };
+function onSetProjectDeleted(state: NewProjectWizardState) {
+  if (state.wizardState && state.activeProject) {
+    const activeProject:Project = {...state.activeProject, destroyed: true};
+    const nextState = {...state, activeProject};
+    delete nextState.wizardState;
+    return nextState;
+  }
 
-      if (wizardState && wizardState.done[WizardTabTypes.Review]) {
-        wizardState.modifiedAfterReview = true;
-      }
+  return state;
+}
 
-      return {...state, activeProject, wizardState};
-    }
+function onUnsetProject(state: NewProjectWizardState) {
+  if (state.wizardState === undefined) {
+    return {...state, activeProject: undefined};
+  }
 
-    case NewProjectWizardActionTypes.EditInProjectWizard: {
-      const project = action.payload.project;
-      const done = project.incomplete ? {
-        [WizardTabTypes.Project]: true,
-      } : {
+  return state;
+}
+
+function onEditInProjectWizard(state: NewProjectWizardState, action: EditInProjectWizard) {
+  {
+    const project = action.payload.project;
+    const done = project.incomplete ? {
+      [WizardTabTypes.Project]: true,
+    } : {
         [WizardTabTypes.Project]: true,
         [WizardTabTypes.JMeter]: true,
         [WizardTabTypes.Cluster]: true,
         [WizardTabTypes.Review]: true,
       };
+    const wizardState: NewProjectWizardProgress = {
+      activeTab: project.incomplete || action.payload.activeTab === undefined ? WizardTabTypes.Project : action.payload.activeTab,
+      done,
+      activeJMeterFile: project.jmeter ? project.jmeter.files[0] : undefined,
+      activeCluster: project.clusters && project.clusters.length > 0 ? project.clusters[0] : undefined
+    };
+    return { ...state, wizardState, activeProject: project };
+  }
+}
 
-      const wizardState: NewProjectWizardProgress = {
-        activeTab: project.incomplete || action.payload.activeTab === undefined ? WizardTabTypes.Project : action.payload.activeTab,
-        done,
-        activeJMeterFile: project.jmeter ? project.jmeter.files[0] : undefined,
-        activeCluster: project.clusters && project.clusters.length > 0 ? project.clusters[0] : undefined
-      }
-
-      return {...state, wizardState, activeProject: project};
+function onUpdateProjectTitle(state: NewProjectWizardState, action: UpdateProjectTitleAction) {
+  {
+    const activeProject = { ...state.activeProject!, title: action.payload };
+    const wizardState: NewProjectWizardProgress = {
+      ...state.wizardState!,
+      activeTab: WizardTabTypes.JMeter
+    };
+    if (wizardState && wizardState.done[WizardTabTypes.Review]) {
+      wizardState.modifiedAfterReview = true;
     }
+    return { ...state, activeProject, wizardState };
+  }
+}
 
-    case NewProjectWizardActionTypes.UnsetProject: {
-      if (state.wizardState === undefined) {
-        return {...state, activeProject: undefined};
-      }
+function onStayInProjectSetup(state: NewProjectWizardState) {
+  {
+    const wizardState = { ...state.wizardState! };
+    delete wizardState.confirmCancel;
+    return { ...state, wizardState };
+  }
+}
 
-      return state;
+function onConfirmProjectSetupCancel(state: NewProjectWizardState) {
+  if (
+    !state.activeProject || (
+      state.wizardState!.done[WizardTabTypes.Review] &&
+      !state.wizardState!.modifiedAfterReview
+    )
+  ) {
+    const nextState = {...state};
+    delete nextState.wizardState;
+    return nextState;
+  }
+
+  const wizardState: NewProjectWizardProgress = {
+    ...state.wizardState!,
+    confirmCancel: true
+  }
+
+  return {...state, wizardState};
+}
+
+function onReviewCompleted(state: NewProjectWizardState) {
+  {
+    const nextState = { ...state };
+    if (state.activeProject!.incomplete) {
+      const activeProject = { ...state.activeProject! };
+      delete activeProject.incomplete;
+      nextState.activeProject = activeProject;
     }
+    delete nextState.wizardState;
+    return nextState;
+  }
+}
 
-    case NewProjectWizardActionTypes.SetProjectDeleted: {
-      if (state.wizardState && state.activeProject) {
-        const activeProject:Project = {...state.activeProject, destroyed: true};
-        const nextState = {...state, activeProject};
-        delete nextState.wizardState;
-        return nextState;
+function onClusterSetupCompleted(state: NewProjectWizardState) {
+  {
+    const wizardState: NewProjectWizardProgress = {
+      ...state.wizardState!,
+      activeTab: WizardTabTypes.Review,
+      done: {
+        ...state.wizardState!.done,
+        [WizardTabTypes.Cluster]: true
       }
+    };
+    return { ...state, wizardState };
+  }
+}
 
-      return state;
-    }
+function onJMeterSetupCompleted(state: NewProjectWizardState) {
+  {
+    const wizardState: NewProjectWizardProgress = {
+      ...state.wizardState!,
+      activeTab: WizardTabTypes.Cluster,
+      done: {
+        ...state.wizardState!.done,
+        [WizardTabTypes.JMeter]: true
+      }
+    };
+    return { ...state, wizardState };
+  }
+}
 
-    default:
-      return state;
+function onCreateProject(state: NewProjectWizardState, action: CreateProjectAction) {
+  {
+    const wizardState: NewProjectWizardProgress = {
+      ...state.wizardState!,
+      activeTab: WizardTabTypes.JMeter,
+      done: {
+        ...state.wizardState!.done,
+        [WizardTabTypes.Project]: true
+      }
+    };
+    return { ...state, wizardState, activeProject: action.payload };
+  }
+}
+
+function onActivateTab(state: NewProjectWizardState, action: ActivateTabAction) {
+  {
+    const wizardState: NewProjectWizardProgress = { ...state.wizardState!, activeTab: action.payload };
+    return { ...state, wizardState };
+  }
+}
+
+function onProjectSetupCancel(state: NewProjectWizardState) {
+  {
+    const nextState: NewProjectWizardState = { ...state, activeProject: undefined };
+    delete nextState.wizardState;
+    return nextState;
+  }
+}
+
+function onProjectSetup(state: NewProjectWizardState) {
+  {
+    const nextState: NewProjectWizardState = { ...state, activeProject: undefined };
+    return { ...nextState, wizardState: { activeTab: WizardTabTypes.Project, done: {} } };
   }
 }
 

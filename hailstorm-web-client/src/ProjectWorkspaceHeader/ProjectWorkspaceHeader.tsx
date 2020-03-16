@@ -20,8 +20,8 @@ export const ProjectWorkspaceHeader: React.FC = () => {
     <div className={`columns ${styles.workspaceHeader}`}>
       <div className="column is-three-quarters">
         {isEditable ?
-          textBox(project.id, project.title, dispatch, setEditable, toggleEditable) :
-          header(project.title, toggleEditable)}
+          textBox({projectId: project.id, title: project.title, dispatch, setEditable, toggleEditable}) :
+          header({title: project.title, toggleEditable})}
       </div>
       <div className="column">
         {project.running && !project.interimState &&
@@ -39,13 +39,19 @@ export const ProjectWorkspaceHeader: React.FC = () => {
   );
 };
 
-function textBox(
+function textBox({
+  projectId,
+  title,
+  dispatch,
+  setEditable,
+  toggleEditable
+}: {
   projectId: number,
   title: string,
   dispatch: React.Dispatch<any>,
   setEditable: React.Dispatch<React.SetStateAction<boolean>>,
   toggleEditable: () => void
-): React.ReactNode {
+}): React.ReactNode {
   return (
     <ProjectForm
       title={title}
@@ -86,10 +92,10 @@ function textBox(
   );
 }
 
-function header(value: string, toggleEditable: () => void) {
+function header({title, toggleEditable}: {title: string, toggleEditable: () => void}) {
   return (
     <h2 className="title is-2">
-      {value}
+      {title}
       <sup><a onClick={toggleEditable}><i title="Edit" className={`fas fa-pen ${styles.editTrigger}`}></i></a></sup>
     </h2>
   );

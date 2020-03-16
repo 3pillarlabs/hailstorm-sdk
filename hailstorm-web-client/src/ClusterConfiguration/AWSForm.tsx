@@ -6,6 +6,8 @@ import { AWSInstanceChoice } from './AWSInstanceChoice';
 import { AWSInstanceChoiceOption, AWSRegionList } from './domain';
 import { ApiFactory } from '../api';
 import { AWSRegionChoice } from './AWSRegionChoice';
+import { ClusterFormFooter } from './ClusterFormFooter';
+import { ClusterViewHeader } from './ClusterViewHeader';
 
 export function AWSForm({ dispatch, activeProject }: {
   dispatch: React.Dispatch<any>;
@@ -56,12 +58,10 @@ export function AWSForm({ dispatch, activeProject }: {
 
   return (
     <div className="card">
-      <div className="card-header">
-        <div className="card-header-title">
-          <span className="icon"><i className="fab fa-aws"></i></span>
-          Create a new AWS Cluster
-        </div>
-      </div>
+      <ClusterViewHeader
+        title="Create a new AWS Cluster"
+        icon={(<i className="fab fa-aws"></i>)}
+      />
       <Formik
         isInitialValid={false}
         initialValues={{
@@ -136,16 +136,7 @@ export function AWSForm({ dispatch, activeProject }: {
               </div>
             </>) : null}
           </div>
-          <div className="card-footer">
-            <div className="card-footer-item">
-              <button type="button" className="button is-warning" role="Remove Cluster" onClick={() => dispatch(new RemoveClusterAction())}>
-                Remove
-              </button>
-            </div>
-            <div className="card-footer-item">
-              <button type="submit" className="button is-dark" disabled={isSubmitting || !isValid}>Save</button>
-            </div>
-          </div>
+          <ClusterFormFooter {...{dispatch}} disabled={isSubmitting || !isValid} />
         </Form>)}
       </Formik>
     </div>

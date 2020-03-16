@@ -144,42 +144,32 @@ function ClusterChoice({
         Choose how you want to create your {!clusters || clusters.length === 0 ? 'first' : 'next'} cluster...
       </h5>
       <div className="columns">
-        <div className="column is-half">
-          <div className={clusterStyles.choiceCard}>
-            <a
-              className={`button is-link is-large is-fullwidth ${clusterStyles.cardButton}`}
-              onClick={() => dispatch(new ActivateClusterAction({title: '', type: 'AWS'}))}
-            >
-              <span className="icon is-medium">
-                <i className="fab fa-aws"></i>
-              </span>
-              <span>AWS</span>
-            </a>
-            <p className="subtitle">Choose Amazon Web Services (AWS) when...</p>
-            <UnorderedList className={clusterStyles.whyList}>
-              <ListItem>The application is reachable publicly, or from AWS.</ListItem>
-              <ListItem>The application is hosted on AWS.</ListItem>
-            </UnorderedList>
-          </div>
-        </div>
-        <div className="column is-half">
-          <div className={clusterStyles.choiceCard}>
-            <a
-              className={`button is-link is-large is-fullwidth ${clusterStyles.cardButton}`}
-              onClick={() => dispatch(new ActivateClusterAction({title: '', type: 'DataCenter'}))}
-            >
-              <span className="icon is-medium">
-                <i className="fas fa-network-wired"></i>
-              </span>
-              <span>Data Center</span>
-            </a>
-            <p className="subtitle">Choose a Data Center when...</p>
-            <UnorderedList className={clusterStyles.whyList}>
-              <ListItem>The application is privately hosted in the data center.</ListItem>
-              <ListItem>Network latency needs to be minimized as much as possible.</ListItem>
-            </UnorderedList>
-          </div>
-        </div>
+        <ChoiceCard>
+          <ChoiceCardLink action={new ActivateClusterAction({title: '', type: 'AWS'})} {...{dispatch}}>
+            <span className="icon is-medium">
+              <i className="fab fa-aws"></i>
+            </span>
+            <span>AWS</span>
+          </ChoiceCardLink>
+          <p className="subtitle">Choose Amazon Web Services (AWS) when...</p>
+          <UnorderedList className={clusterStyles.whyList}>
+            <ListItem>The application is reachable publicly, or from AWS.</ListItem>
+            <ListItem>The application is hosted on AWS.</ListItem>
+          </UnorderedList>
+        </ChoiceCard>
+        <ChoiceCard>
+          <ChoiceCardLink action={new ActivateClusterAction({title: '', type: 'DataCenter'})} {...{dispatch}}>
+            <span className="icon is-medium">
+              <i className="fas fa-network-wired"></i>
+            </span>
+            <span>Data Center</span>
+          </ChoiceCardLink>
+          <p className="subtitle">Choose a Data Center when...</p>
+          <UnorderedList className={clusterStyles.whyList}>
+            <ListItem>The application is privately hosted in the data center.</ListItem>
+            <ListItem>Network latency needs to be minimized as much as possible.</ListItem>
+          </UnorderedList>
+        </ChoiceCard>
       </div>
       {clusters && clusters.length > 0 && (
       <div className="control has-text-centered">
@@ -187,6 +177,31 @@ function ClusterChoice({
       </div>
       )}
     </>
+  )
+}
+
+function ChoiceCard({children}: React.PropsWithChildren<{}>) {
+  return (
+    <div className="column is-half">
+      <div className={clusterStyles.choiceCard}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function ChoiceCardLink({
+  action,
+  dispatch,
+  children
+}: React.PropsWithChildren<{action: ActivateClusterAction, dispatch: React.Dispatch<any>}>) {
+  return (
+    <a
+      className={`button is-link is-large is-fullwidth ${clusterStyles.cardButton}`}
+      onClick={() => dispatch(action)}
+    >
+      {children}
+    </a>
   )
 }
 

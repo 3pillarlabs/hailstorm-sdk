@@ -11,9 +11,9 @@ class DbConfig
 
   def self.initialize
     ActiveRecord::Base.logger = logger
-    database_properties = YAML.load_file(File.expand_path('../../../config/database.yml', __FILE__))
-    database_properties.symbolize_keys!
-    connection_spec = eval(ERB.new(database_properties[Hailstorm.env].to_s).result)
+    db_props_template = ERB.new(File.read(File.expand_path('../../../config/database.yml', __FILE__)))
+    database_properties = YAML.load(db_props_template.result)
+    connection_spec = database_properties[Hailstorm.env.to_s]
     connection_spec.symbolize_keys!
     connection_spec[:pool] = 50
     connection_spec[:wait_timeout] = 30.minutes

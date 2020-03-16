@@ -36,14 +36,33 @@ export const WizardStepTitle: React.FC<WizardStepTitleProps> = (props) => {
   return stepElement;
 }
 
+const circleX = 42;
+const circleY = 42;
+const radius = 31;
+const vertLineStart = radius + 1;
+
 function Step(props: React.PropsWithChildren<WizardStepTitleProps>) {
   return (
     <svg>
-      {props.first ? <></> : <line x1="42" y1="0" x2="42" y2="32" strokeWidth="10"></line>}
-      <circle cx="42" cy="42" r="31" strokeWidth="1"></circle>
-      {props.last ? <></> : <line x1="42" y1="32" x2="42" y2="160" strokeWidth="10"></line>}
-      <text x="42" y="42" textAnchor="middle" dominantBaseline="middle" className={styles.stepTitle}>{props.title}</text>
-      <text x="110" y="42" textAnchor="middle" dominantBaseline="middle">{props.children}</text>
+      {props.first ? <></> : <Line y2={vertLineStart} />}
+      <circle cx={circleX} cy={circleY} r={radius} strokeWidth="1"></circle>
+      {props.last ? <></> : <Line y1={vertLineStart} y2={160} />}
+      <text x={circleX} y={circleY} textAnchor="middle" dominantBaseline="middle" className={styles.stepTitle}>{props.title}</text>
+      <text x="110" y={circleY} textAnchor="middle" dominantBaseline="middle">{props.children}</text>
     </svg>
+  );
+}
+
+function Line({
+  x1, y1, x2, y2, strokeWidth
+}:{
+  x1?: number;
+  y1?: number;
+  x2?: number;
+  y2: number;
+  strokeWidth?: number;
+}) {
+  return (
+    <line x1={x1 || circleX} y1={y1 || 0} x2={x2 || circleX} y2={y2} strokeWidth={strokeWidth || 10}></line>
   );
 }

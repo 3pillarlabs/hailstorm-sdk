@@ -4,6 +4,7 @@ import { FormikActions } from 'formik';
 import { JMeterPropertiesMap } from './JMeterPropertiesMap';
 import { JMeterFileUploadState } from '../NewProjectWizard/domain';
 import { isUploadInProgress } from './isUploadInProgress';
+import { FormikActionsHandler } from './domain';
 
 export function JMeterFileDetail({
   setShowModal,
@@ -13,7 +14,7 @@ export function JMeterFileDetail({
 }: {
   setShowModal?: React.Dispatch<React.SetStateAction<boolean>>;
   jmeterFile: JMeterFile;
-  onSubmit?: (values: {[K: string]: any}, actions: FormikActions<{[K: string]: any}>) => void;
+  onSubmit?: FormikActionsHandler;
   headerTitle?: string;
 }) {
 

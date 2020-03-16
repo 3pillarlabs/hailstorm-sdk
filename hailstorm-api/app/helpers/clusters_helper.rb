@@ -17,9 +17,7 @@ module ClustersHelper
             end
 
     attrs[:code] = cluster_cfg.cluster_code
-    if cluster_cfg.active == false
-      attrs[:disabled] = true
-    end
+    attrs[:disabled] = true if cluster_cfg.active == false
 
     if project
       cluster = Hailstorm::Model::Cluster.where(project: project)

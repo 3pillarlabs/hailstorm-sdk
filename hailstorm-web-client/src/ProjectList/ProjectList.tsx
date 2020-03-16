@@ -160,30 +160,22 @@ export const ProjectList: React.FC = () => {
 
   return (
     <div className="container">
-    {running.length > 0 && (
-      <>
-      <h3 className="title is-3">Running now</h3>
-      <div className={`tile is-ancestor ${styles.wrap} ${styles.running}`}>
-        {running.map(projectItem)}
-      </div>
-      </>
-    )}
-    {justCompleted.length > 0 && (
-      <>
-      <h3 className="title is-3">Just completed</h3>
-      <div className={`tile is-ancestor ${styles.wrap} ${styles.justCompleted}`}>
-        {justCompleted.map(projectItem)}
-      </div>
-      </>
-    )}
-    {others.length > 0 && (
-      <>
-      <h3 className="title is-3">Others</h3>
-      <div className={`tile is-ancestor ${styles.wrap} ${styles.others}`}>
-        {others.map(projectItem)}
-      </div>
-      </>
-    )}
+      <SectionWithItems items={running} styleLabel="running" title="Running now" />
+      <SectionWithItems items={justCompleted} styleLabel="justCompleted" title="Just completed" />
+      <SectionWithItems items={others} styleLabel="others" title="Others" />
     </div>
   );
+}
+
+function SectionWithItems({items, styleLabel, title}: {items: Project[], styleLabel: string, title: string}) {
+  if (items.length === 0) return null;
+
+  return(
+    <>
+    <h3 className="title is-3">{title}</h3>
+    <div className={`tile is-ancestor ${styles.wrap} ${styles[styleLabel]}`}>
+      {items.map(projectItem)}
+    </div>
+    </>
+  )
 }

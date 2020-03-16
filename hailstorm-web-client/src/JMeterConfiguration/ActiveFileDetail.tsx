@@ -5,6 +5,7 @@ import { ApiFactory } from '../api';
 import { JMeterFileMessage } from './JMeterFileMessage';
 import { FormikActions } from 'formik';
 import { JMeterFileDetail } from './JMeterFileDetail';
+import { FormikActionsHandler } from './domain';
 
 export function ActiveFileDetail({ state, dispatch, setShowModal, setUploadAborted, disableAbort }: {
   state: NewProjectWizardState;
@@ -14,10 +15,7 @@ export function ActiveFileDetail({ state, dispatch, setShowModal, setUploadAbort
   disableAbort: boolean;
 }) {
 
-  const onSubmit: (
-    values: {[K: string]: any},
-    actions: FormikActions<{[K: string]: any}>
-  ) => void = (
+  const onSubmit: FormikActionsHandler = (
     values,
     { setSubmitting }
   ) => {

@@ -1,24 +1,22 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { AppStateContext } from '../appStateContext';
-import { JMeterSetupCompletedAction } from '../NewProjectWizard/actions';
-import { CancelLink, BackLink } from '../NewProjectWizard/WizardControls';
-import { WizardTabTypes, NewProjectWizardState } from "../NewProjectWizard/domain";
-import { JMeterPlanList } from '../JMeterPlanList';
+import { NewProjectWizardState } from "../NewProjectWizard/domain";
 import { selector } from '../NewProjectWizard/reducer';
 import styles from '../NewProjectWizard/NewProjectWizard.module.scss';
-import { FileUpload } from '../FileUpload';
-import { AddJMeterFileAction, CommitJMeterFileAction, AbortJMeterFileUploadAction, SetJMeterConfigurationAction } from './actions';
-import { MergeJMeterFileAction, SelectJMeterFileAction, RemoveJMeterFileAction, FileRemoveInProgressAction } from './actions';
+import { CommitJMeterFileAction, AbortJMeterFileUploadAction, SetJMeterConfigurationAction } from './actions';
+import { MergeJMeterFileAction, RemoveJMeterFileAction, FileRemoveInProgressAction } from './actions';
 import { ApiFactory } from '../api';
 import { SavedFile } from '../FileUpload/domain';
 import { ValidationNotice, JMeterFile } from '../domain';
-import { Modal } from '../Modal';
 import { FileServer } from '../FileUpload/fileServer';
 import { isUploadInProgress } from './isUploadInProgress';
-import { ActiveFileDetail } from './ActiveFileDetail';
 import { Loader, LoaderSize } from '../Loader/Loader';
+import { StepHeader } from './StepHeader';
+import { StepContent } from './StepContent';
+import { StepFooter } from './StepFooter';
+import { FileRemoveConfirmation } from './FileRemoveConfirmation';
 
-const UPLOAD_ABORT_ENABLE_DELAY_MS = 5000;
+export const UPLOAD_ABORT_ENABLE_DELAY_MS = 5000;
 
 export const JMeterConfiguration: React.FC = () => {
   const {appState, dispatch} = useContext(AppStateContext);
@@ -67,137 +65,23 @@ export const JMeterConfiguration: React.FC = () => {
   );
 }
 
-function StepHeader({
-  state,
-  setDisableAbort,
-  dispatch,
-  handleFileUpload,
-  setUploadAborted,
-  uploadAborted
-}: {
-  state: NewProjectWizardState;
-  setDisableAbort: React.Dispatch<React.SetStateAction<boolean>>;
-  dispatch: React.Dispatch<any>;
-  handleFileUpload: (file: SavedFile) => void;
-  setUploadAborted: React.Dispatch<React.SetStateAction<boolean>>;
-  uploadAborted: boolean;
-}) {
+export function isNextDisabled(state: NewProjectWizardState): boolean {
   return (
-    <div className={`columns ${styles.stepHeader}`}>
-      <div className="column is-10">
-        <h3 className="title is-3">{state.activeProject!.title} &mdash; JMeter</h3>
-      </div>
-      <div className="column is-2">
-        <FileUpload
-          onAccept={(file) => {
-            setDisableAbort(true);
-            const dataFile: boolean = !file.name.match(/\.jmx$/);
-            dispatch(new AddJMeterFileAction({ name: file.name, dataFile }));
-            setTimeout(() => {
-              setDisableAbort(false);
-            }, UPLOAD_ABORT_ENABLE_DELAY_MS);
-          }}
-          onFileUpload={handleFileUpload}
-          onUploadError={(file, error) => {
-            dispatch(new AbortJMeterFileUploadAction({ name: file.name, uploadError: error }));
-            setUploadAborted(false);
-            setDisableAbort(true);
-          }}
-          disabled={isUploadInProgress(state.wizardState!.activeJMeterFile)}
-          abort={uploadAborted}
-          pathPrefix={state.activeProject!.id.toString()}
-        >
-          <button
-            className="button is-link is-medium is-pulled-right"
-            title="Upload .jmx and data files (like .csv)"
-            disabled={isUploadInProgress(state.wizardState!.activeJMeterFile)}
-          >
-            Upload
-          </button>
-        </FileUpload>
-      </div>
-    </div>
+    !state.activeProject!.jmeter ||
+    state.activeProject!.jmeter.files.filter(value => !value.dataFile).length === 0 ||
+    isBackDisabled(state)
   );
 }
 
-function StepContent({
-  dispatch,
-  state,
-  setShowModal,
-  setUploadAborted,
-  disableAbort
-}: {
-  dispatch: React.Dispatch<any>;
-  state: NewProjectWizardState;
-  setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
-  setUploadAborted: React.Dispatch<React.SetStateAction<boolean>>;
-  disableAbort: boolean;
-}) {
-
+export function isBackDisabled(state: NewProjectWizardState): boolean {
   return (
-    <div className={`columns ${styles.stepContent}`}>
-      <div className="column is-two-fifths">
-        <JMeterPlanList
-          onSelect={(file) => dispatch(new SelectJMeterFileAction(file))}
-          jmeter={state.activeProject!.jmeter}
-          activeFile={state.wizardState!.activeJMeterFile}
-        />
-      </div>
-
-      <div className="column is-three-fifths">
-        <ActiveFileDetail {...{state, dispatch, setShowModal, setUploadAborted, disableAbort}} />
-      </div>
-    </div>
+    (state.wizardState!.activeJMeterFile &&
+      isUploadInProgress(state.wizardState!.activeJMeterFile)) ||
+    ((state.wizardState!.activeJMeterFile &&
+      hasUnsavedProperties(state.wizardState!.activeJMeterFile)) ||
+      (state.wizardState!.activeJMeterFile &&
+        state.wizardState!.activeJMeterFile.removeInProgress !== undefined)) === true
   );
-}
-
-function StepFooter({
-  dispatch,
-  state,
-}: {
-  dispatch: React.Dispatch<any>;
-  state: NewProjectWizardState;
-}) {
-  return (
-    <div className="level">
-      <div className="level-left">
-        <div className="level-item">
-          <CancelLink {...{dispatch}} />
-        </div>
-        <div className="level-item">
-          <BackLink
-            {...{dispatch, tab: WizardTabTypes.Project}}
-            disabled={ isBackDisabled(state) }
-          />
-        </div>
-      </div>
-      <div className="level-right">
-        <div className="level-item">
-          <button
-            className="button is-primary"
-            onClick={() => dispatch(new JMeterSetupCompletedAction())}
-            disabled={ isNextDisabled(state) }
-          >
-            Next
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function isNextDisabled(state: NewProjectWizardState): boolean {
-  return !state.activeProject!.jmeter ||
-    state.activeProject!.jmeter.files.filter((value) => !value.dataFile).length === 0 ||
-    (state.wizardState!.activeJMeterFile && isUploadInProgress(state.wizardState!.activeJMeterFile)) ||
-    (state.wizardState!.activeJMeterFile && hasUnsavedProperties(state.wizardState!.activeJMeterFile) ||
-      (state.wizardState!.activeJMeterFile && state.wizardState!.activeJMeterFile.removeInProgress !== undefined)) === true;
-}
-
-function isBackDisabled(state: NewProjectWizardState): boolean {
-  return (state.wizardState!.activeJMeterFile && isUploadInProgress(state.wizardState!.activeJMeterFile)) ||
-    (state.wizardState!.activeJMeterFile && hasUnsavedProperties(state.wizardState!.activeJMeterFile) ||
-      (state.wizardState!.activeJMeterFile && state.wizardState!.activeJMeterFile.removeInProgress !== undefined)) === true;
 }
 
 function hasUnsavedProperties(file: JMeterFile) {
@@ -207,45 +91,6 @@ function hasUnsavedProperties(file: JMeterFile) {
       value === undefined || value.toString().trim().length === 0)
     )
   )
-}
-
-function FileRemoveConfirmation({
-  showModal,
-  setShowModal,
-  handleFileRemove,
-  file,
-}: {
-  showModal: boolean;
-  setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
-  handleFileRemove: (file: JMeterFile) => void;
-  file: JMeterFile;
-}) {
-  return (
-    <Modal isActive={showModal}>
-      <div className={`modal${showModal ? " is-active" : ""}`}>
-        <div className="modal-background"></div>
-        <div className="modal-content">
-          <article className="message is-warning">
-            <div className="message-body">
-              <p>Are you sure you want to remove this file?</p>
-              <div className="field is-grouped is-grouped-centered">
-                <p className="control">
-                  <a className="button is-primary" onClick={() => setShowModal(false)}>
-                    No, keep it
-                  </a>
-                </p>
-                <p className="control">
-                  <button className="button is-danger" onClick={() => handleFileRemove(file)}>
-                    Yes, remove it
-                  </button>
-                </p>
-              </div>
-            </div>
-          </article>
-        </div>
-      </div>
-    </Modal>
-  );
 }
 
 async function destroyFile({ file, projectId, dispatch }: { file: JMeterFile; projectId: number; dispatch: React.Dispatch<any>; }) {

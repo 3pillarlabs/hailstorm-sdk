@@ -4,6 +4,14 @@ import { fetchGuard, fetchOK } from "./fetch-adapter";
 
 export type ProjectActions = 'stop' | 'abort' | 'start' | 'terminate';
 
+const projectReviver = (key: string, value: any) => {
+  if ((key === "startedAt" || key === "stoppedAt") && value !== undefined && value !== null) {
+    return new Date(value);
+  }
+
+  return value;
+};
+
 export class ProjectService {
 
   async list(): Promise<Project[]> {
@@ -11,14 +19,7 @@ export class ProjectService {
     return fetchGuard(async () => {
       const response = await fetchOK(`${environvent.apiBaseURL}/projects`);
       const body = await response.text();
-      const data: Project[] = JSON.parse(body, (key, value) => {
-        if ((key === "startedAt" || key === "stoppedAt") && value !== undefined && value !== null) {
-          return new Date(value);
-        }
-
-        return value;
-      });
-
+      const data: Project[] = JSON.parse(body, projectReviver);
       return data;
     });
   }
@@ -28,14 +29,7 @@ export class ProjectService {
     return fetchGuard(async () => {
       const response = await fetchOK(`${environvent.apiBaseURL}/projects/${id}`);
       const body = await response.text();
-      const data: Project = JSON.parse(body, (key, value) => {
-        if ((key === "startedAt" || key === "stoppedAt") && value !== undefined && value !== null) {
-          return new Date(value);
-        }
-
-        return value;
-      });
-
+      const data: Project = JSON.parse(body, projectReviver);
       return data;
     });
   }

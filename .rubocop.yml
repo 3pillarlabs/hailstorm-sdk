@@ -72,3 +72,7 @@ Metrics/ModuleLength:
 
 Performance/Caller:
   Enabled: false
+
+Security/YAMLLoad:
+  Enabled: false # safe_load is not as versatile as load
+

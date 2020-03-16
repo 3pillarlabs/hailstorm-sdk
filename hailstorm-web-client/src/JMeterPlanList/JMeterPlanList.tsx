@@ -1,5 +1,6 @@
 import React from 'react';
 import { JMeter, JMeterFile } from '../domain';
+import { EmptyPanel } from '../EmptyPanel';
 
 export interface JMeterPlanListProps {
   showEdit?: boolean;
@@ -79,11 +80,5 @@ function renderPlanList(
 }
 
 function renderEmptyList(): React.ReactNode {
-  return (
-    <>
-    <div className="panel-block"></div>
-    <div className="panel-block"></div>
-    <div className="panel-block"></div>
-    </>
-  )
+  return (<EmptyPanel />);
 }

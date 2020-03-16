@@ -529,7 +529,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
         yield @jmeter_plan_io
       else
         Hailstorm.workspace(self.project.project_code).open_app_file(self.test_plan_name) do |io|
-          block.call(io)
+          yield io
         end
       end
     end
