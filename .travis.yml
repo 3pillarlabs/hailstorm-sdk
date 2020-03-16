@@ -12,7 +12,8 @@ stages:
   - name: test
     if: branch NOT IN (master, develop)
   - name: coverage
-    if: branch = develop AND type = pull_request
+    # if: branch = develop AND type = pull_request
+    if: branch = develop
 
 jobs:
   include:
