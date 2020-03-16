@@ -2,26 +2,35 @@ import { ProjectBarActions, ProjectBarActionTypes } from "./actions";
 import { Project } from "../domain";
 
 export function reducer(state: Project[], action: ProjectBarActions): Project[] {
+  let nextState: Project[];
   switch (action.type) {
     case ProjectBarActionTypes.SetRunningProjects:
-      return action.payload;
+      nextState = action.payload;
+      break;
 
     case ProjectBarActionTypes.AddRunningProject:
-      return [...state, action.payload];
+      nextState = [...state, action.payload];
+      break;
 
     case ProjectBarActionTypes.RemoveNotRunningProject:
-      return state.filter((p) => p.id !== action.payload.id);
+      nextState = state.filter((p) => p.id !== action.payload.id);
+      break;
 
     case ProjectBarActionTypes.ModifyRunningProject: {
       const match = state.find((p) => p.id === action.payload.projectId);
       if (match) {
-        return [...state.filter((p) => p.id !== match.id), {...match, ...action.payload.attrs}];
+        nextState = [...state.filter((p) => p.id !== match.id), {...match, ...action.payload.attrs}];
       } else {
-        return state;
+        nextState = state;
       }
+
+      break;
     }
 
     default:
-      return state;
+      nextState = state;
+      break;
   }
+
+  return nextState;
 }

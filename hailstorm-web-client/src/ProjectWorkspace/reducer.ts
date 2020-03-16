@@ -8,25 +8,33 @@ export const reducer: (
   state,
   action
 ) => {
+  let nextState: Project | undefined;
   switch (action.type) {
     case ProjectWorkspaceActionTypes.SetProject:
-      return action.payload;
+      nextState = action.payload;
+      break;
 
     case ProjectWorkspaceActionTypes.SetRunning:
-      return {...state!, running: action.payload};
+      nextState = {...state!, running: action.payload};
+      break;
 
     case ProjectWorkspaceActionTypes.SetInterimState:
-      return {...state!, interimState: action.payload};
+      nextState = {...state!, interimState: action.payload};
+      break;
 
     case ProjectWorkspaceActionTypes.UnsetInterimState:
-      const next = {...state!};
-      delete next.interimState;
-      return next;
+      nextState = {...state!};
+      delete nextState.interimState;
+      break;
 
     case ProjectWorkspaceActionTypes.UpdateProject:
-      return {...state!, ...action.payload};
+      nextState = {...state!, ...action.payload};
+      break;
 
     default:
-      return state;
+      nextState = state;
+      break;
   }
+
+  return nextState;
 };
