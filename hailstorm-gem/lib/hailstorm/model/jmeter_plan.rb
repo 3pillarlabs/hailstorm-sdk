@@ -524,7 +524,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     attr_writer :jmeter_plan_io
 
     # @return [IO]
-    def jmeter_plan_io(&block)
+    def jmeter_plan_io
       if @jmeter_plan_io
         yield @jmeter_plan_io
       else
