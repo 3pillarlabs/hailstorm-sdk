@@ -1,0 +1,10 @@
+.git
+.idea
+coverage
+node_modules
+public
+src
+.editorconfig
+.gitignore
+issues.md
+README.md

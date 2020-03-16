@@ -53,3 +53,14 @@ Welcome to the Hailstorm (version 4.0.0) shell.
 Type help to get started...
 hs >
 ```
+
+## Web UI
+
+```bash
+make
+docker-compose up
+```
+
+Open browser to [http://localhost:8080](http://localhost:8080).
+
+

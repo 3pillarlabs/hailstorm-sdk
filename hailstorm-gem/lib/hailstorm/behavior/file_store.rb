@@ -8,6 +8,7 @@ module Hailstorm::Behavior::FileStore
   #
   # @param [String] _project_code
   # @param [String] _local_path
+  # @return [String] URI to exported resource
   def export_report(_project_code, _local_path)
     raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
@@ -19,7 +20,7 @@ module Hailstorm::Behavior::FileStore
     # application directory.
     #
     # @param [String] _project_code
-    # @return [String] Array of names.
+    # @return [Array<String>] Array of names.
     def fetch_jmeter_plans(_project_code)
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
@@ -35,6 +36,12 @@ module Hailstorm::Behavior::FileStore
     # @param [String] _to_path absolute path to local filesystem
     def transfer_jmeter_artifacts(_project_code, _to_path)
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
+    end
+
+    # Override this file if the file_path to a test plan or data file should be altered
+    # before persistence. The default is to not make any modifications.
+    def normalize_file_path(file_path)
+      file_path
     end
   end
 

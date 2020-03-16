@@ -7,7 +7,8 @@ module ClientStatsHelper
     execution_cycle = Hailstorm::Model::ExecutionCycle.create!(project: project,
                                                                status: :stopped,
                                                                started_at: Time.now,
-                                                               stopped_at: Time.now + 15.minutes)
+                                                               stopped_at: Time.now + 15.minutes,
+                                                               threads_count: 100)
     jmeter_plan = Hailstorm::Model::JmeterPlan.create!(project: project,
                                                        test_plan_name: 'priming',
                                                        content_hash: 'A',

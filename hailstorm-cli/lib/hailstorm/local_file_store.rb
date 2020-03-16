@@ -10,11 +10,11 @@ class Hailstorm::LocalFileStore
   def fetch_jmeter_plans(_project_code)
     file_prefix = File.join(Hailstorm.root, Hailstorm.app_dir).concat(File::SEPARATOR)
     Dir[File.join(Hailstorm.root, Hailstorm.app_dir, '**', '*.jmx')]
-      .map { |n| n.split(file_prefix).last.gsub(/\.jmx$/, '') }
+      .map { |n| File.strip_ext(n.split(file_prefix).last) }
   end
 
   # pick app sub-directories
-  def app_dir_tree
+  def app_dir_tree(_project_code = nil)
     tree_dir(File.join(Hailstorm.root, Hailstorm.app_dir))
   end
 
@@ -104,13 +104,17 @@ class Hailstorm::LocalFileStore
 
   def copy_jtl(_project_code, from_path:, to_path:)
     file_name = File.basename(from_path)
-    FileUtils.cp(from_path, File.join(to_path, file_name))
+    copied_path = File.join(to_path, file_name)
+    FileUtils.cp(from_path, copied_path)
+    copied_path
   end
 
   def export_report(_project_code, local_path)
     file_name = File.basename(local_path)
     export_path = File.join(Hailstorm.root, Hailstorm.reports_dir)
-    FileUtils.cp(local_path, File.join(export_path, file_name))
+    to_path = File.join(export_path, file_name)
+    FileUtils.cp(local_path, to_path)
     logger.info { "Report generated to: #{export_path}" }
+    "file://#{to_path}"
   end
 end

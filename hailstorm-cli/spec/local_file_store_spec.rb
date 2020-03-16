@@ -48,17 +48,17 @@ describe Hailstorm::LocalFileStore do
       FileUtils.mkdir_p("#{app_path}/a/b/d/f")
       FileUtils.mkdir_p("#{app_path}/a/c/g")
       key = Hailstorm.app_dir
-      structure = {
-        key => {
-          a: {
-            b: {
-              d: { e: nil, f: nil }
-            },
-            c: { g: nil }
-          }
+      structure = {}
+      structure[key] = {
+        a: {
+          b: {
+            d: { e: nil, f: nil }
+          },
+          c: { g: nil }
         }
-      }.deep_stringify_keys
+      }
 
+      structure.deep_stringify_keys!
       expect(local_fs.app_dir_tree).to eq(structure)
       expect(local_fs.tree_dir("#{app_path}/a")).to eq(structure[key])
       expect(local_fs.tree_dir("#{app_path}/a/b")).to eq({'b' => structure[key]['a']['b']})
@@ -116,7 +116,7 @@ describe Hailstorm::LocalFileStore do
       end
     end
   end
-  
+
   context '#read_identity_file' do
     it 'should open an absolute path' do
       FileUtils.mkdir_p(Hailstorm.tmp_path)
@@ -136,11 +136,11 @@ describe Hailstorm::LocalFileStore do
       expect(file_objects).to_not be_empty
     end
   end
-  
+
   context '#copy_jtl' do
     it 'should copy the file to destination' do
       FileUtils.should_receive(:cp).with('/foo/bar.jtl', '/baz/bar.jtl')
-      local_fs.copy_jtl('any', from_path: '/foo/bar.jtl', to_path: '/baz')
+      expect(local_fs.copy_jtl('any', from_path: '/foo/bar.jtl', to_path: '/baz')).to eq('/baz/bar.jtl')
     end
   end
 

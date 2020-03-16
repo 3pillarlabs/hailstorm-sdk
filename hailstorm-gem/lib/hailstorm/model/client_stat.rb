@@ -39,7 +39,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   # @param [Hailstorm::Behavior::Clusterable] cluster_instance
   def self.collect_client_stats(execution_cycle, cluster_instance)
     logger.debug { "#{self.class}.#{__method__}" }
-    jmeter_plan_results_map = fetch_results(cluster_instance)
+    jmeter_plan_results_map = fetch_results(execution_cycle, cluster_instance)
     jmeter_plan_results_map.keys.sort.each do |jmeter_plan_id|
       stat_file_paths = jmeter_plan_results_map[jmeter_plan_id]
       self.create_client_stat(execution_cycle, jmeter_plan_id, cluster_instance, stat_file_paths)
@@ -47,14 +47,15 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     end
   end
 
+  # @param [Hailstorm::Model::ExecutionCycle] execution_cycle
   # @param [Hailstorm::Behavior::Clusterable] cluster_instance
-  def self.fetch_results(cluster_instance)
+  def self.fetch_results(execution_cycle, cluster_instance)
     jmeter_plan_results_map = Hash.new { |h, k| h[k] = [] }
     result_mutex = Mutex.new
     local_log_path = Hailstorm.workspace(cluster_instance.project.project_code).tmp_path
 
     self.visit_collection(cluster_instance.master_agents.where(active: true).all) do |master|
-      result_file_name = master.result_for(self, local_log_path)
+      result_file_name = master.result_for(execution_cycle, local_log_path)
       result_file_path = File.join(local_log_path, result_file_name)
       result_mutex.synchronize do
         jmeter_plan_results_map[master.jmeter_plan_id].push(result_file_path)

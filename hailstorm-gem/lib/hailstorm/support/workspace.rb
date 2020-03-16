@@ -8,7 +8,6 @@ class Hailstorm::Support::Workspace
   ROOT_DIR = '.hailstorm'.freeze
   WORKSPACE_DIR = 'workspace'.freeze
   KEYS_DIR = 'keys'.freeze
-  APP_DIR = 'app'.freeze
   TMP_DIR = 'tmp'.freeze
 
   # @return [String]
@@ -17,7 +16,6 @@ class Hailstorm::Support::Workspace
   # @param [String] project_code
   def initialize(project_code)
     @project_code = project_code
-    create_file_layout
   end
 
   # @param [String] file_name
@@ -53,7 +51,7 @@ class Hailstorm::Support::Workspace
 
   # @return [String] path to app
   def app_path
-    @app_path ||= workspace_dir_path(APP_DIR)
+    @app_path ||= workspace_dir_path(Hailstorm.app_dir)
   end
 
   # If a block is given, yield the IO instance associated with the app file,
@@ -76,7 +74,7 @@ class Hailstorm::Support::Workspace
   def workspace_path
     @workspace_path ||= File.join(user_home,
                                   ROOT_DIR,
-                                  WORKSPACE_DIR, "#{self.project_code}-#{Thread.current.object_id}")
+                                  WORKSPACE_DIR, self.project_code)
   end
 
   # @return [String]
@@ -91,7 +89,7 @@ class Hailstorm::Support::Workspace
   def make_tmp_dir(dir_name)
     path_to_make = File.join(tmp_path, dir_name)
     FileUtils.rm_rf(path_to_make)
-    FileUtils.mkdir(path_to_make)
+    FileUtils.mkdir_p(path_to_make)
     path_to_make
   end
 
@@ -100,13 +98,21 @@ class Hailstorm::Support::Workspace
     Dir[File.join(app_path, '**', '*')]
   end
 
-  private
+  def purge
+    [KEYS_DIR, Hailstorm.app_dir, TMP_DIR].each do |dir|
+      FileUtils.rm_rf(workspace_dir_path(dir))
+    end
+
+    create_file_layout
+  end
 
   def create_file_layout
-    [KEYS_DIR, APP_DIR, TMP_DIR].each do |dir|
+    [KEYS_DIR, Hailstorm.app_dir, TMP_DIR].each do |dir|
       FileUtils.mkdir_p(workspace_dir_path(dir))
     end
   end
+
+  private
 
   def workspace_dir_path(dir)
     File.join(workspace_path, dir)

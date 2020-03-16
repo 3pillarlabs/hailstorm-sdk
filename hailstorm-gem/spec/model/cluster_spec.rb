@@ -50,6 +50,7 @@ def clusterables_stub!
     before_destroy_load_agent
     after_destroy_load_agent
     purge
+    assign_vpc_subnet
   ]
 
   methods.each do |m|
@@ -173,6 +174,29 @@ describe Hailstorm::Model::Cluster do
         expect(Hailstorm::Model::Cluster.where(project_id: @project.id).count).to eql(2)
       end
     end
+    context 'reconfiguration with mutable properties' do
+      it 'should not create duplicate clusters' do
+        clusterables_stub!
+        config = Hailstorm::Support::Configuration.new
+        config.clusters(:amazon_cloud) do |aws|
+          aws.access_key = 'key-1'
+          aws.secret_key = 'secret-1'
+          aws.region = 'us-east-1'
+        end
+
+        Hailstorm::Model::Cluster.configure_all(@project, config)
+
+        config.clusters(:amazon_cloud) do |aws|
+          aws.access_key = 'key-1'
+          aws.secret_key = 'secret-1'
+          aws.region = 'us-east-1'
+          aws.max_threads_per_agent = 500
+        end
+
+        Hailstorm::Model::Cluster.configure_all(@project, config)
+        expect(@project.reload.clusters.count).to be == 1
+      end
+    end
   end
 
   context '#configure' do
@@ -218,16 +242,24 @@ describe Hailstorm::Model::Cluster do
       clusterables_stub!
     end
     context 'without master_slave setup' do
-      it 'should generate load on all clusters' do
+      it 'should generate load on all active clusters' do
+        @config.clusters(:data_center) do |dc|
+          dc.machines = %w[B]
+          dc.user_name = 'bob'
+          dc.ssh_identity = 'identity-1'
+          dc.title = 'DC-B'
+          dc.active = false
+        end
+
         Hailstorm::Model::Cluster.configure_all(@project, @config)
         @project.build_current_execution_cycle.save!
         @project.current_execution_cycle.started!
         cluster_instances = Hailstorm::Model::Cluster.generate_all_load(@project)
-        expect(cluster_instances.length).to eql(@config.clusters.length)
+        expect(cluster_instances.length).to eql(@config.clusters.length - 1)
       end
     end
     context 'with master_slave setup' do
-      it 'should generate load on all clusters' do
+      it 'should generate load on all active clusters' do
         @project.update_column(:master_slave_mode, true)
         Hailstorm::Model::Cluster.configure_all(@project, @config)
         @project.build_current_execution_cycle.save!
@@ -268,7 +300,7 @@ describe Hailstorm::Model::Cluster do
   end
 
   context '.stop_load_generation' do
-    it 'should stop load generation on all clusters' do
+    it 'should stop load generation on all active clusters' do
       config = Hailstorm::Support::Configuration.new
       config.clusters(:amazon_cloud) do |aws|
         aws.access_key = 'key-1'
@@ -276,6 +308,14 @@ describe Hailstorm::Model::Cluster do
         aws.region = 'us-east-1'
         aws.active = true
       end
+
+      config.clusters(:amazon_cloud) do |aws|
+        aws.access_key = 'key-2'
+        aws.secret_key = 'secret-2'
+        aws.region = 'us-west-1'
+        aws.active = false
+      end
+
       config.clusters(:data_center) do |dc|
         dc.machines = %w[A]
         dc.user_name = 'alice'
@@ -293,7 +333,7 @@ describe Hailstorm::Model::Cluster do
       Hailstorm::Model::Cluster.generate_all_load(@project)
 
       cluster_instances = Hailstorm::Model::Cluster.stop_load_generation(@project)
-      expect(cluster_instances.size).to be == config.clusters.size
+      expect(cluster_instances.size).to eq(config.clusters.size - 1)
     end
 
     context 'fail on a cluster' do
@@ -396,6 +436,25 @@ describe Hailstorm::Model::Cluster do
       Hailstorm::Model::Cluster.first.destroy!
       expect(Hailstorm::Model::AmazonCloud.count).to be_zero
     end
+
+    it 'should not raise if record not found' do
+      config = Hailstorm::Support::Configuration.new
+      config.clusters(:amazon_cloud) do |aws|
+        aws.access_key = 'key-1'
+        aws.secret_key = 'secret-1'
+        aws.region = 'us-east-1'
+        aws.active = true
+      end
+
+      clusterables_stub!
+      Hailstorm::Model::AmazonCloud
+        .any_instance
+        .stub(:destroy!)
+        .and_raise(ActiveRecord::RecordNotFound, 'mock not found error')
+
+      Hailstorm::Model::Cluster.configure_all(@project, config)
+      expect { Hailstorm::Model::Cluster.first.destroy! }.to_not raise_error
+    end
   end
 
   context '#cluster_instance' do
@@ -439,7 +498,7 @@ describe Hailstorm::Model::Cluster do
         clusterable.start_master_process
       end
     end
-    
+
     context '#stop_master_process' do
       it 'should stop jmeter on all master agents' do
         clusterable = Hailstorm::Model::DataCenter.new

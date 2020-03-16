@@ -1,0 +1,11 @@
+@import "~bulma/sass/utilities/_all.sass";
+
+.button {
+  i {
+    margin-left: 0.3rem;
+  }
+}
+
+.pressedState {
+  background-color: $grey-light !important;
+}

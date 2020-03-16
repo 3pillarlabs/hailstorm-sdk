@@ -19,7 +19,7 @@ describe Hailstorm::Model::DataCenter do
 
   it 'should not be valid without an existing ssh_identity' do
     dc = Hailstorm::Model::DataCenter.new(ssh_identity: 'hacker', active: true, machines: ['172.17.0.2'])
-    dc.project = Hailstorm::Model::Project.new(project_code: 'data_center_spec')
+    dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec')
     dc.stub!(:transfer_identity_file).and_raise(Errno::ENOENT, 'mock error')
     expect(dc).to_not be_valid
     expect(dc.errors).to include(:ssh_identity)
@@ -29,7 +29,7 @@ describe Hailstorm::Model::DataCenter do
     mock_hailstorm_fs
     attrs = { user_name: 'jack', ssh_identity: 'jack' }
     dc = Hailstorm::Model::DataCenter.new(attrs)
-    dc.project = Hailstorm::Model::Project.new(project_code: 'data_center_spec')
+    dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec')
     dc.valid?
     expect(dc.errors).to include(:machines)
   end
@@ -56,7 +56,7 @@ describe Hailstorm::Model::DataCenter do
       ssh.stub!(:exec!) { '/usr/bin/java' }
       Hailstorm::Support::SSH.stub!(:start).and_yield(ssh)
       dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack')
-      dc.project = Hailstorm::Model::Project.new(project_code: 'data_center_spec')
+      dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec')
       expect(dc.send(:java_installed?, Hailstorm::Model::MasterAgent.new)).to be_true
     end
     it 'should be false when Java is not installed' do
@@ -64,7 +64,7 @@ describe Hailstorm::Model::DataCenter do
       ssh.stub!(:exec!) { nil }
       Hailstorm::Support::SSH.stub!(:start).and_yield(ssh)
       dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack')
-      dc.project = Hailstorm::Model::Project.new(project_code: 'data_center_spec')
+      dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec')
       expect(dc.send(:java_installed?, Hailstorm::Model::MasterAgent.new)).to be_false
     end
   end
@@ -81,7 +81,7 @@ describe Hailstorm::Model::DataCenter do
       end
       Hailstorm::Support::SSH.stub!(:start).and_yield(ssh)
       dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack')
-      dc.project = Hailstorm::Model::Project.new(project_code: 'data_center_spec')
+      dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec')
       expect(dc.send(:java_version_ok?, Hailstorm::Model::MasterAgent.new)).to be_true
     end
     it 'should be false if version of Java is not correct' do
@@ -95,7 +95,7 @@ describe Hailstorm::Model::DataCenter do
       end
       Hailstorm::Support::SSH.stub!(:start).and_yield(ssh)
       dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack')
-      dc.project = Hailstorm::Model::Project.new(project_code: 'data_center_spec')
+      dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec')
       expect(dc.send(:java_version_ok?, Hailstorm::Model::MasterAgent.new)).to be_false
     end
   end
@@ -106,7 +106,7 @@ describe Hailstorm::Model::DataCenter do
       ssh.stub!(:exec!).and_yield(nil, :stdout, '/home/ubuntu/jmeter')
       Hailstorm::Support::SSH.stub!(:start).and_yield(ssh)
       dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack')
-      dc.project = Hailstorm::Model::Project.new(project_code: 'data_center_spec')
+      dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec')
       expect(dc.send(:jmeter_installed?, Hailstorm::Model::MasterAgent.new)).to be_true
     end
     it 'should be false when JMeter is not installed' do
@@ -114,7 +114,7 @@ describe Hailstorm::Model::DataCenter do
       ssh.stub!(:exec!).and_yield(nil, :stderr, 'ls: cannot access /home/darwin: No such file or directory')
       Hailstorm::Support::SSH.stub!(:start).and_yield(ssh)
       dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack')
-      dc.project = Hailstorm::Model::Project.new(project_code: 'data_center_spec')
+      dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec')
       expect(dc.send(:jmeter_installed?, Hailstorm::Model::MasterAgent.new)).to be_false
     end
   end
@@ -158,7 +158,7 @@ describe Hailstorm::Model::DataCenter do
     context 'standard SSH port' do
       before(:each) do
         @dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack')
-        @dc.project = Hailstorm::Model::Project.new(project_code: 'data_center_spec')
+        @dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec')
       end
       it 'should have :keys' do
         expect(@dc.ssh_options).to include(:keys)
@@ -171,7 +171,7 @@ describe Hailstorm::Model::DataCenter do
       before(:each) do
         @dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack',
                                                ssh_port: 8022)
-        @dc.project = Hailstorm::Model::Project.new(project_code: 'data_center_spec')
+        @dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec')
       end
       it 'should have :keys' do
         expect(@dc.ssh_options).to include(:keys)

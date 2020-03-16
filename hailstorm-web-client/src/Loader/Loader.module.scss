@@ -1,0 +1,16 @@
+$sizes: 1rem 2rem 4rem 8rem 16rem;
+
+.appLoader {
+  font-size: 12rem;
+  width: nth($list: $sizes, $n: 5);
+  height: nth($list: $sizes, $n: 5);
+  margin: auto;
+  text-align: center;
+  margin-top: 25vh;
+}
+
+.tinyLoader {
+  width: nth($list: $sizes, $n: 1);
+  height: nth($list: $sizes, $n: 1);
+  margin: auto;
+}

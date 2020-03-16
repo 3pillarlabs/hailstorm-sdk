@@ -129,10 +129,20 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     end
 
     def find_clusterable_by_attrs(cluster_config)
-      cluster_attributes = cluster_config.instance_values.symbolize_keys.except(:cluster_type, :cluster_code, :active)
+      cluster_attributes = cluster_config.instance_values.symbolize_keys.except(
+        :cluster_type,
+        :cluster_code,
+        :active,
+        :max_threads_per_agent
+      )
+
       cluster_attributes[:project_id] = self.project.id
       clusterable = cluster_klass.where(cluster_attributes).first_or_initialize
       clusterable.active = cluster_config.active
+      if cluster_config.respond_to?(:max_threads_per_agent)
+        clusterable.max_threads_per_agent = cluster_config.max_threads_per_agent
+      end
+
       clusterable
     end
 
@@ -154,6 +164,8 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   # start load generation on clusters of a specific cluster_type
   def generate_load(redeploy = false)
     logger.debug { "#{self.class}##{__method__}" }
+    return nil unless cluster_instance.active?
+
     cluster_instance.before_generate_load
     cluster_instance.start_slave_process(redeploy) if self.project.master_slave_mode?
     cluster_instance.start_master_process(redeploy)
@@ -169,12 +181,15 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     cluster_instances = []
     self.visit_collection(project.clusters.all) do |c|
       ci = c.generate_load(redeploy)
-      mutex.synchronize { cluster_instances.push(ci) }
+      mutex.synchronize { cluster_instances.push(ci) } if ci
     end
     cluster_instances
   end
 
   def stop_load_generation(wait = false, options = nil, aborted = false)
+    logger.debug { "#{self.class}.#{__method__}" }
+    return nil unless cluster_instance.active?
+
     cluster_instance.before_stop_load_generation
     cluster_instance.stop_master_process(wait, aborted)
     logger.info "Load generation stopped at #{cluster_instance.slug}"
@@ -193,7 +208,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     cluster_instances = []
     self.visit_collection(project.clusters.all) do |c|
       ci = c.stop_load_generation(wait, options, aborted)
-      mutex.synchronize { cluster_instances.push(ci) }
+      mutex.synchronize { cluster_instances.push(ci) } if ci
     end
 
     # check if load generation is not stopped on any load agent and raise
@@ -229,6 +244,8 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
 
   def destroy_clusterable
     cluster_instance.destroy! unless cluster_instance.new_record?
+  rescue ActiveRecord::RecordNotFound => e
+    logger.warn(e.message)
   end
 
   def purge

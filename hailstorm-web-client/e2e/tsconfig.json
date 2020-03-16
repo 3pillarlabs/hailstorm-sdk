@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES5",
+    "baseUrl": ".",
+    "paths": {
+      "*": [
+        "./*"
+      ],
+      "src/*": [
+        "./src/*"
+      ]
+    },
+    "types": [
+      "node",
+      "@wdio/sync"
+    ],
+    "esModuleInterop": true
+  },
+  "include": [
+    "./features/**/*.ts"
+  ]
+}

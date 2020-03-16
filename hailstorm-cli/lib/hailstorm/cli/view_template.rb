@@ -20,6 +20,8 @@ class Hailstorm::Cli::ViewTemplate
   def render_load_agents(enumerable, only_active = true)
     clustered_load_agents = []
     enumerable.each do |cluster|
+      next if only_active && !cluster.cluster_instance.active
+
       clustered_load_agents.push(clusterable_to_view_model(cluster, only_active))
     end
     render_view('cluster', clustered_load_agents: clustered_load_agents, only_active: only_active)
@@ -80,7 +82,7 @@ class Hailstorm::Cli::ViewTemplate
   def exec_cycle_to_attrs(execution_cycle)
     {
       execution_cycle_id: execution_cycle.id,
-      total_threads_count: execution_cycle.total_threads_count,
+      total_threads_count: execution_cycle.threads_count,
       avg_90_percentile: execution_cycle.avg_90_percentile,
       avg_tps: execution_cycle.avg_tps.round(2),
       started_at: execution_cycle.formatted_started_at,

@@ -23,6 +23,7 @@ AllCops:
     - 'hailstorm-cli/spec/**/*'
     - 'hailstorm-cli/templates/**/*'
     - 'hailstorm-cli/build/**/*'
+    - 'hailstorm-api/spec/**/*'
 
 Lint/RescueException:
   Enabled: false
@@ -51,6 +52,9 @@ Style/RegexpLiteral:
 Style/ExpandPathArguments:
   Enabled: false
 
+Style/MixinUsage:
+  Enabled: false
+
 Metrics/LineLength:
   Max: 120
 
@@ -68,3 +72,7 @@ Metrics/ModuleLength:
 
 Performance/Caller:
   Enabled: false
+
+Security/YAMLLoad:
+  Enabled: false # safe_load is not as versatile as load
+

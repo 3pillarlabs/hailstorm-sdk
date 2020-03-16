@@ -1,10 +1,32 @@
-require 'rubygems'
 require 'bundler/setup'
-require 'simplecov'
+require 'active_support/all'
+require 'cucumber/rspec/doubles'
 
-$LOAD_PATH.push(File.expand_path('../../lib', __FILE__))
-$CLASSPATH << File.expand_path('../../data', __FILE__)
-ENV['HAILSTORM_ENV'] = 'cucumber'
+BUILD_PATH = File.join(File.expand_path('../../..', __FILE__), 'build', 'integration').freeze
+FileUtils.rm_rf(BUILD_PATH)
+FileUtils.mkdir_p(BUILD_PATH)
 
-require 'hailstorm/initializer'
-require 'hailstorm/initializer/eager_load'
+ENV['HAILSTORM_ENV'] = 'cli_integration' unless ENV['HAILSTORM_ENV']
+
+require 'active_record'
+require 'active_record/base'
+
+connection_spec = {
+  adapter:  'jdbcmysql',
+  database: "hailstorm_#{ENV['HAILSTORM_ENV']}",
+  username: 'hailstorm_dev',
+  password: 'hailstorm_dev'
+}
+
+ActiveRecord::Base.establish_connection(connection_spec)
+begin
+  ActiveRecord::Base.connection.drop_database(connection_spec[:database]) rescue false
+ensure
+  ActiveRecord::Base.establish_connection(connection_spec.merge(database: nil))
+  ActiveRecord::Base.connection.create_database(connection_spec[:database])
+  ActiveRecord::Base.connection.disconnect!
+end
+
+def build_path
+  BUILD_PATH
+end

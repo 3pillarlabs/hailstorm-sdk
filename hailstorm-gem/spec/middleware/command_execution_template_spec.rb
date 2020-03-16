@@ -34,7 +34,7 @@ describe Hailstorm::Middleware::CommandExecutionTemplate do
 
     context 'with extract_last == true' do
       before(:each) do
-        r1 = { id: 3, total_threads_count: 100, avg_90_percentile: 1300.43, avg_tps: 2000.345,
+        r1 = { id: 3, threads_count: 100, avg_90_percentile: 1300.43, avg_tps: 2000.345,
                formatted_started_at: '2018-01-01 14:10:00', formatted_stopped_at: '2018-01-01 14:25:00' }
         r2 = r1.clone
         r2[:id] = 4

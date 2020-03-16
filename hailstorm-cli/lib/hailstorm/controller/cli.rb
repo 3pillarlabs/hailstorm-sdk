@@ -6,6 +6,7 @@ require 'hailstorm/version'
 require 'hailstorm/exceptions'
 require 'hailstorm/cli/cmd_history'
 require 'hailstorm/cli/cmd_executor'
+require 'hailstorm/local_file_store'
 
 # CLI controller
 class Hailstorm::Controller::Cli
@@ -24,6 +25,7 @@ class Hailstorm::Controller::Cli
     self.exit_command_counter = 0
     self.prompt = 'hs > '
     @shell_binding_ctx = FreeShell.new.binding_context
+    Hailstorm.fs = Hailstorm::LocalFileStore.new
   end
 
   def current_project
@@ -50,6 +52,7 @@ Type help to get started...
       middleware.load_config
       current_project.settings_modified = true
       current_project.serial_version = current_serial_version
+      cmd_executor.refresh_config
     end
     post_process(cmd_executor.interpret_execute(args))
   rescue StandardError => error
@@ -82,16 +85,10 @@ Type help to get started...
 
   def post_process(method_name)
     handle_exit(method_name) if %i[quit exit].include?(method_name)
-    modify_prompt_on(method_name)
-  end
+    return unless current_project.destroyed?
 
-  def modify_prompt_on(method_name)
-    case method_name
-    when :start
-      self.prompt.gsub!(/\s$/, '*  ')
-    when :stop, :abort
-      self.prompt.gsub!(/\*\s{2}$/, ' ')
-    end
+    @current_project = nil
+    cmd_executor.project = current_project
   end
 
   def handle_unknown_command(instr)
@@ -116,7 +113,7 @@ Type help to get started...
 
     # for IRB like shell, save state for later execution
     while self.exit_command_counter >= 0
-      command_line = Readline.readline(self.prompt, true)
+      command_line = Readline.readline(enhanced_prompt, true)
 
       # process EOF (Control+D)
       handle_exit if command_line.nil?
@@ -131,6 +128,14 @@ Type help to get started...
 
       process_cmd_line(command_line)
       cmd_history.save_history(command_line)
+    end
+  end
+
+  def enhanced_prompt
+    if self.current_project && self.current_project.current_execution_cycle
+      self.prompt.gsub(/\s$/, '*  ')
+    else
+      self.prompt
     end
   end
 

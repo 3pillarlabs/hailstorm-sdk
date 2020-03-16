@@ -22,6 +22,15 @@ describe Hailstorm::Model::Project do
         expect(project.project_code).to be == 'z_x_a_0b_c_txt'
       end
     end
+
+    context 'with :custom_jmeter_installer_url' do
+      it 'should extract the JMeter version' do
+        project = Hailstorm::Model::Project.new(project_code: 'project_spec',
+                                                custom_jmeter_installer_url: 'http://whodunit.org/my-jmeter-3.2_rhode.tgz')
+        project.save!
+        expect(project.jmeter_version).to eq '3.2_rhode'
+      end
+    end
   end
 
   context '#setup' do
@@ -161,7 +170,7 @@ describe Hailstorm::Model::Project do
         project.stub!(:settings_modified?).and_return(true)
         project.stub!(:setup).and_raise(Hailstorm::Exception)
         expect { project.start(config: @mock_config) }.to raise_error(Hailstorm::Exception)
-        expect(project.current_execution_cycle.status.to_sym).to be == :aborted
+        expect(project.execution_cycles.order(started_at: :desc).first.status.to_sym).to be == :aborted
       end
 
       it 'should raise error if target monitoring or load generation fails' do
@@ -170,7 +179,7 @@ describe Hailstorm::Model::Project do
         Hailstorm::Model::TargetHost.stub!(:monitor_all).and_raise(Hailstorm::Exception)
         Hailstorm::Model::Cluster.stub!(:generate_all_load).and_raise(Hailstorm::Exception)
         expect { project.start(config: @mock_config) }.to raise_error(Hailstorm::Exception)
-        expect(project.current_execution_cycle.status.to_sym).to be == :aborted
+        expect(project.execution_cycles.order(started_at: :desc).first.status.to_sym).to be == :aborted
       end
     end
   end
@@ -192,26 +201,42 @@ describe Hailstorm::Model::Project do
     context 'current_execution_cycle exists' do
       it 'should stop load generation and target monitoring' do
         project = Hailstorm::Model::Project.new(project_code: 'project_spec')
-        Hailstorm::Model::ExecutionCycle.create!(project: project,
-                                                 status: :started,
-                                                 started_at: Time.now - 30.minutes)
+        execution_cycle = Hailstorm::Model::ExecutionCycle.create!(project: project,
+                                                                   status: :started,
+                                                                   started_at: Time.now - 30.minutes)
         Hailstorm::Model::Cluster.should_receive(:stop_load_generation)
         Hailstorm::Model::TargetHost.should_receive(:stop_all_monitoring)
         project.stop
-        expect(project.current_execution_cycle.status.to_sym).to be == :stopped
+        execution_cycle.reload
+        expect(execution_cycle.status.to_sym).to be == :stopped
       end
 
       it 'should ensure to stop target monitoring if stopping load generation failed' do
         project = Hailstorm::Model::Project.new(project_code: 'project_spec')
-        Hailstorm::Model::ExecutionCycle.create!(project: project,
-                                                 status: :started,
-                                                 started_at: Time.now - 30.minutes)
+        execution_cycle = Hailstorm::Model::ExecutionCycle.create!(project: project,
+                                                                   status: :started,
+                                                                   started_at: Time.now - 30.minutes)
         Hailstorm::Model::Cluster.stub!(:stop_load_generation).and_raise(Hailstorm::Exception)
         Hailstorm::Model::TargetHost
-            .should_receive(:stop_all_monitoring)
-            .with(project, project.current_execution_cycle, create_target_stat: false)
+          .should_receive(:stop_all_monitoring)
+          .with(project, project.current_execution_cycle, create_target_stat: false)
         expect { project.stop }.to raise_error(Hailstorm::Exception)
-        expect(project.current_execution_cycle.status.to_sym).to be == :aborted
+        execution_cycle.reload
+        expect(execution_cycle.status.to_sym).to be == :aborted
+      end
+
+      context 'asked to stop before script with fixed duration stops running' do
+        it 'should not stop target monitoring' do
+          project = Hailstorm::Model::Project.new(project_code: 'project_spec')
+          Hailstorm::Model::ExecutionCycle.create!(project: project,
+                                                   status: :started,
+                                                   started_at: Time.now - 30.minutes)
+          exception = Hailstorm::ThreadJoinException.new(Hailstorm::JMeterRunningException.new)
+          Hailstorm::Model::Cluster.should_receive(:stop_load_generation).and_raise(exception)
+          Hailstorm::Model::TargetHost.should_not_receive(:stop_all_monitoring)
+          expect { project.stop }.to raise_error(Hailstorm::ThreadJoinException)
+          expect(project.current_execution_cycle.status.to_sym).to be == :started
+        end
       end
     end
   end
@@ -219,16 +244,17 @@ describe Hailstorm::Model::Project do
   context '#abort' do
     it 'should abort load generation and target monitoring' do
       project = Hailstorm::Model::Project.new(project_code: 'project_spec')
-      Hailstorm::Model::ExecutionCycle.create!(project: project,
-                                               status: :started,
-                                               started_at: Time.now - 30.minutes)
+      execution_cycle = Hailstorm::Model::ExecutionCycle.create!(project: project,
+                                                                 status: :started,
+                                                                 started_at: Time.now - 30.minutes)
 
       Hailstorm::Model::Cluster.should_receive(:stop_load_generation).with(project, false, nil, true)
       Hailstorm::Model::TargetHost
           .should_receive(:stop_all_monitoring)
           .with(project, project.current_execution_cycle, create_target_stat: false)
       project.abort
-      expect(project.current_execution_cycle.status.to_sym).to be == :aborted
+      execution_cycle.reload
+      expect(execution_cycle.status.to_sym).to be == :aborted
     end
   end
 
@@ -236,14 +262,14 @@ describe Hailstorm::Model::Project do
     it 'should terminate the setup' do
       project = Hailstorm::Model::Project.create!(project_code: 'project_spec')
       project.update_column(:serial_version, 'some value')
-      Hailstorm::Model::ExecutionCycle.create!(project: project,
-                                               status: :started,
-                                               started_at: Time.now - 30.minutes)
+      execution_cycle = Hailstorm::Model::ExecutionCycle.create!(project: project,
+                                                                 status: :started,
+                                                                 started_at: Time.now - 30.minutes)
       Hailstorm::Model::Cluster.should_receive(:terminate)
       Hailstorm::Model::TargetHost.should_receive(:terminate)
       project.terminate
-      expect(project.current_execution_cycle.status.to_sym).to be == :terminated
-      project.reload
+      expect(project.current_execution_cycle).to be_nil
+      expect(execution_cycle.reload.status.to_sym).to be == :terminated
       expect(project.serial_version).to be_nil
     end
   end
@@ -321,7 +347,6 @@ describe Hailstorm::Model::Project do
         project = Hailstorm::Model::Project.create!(project_code: 'product_spec')
         project.stub!(:setup)
         project.settings_modified = false
-        Hailstorm::Model::ExecutionCycle.stub!(:execution_cycles_for_report).and_return([])
         exec_cycle = mock(Hailstorm::Model::ExecutionCycle)
         project.execution_cycles.stub(:where).and_return([exec_cycle])
 
@@ -347,7 +372,6 @@ describe Hailstorm::Model::Project do
       end
 
       it 'should import from results_import_dir' do
-        Hailstorm::Model::ExecutionCycle.stub!(:execution_cycles_for_report)
         jtl_path = File.join(RSpec.configuration.build_path, 'a.jtl')
         FileUtils.touch(jtl_path)
         project = Hailstorm::Model::Project.new(project_code: 'project_spec')

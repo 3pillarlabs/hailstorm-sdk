@@ -1,0 +1,72 @@
+version: '3.2'
+services:
+  web:
+    image: "hailstorm/web-client"
+    ports:
+      - "8080:80"
+    networks:
+      - dmz
+    tty:
+      true
+    depends_on:
+      - file-server
+      - client-exchange
+      - hailstorm-db
+
+  file-server:
+    image: "hailstorm/hailstorm-file-server"
+    hostname: "hailstorm-file-server"
+    ports:
+      - "9000:8080"
+    networks:
+      - dmz
+    volumes:
+      - type: volume
+        source: fileStore
+        target: /hailstorm
+
+  hailstorm-db:
+    image: "mysql:5"
+    hostname: "hailstorm-db"
+    ports:
+      - "3306:3306"
+    networks:
+      - hailstorm
+    volumes:
+      - type: volume
+        source: hailstorm-db-vol
+        target: /var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 'i r baboon'
+
+  hailstorm-mq:
+    image: "redis:5.0.7-alpine"
+    hostname: "hailstorm-mq"
+    ports:
+      - "6379:6379"
+    networks:
+      - hailstorm
+
+  client-exchange:
+    image: "hailstorm/hailstorm-client-exchange"
+    hostname: "hailstorm-client-exchange"
+    ports:
+      - "9100:8080"
+    networks:
+      - hailstorm
+      - dmz
+    depends_on:
+      - hailstorm-mq
+    entrypoint:
+      - "java"
+      - "-jar"
+      - "/app.jar"
+      - "--redisHost=hailstorm-mq"
+
+networks:
+  dmz:
+  hailstorm:
+
+volumes:
+  fileStore:
+  hailstorm-db-vol:

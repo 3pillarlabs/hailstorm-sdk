@@ -11,6 +11,7 @@ describe Hailstorm::Model::JmeterPlan do
   def app_file_fixture
     io = File.open(SOURCE_JMX_PATH, 'r')
     mock_workspace = mock(Hailstorm::Support::Workspace)
+    mock_workspace.stub!(:create_file_layout)
     mock_workspace.stub!(:open_app_file).and_yield(io)
     Hailstorm.stub!(:workspace).and_return(mock_workspace)
     [io, mock_workspace]
@@ -122,6 +123,7 @@ describe Hailstorm::Model::JmeterPlan do
       end
       jmx_files = %w[a b]
       Hailstorm.fs.stub!(:fetch_jmeter_plans).and_return(jmx_files)
+      Hailstorm.fs.stub!(:normalize_file_path) { |args| args }
       Hailstorm::Model::JmeterPlan.setup(@project, config)
       jmx_files.pop
       @project.reload
@@ -141,6 +143,7 @@ describe Hailstorm::Model::JmeterPlan do
           end
           jmx_files = %w[a b]
           Hailstorm.fs.stub!(:fetch_jmeter_plans).and_return(jmx_files)
+          Hailstorm.fs.stub!(:normalize_file_path) { |args| args }
           saved_plans = Hailstorm::Model::JmeterPlan.setup(@project, config)
           expect(saved_plans.size).to be == jmx_files.size
         end
@@ -169,6 +172,7 @@ describe Hailstorm::Model::JmeterPlan do
             end
           end
           Hailstorm.fs.stub!(:fetch_jmeter_plans).and_return(jmx_files)
+          Hailstorm.fs.stub!(:normalize_file_path) { |args| args }
           saved_plans = Hailstorm::Model::JmeterPlan.setup(@project, config)
           expect(saved_plans.size).to be == jmx_files.size
         end
@@ -340,7 +344,7 @@ describe Hailstorm::Model::JmeterPlan do
         </test>
         XML
         @jmeter_plan.stub!(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
-        expect(@jmeter_plan.plan_name).to be == @jmeter_plan.test_plan_name
+        expect(@jmeter_plan.plan_name).to be == @jmeter_plan.test_plan_name.titlecase
       end
     end
     context 'name in JMeter plan is == "Test Plan"' do
@@ -351,7 +355,7 @@ describe Hailstorm::Model::JmeterPlan do
         </test>
         XML
         @jmeter_plan.stub!(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
-        expect(@jmeter_plan.plan_name).to be == @jmeter_plan.test_plan_name
+        expect(@jmeter_plan.plan_name).to be == @jmeter_plan.test_plan_name.titlecase
       end
     end
     it 'should be same as name in JMeter plan' do

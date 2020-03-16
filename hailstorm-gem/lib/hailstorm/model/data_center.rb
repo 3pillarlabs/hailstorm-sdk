@@ -48,7 +48,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
   private
 
   def identity_file_name
-    self.ssh_identity.gsub(/\.pem$/, '').concat('.pem')
+    File.basename(self.ssh_identity.gsub(/\.pem$/, '')).concat('.pem')
   end
 
   def set_defaults
@@ -78,7 +78,9 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     logger.debug { "#{self.class}##{__method__}" }
     java_version_ok = false
     Hailstorm::Support::SSH.start(load_agent.private_ip_address, self.user_name, ssh_options) do |ssh|
-      java_version_ok = true if /java\sversion\s\"#{Defaults::JAVA_VERSION}\.[0-9].*\"/ =~ ssh.exec!('java -version')
+      output = ssh.exec!('java -version')
+      logger.debug { output }
+      java_version_ok = true if /version\s+\"#{Defaults::JAVA_VERSION}\.[^"]+"/ =~ output
     end
     java_version_ok
   end

@@ -1,0 +1,39 @@
+# Hailstorm configuration
+Hailstorm.application.config do |config|
+
+    # This is the JMeter configuration
+    config.jmeter do |jmeter|
+        # default properties for all app/**/*.jmx files
+        jmeter.properties() do |map|
+        <%- @properties.each do |p| %>
+            map['<%= raw p.property %>'] = <%= raw((Float(p.value) rescue nil) ? p.value : "'#{p.value}'") %>
+        <%- end %>
+        end
+    end
+
+    # Cluster configuration
+    <%- @clusters.each do |p| %>
+    config.clusters(:<%= p.cluster_type %>) do |cluster|
+      <%- (p.to_h.keys - [:cluster_type]).each do |key| %>
+      <%- value = p.send(key) %>
+      <%- if value %>
+        cluster.<%= key %> = <%= raw((Float(value) rescue nil) || !value.is_a?(String) ? value : "'#{value}'") %>
+      <%- end %>
+      <%- end %>
+    end
+    <%- end %>
+
+    # Target configuration
+    config.monitors(:nmon) do |monitor|
+        monitor.executable_path   = '/usr/bin/nmon'
+        monitor.ssh_identity      = 'all_purpose'
+        monitor.user_name         = 'ubuntu'
+        monitor.sampling_interval = 5
+        monitor.active = <%= @monitor_active %>
+
+        monitor.groups('Application Server') do |group|
+            group.hosts('<%= @monitor_host %>')
+        end
+    end
+
+end

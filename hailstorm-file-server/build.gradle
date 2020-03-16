@@ -1,0 +1,40 @@
+plugins {
+	id 'org.springframework.boot' version '2.2.0.RELEASE'
+	id 'io.spring.dependency-management' version '1.0.8.RELEASE'
+	id 'com.palantir.docker' version '0.22.1'
+	id 'java'
+	id 'jacoco'
+}
+
+group = 'com.3pillarglobal.labs'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '1.8'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	compile group: 'commons-codec', name: 'commons-codec', version: '1.13'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
+}
+
+test {
+	useJUnitPlatform()
+}
+
+docker {
+	name "hailstorm/${bootJar.baseName}"
+	copySpec.from(tasks.bootJar.outputs.files.singleFile).into("build")
+	buildArgs([JAR_FILE: "build/*.jar"])
+}
+
+jacocoTestReport {
+	reports {
+		xml.enabled true
+		html.enabled false
+	}
+}

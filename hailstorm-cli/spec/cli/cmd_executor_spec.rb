@@ -34,6 +34,11 @@ describe Hailstorm::Cli::CmdExecutor do
         @app.interpret_execute('show')
       end
     end
+    it 'should modify sequences to be array of file paths in default results import directory' do
+      Dir.stub!('[]'.to_sym).and_return(%w[b.jtl a.jtl])
+      @app.command_execution_template.should_receive(:results).with(false, nil, :import, [%w[a.jtl b.jtl], nil])
+      @app.interpret_execute('results import')
+    end
   end
 
   context '#help' do
@@ -72,7 +77,7 @@ describe Hailstorm::Cli::CmdExecutor do
     end
 
     context "'results import' command" do
-      it 'should modify sequences to be array of file paths in default results import directory' do
+      it 'should modify sequences to be array of file paths in default results import directory and options' do
         Dir.stub!('[]'.to_sym).and_return(%w[b.jtl a.jtl])
         @app.command_execution_template.should_receive(:results)
           .with(false, nil, :import, [%w[a.jtl b.jtl], {'jmeter' => '1', 'cluster' => '2'}])

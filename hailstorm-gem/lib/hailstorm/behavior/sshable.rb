@@ -61,14 +61,8 @@ module Hailstorm::Behavior::SSHable
     path = Hailstorm.workspace(self.project.project_code).identity_file_path(identity_file_name)
     return path if File.exist?(path)
 
-    if Pathname.new(self.ssh_identity).absolute?
-      file_path = self.ssh_identity
-      file_name = identity_file_name
-    else
-      file_path = identity_file_name
-      file_name = file_path
-    end
-
+    file_path = self.ssh_identity
+    file_name = identity_file_name
     Hailstorm.fs.read_identity_file(file_path, self.project.project_code) do |io|
       Hailstorm.workspace(self.project.project_code).write_identity_file(file_name, io)
     end

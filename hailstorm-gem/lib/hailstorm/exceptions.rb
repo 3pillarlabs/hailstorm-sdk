@@ -7,6 +7,8 @@ module Hailstorm
   # Exception for threading issues.
   class ThreadJoinException < Exception
 
+    attr_reader :exceptions
+
     # @param [Array] exceptions
     def initialize(exceptions = nil)
       return unless exceptions
@@ -15,7 +17,7 @@ module Hailstorm
     end
 
     def message
-      @message ||= @exceptions.nil? ? super.message : @exceptions.collect(&:message)
+      @message ||= exceptions.nil? ? super.message : exceptions.collect(&:message)
     end
   end
 
@@ -169,6 +171,14 @@ module Hailstorm
 
     def diagnostics
       'Nothing to stop... no tests running'
+    end
+  end
+
+  # JMeter was expected to be stopped, but it is still running.
+  class JMeterRunningException < DiagnosticAwareException
+
+    def diagnostics
+      "Jmeter is still running! Run 'abort' if you really mean to stop.".freeze
     end
   end
 end

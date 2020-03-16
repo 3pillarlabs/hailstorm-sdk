@@ -1,0 +1,14 @@
+default: &default
+  host: localhost
+  port: 9000
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+  host: webfs.hailstorm
+
+production:
+  <<: *default
+  port: 9000

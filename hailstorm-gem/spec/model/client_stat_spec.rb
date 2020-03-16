@@ -15,7 +15,7 @@ describe Hailstorm::Model::ClientStat do
   context '.collect_client_stats' do
     it 'should collect create_client_stats' do
       cluster_instance = Hailstorm::Model::AmazonCloud.new
-      cluster_instance.project = Hailstorm::Model::Project.new(project_code: 'client_stat_spec')
+      cluster_instance.project = Hailstorm::Model::Project.create!(project_code: 'client_stat_spec')
       expect(cluster_instance).to respond_to(:master_agents)
       agent_generator = Proc.new do |jmeter_plan_id, result_file|
         agent = Hailstorm::Model::MasterAgent.new
@@ -113,7 +113,7 @@ describe Hailstorm::Model::ClientStat do
         end
       end
 
-      project = Hailstorm::Model::Project.new(project_code: 'client_stat_spec')
+      project = Hailstorm::Model::Project.create!(project_code: 'client_stat_spec')
       template = Hailstorm::Model::ClientStat::ClientStatTemplate
                    .new(mock(Hailstorm::Model::JmeterPlan, id: 1),
                         mock(Hailstorm::Model::ExecutionCycle, id: 1, project: project),

@@ -49,7 +49,7 @@ describe Hailstorm::Model::LoadAgent do
         @load_agent
           .jmeter_plan
           .stub!(:remote_directory_hierarchy)
-          .and_return({ project_code => { log: nil, app: { store: { admin: nil } } }.deep_stringify_keys })
+          .and_return({ project_code => { log: nil, jmeter: { store: { admin: nil } } }.deep_stringify_keys })
 
         mock_ssh = mock(Net::SSH)
         Hailstorm::Support::SSH.stub!(:start).and_yield(mock_ssh)
@@ -72,15 +72,15 @@ describe Hailstorm::Model::LoadAgent do
 
         expect(dir_paths).to include("/home/ubuntu/#{project_code}")
         expect(dir_paths).to include("/home/ubuntu/#{project_code}/log")
-        expect(dir_paths).to include("/home/ubuntu/#{project_code}/app/store")
-        expect(dir_paths).to include("/home/ubuntu/#{project_code}/app/store/admin")
+        expect(dir_paths).to include("/home/ubuntu/#{project_code}/jmeter/store")
+        expect(dir_paths).to include("/home/ubuntu/#{project_code}/jmeter/store/admin")
         expect(dir_paths).to include([
           @load_agent.jmeter_plan.test_artifacts[0],
-          "/home/ubuntu/#{project_code}/app/store/prime.jmx"
+          "/home/ubuntu/#{project_code}/jmeter/store/prime.jmx"
         ])
         expect(dir_paths).to include([
           @load_agent.jmeter_plan.test_artifacts[1],
-          "/home/ubuntu/#{project_code}/app/store/admin/prime.jmx"
+          "/home/ubuntu/#{project_code}/jmeter/store/admin/prime.jmx"
         ])
       end
 

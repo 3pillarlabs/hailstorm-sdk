@@ -2,9 +2,11 @@ require 'hailstorm/cli'
 require 'hailstorm/cli/help_doc'
 require 'hailstorm/cli/view_renderer'
 require 'hailstorm/middleware/command_execution_template'
+require 'hailstorm/behavior/loggable'
 
 # Command executor for CLI
 class Hailstorm::Cli::CmdExecutor
+  include Hailstorm::Behavior::Loggable
 
   attr_reader :middleware
   attr_reader :project
@@ -23,7 +25,7 @@ class Hailstorm::Cli::CmdExecutor
     elsif method_name == :help
       help(*method_args)
     else
-      execute_method_args(method_args, method_name)
+      execute_method_args(method_args, method_name) unless %i[quit exit].include?(method_name)
     end
     method_name
   end
@@ -32,6 +34,7 @@ class Hailstorm::Cli::CmdExecutor
     if method_name == :results
       method_args[3] = find_files(*method_args[3]) if method_args[2] == :import # command is 'results import [jmeter=1]'
     end
+    logger.debug { ['command_execution_template', method_name, *method_args] }
     values = command_execution_template.send(method_name, *method_args)
     render_method = "render_#{method_name}".to_sym
     render_args = values.is_a?(Array) ? values : [values]
@@ -76,9 +79,19 @@ class Hailstorm::Cli::CmdExecutor
     @view_renderer ||= Hailstorm::Cli::ViewRenderer.new(project)
   end
 
+  def refresh_config
+    command_execution_template.config = middleware.config
+  end
+
+  # @param [Hailstorm::Model::Project] new_ref
+  def project=(new_ref)
+    @project = new_ref
+    command_execution_template.model_delegate = @project
+  end
+
   private
 
-  def find_files(file_path, options)
+  def find_files(file_path = nil, options = nil)
     if file_path.nil?
       glob = File.join(Hailstorm.root, Hailstorm.results_import_dir, '*.jtl')
       [Dir[glob].sort, options]
