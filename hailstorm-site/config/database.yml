@@ -22,6 +22,13 @@ test:
   <<: *default
   database: hailstorm_site_test
 
+container:
+  <<: *default
+  database: hailstorm_site_container
+  username: hailstorm_dev
+  password: hailstorm_dev
+  host: hailstorm-db
+
 production:
   <<: *default
   database: hailstorm_site_production

@@ -11,7 +11,7 @@ module Hailstorm::Initializer
   # @param [Boolean] quiet false, by default; set true to not emit to stdout
   # @param [Array<Struct>] gems to add, each is a struct with (name, path)
   # @return [String] root_path local path to the application root
-  def self.create_project!(invocation_path, arg_app_name, quiet = false, gems = [])
+  def self.create_project!(invocation_path, arg_app_name, quiet = false, gems = nil)
     require 'hailstorm/initializer/project_structure'
     project_creator = Hailstorm::Initializer::ProjectStructure.new(invocation_path, arg_app_name, quiet, gems)
     project_creator.create_app_structure

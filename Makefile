@@ -64,6 +64,28 @@ install_aws:
 cc_test_report:
 	cd ${PROJECT_PATH} && make cc_test_report
 
+build_install:
+	cd ${PROJECT_PATH} && make build_install
+
+database:
+	docker run \
+	-it \
+	--rm \
+	--name mysql-client \
+	--network hailstorm-sdk_hailstorm \
+	mysql:5 \
+	mysql \
+	-h hailstorm-db \
+	-uroot \
+	-p"'${DOCKER_MYSQL_ROOT_PASSWD}'" \
+	-e "grant all privileges on *.* to 'hailstorm_dev'@'%' identified by 'hailstorm_dev'"
+
+hailstorm_site:
+	cd ${TRAVIS_BUILD_DIR}/hailstorm-site && docker build -t hailstorm/hailstorm_site:1.0.0 .
+
+hailstorm_agent:
+	cd ${TRAVIS_BUILD_DIR}/setup/data-center && docker build -t hailstorm/hailstorm_agent:1.0.0 .
+
 # file_server:
 # 	cd hailstorm-file-server && \
 # 	./gradlew clean bootJar docker

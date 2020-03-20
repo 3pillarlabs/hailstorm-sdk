@@ -1,3 +1,7 @@
+ifndef TAG_FLAGS
+TAG_FLAGS = @smoke
+endif
+
 install: create_mysql_user
 	bundle install
 	rake db:setup
@@ -17,3 +21,9 @@ create_mysql_user:
 
 cc_test_report:
 	if [ -n "${CI}" ]; then ${TRAVIS_BUILD_DIR}/.travis/coverage.sh -u $(shell basename ${PWD}) -t simplecov; fi
+
+integration:
+	cucumber --tags ${TAG_FLAGS}
+
+build:
+	rake build

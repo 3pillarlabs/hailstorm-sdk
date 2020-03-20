@@ -1,0 +1,29 @@
+version: '3.2'
+services:
+  hailstorm-db:
+    image: "mysql:5"
+    hostname: "hailstorm-db"
+    ports:
+      - "3306:3306"
+    networks:
+      - hailstorm
+    volumes:
+      - type: volume
+        source: hailstorm-db-vol
+        target: /var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 'i r baboon'
+
+  cli:
+    image: "hailstorm/hailstorm-cli:1.0.0"
+    hostname: "hailstorm-cli"
+    networks:
+      - hailstorm
+    depends_on:
+      - hailstorm-db
+
+networks:
+  hailstorm:
+
+volumes:
+  hailstorm-db-vol:

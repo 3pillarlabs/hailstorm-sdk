@@ -1,21 +1,24 @@
-FROM ruby:2.4.1-stretch
+FROM jruby:9.1.17.0-jre
 
-WORKDIR /usr/local/lib/hailstorm-site
+WORKDIR /usr/local/lib/hailstorm-cli
 
-RUN apt-get update && apt-get install -y mysql-client nodejs
+RUN apt-get update && apt-get install -y default-mysql-client git
 
-COPY Gemfile Gemfile.lock ./
+RUN gem install cucumber -v 2.99.0 && mkdir pkg
 
-RUN bundle install
+COPY pkg/hailstorm-*.gem ./pkg/
 
-COPY . .
+RUN gem install pkg/hailstorm-*.gem
 
-RUN RAILS_ENV=container rake db:setup && \
-    RAILS_ENV=container rake db:migrate && \
-    mkdir -p tmp/cache tmp/pids tmp/sessions tmp/sockets log
+ARG HAILSTORM_VERSION
 
-ENV RAILS_ENV container
+RUN echo "#!/bin/sh" > /usr/local/bin/create_hailstorm_app && \
+    echo -n \
+    exec "hailstorm -g /usr/local/bundle/gems/hailstorm-$HAILSTORM_VERSION-java" >> \
+    /usr/local/bin/create_hailstorm_app && \
+    echo ' $*' >> /usr/local/bin/create_hailstorm_app && \
+    chmod +x /usr/local/bin/create_hailstorm_app
 
-EXPOSE 34451
+WORKDIR /hailstorm
 
-CMD [ "rackup", "-o", "0.0.0.0", "-p", "34451", "-E", "container" ]
+CMD [ "sh" ]
