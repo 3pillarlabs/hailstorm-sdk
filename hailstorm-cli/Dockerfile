@@ -19,6 +19,12 @@ RUN echo "#!/bin/sh" > /usr/local/bin/create_hailstorm_app && \
     echo ' $*' >> /usr/local/bin/create_hailstorm_app && \
     chmod +x /usr/local/bin/create_hailstorm_app
 
+COPY . .
+
+ENV GEM_PATH /usr/local/bundle/gems
+
+RUN gem install bundler -v 2.0.1 && bundle install
+
 WORKDIR /hailstorm
 
 CMD [ "sh" ]

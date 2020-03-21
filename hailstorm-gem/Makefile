@@ -27,3 +27,6 @@ integration:
 
 build:
 	rake build
+
+local_publish:
+	rake install

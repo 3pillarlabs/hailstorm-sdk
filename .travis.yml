@@ -14,9 +14,9 @@ stages:
   #   if: branch NOT IN (master, develop)
   # - name: coverage
   #   if: branch = develop
-  - name: prepare_site
-    #if: branch = master AND type = pull_request
-    if: branch NOT IN (master, develop) AND type = push
+  # - name: prepare_site
+  #   #if: branch = master AND type = pull_request
+  #   if: branch NOT IN (master, develop) AND type = push
   - name: integration
     #if: branch = master AND type = pull_request
     if: branch NOT IN (master, develop) AND type = push
@@ -182,32 +182,34 @@ jobs:
     #     - make PROJECT=web-client cc_test_report
 
     # ------------ PREPARE_SITE -----------------------------------
-    - stage: prepare_site
-      name: "hailstorm-sdk prepare_site"
-      language: ruby
-      before_install:
-        - make install_aws
-        - ${TRAVIS_BUILD_DIR}/.travis/write_aws_keys.sh
-        - ${TRAVIS_BUILD_DIR}/.travis/write_vagrant_aws.sh
-        - aws s3 cp s3://${S3_BUCKET_NAME}/hailstorm_travis_insecure.pem ${TRAVIS_BUILD_DIR}/
-      install:
-        - sudo apt-get install -y vagrant
-        - sudo vagrant plugin install vagrant-aws
-      script:
-        - sudo vagrant up aws-site --provider=aws
+    # - stage: prepare_site
+    #   name: "hailstorm-sdk prepare_site"
+    #   language: minimal
+    #   before_install:
+    #     - make install_aws
+    #     - ${TRAVIS_BUILD_DIR}/.travis/write_aws_keys.sh
+    #     - ${TRAVIS_BUILD_DIR}/.travis/write_vagrant_aws.sh
+    #     - aws s3 cp s3://${S3_BUCKET_NAME}/hailstorm_travis_insecure.pem ${TRAVIS_BUILD_DIR}/
+    #   install:
+    #     - curl -fsLO https://releases.hashicorp.com/vagrant/2.2.5/vagrant_2.2.5_x86_64.deb
+    #     - sudo dpkg --install vagrant_2.2.5_x86_64.deb
+    #     - sudo vagrant box add dummy https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box
+    #     - sudo vagrant plugin install vagrant-aws
+    #   script:
+    #     - sudo vagrant up aws-site --provider=aws
 
 
     # ------------ INTEGRATION -----------------------------------
-    - stage: integration
-      name: "hailstorm-gem integration"
-      language: ruby
-      rvm: jruby-9.1.9.0
-      jdk: openjdk8
-      install:
-        - ${TRAVIS_BUILD_DIR}/.travis/write_gem_aws_keys.sh
-        - make PROJECT=gem FORCE=yes install
-      script:
-        - make PROJECT=gem FORCE=yes integration
+    # - stage: integration
+    #   name: "hailstorm-gem integration"
+    #   language: ruby
+    #   rvm: jruby-9.1.9.0
+    #   jdk: openjdk8
+    #   install:
+    #     - ${TRAVIS_BUILD_DIR}/.travis/write_gem_aws_keys.sh
+    #     - make PROJECT=gem FORCE=yes install
+    #   script:
+    #     - make PROJECT=gem FORCE=yes integration
 
     - stage: integration
       name: "hailstorm-cli integration"
@@ -215,22 +217,18 @@ jobs:
       rvm: jruby-9.1.9.0
       jdk: openjdk8
       before_install:
-        - make install_aws
+        - ${TRAVIS_BUILD_DIR}/.travis/write_cli_aws_keys.sh
+      #   - make install_aws
         - make hailstorm_site hailstorm_agent
         - sudo apt-get install -y docker-compose
-        - docker-compose -f docker-compose-cli-integration.yml -d up \
-          hailstorm-db \
-          hailstorm-site \
-          hailstorm-agent-1 hailstorm-agent-2
+        - docker-compose -f docker-compose-cli-integration.yml up -d
       install:
-        - make database
-        - make PROJECT=gem FORCE=yes build
+        - make PROJECT=gem FORCE=yes install build local_publish
         - mkdir -p ${TRAVIS_BUILD_DIR}/hailstorm-cli/pkg
         - cp ${TRAVIS_BUILD_DIR}/hailstorm-gem/pkg/hailstorm-*.gem ${TRAVIS_BUILD_DIR}/hailstorm-cli/pkg/.
-        - make PROJECT=cli FORCE=yes build
-        - make PROJECT=cli FORCE=yes package
+        - make PROJECT=cli FORCE=yes install build package
       script:
         - make PROJECT=cli FORCE=yes integration
       after_script:
-        - ${TRAVIS_BUILD_DIR}/.travis/terminate_aws_site.sh
+        # - ${TRAVIS_BUILD_DIR}/.travis/terminate_aws_site.sh
         - docker-compose -f docker-compose-cli-integration.yml down

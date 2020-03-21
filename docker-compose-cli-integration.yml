@@ -10,16 +10,10 @@ services:
         source: hailstorm-db-vol
         target: /var/lib/mysql
     environment:
-      MYSQL_ROOT_PASSWORD: 'i r baboon'
-
-  cli:
-    image: "hailstorm/hailstorm-cli-integration:1.0.0"
-    hostname: "hailstorm-cli"
-    networks:
-      - hailstorm_integration
-    depends_on:
-      - hailstorm-db
-    command: ["cucumber", "--tags", "@smoke"]
+      MYSQL_DATABASE: 'hailstorm_cli_integration'
+      MYSQL_USER: 'hailstorm'
+      MYSQL_PASSWORD: 'hailstorm'
+      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
 
   hailstorm-site:
     image: "hailstorm/hailstorm_site:1.0.0"

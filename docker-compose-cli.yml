@@ -14,14 +14,6 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: 'i r baboon'
 
-  cli:
-    image: "hailstorm/hailstorm-cli:1.0.0"
-    hostname: "hailstorm-cli"
-    networks:
-      - hailstorm
-    depends_on:
-      - hailstorm-db
-
 networks:
   hailstorm:
 

@@ -14,8 +14,8 @@ require 'active_record/errors'
 connection_spec = {
   adapter:  'jdbcmysql',
   database: "hailstorm_#{ENV['HAILSTORM_ENV']}",
-  username: 'hailstorm_dev',
-  password: 'hailstorm_dev',
+  username: 'hailstorm',
+  password: 'hailstorm',
   host: ENV['DATABASE_HOST'] || 'localhost'
 }
 

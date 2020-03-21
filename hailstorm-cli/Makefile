@@ -24,11 +24,13 @@ package:
 	docker build \
 	--build-arg HAILSTORM_VERSION=$(shell ruby -I ./lib -r 'hailstorm/version' -e 'puts Hailstorm::VERSION') \
 	--rm \
-	-t hailstorm/hailstorm-cli:$(shell ruby -I ./lib -r 'hailstorm/cli/version' -e 'puts Hailstorm::Cli::VERSION') . && \
-	docker build \
-	-f Dockerfile.integration \
-	--rm \
-	-t hailstorm/hailstorm-cli-integration:$(shell ruby -I ./lib -r 'hailstorm/cli/version' -e 'puts Hailstorm::Cli::VERSION') .
+	-t hailstorm/hailstorm-cli:$(shell ruby -I ./lib -r 'hailstorm/cli/version' -e 'puts Hailstorm::Cli::VERSION') .
 
 integration:
-	cd ../ && docker-compose -f docker-compose-cli-integration.yml up cli
+	docker run \
+	-it \
+	--rm \
+	--network hailstorm-sdk_hailstorm_integration \
+	-e DATABASE_HOST=hailstorm-db \
+	hailstorm/hailstorm-cli:1.0.0 bash -c \
+	'cd /usr/local/lib/hailstorm-cli && cucumber --tags @smoke'

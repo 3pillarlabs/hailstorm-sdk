@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cat - > ${TRAVIS_BUILD_DIR}/setup/vagrant-aws.yml <<EOF
+cat - > ${TRAVIS_BUILD_DIR}/setup/hailstorm-site/vagrant-site.yml <<EOF
 # Configuration for Vagrant aws VM
 ---
   keypair_name: "${AWS_SITE_KEY_PAIR}"
