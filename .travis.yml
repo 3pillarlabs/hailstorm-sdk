@@ -186,11 +186,12 @@ jobs:
       name: "hailstorm-sdk prepare_site"
       language: ruby
       before_install:
+        - make install_aws
         - ${TRAVIS_BUILD_DIR}/.travis/write_aws_keys.sh
         - ${TRAVIS_BUILD_DIR}/.travis/write_vagrant_aws.sh
         - aws s3 cp s3://${S3_BUCKET_NAME}/hailstorm_travis_insecure.pem ${TRAVIS_BUILD_DIR}/
       install:
-        - sudo apt-get install -y vagrant docker-compose
+        - sudo apt-get install -y vagrant
         - sudo vagrant plugin install vagrant-aws
       script:
         - sudo vagrant up aws-site --provider=aws
@@ -216,6 +217,7 @@ jobs:
       before_install:
         - make install_aws
         - make hailstorm_site hailstorm_agent
+        - sudo apt-get install -y docker-compose
         - docker-compose -f docker-compose-cli-integration.yml -d up \
           hailstorm-db \
           hailstorm-site \
