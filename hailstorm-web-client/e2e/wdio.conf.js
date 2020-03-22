@@ -165,6 +165,10 @@ exports.config = {
       const buildPath = path.resolve('build')
       rimraf.sync(buildPath);
       fs.mkdirSync(buildPath);
+
+      // copy insecure_key as insecure_key.pem
+      const insecure_key_path = path.resolve('data', 'insecure_key');
+      fs.copyFileSync(insecure_key_path, `${insecure_key_path}.pem`);
     },
     /**
      * Gets executed just before initialising the webdriver session and test framework. It allows you

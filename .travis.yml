@@ -211,24 +211,61 @@ jobs:
     #   script:
     #     - make PROJECT=gem FORCE=yes integration
 
+    # - stage: integration
+    #   name: "hailstorm-cli integration"
+    #   language: ruby
+    #   rvm: jruby-9.1.9.0
+    #   jdk: openjdk8
+    #   before_install:
+    #     - ${TRAVIS_BUILD_DIR}/.travis/write_cli_aws_keys.sh
+    #   #   - make install_aws
+    #     - make hailstorm_site hailstorm_agent
+    #     - sudo curl -fsL -o /usr/local/bin/docker-compose "https://github.com/docker/compose/releases/download/1.25.4/docker-compose-Linux-x86_64"
+    #     - sudo chmod +x /usr/local/bin/docker-compose
+    #     - docker-compose -f docker-compose-cli.yml up -d hailstorm-db
+    #     - sleep 20 && make DOCKER_NETWORK=hailstorm_integration hailstorm_db_users
+    #     - docker-compose -f docker-compose-cli.yml down
+    #   install:
+    #     - make PROJECT=gem FORCE=yes install build local_publish
+    #     - mkdir -p ${TRAVIS_BUILD_DIR}/hailstorm-cli/pkg
+    #     - cp ${TRAVIS_BUILD_DIR}/hailstorm-gem/pkg/hailstorm-*.gem ${TRAVIS_BUILD_DIR}/hailstorm-cli/pkg/.
+    #     - make PROJECT=cli FORCE=yes install build package
+    #     - docker-compose -f docker-compose-cli.yml -f docker-compose-cli.ci.yml -f docker-compose.dc-sim.yml up -d
+    #   script:
+    #     - make PROJECT=cli FORCE=yes integration
+    #   after_script:
+    #     # - ${TRAVIS_BUILD_DIR}/.travis/terminate_aws_site.sh
+    #     - docker-compose -f docker-compose-cli.yml -f docker-compose.dc-sim.yml -f docker-compose-cli.ci.yml down
+
     - stage: integration
-      name: "hailstorm-cli integration"
-      language: ruby
-      rvm: jruby-9.1.9.0
-      jdk: openjdk8
+      name: "hailstorm-web-client integration"
+      language: node_js
+      node_js: lts/dubnium
+      env:
+        - MOZ_HEADLESS=1
+      addons:
+        firefox: latest
       before_install:
-        - ${TRAVIS_BUILD_DIR}/.travis/write_cli_aws_keys.sh
+        - sudo systemctl stop mysql
+        - ${TRAVIS_BUILD_DIR}/.travis/write_web_aws_keys.sh
       #   - make install_aws
         - make hailstorm_site hailstorm_agent
-        - sudo apt-get install -y docker-compose
-        - docker-compose -f docker-compose-cli-integration.yml up -d
+        - sudo curl -fsL -o /usr/local/bin/docker-compose "https://github.com/docker/compose/releases/download/1.25.4/docker-compose-Linux-x86_64"
+        - sudo chmod +x /usr/local/bin/docker-compose
+        - docker-compose -f docker-compose.yml -f docker-compose.dc-sim.yml -f docker-compose.web-ci.yml up -d hailstorm-db
+        - sleep 20 && make hailstorm_db_users
+        - docker-compose -f docker-compose.yml -f docker-compose.dc-sim.yml -f docker-compose.web-ci.yml down
       install:
+        - make PROJECT=web-client FORCE=yes install build package
         - make PROJECT=gem FORCE=yes install build local_publish
-        - mkdir -p ${TRAVIS_BUILD_DIR}/hailstorm-cli/pkg
-        - cp ${TRAVIS_BUILD_DIR}/hailstorm-gem/pkg/hailstorm-*.gem ${TRAVIS_BUILD_DIR}/hailstorm-cli/pkg/.
-        - make PROJECT=cli FORCE=yes install build package
+        - mkdir -p ${TRAVIS_BUILD_DIR}/hailstorm-api/pkg
+        - cp ${TRAVIS_BUILD_DIR}/hailstorm-gem/pkg/hailstorm-*.gem ${TRAVIS_BUILD_DIR}/hailstorm-api/pkg/.
+        - make PROJECT=api FORCE=yes install package
+        - make PROJECT=file-server FORCE=yes install package
+        - make PROJECT=client-exchange FORCE=yes install package
+        - docker-compose -f docker-compose.yml -f docker-compose.dc-sim.yml -f docker-compose.web-ci.yml up -d
       script:
-        - make PROJECT=cli FORCE=yes integration
+        - make PROJECT=web-client FORCE=yes integration
       after_script:
         # - ${TRAVIS_BUILD_DIR}/.travis/terminate_aws_site.sh
-        - docker-compose -f docker-compose-cli-integration.yml down
+        - docker-compose -f docker-compose.yml -f docker-compose.dc-sim.yml -f docker-compose.web-ci.yml down

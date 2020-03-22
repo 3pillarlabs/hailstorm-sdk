@@ -5,6 +5,9 @@ BUILD_PATH = File.join(File.expand_path('../../..', __FILE__), 'build', 'integra
 FileUtils.rm_rf(BUILD_PATH)
 FileUtils.mkdir_p(BUILD_PATH)
 
+insecure_key_path = File.expand_path('../../data/insecure_key', __FILE__)
+FileUtils.cp(insecure_key_path, "#{insecure_key_path}.pem")
+
 ENV['HAILSTORM_ENV'] = 'cli_integration' unless ENV['HAILSTORM_ENV']
 
 require 'active_record'

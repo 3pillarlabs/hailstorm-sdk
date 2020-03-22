@@ -7,7 +7,7 @@ Feature: Generate load from AWS
   @end-to-end
   Scenario: Start with 10 threads
     When I have Hailstorm open
-    And I created the project "Full Integration 25"
+    And I created the project "Simple burst test"
     And I configure JMeter with following properties
       | property       | value |
       | NumUsers       |    10 |

@@ -34,6 +34,10 @@ ifeq ($(FORCE), yes)
 CHANGES = ls -d
 endif
 
+DOCKER_COMPOSE_PREFIX = hailstorm-sdk_
+
+DOCKER_NETWORK = hailstorm
+
 install:
 	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make install; fi
 
@@ -72,6 +76,12 @@ hailstorm_site:
 
 hailstorm_agent:
 	cd ${TRAVIS_BUILD_DIR}/setup/data-center && docker build -t hailstorm/hailstorm_agent:1.0.0 .
+
+hailstorm_db_users:
+	@docker run --rm --network ${DOCKER_COMPOSE_PREFIX}${DOCKER_NETWORK} mysql:5 \
+	mysql -h hailstorm-db -uroot -p"${MYSQL_ROOT_PASSWORD}" -e \
+	"grant all privileges on *.* to 'hailstorm'@'%' identified by 'hailstorm'; \
+	grant all privileges on *.* to 'hailstorm_dev'@'%' identified by 'hailstorm_dev'"
 
 # file_server:
 # 	cd hailstorm-file-server && \

@@ -1,20 +1,5 @@
 version: '3.2'
 services:
-  hailstorm-db:
-    image: "mysql:5"
-    hostname: "hailstorm-db"
-    networks:
-      - hailstorm_integration
-    volumes:
-      - type: volume
-        source: hailstorm-db-vol
-        target: /var/lib/mysql
-    environment:
-      MYSQL_DATABASE: 'hailstorm_cli_integration'
-      MYSQL_USER: 'hailstorm'
-      MYSQL_PASSWORD: 'hailstorm'
-      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
-
   hailstorm-site:
     image: "hailstorm/hailstorm_site:1.0.0"
     hostname: "hailstorm-site"
@@ -49,6 +34,3 @@ networks:
       driver: default
       config:
         - subnet: 192.168.20.0/24
-
-volumes:
-  hailstorm-db-vol:

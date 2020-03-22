@@ -1,7 +1,7 @@
 version: '3.2'
 services:
   web:
-    image: "hailstorm/web-client"
+    image: "hailstorm/web-client:1.0.0"
     ports:
       - "8080:80"
     networks:
@@ -11,18 +11,37 @@ services:
     depends_on:
       - file-server
       - client-exchange
+      - hailstorm-api
+
+  hailstorm-api:
+    image: "hailstorm/hailstorm-api:1.0.0"
+    ports:
+      - "4567:8080"
+    environment:
+      HAILSTORM_DATABASE_PASSWORD: hailstorm
+      HAILSTORM_ENV: production
+      REDIS_URL: redis://hailstorm-mq/
+    networks:
+      - dmz
+      - hailstorm
+    depends_on:
       - hailstorm-db
+      - client-exchange
+    volumes:
+      - type: volume
+        source: hailstorm-home
+        target: /home
 
   file-server:
-    image: "hailstorm/hailstorm-file-server"
-    hostname: "hailstorm-file-server"
+    image: "hailstorm/hailstorm-file-server:1.0.0"
+    hostname: "file-server"
     ports:
       - "9000:8080"
     networks:
       - dmz
     volumes:
       - type: volume
-        source: fileStore
+        source: hailstorm-file-store
         target: /hailstorm
 
   hailstorm-db:
@@ -34,10 +53,10 @@ services:
       - hailstorm
     volumes:
       - type: volume
-        source: hailstorm-db-vol
+        source: hailstorm-db
         target: /var/lib/mysql
     environment:
-      MYSQL_ROOT_PASSWORD: 'i r baboon'
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
 
   hailstorm-mq:
     image: "redis:5.0.7-alpine"
@@ -48,7 +67,7 @@ services:
       - hailstorm
 
   client-exchange:
-    image: "hailstorm/hailstorm-client-exchange"
+    image: "hailstorm/hailstorm-client-exchange:1.0.0"
     hostname: "hailstorm-client-exchange"
     ports:
       - "9100:8080"
@@ -68,5 +87,6 @@ networks:
   hailstorm:
 
 volumes:
-  fileStore:
-  hailstorm-db-vol:
+  hailstorm-file-store:
+  hailstorm-db:
+  hailstorm-home:

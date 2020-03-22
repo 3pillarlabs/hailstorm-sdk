@@ -11,4 +11,5 @@ test:
 
 production:
   <<: *default
-  port: 9000
+  host: file-server
+  port: 8080

@@ -20,7 +20,7 @@ export const DeleteProject: React.FC = () => {
     setShowModal(false);
     dispatch(new SetInterimStateAction(InterimProjectState.DELETING));
     let firstPromise: Promise<number>;
-    if (project.jmeter || project.clusters) {
+    if ((project.jmeter && project.jmeter.files.length > 0) || (project.clusters && project.clusters.length > 0)) {
       firstPromise = ApiFactory().projects().update(project.id, {action: 'terminate'});
     } else {
       firstPromise = Promise.resolve(200);

@@ -16,3 +16,8 @@ create_mysql_user:
 
 cc_test_report:
 	if [ -n "${CI}" ]; then ${TRAVIS_BUILD_DIR}/.travis/coverage.sh -u $(shell basename ${PWD}) -t simplecov; fi
+
+package:
+	docker build \
+	--rm \
+	-t hailstorm/hailstorm-api:$(shell ruby -I ./app -r 'version' -e 'puts Hailstorm::Api::VERSION') .

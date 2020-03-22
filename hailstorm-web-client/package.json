@@ -1,6 +1,6 @@
 {
   "name": "hailstorm-web-client",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "dependencies": {
     "date-fns": "^2.6.0",
@@ -19,8 +19,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "clean": "rimraf build",
-    "build:docker": "docker build -t hailstorm/web-client .",
-    "package": "run-s clean build build:docker"
+    "package": "docker build -t hailstorm/web-client:1.0.0 ."
   },
   "eslintConfig": {
     "extends": "react-app"

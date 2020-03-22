@@ -9,13 +9,13 @@ services:
       - hailstorm
     volumes:
       - type: volume
-        source: hailstorm-db-vol
+        source: hailstorm-db
         target: /var/lib/mysql
     environment:
-      MYSQL_ROOT_PASSWORD: 'i r baboon'
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
 
 networks:
   hailstorm:
 
 volumes:
-  hailstorm-db-vol:
+  hailstorm-db:

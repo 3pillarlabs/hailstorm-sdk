@@ -1,5 +1,7 @@
 FROM sebp/lighttpd
 
-ADD build /var/www/localhost/htdocs
+COPY BUILD_ID .
+
+COPY build /var/www/localhost/htdocs
 
 CMD ["start.sh"]

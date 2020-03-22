@@ -34,3 +34,19 @@ integration:
 	-e DATABASE_HOST=hailstorm-db \
 	hailstorm/hailstorm-cli:1.0.0 bash -c \
 	'cd /usr/local/lib/hailstorm-cli && cucumber --tags @smoke'
+
+open_console:
+	docker run \
+	-it \
+	--rm \
+	--network hailstorm-sdk_hailstorm \
+	-e DATABASE_HOST=hailstorm-db \
+	hailstorm/hailstorm-cli:1.0.0 bash
+
+open_test_console:
+	docker run \
+	-it \
+	--rm \
+	--network hailstorm-sdk_hailstorm_integration \
+	-e DATABASE_HOST=hailstorm-db \
+	hailstorm/hailstorm-cli:1.0.0 bash
