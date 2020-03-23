@@ -244,8 +244,13 @@ jobs:
       env:
         - MOZ_HEADLESS=1
       addons:
+        apt:
+          update: true
+          packages:
+            - openjdk-8-jdk-headless
         firefox: latest
       before_install:
+        - rvm install jruby-9.1.9.0
         - sudo systemctl stop mysql
         - ${TRAVIS_BUILD_DIR}/.travis/write_web_aws_keys.sh
       #   - make install_aws
