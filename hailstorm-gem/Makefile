@@ -2,18 +2,20 @@ ifndef TAG_FLAGS
 TAG_FLAGS = @smoke
 endif
 
-install: create_mysql_user
+install:
 	bundle install
-	rake db:setup
 
-test:
+test: create_mysql_user
 	JRUBY_OPTS="--debug" rspec -f HailstormCiFormatter
 
-coverage:
+coverage: create_mysql_user
 	if [ -n "${CI}" ]; then ${TRAVIS_BUILD_DIR}/.travis/coverage.sh -i; fi
 	HAILSTORM_COVERAGE="true" JRUBY_OPTS="--debug" rspec -f HailstormCiFormatter
 
-create_mysql_user:
+setup_db:
+	rake db:setup
+
+create_mysql_user: setup_db
 	if [ -n "${CI}" ]; \
 	then \
 		mysql -e 'grant all privileges on *.* to "hailstorm_dev"@"localhost" identified by "hailstorm_dev";'; \

@@ -19,7 +19,7 @@ integration:
 	NODE_ENV=production npx wdio run wdio.smoke.conf.js
 
 build:
-	npm run build
+	CI=false npm run build
 
 package:
 	find build -type f -exec cat {} + | sha1sum | cut -f1 -d' ' > BUILD_ID
