@@ -1,7 +1,13 @@
 import { Given, When, Then } from "cucumber";
 import { expect } from 'chai';
-import * as path from 'path';
-import { landingPage, newProjectWizardPage, jMeterConfigPage, amazonConfig, wizardReview, projectWorkspace } from "features/support/po";
+import {
+  landingPage,
+  newProjectWizardPage,
+  jMeterConfigPage,
+  amazonConfig,
+  wizardReview,
+  projectWorkspace
+} from "features/support/po";
 
 Given("I have Hailstorm open", function() {
   landingPage.open();
@@ -51,6 +57,10 @@ Then("{int} test should be running", function(numRows) {
   expect(projectWorkspace.isStopEnabled()).to.not.be.true;
 });
 
+Given("a test is running", function () {
+  expect(projectWorkspace.isTestRunning()).to.be.true;
+});
+
 When("I wait for load generation to stop", function () {
   projectWorkspace.waitForTestsToStop();
 });
@@ -76,6 +86,10 @@ When("I terminate the setup", function() {
   this.projectId = projectWorkspace.terminateProject();
 });
 
+Given("some tests have completed", function() {
+  expect(projectWorkspace.containsStoppedTests()).to.be.true;
+});
+
 When("I generate a report", function() {
   projectWorkspace.generateReport();
 });
@@ -84,6 +98,3 @@ Then("a report file should be created", function() {
   const count = projectWorkspace.waitForGeneratedReports();
   expect(count).to.be.greaterThan(0);
 });
-
-// TODO
-// - find unit tests that are leaking to the API

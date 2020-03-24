@@ -239,18 +239,15 @@ jobs:
 
     - stage: integration
       name: "hailstorm-web-client integration"
-      language: node_js
-      node_js: lts/dubnium
+      language: java
+      jdk: openjdk8
       env:
         - MOZ_HEADLESS=1
       addons:
-        apt:
-          update: true
-          packages:
-            - openjdk-8-jdk-headless
         firefox: latest
       before_install:
         - rvm install jruby-9.1.9.0
+        - nvm install lts/dubnium
         - sudo systemctl stop mysql
         - ${TRAVIS_BUILD_DIR}/.travis/write_web_aws_keys.sh
       #   - make install_aws
@@ -269,6 +266,7 @@ jobs:
         - make PROJECT=file-server FORCE=yes install package
         - make PROJECT=client-exchange FORCE=yes install package
         - docker-compose -f docker-compose.yml -f docker-compose.dc-sim.yml -f docker-compose.web-ci.yml up -d
+        - sleep 60
       script:
         - make PROJECT=web-client FORCE=yes integration
       after_script:

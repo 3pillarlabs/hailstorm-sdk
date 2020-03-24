@@ -1,16 +1,12 @@
-import { expect } from 'chai';
 import * as path from 'path';
 import * as yaml from 'yaml';
 import * as fs from 'fs';
-import axios from 'axios';
 import { readServerIP } from './aws-helper';
-import config from 'environment.e2e';
 
 class LandingPage {
 
   open() {
-    browser.setTimeout({pageLoad: 3600000});
-    browser.setTimeout({script: 3600000});
+    browser.setTimeout({implicit: 5000});
     browser.url('/');
   }
 
@@ -27,7 +23,7 @@ class LandingPage {
 
 class WizardBase {
   get nextLink() { return $('=Next') }
-  get nextButton() { return $('button=Next') }
+  get nextButton() { return $('button*=Next') }
 }
 
 class NewProjectWizardPage extends WizardBase {
@@ -38,7 +34,7 @@ class NewProjectWizardPage extends WizardBase {
 
   proceedToNextStep(element: WebdriverIO.Element) {
     element.click();
-    this.nextLink.waitForDisplayed();
+    this.nextLink.waitForExist();
     this.nextLink.click();
   }
 
@@ -62,7 +58,7 @@ class JMeterConfigPage extends WizardBase {
   get saveButton() { return $('button*=Save') }
 
   updateProperties(properties: {property: string, value: any}[]) {
-    browser.waitUntil(() => this.fileUpload.isExisting());
+    browser.waitUntil(() => this.fileUpload.isExisting(), 10000);
     if (! this.serverNameInput.isExisting()) {
       this.uploadFile();
     }
@@ -126,6 +122,7 @@ class AmazonConfig extends WizardBase {
 
     this.selectRegion(region);
     const submitBtn = $('button*=Save');
+    submitBtn.waitForEnabled();
     submitBtn.click();
   }
 
@@ -140,7 +137,7 @@ class AmazonConfig extends WizardBase {
   }
 
   proceedToNextStep() {
-    browser.waitUntil(() => this.nextButton.isEnabled());
+    browser.waitUntil(() => this.nextButton.isEnabled(), 10000);
     this.nextButton.click();
   }
 }
@@ -170,13 +167,20 @@ class ProjectWorkspace {
   get reportsListItems() { return $$('//*[@data-testid="Reports List"]/a') }
 
   startTest() {
-    browser.waitUntil(() => this.startButton.isDisplayed());
+    browser.waitUntil(() => this.startButton.isEnabled(), 10000);
     this.startButton.click();
+  }
+
+  isTestRunning() {
+    return $$('tr.notification').length > 0;
   }
 
   waitForTestsToStart(numTests: number) {
     console.info("Tests starting...");
-    browser.waitUntil(() => $$('tr.notification').length === numTests, 30 * 60 * 1000, "waiting for test to start");
+    browser.waitUntil(() => {
+      console.info("Waiting for tests to start...");
+      return ($$('tr.notification').length === numTests);
+    }, 30 * 60 * 1000, "waiting for test to start", 3000);
   }
 
   isStopEnabled() {
@@ -185,12 +189,19 @@ class ProjectWorkspace {
 
   waitForTestsToStop() {
     console.info("Tests started successfully, waiting for stop...");
-    browser.waitUntil(() => this.startButton.isEnabled(), 15 * 60 * 1000, "waiting for test to stop");
+    browser.waitUntil(() => {
+      console.info("...waiting for current test to stop");
+      return this.startButton.isEnabled();
+    }, 15 * 60 * 1000, "waiting for test to stop", 3000);
   }
 
   waitForFinishedTests(numTests: number): number {
-    browser.waitUntil(() => this.checkBoxes.length === numTests, 60 * 1000);
+    browser.waitUntil(() => this.checkBoxes.length === numTests, 60 * 1000, "waiting for test to finish", 3000);
     return this.checkBoxes.length;
+  }
+
+  containsStoppedTests() {
+    return this.checkBoxes.length > 0;
   }
 
   reconfigure() {
@@ -206,20 +217,24 @@ class ProjectWorkspace {
 
   terminateProject(): string {
     this.showDangerousSettings.click();
+    this.terminateButton.waitForDisplayed();
     this.terminateButton.click();
+    this.confirmTerminate.waitForDisplayed();
     this.confirmTerminate.click();
-    browser.waitUntil(() => !this.terminateButton.isEnabled());
-    browser.waitUntil(() => this.terminateButton.isEnabled(), 5 * 60 * 1000);
+    // TODO Remove browser.pause because it leads to flaky tests
+    browser.pause(1000);
+    browser.waitUntil(() => this.terminateButton.isEnabled(), 5 * 60 * 1000, "wait for terminate action to complete", 3000);
     return path.basename((new URL(browser.getUrl())).hash.slice(1));
   }
 
   generateReport() {
     this.masterCheckBox.click();
+    this.reportButton.waitForEnabled();
     this.reportButton.click();
   }
 
   waitForGeneratedReports() {
-    browser.waitUntil(() => this.reportsListItems.length > 0, 5 * 60 * 1000, "waiting for report to be generated");
+    browser.waitUntil(() => this.reportsListItems.length > 0, 5 * 60 * 1000, "waiting for report to be generated", 1000);
     return this.reportsListItems.length;
   }
 }

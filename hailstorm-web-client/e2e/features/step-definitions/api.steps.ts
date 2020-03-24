@@ -1,6 +1,5 @@
 import { Then } from "cucumber";
 import { expect } from 'chai';
-import * as http from 'http';
 import config from 'environment.e2e';
 import axios from 'axios';
 
