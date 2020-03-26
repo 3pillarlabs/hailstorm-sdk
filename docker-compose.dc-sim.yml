@@ -1,7 +1,7 @@
 version: '3.2'
 services:
   hailstorm-site:
-    image: "hailstorm/hailstorm_site:1.0.0"
+    image: "hailstorm3/hailstorm-site:1.0.0"
     hostname: "hailstorm-site"
     networks:
       hailstorm_integration:
@@ -10,7 +10,7 @@ services:
       - hailstorm-db
 
   hailstorm-agent-1:
-    image: "hailstorm/hailstorm_agent:1.0.0"
+    image: "hailstorm3/hailstorm-agent:1.0.0"
     hostname: "hailstorm-agent-1"
     networks:
       hailstorm_integration:
@@ -19,7 +19,7 @@ services:
       - hailstorm-site
 
   hailstorm-agent-2:
-    image: "hailstorm/hailstorm_agent:1.0.0"
+    image: "hailstorm3/hailstorm-agent:1.0.0"
     hostname: "hailstorm-agent-2"
     networks:
       hailstorm_integration:

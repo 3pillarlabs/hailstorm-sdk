@@ -14,9 +14,6 @@ stages:
   #   if: branch NOT IN (master, develop)
   # - name: coverage
   #   if: branch = develop
-  # - name: prepare_site
-  #   #if: branch = master AND type = pull_request
-  #   if: branch NOT IN (master, develop) AND type = push
   - name: integration
     #if: branch = master AND type = pull_request
     if: branch NOT IN (master, develop) AND type = push
@@ -181,7 +178,18 @@ jobs:
     #   after_script:
     #     - make PROJECT=web-client cc_test_report
 
-    # ------------ PREPARE_SITE -----------------------------------
+    # ------------ INTEGRATION -----------------------------------
+    - stage: integration
+      name: "hailstorm-gem integration"
+      language: ruby
+      rvm: jruby-9.1.9.0
+      jdk: openjdk8
+      install:
+        - ${TRAVIS_BUILD_DIR}/.travis/write_gem_aws_keys.sh
+        - make PROJECT=gem install
+      script:
+        - make PROJECT=gem integration
+
     # - stage: prepare_site
     #   name: "hailstorm-sdk prepare_site"
     #   language: minimal
@@ -198,44 +206,46 @@ jobs:
     #   script:
     #     - sudo vagrant up aws-site --provider=aws
 
-
-    # ------------ INTEGRATION -----------------------------------
-    # - stage: integration
-    #   name: "hailstorm-gem integration"
-    #   language: ruby
-    #   rvm: jruby-9.1.9.0
-    #   jdk: openjdk8
-    #   install:
-    #     - ${TRAVIS_BUILD_DIR}/.travis/write_gem_aws_keys.sh
-    #     - make PROJECT=gem FORCE=yes install
-    #   script:
-    #     - make PROJECT=gem FORCE=yes integration
-
-    # - stage: integration
-    #   name: "hailstorm-cli integration"
-    #   language: ruby
-    #   rvm: jruby-9.1.9.0
-    #   jdk: openjdk8
-    #   before_install:
-    #     - ${TRAVIS_BUILD_DIR}/.travis/write_cli_aws_keys.sh
-    #   #   - make install_aws
-    #     - make hailstorm_site hailstorm_agent
-    #     - sudo curl -fsL -o /usr/local/bin/docker-compose "https://github.com/docker/compose/releases/download/1.25.4/docker-compose-Linux-x86_64"
-    #     - sudo chmod +x /usr/local/bin/docker-compose
-    #     - docker-compose -f docker-compose-cli.yml up -d hailstorm-db
-    #     - sleep 20 && make DOCKER_NETWORK=hailstorm_integration hailstorm_db_users
-    #     - docker-compose -f docker-compose-cli.yml down
-    #   install:
-    #     - make PROJECT=gem FORCE=yes install build local_publish
-    #     - mkdir -p ${TRAVIS_BUILD_DIR}/hailstorm-cli/pkg
-    #     - cp ${TRAVIS_BUILD_DIR}/hailstorm-gem/pkg/hailstorm-*.gem ${TRAVIS_BUILD_DIR}/hailstorm-cli/pkg/.
-    #     - make PROJECT=cli FORCE=yes install build package
-    #     - docker-compose -f docker-compose-cli.yml -f docker-compose-cli.ci.yml -f docker-compose.dc-sim.yml up -d
-    #   script:
-    #     - make PROJECT=cli FORCE=yes integration
-    #   after_script:
-    #     # - ${TRAVIS_BUILD_DIR}/.travis/terminate_aws_site.sh
-    #     - docker-compose -f docker-compose-cli.yml -f docker-compose.dc-sim.yml -f docker-compose-cli.ci.yml down
+    - stage: integration
+      name: "hailstorm-cli integration"
+      language: ruby
+      rvm: jruby-9.1.9.0
+      jdk: openjdk8
+      env:
+        - TAG_VALUE="Hailstorm Site - cli"
+      before_install:
+        - make install_aws
+        - ${TRAVIS_BUILD_DIR}/.travis/write_aws_keys.sh
+        # - ${TRAVIS_BUILD_DIR}/.travis/write_vagrant_aws.sh
+        # - aws s3 cp s3://${S3_BUCKET_NAME}/hailstorm_travis_insecure.pem ${TRAVIS_BUILD_DIR}/
+        # - curl -fsLO https://releases.hashicorp.com/vagrant/2.2.5/vagrant_2.2.5_x86_64.deb
+        # - sudo dpkg --install vagrant_2.2.5_x86_64.deb
+        # - sudo vagrant box add dummy https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box
+        # - sudo vagrant plugin install vagrant-aws
+        # - TAG_VALUE=cli sudo -E vagrant up aws-site --provider=aws
+        - export SITE_INSTANCE_ID=$(aws ec2 run-instances --image-id ${HAILSTORM_SITE_AMI_ID} --instance-type t2.medium --key-name ${AWS_SITE_KEY_PAIR} --security-group-ids ${AWS_SITE_SECURITY_GROUP} --subnet-id ${AWS_SITE_SUBNET_ID} --associate-public-ip-address --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value='${TAG_VALUE}'}]" --query 'Instances[0].InstanceId' | perl -ne '/^"(.+)"$/; print $1')
+        - ${TRAVIS_BUILD_DIR}/.travis/write_cli_aws_keys.sh
+        - sudo curl -fsL -o /usr/local/bin/docker-compose "https://github.com/docker/compose/releases/download/1.25.4/docker-compose-Linux-x86_64"
+        - sudo chmod +x /usr/local/bin/docker-compose
+        - sudo systemctl stop mysql
+        - docker-compose -f docker-compose-cli.yml -f docker-compose-cli.ci.yml -f docker-compose.dc-sim.yml up -d hailstorm-db
+        - sleep 20
+        - make DOCKER_NETWORK=hailstorm_integration hailstorm_db_users
+        - docker-compose -f docker-compose-cli.yml -f docker-compose-cli.ci.yml -f docker-compose.dc-sim.yml down
+      install:
+        - make PROJECT=gem FORCE=yes install build local_publish
+        - mkdir -p ${TRAVIS_BUILD_DIR}/hailstorm-cli/pkg
+        - cp ${TRAVIS_BUILD_DIR}/hailstorm-gem/pkg/hailstorm-*.gem ${TRAVIS_BUILD_DIR}/hailstorm-cli/pkg/.
+        - make PROJECT=cli FORCE=yes install build package
+        - docker-compose -f docker-compose-cli.yml -f docker-compose-cli.ci.yml -f docker-compose.dc-sim.yml up -d
+        - sleep 60
+        - while [ "$(aws ec2 describe-instance-status --instance-ids "${SITE_INSTANCE_ID}" --query "join(' ', InstanceStatuses[0].[InstanceState.Name, InstanceStatus.Details[0].Status, SystemStatus.Details[0].Status])" | perl -ne '/^"(.+)"$/; print $1')" != "running passed passed" ]; do echo "Waiting for ${SITE_INSTANCE_ID} running state"; sleep 30; done
+      script:
+        - make PROJECT=cli FORCE=yes integration
+      after_script:
+        # - sudo vagrant destroy -f aws-site
+        - aws ec2 terminate-instances --instance-ids "${SITE_INSTANCE_ID}"
+        - docker-compose -f docker-compose-cli.yml -f docker-compose.dc-sim.yml -f docker-compose-cli.ci.yml down
 
     - stage: integration
       name: "hailstorm-web-client integration"
@@ -243,19 +253,29 @@ jobs:
       jdk: openjdk8
       env:
         - MOZ_HEADLESS=1
+        - TAG_VALUE="Hailstorm Site - web-client"
       addons:
         firefox: latest
       before_install:
+        - make install_aws
+        - ${TRAVIS_BUILD_DIR}/.travis/write_aws_keys.sh
+        # - ${TRAVIS_BUILD_DIR}/.travis/write_vagrant_aws.sh
+        # - aws s3 cp s3://${S3_BUCKET_NAME}/hailstorm_travis_insecure.pem ${TRAVIS_BUILD_DIR}/
+        # - curl -fsLO https://releases.hashicorp.com/vagrant/2.2.5/vagrant_2.2.5_x86_64.deb
+        # - sudo dpkg --install vagrant_2.2.5_x86_64.deb
+        # - sudo vagrant box add dummy https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box
+        # - sudo vagrant plugin install vagrant-aws
+        # - TAG_VALUE=web-client sudo -E vagrant up aws-site --provider=aws
+        - export SITE_INSTANCE_ID=$(aws ec2 run-instances --image-id ${HAILSTORM_SITE_AMI_ID} --instance-type t2.medium --key-name ${AWS_SITE_KEY_PAIR} --security-group-ids ${AWS_SITE_SECURITY_GROUP} --subnet-id ${AWS_SITE_SUBNET_ID} --associate-public-ip-address --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value='${TAG_VALUE}'}]" --query 'Instances[0].InstanceId' | perl -ne '/^"(.+)"$/; print $1')
         - rvm install jruby-9.1.9.0
         - nvm install lts/dubnium
         - sudo systemctl stop mysql
         - ${TRAVIS_BUILD_DIR}/.travis/write_web_aws_keys.sh
-      #   - make install_aws
-        - make hailstorm_site hailstorm_agent
         - sudo curl -fsL -o /usr/local/bin/docker-compose "https://github.com/docker/compose/releases/download/1.25.4/docker-compose-Linux-x86_64"
         - sudo chmod +x /usr/local/bin/docker-compose
         - docker-compose -f docker-compose.yml -f docker-compose.dc-sim.yml -f docker-compose.web-ci.yml up -d hailstorm-db
-        - sleep 20 && make hailstorm_db_users
+        - sleep 20
+        - make hailstorm_db_users
         - docker-compose -f docker-compose.yml -f docker-compose.dc-sim.yml -f docker-compose.web-ci.yml down
       install:
         - make PROJECT=web-client FORCE=yes install build package
@@ -266,9 +286,11 @@ jobs:
         - make PROJECT=file-server FORCE=yes install package
         - make PROJECT=client-exchange FORCE=yes install package
         - docker-compose -f docker-compose.yml -f docker-compose.dc-sim.yml -f docker-compose.web-ci.yml up -d
-        - sleep 60
+        - sleep 180
+        - while [ "$(aws ec2 describe-instance-status --instance-ids "${SITE_INSTANCE_ID}" --query "join(' ', InstanceStatuses[0].[InstanceState.Name, InstanceStatus.Details[0].Status, SystemStatus.Details[0].Status])" | perl -ne '/^"(.+)"$/; print $1')" != "running passed passed" ]; do echo "Waiting for ${SITE_INSTANCE_ID} running state"; sleep 30; done
       script:
         - make PROJECT=web-client FORCE=yes integration
       after_script:
-        # - ${TRAVIS_BUILD_DIR}/.travis/terminate_aws_site.sh
+        # - sudo vagrant destroy -f aws-site
+        - aws ec2 terminate-instances --instance-ids "${SITE_INSTANCE_ID}"
         - docker-compose -f docker-compose.yml -f docker-compose.dc-sim.yml -f docker-compose.web-ci.yml down

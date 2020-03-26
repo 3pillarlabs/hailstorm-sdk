@@ -8,6 +8,7 @@ class LandingPage {
   open() {
     browser.setTimeout({implicit: 5000});
     browser.url('/');
+    browser.pause(5000);
   }
 
   getTitle(): string {
@@ -15,7 +16,8 @@ class LandingPage {
   }
 
   findProjectElement({title}: {title: string}): WebdriverIO.Element | undefined {
-    browser.waitUntil(() => browser.react$('Loader').isDisplayed() === false);
+    browser.pause(3000);
+    browser.waitUntil(() => browser.react$('Loader').isDisplayed() === false, 10000);
     const matches = $$(`*=${title}`);
     return matches.length > 0 ? matches[0] : undefined;
   }
@@ -34,18 +36,18 @@ class NewProjectWizardPage extends WizardBase {
 
   proceedToNextStep(element: WebdriverIO.Element) {
     element.click();
-    this.nextLink.waitForExist();
+    this.nextLink.waitForEnabled();
     this.nextLink.click();
   }
 
   createNewProject({title}: {title: string}) {
-    if (this.newProjectLink.isExisting()) {
+    if (this.newProjectLink.isExisting() && this.newProjectLink.isEnabled()) {
       this.newProjectLink.click();
     }
 
-    this.titleInput.waitForDisplayed();
+    this.titleInput.waitForDisplayed(1000);
     this.titleInput.addValue(title);
-    this.saveAndNextStep.waitForEnabled();
+    this.saveAndNextStep.waitForEnabled(1000);
     this.saveAndNextStep.click();
   }
 }
@@ -58,14 +60,15 @@ class JMeterConfigPage extends WizardBase {
   get saveButton() { return $('button*=Save') }
 
   updateProperties(properties: {property: string, value: any}[]) {
-    browser.waitUntil(() => this.fileUpload.isExisting(), 10000);
+    browser.waitUntil(() => this.fileUpload.isExisting(), 15000);
     if (! this.serverNameInput.isExisting()) {
       this.uploadFile();
     }
 
     this.fillProperties(properties);
+    browser.waitUntil(() => this.saveButton.isEnabled(), 10000);
     this.saveButton.click();
-    browser.waitUntil(() => this.saveButton.isEnabled());
+    browser.waitUntil(() => this.nextButton.isEnabled(), 10000);
     this.nextButton.click();
   }
 
@@ -83,7 +86,7 @@ class JMeterConfigPage extends WizardBase {
     const filePath = path.resolve("data", "hailstorm-site-basic.jmx");
     const remoteFilePath = browser.uploadFile(filePath);
     this.fileUpload.setValue(remoteFilePath);
-    browser.waitUntil(() => this.removeButton.isDisplayed(), 15000);
+    browser.waitUntil(() => this.removeButton.isDisplayed(), 20000);
   }
 }
 
@@ -98,7 +101,7 @@ class AmazonConfig extends WizardBase {
   get maxThreadsPerInstance() { return $('//input[@name="maxThreadsByInstance"]') }
 
   chooseAWS() {
-    browser.waitUntil(() => browser.react$("Loader").isDisplayed() === false);
+    browser.waitUntil(() => browser.react$("Loader").isDisplayed() === false, 10000);
     if (this.awsLink.isDisplayed()) {
       this.awsLink.click();
       return true;
@@ -108,7 +111,7 @@ class AmazonConfig extends WizardBase {
   }
 
   createCluster({region, maxThreadsPerAgent}: {region: string, maxThreadsPerAgent: number}) {
-    browser.waitUntil(() => this.editRegion.isDisplayed());
+    browser.waitUntil(() => this.editRegion.isDisplayed(), 10000);
     const awsCredentials: { accessKey: string; secretKey: string } = yaml.parse(
       fs.readFileSync(path.resolve("data/keys.yml"), "utf8")
     );
@@ -117,27 +120,30 @@ class AmazonConfig extends WizardBase {
     this.secretKey.setValue(awsCredentials.secretKey);
     if (maxThreadsPerAgent) {
       this.advancedMode.click();
+      browser.waitUntil(() => this.maxThreadsPerInstance.isExisting());
       this.maxThreadsPerInstance.setValue(maxThreadsPerAgent);
     }
 
     this.selectRegion(region);
     const submitBtn = $('button*=Save');
-    submitBtn.waitForEnabled();
+    submitBtn.waitForEnabled(1000);
     submitBtn.click();
   }
 
   private selectRegion(region: string) {
     const [levelOneRegion, levelTwoRegion] = region.split('/');
     this.editRegion.click();
-    const levelOne = this.regionOptions.find((region) => region.getText() === levelOneRegion);
+    browser.pause(500);
+    const levelOne = this.regionOptions.find((opt) => opt.getText() === levelOneRegion);
     levelOne.click();
-    const levelTwo = this.regionOptions.find((region) => region.getText() === levelTwoRegion);
+    browser.pause(500);
+    const levelTwo = this.regionOptions.find((opt) => opt.getText() === levelTwoRegion);
     levelTwo.click();
     browser.waitUntil(() => $(`//input[@value="${levelTwoRegion}"]`).isExisting());
   }
 
   proceedToNextStep() {
-    browser.waitUntil(() => this.nextButton.isEnabled(), 10000);
+    browser.waitUntil(() => this.nextButton.isEnabled(), 15000);
     this.nextButton.click();
   }
 }
@@ -147,7 +153,7 @@ class WizardReview extends WizardBase {
   get doneButton() { return $("button*=Done") }
 
   finalize() {
-    browser.waitUntil(() => this.doneButton.isExisting());
+    browser.waitUntil(() => this.doneButton.isExisting(), 20000);
     this.doneButton.click();
   }
 }
@@ -167,7 +173,7 @@ class ProjectWorkspace {
   get reportsListItems() { return $$('//*[@data-testid="Reports List"]/a') }
 
   startTest() {
-    browser.waitUntil(() => this.startButton.isEnabled(), 10000);
+    browser.waitUntil(() => this.startButton.isEnabled(), 15000);
     this.startButton.click();
   }
 
@@ -217,24 +223,23 @@ class ProjectWorkspace {
 
   terminateProject(): string {
     this.showDangerousSettings.click();
-    this.terminateButton.waitForDisplayed();
+    this.terminateButton.waitForDisplayed(1000);
     this.terminateButton.click();
-    this.confirmTerminate.waitForDisplayed();
+    this.confirmTerminate.waitForDisplayed(1000);
     this.confirmTerminate.click();
-    // TODO Remove browser.pause because it leads to flaky tests
-    browser.pause(1000);
+    this.terminateButton.waitForEnabled(1000, true);
     browser.waitUntil(() => this.terminateButton.isEnabled(), 5 * 60 * 1000, "wait for terminate action to complete", 3000);
     return path.basename((new URL(browser.getUrl())).hash.slice(1));
   }
 
   generateReport() {
     this.masterCheckBox.click();
-    this.reportButton.waitForEnabled();
+    this.reportButton.waitForEnabled(1000);
     this.reportButton.click();
   }
 
   waitForGeneratedReports() {
-    browser.waitUntil(() => this.reportsListItems.length > 0, 5 * 60 * 1000, "waiting for report to be generated", 1000);
+    browser.waitUntil(() => this.reportsListItems.length > 0, 5 * 60 * 1000, "waiting for report to be generated", 10000);
     return this.reportsListItems.length;
   }
 }

@@ -72,10 +72,10 @@ local_publish:
 	cd ${PROJECT_PATH} && make local_publish
 
 hailstorm_site:
-	cd ${TRAVIS_BUILD_DIR}/hailstorm-site && docker build -t hailstorm/hailstorm_site:1.0.0 .
+	cd ${TRAVIS_BUILD_DIR}/hailstorm-site && docker build -t hailstorm3/hailstorm-site .
 
 hailstorm_agent:
-	cd ${TRAVIS_BUILD_DIR}/setup/data-center && docker build -t hailstorm/hailstorm_agent:1.0.0 .
+	cd ${TRAVIS_BUILD_DIR}/setup/data-center && docker build -t hailstorm3/hailstorm-agent .
 
 hailstorm_db_users:
 	@docker run --rm --network ${DOCKER_COMPOSE_PREFIX}${DOCKER_NETWORK} mysql:5 \
