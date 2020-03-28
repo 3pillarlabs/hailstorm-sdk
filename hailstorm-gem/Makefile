@@ -5,17 +5,17 @@ endif
 install:
 	bundle install
 
-test: create_mysql_user
+test: create_mysql_user setup_db
 	JRUBY_OPTS="--debug" rspec -f HailstormCiFormatter
 
-coverage: create_mysql_user
+coverage: create_mysql_user setup_db
 	if [ -n "${CI}" ]; then ${TRAVIS_BUILD_DIR}/.travis/coverage.sh -i; fi
 	HAILSTORM_COVERAGE="true" JRUBY_OPTS="--debug" rspec -f HailstormCiFormatter
 
 setup_db:
 	rake db:setup
 
-create_mysql_user: setup_db
+create_mysql_user:
 	if [ -n "${CI}" ]; \
 	then \
 		mysql -e 'grant all privileges on *.* to "hailstorm_dev"@"localhost" identified by "hailstorm_dev";'; \
