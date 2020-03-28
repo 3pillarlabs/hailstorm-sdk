@@ -109,6 +109,7 @@ jobs:
         - CI_NODE_INDEX=1
       before_install:
         - make install_aws
+        - make PROJECT=gem FORCE=yes install build local_publish
       install:
         - make PROJECT=cli FORCE=yes install
       script:
@@ -125,6 +126,7 @@ jobs:
         - CI_NODE_INDEX=2
       before_install:
         - make install_aws
+        - make PROJECT=gem FORCE=yes install build local_publish
       install:
         - make PROJECT=api FORCE=yes install
       script:
