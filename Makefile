@@ -34,9 +34,24 @@ ifeq ($(FORCE), yes)
 CHANGES = ls -d
 endif
 
-DOCKER_COMPOSE_PREFIX = hailstorm-sdk_
+DOCKER_COMPOSE_PREFIX := hailstorm-sdk_
 
-DOCKER_NETWORK = hailstorm
+DOCKER_NETWORK := hailstorm
+
+ifeq ($(COMPOSE), cli)
+COMPOSE_FILES := -f docker-compose-cli.yml -f docker-compose-cli.ci.yml -f docker-compose.dc-sim.yml
+endif
+
+ifeq ($(COMPOSE), web-client)
+COMPOSE_FILES := -f docker-compose.yml -f docker-compose.dc-sim.yml -f docker-compose.web-ci.yml
+endif
+
+SITE_STATUS_CHECK = aws ec2 describe-instance-status --instance-ids "${SITE_INSTANCE_ID}" \
+                    --query "join(' ', InstanceStatuses[0].[ \
+						InstanceState.Name, \
+					    InstanceStatus.Details[0].Status, \
+						SystemStatus.Details[0].Status \
+					])" | perl -ne '/^"(.+)"$/; print $1')" != "running passed passed"
 
 install:
 	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make install; fi
@@ -78,14 +93,140 @@ hailstorm_agent:
 	cd ${TRAVIS_BUILD_DIR}/setup/data-center && docker build -t hailstorm3/hailstorm-agent .
 
 hailstorm_db_users:
+	if [ -n "${TRAVIS}" ]; then
+		sudo systemctl stop mysql
+		docker-compose ${COMPOSE_FILES} up -d hailstorm-db
+		sleep 20
+	fi
+
 	@docker run --rm --network ${DOCKER_COMPOSE_PREFIX}${DOCKER_NETWORK} mysql:5 \
 	mysql -h hailstorm-db -uroot -p"${MYSQL_ROOT_PASSWORD}" -e \
 	"grant all privileges on *.* to 'hailstorm'@'%' identified by 'hailstorm'; \
+
 	grant all privileges on *.* to 'hailstorm_dev'@'%' identified by 'hailstorm_dev'"
 
-# file_server:
-# 	cd hailstorm-file-server && \
-# 	./gradlew clean bootJar docker
+	if [ -n "${TRAVIS}" ]; then
+		docker-compose ${COMPOSE_FILES} down
+	fi
 
-# web_client:
-# 	cd hailstorm-web-client && npm run package
+
+hailstorm_site_instance:
+	make install_aws
+
+	${TRAVIS_BUILD_DIR}/.travis/write_aws_profile.sh
+
+	export SITE_INSTANCE_ID=$( \
+		aws ec2 run-instances \
+		--image-id ${HAILSTORM_SITE_AMI_ID} \
+		--instance-type t2.medium \
+		--key-name ${AWS_SITE_KEY_PAIR} \
+		--security-group-ids ${AWS_SITE_SECURITY_GROUP} \
+		--subnet-id ${AWS_SITE_SUBNET_ID} \
+		--associate-public-ip-address \
+		--tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value='${TAG_VALUE}'}]" \
+		--query 'Instances[0].InstanceId' | perl -ne '/^"(.+)"$/; print $1' \
+	)
+
+
+docker_compose_binary:
+	sudo curl -fsL -o /usr/local/bin/docker-compose \
+	"https://github.com/docker/compose/releases/download/1.25.4/docker-compose-Linux-x86_64"
+	sudo chmod +x /usr/local/bin/docker-compose
+
+
+ready_hailstorm_site:
+	while [ "$(${SITE_STATUS_CHECK})" | perl -ne '/^"(.+)"$/; print $1')" != "running passed passed" ]; do \
+		echo "Waiting for ${SITE_INSTANCE_ID} running state"
+		sleep 30
+	done
+
+invoke_cli_integration_before_install:
+	if ${CHANGES} hailstorm-cli; then make cli_integration_before_install; fi
+
+
+cli_integration_before_install:
+	if ${CHANGES} hailstorm-cli; then
+		make hailstorm_site_instance
+		make docker_compose_binary
+		make COMPOSE=cli DOCKER_NETWORK=hailstorm_integration hailstorm_db_users
+	fi
+
+
+cli_integration_install:
+	if ${CHANGES} hailstorm-cli; then
+		make PROJECT=gem FORCE=yes install build local_publish
+		mkdir -p ${TRAVIS_BUILD_DIR}/hailstorm-cli/pkg
+		cp ${TRAVIS_BUILD_DIR}/hailstorm-gem/pkg/hailstorm-*.gem ${TRAVIS_BUILD_DIR}/hailstorm-cli/pkg/.
+		make PROJECT=cli FORCE=yes install build package
+		docker-compose ${COMPOSE_FILES} up -d
+		sleep 60
+		make ready_hailstorm_site
+	fi
+
+
+cli_integration_after_script:
+	if ${CHANGES} hailstorm-cli; then
+		aws ec2 terminate-instances --instance-ids "${SITE_INSTANCE_ID}"
+		docker-compose ${COMPOSE_FILES} down
+	fi
+
+
+detect_dependency_changes:
+	${CHANGES} hailstorm-web-client
+	if [ $? -eq 0 ]; then
+		export INVOKE_WEB_INTEGRATION=yes
+	else
+		${CHANGES} hailstorm-api
+		if [ $? -eq 0 ]; then
+			export INVOKE_WEB_INTEGRATION=yes
+		else
+			${CHANGES} hailstorm-file-server
+			if [ $? -eq 0 ]; then
+				export INVOKE_WEB_INTEGRATION=yes
+			else
+				${CHANGES} hailstorm-client-exchange
+				if [ $? -eq 0 ]; then
+					export INVOKE_WEB_INTEGRATION=yes
+				fi
+			fi
+		fi
+	fi
+
+
+web_integration_before_install: detect_dependency_changes
+	if [ -n "${INVOKE_WEB_INTEGRATION}" ]; then
+		make hailstorm_site_instance
+		${TRAVIS_BUILD_DIR}/.travis/write_web_aws_keys.sh
+		rvm install jruby-9.1.9.0
+		nvm install lts/dubnium
+		make docker_compose_binary
+		make COMPOSE=web-client hailstorm_db_users
+	fi
+
+
+web_integration_install: detect_dependency_changes
+	if [ -n "${INVOKE_WEB_INTEGRATION}" ]; then
+		make PROJECT=web-client FORCE=yes install build package
+		make PROJECT=gem FORCE=yes install build local_publish
+		mkdir -p ${TRAVIS_BUILD_DIR}/hailstorm-api/pkg
+		cp ${TRAVIS_BUILD_DIR}/hailstorm-gem/pkg/hailstorm-*.gem ${TRAVIS_BUILD_DIR}/hailstorm-api/pkg/.
+		make PROJECT=api FORCE=yes install package
+		make PROJECT=file-server FORCE=yes install package
+		make PROJECT=client-exchange FORCE=yes install package
+		docker-compose ${COMPOSE_FILES} up -d
+		sleep 180
+		make ready_hailstorm_site
+	fi
+
+
+web_integration_script: detect_dependency_changes
+	if [ -n "${INVOKE_WEB_INTEGRATION}" ]; then
+		make PROJECT=web-client FORCE=yes integration
+	fi
+
+
+web_integration_after_script: detect_dependency_changes
+	if [ -n "${INVOKE_WEB_INTEGRATION}" ]; then
+		aws ec2 terminate-instances --instance-ids "${SITE_INSTANCE_ID}"
+		docker-compose ${COMPOSE_FILES} down
+	fi

@@ -25,6 +25,7 @@ cc_test_report:
 	if [ -n "${CI}" ]; then ${TRAVIS_BUILD_DIR}/.travis/coverage.sh -u $(shell basename ${PWD}) -t simplecov; fi
 
 integration:
+	${TRAVIS_BUILD_DIR}/.travis/write_gem_aws_keys.sh
 	cucumber --tags ${TAG_FLAGS}
 
 build:
