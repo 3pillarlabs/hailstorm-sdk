@@ -8,6 +8,7 @@ env:
     - AWS_DEFAULT_REGION=us-east-1
     - CC_TEST_REPORTER_ID=3e42f82fe2b2f0601cafe4eca93a8c9d296dfa8f7af67d2e846a182a834bde59
     - CI_NODE_TOTAL=6
+    - PATH=~/bin:${PATH}
 
 stages:
   - name: test

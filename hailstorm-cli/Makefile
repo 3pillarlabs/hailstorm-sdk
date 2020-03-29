@@ -27,7 +27,6 @@ package:
 	-t hailstorm/hailstorm-cli:$(shell ruby -I ./lib -r 'hailstorm/cli/version' -e 'puts Hailstorm::Cli::VERSION') .
 
 integration:
-	${TRAVIS_BUILD_DIR}/.travis/write_cli_aws_keys.sh
 	docker run \
 	-it \
 	--rm \
