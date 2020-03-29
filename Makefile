@@ -204,7 +204,6 @@ web_integration_before_install_steps:
 	make hailstorm_site_instance
 	${TRAVIS_BUILD_DIR}/.travis/write_web_aws_keys.sh
 	rvm install ${JRUBY}
-	nvm install lts/dubnium
 	make docker_compose_binary
 	make COMPOSE=web-client hailstorm_db_users
 

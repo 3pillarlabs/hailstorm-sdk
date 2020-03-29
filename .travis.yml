@@ -218,6 +218,7 @@ jobs:
       addons:
         firefox: latest
       before_install:
+        - nvm install lts/dubnium
         - make web_integration_before_install
       install:
         - make COMPOSE=web-client web_integration_install
