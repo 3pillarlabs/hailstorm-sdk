@@ -94,7 +94,7 @@ jobs:
       before_install:
         - make install_aws
       install:
-        - make PROJECT=gem FORCE=yes install
+        - make PROJECT=gem install
       script:
         - make PROJECT=gem coverage
       after_script:
@@ -111,7 +111,7 @@ jobs:
         - make install_aws
         - make PROJECT=gem FORCE=yes install build local_publish
       install:
-        - make PROJECT=cli FORCE=yes install
+        - make PROJECT=cli install
       script:
         - make PROJECT=cli coverage
       after_script:
@@ -128,7 +128,7 @@ jobs:
         - make install_aws
         - make PROJECT=gem FORCE=yes install build local_publish
       install:
-        - make PROJECT=api FORCE=yes install
+        - make PROJECT=api install
       script:
         - make PROJECT=api coverage
       after_script:
@@ -143,7 +143,7 @@ jobs:
       before_install:
         - make install_aws
       install:
-        - make PROJECT=file-server FORCE=yes install
+        - make PROJECT=file-server install
       script:
         - make PROJECT=file-server coverage
       after_script:
@@ -158,7 +158,7 @@ jobs:
       before_install:
         - make install_aws
       install:
-        - make PROJECT=client-exchange FORCE=yes install
+        - make PROJECT=client-exchange install
       script:
         - make PROJECT=client-exchange coverage
       after_script:
@@ -173,7 +173,7 @@ jobs:
       before_install:
         - make install_aws
       install:
-        - make PROJECT=web-client FORCE=yes install
+        - make PROJECT=web-client install
       script:
         - make PROJECT=web-client coverage
       after_script:
@@ -203,7 +203,7 @@ jobs:
       install:
         - make COMPOSE=cli cli_integration_install
       script:
-        - make PROJECT=cli FORCE=yes integration
+        - make PROJECT=cli integration
       after_script:
         - make COMPOSE=cli cli_integration_after_script
 
