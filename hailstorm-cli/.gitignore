@@ -4,3 +4,4 @@ build/
 coverage/
 .jrubyrc
 keys.yml
+/pkg/

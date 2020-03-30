@@ -1,19 +1,23 @@
 # Travis Configuration
 services:
   - mysql
+  - docker
 
 env:
   global:
     - AWS_DEFAULT_REGION=us-east-1
     - CC_TEST_REPORTER_ID=3e42f82fe2b2f0601cafe4eca93a8c9d296dfa8f7af67d2e846a182a834bde59
     - CI_NODE_TOTAL=6
+    - PATH=~/bin:${PATH}
 
 stages:
   - name: test
     if: branch NOT IN (master, develop)
   - name: coverage
-    # if: branch = develop AND type = pull_request
     if: branch = develop
+  - name: integration
+    if: branch = develop AND type = pull_request
+
 
 jobs:
   include:
@@ -33,6 +37,8 @@ jobs:
       language: ruby
       rvm: jruby-9.1.9.0
       jdk: openjdk8
+      before_install:
+        - make PROJECT=gem FORCE=yes install build local_publish
       install:
         - make PROJECT=cli install
       script:
@@ -43,6 +49,8 @@ jobs:
       language: ruby
       rvm: jruby-9.1.9.0
       jdk: openjdk8
+      before_install:
+        - make PROJECT=gem FORCE=yes install build local_publish
       install:
         - make PROJECT=api install
       script:
@@ -102,6 +110,7 @@ jobs:
         - CI_NODE_INDEX=1
       before_install:
         - make install_aws
+        - make PROJECT=gem FORCE=yes install build local_publish
       install:
         - make PROJECT=cli FORCE=yes install
       script:
@@ -118,6 +127,7 @@ jobs:
         - CI_NODE_INDEX=2
       before_install:
         - make install_aws
+        - make PROJECT=gem FORCE=yes install build local_publish
       install:
         - make PROJECT=api FORCE=yes install
       script:
@@ -169,3 +179,55 @@ jobs:
         - make PROJECT=web-client coverage
       after_script:
         - make PROJECT=web-client cc_test_report
+
+
+    # ------------ INTEGRATION -----------------------------------
+    - stage: integration
+      name: "hailstorm-gem integration"
+      language: ruby
+      rvm: jruby-9.1.9.0
+      jdk: openjdk8
+      install:
+        - make PROJECT=gem install
+      script:
+        - make PROJECT=gem integration
+
+    - stage: integration
+      name: "hailstorm-cli integration"
+      language: ruby
+      rvm: jruby-9.1.9.0
+      jdk: openjdk8
+      env:
+        - TAG_VALUE="Hailstorm Site - cli"
+      before_install:
+        - make cli_integration_before_install
+      install:
+        - make COMPOSE=cli cli_integration_install
+      script:
+        - make PROJECT=cli integration
+      after_script:
+        - make COMPOSE=cli cli_integration_after_script
+
+    - stage: integration
+      name: "hailstorm-web-client integration"
+      language: java
+      jdk: openjdk8
+      env:
+        - MOZ_HEADLESS=1
+        - TAG_VALUE="Hailstorm Site - web-client"
+        - JRUBY=jruby-9.1.9.0
+        - NODE_VERSION=lts/dubnium
+      addons:
+        firefox: latest
+      before_install:
+        - nvm install ${NODE_VERSION}
+        - rvm install ${JRUBY}
+        - make web_integration_before_install
+      install:
+        - nvm use ${NODE_VERSION}
+        - rvm use ${JRUBY}
+        - make COMPOSE=web-client web_integration_install
+      script:
+        - make COMPOSE=web-client web_integration_script
+      after_script:
+        - make COMPOSE=web-client web_integration_after_script

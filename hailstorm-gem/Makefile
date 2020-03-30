@@ -1,13 +1,19 @@
-install: create_mysql_user
-	bundle install
-	rake db:setup
+ifndef TAG_FLAGS
+TAG_FLAGS = @smoke
+endif
 
-test:
+install:
+	bundle install
+
+test: create_mysql_user setup_db
 	JRUBY_OPTS="--debug" rspec -f HailstormCiFormatter
 
-coverage:
+coverage: create_mysql_user setup_db
 	if [ -n "${CI}" ]; then ${TRAVIS_BUILD_DIR}/.travis/coverage.sh -i; fi
 	HAILSTORM_COVERAGE="true" JRUBY_OPTS="--debug" rspec -f HailstormCiFormatter
+
+setup_db:
+	rake db:setup
 
 create_mysql_user:
 	if [ -n "${CI}" ]; \
@@ -17,3 +23,13 @@ create_mysql_user:
 
 cc_test_report:
 	if [ -n "${CI}" ]; then ${TRAVIS_BUILD_DIR}/.travis/coverage.sh -u $(shell basename ${PWD}) -t simplecov; fi
+
+integration: create_mysql_user setup_db
+	${TRAVIS_BUILD_DIR}/.travis/write_gem_aws_keys.sh
+	cucumber --tags ${TAG_FLAGS}
+
+build:
+	rake build
+
+local_publish:
+	rake install

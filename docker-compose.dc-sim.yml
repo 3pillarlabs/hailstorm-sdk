@@ -1,0 +1,36 @@
+version: '3.2'
+services:
+  hailstorm-site:
+    image: "hailstorm3/hailstorm-site:1.0.0"
+    hostname: "hailstorm-site"
+    networks:
+      hailstorm_integration:
+        ipv4_address: 192.168.20.100
+    depends_on:
+      - hailstorm-db
+
+  hailstorm-agent-1:
+    image: "hailstorm3/hailstorm-agent:1.0.0"
+    hostname: "hailstorm-agent-1"
+    networks:
+      hailstorm_integration:
+        ipv4_address: 192.168.20.10
+    depends_on:
+      - hailstorm-site
+
+  hailstorm-agent-2:
+    image: "hailstorm3/hailstorm-agent:1.0.0"
+    hostname: "hailstorm-agent-2"
+    networks:
+      hailstorm_integration:
+        ipv4_address: 192.168.20.20
+    depends_on:
+      - hailstorm-site
+
+networks:
+  hailstorm_integration:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.20.0/24

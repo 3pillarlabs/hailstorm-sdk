@@ -120,7 +120,7 @@ class Hailstorm::Middleware::Application
     }.merge(load_db_properties.reject { |_k, v| v.blank? })
 
     @connection_spec[:database] ||= database_name
-
+    @connection_spec[:host] = ENV['DATABASE_HOST'] if ENV['DATABASE_HOST']
     @connection_spec
   end
 

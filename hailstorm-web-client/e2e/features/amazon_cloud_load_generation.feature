@@ -7,7 +7,7 @@ Feature: Generate load from AWS
   @end-to-end
   Scenario: Start with 10 threads
     When I have Hailstorm open
-    And I created the project "Full Integration 25"
+    And I created the project "Simple burst test"
     And I configure JMeter with following properties
       | property       | value |
       | NumUsers       |    10 |
@@ -15,7 +15,7 @@ Feature: Generate load from AWS
       | RampUp         |     0 |
     And configure following amazon clusters
       | region    | maxThreadsPerAgent |
-      | North America/US East (Ohio) | |
+      | North America/US East (Ohio)  ||
     And finalize the configuration
     And start load generation
     Then 1 test should be running
@@ -23,6 +23,7 @@ Feature: Generate load from AWS
   @smoke
   @end-to-end
   Scenario: Stop the test with 10 threads
+    Given a test is running
     When I wait for load generation to stop
     Then 1 tests should exist
 
@@ -91,5 +92,6 @@ Feature: Generate load from AWS
   @smoke
   @end-to-end
   Scenario: Generate a report
+    Given some tests have completed
     When I generate a report
     Then a report file should be created

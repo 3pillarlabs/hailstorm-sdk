@@ -89,7 +89,7 @@ Vagrant.configure(2) do |config|
       ec2.security_groups = aws_conf[:security_groups]
       ec2.subnet_id = aws_conf[:subnet_id] if aws_conf.key?(:subnet_id)
       ec2.tags = {
-        Name: "Vagrant - Hailstorm Site"
+        Name: ["Vagrant - Hailstorm Site", ENV['TAG_VALUE']].join(' ')
       }
 
       ec2.terminate_on_shutdown = false

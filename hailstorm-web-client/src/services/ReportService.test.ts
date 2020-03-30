@@ -7,7 +7,7 @@ describe('ReportService', () => {
 
   it('should return list of reports', async () => {
     const spy = jest.spyOn(window, 'fetch').mockResolvedValueOnce(new Response(new Blob([JSON.stringify([
-      { id: 1, projectId: 1, title: "hailstorm-site-basic-1-2" },
+      { id: 1, projectId: 1, title: "hailstorm-site-basic-1-2", uri: "http://fs:1234/4567/hailstorm-site-basic-1-2.docx" },
     ])])));
 
     const service = new ReportService();
@@ -18,7 +18,7 @@ describe('ReportService', () => {
 
   it('should create a new project', async () => {
     const spy = jest.spyOn(window, 'fetch').mockResolvedValueOnce(new Response(new Blob([JSON.stringify(
-      { id: 1, projectId: 1, title: "hailstorm-site-basic-2-4" }
+      { id: 1, projectId: 1, title: "hailstorm-site-basic-2-4", uri: "http://fs:1234/5678/hailstorm-site-basic-2-4.docx" }
     )])));
 
     const service = new ReportService();

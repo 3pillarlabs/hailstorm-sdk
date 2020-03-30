@@ -1,0 +1,12 @@
+.bundle/
+.idea/
+build/
+coverage/
+spec/
+.gitignore
+.rspec
+.rubocop.yml
+.ruby-version
+.simplecov
+README.md
+.git/

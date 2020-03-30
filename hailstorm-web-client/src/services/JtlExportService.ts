@@ -1,6 +1,7 @@
 import { JtlFile } from "../domain";
 import environment from "../environment";
 import { fetchGuard, fetchOK } from "./fetch-adapter";
+import { replaceHost } from "./replaceHost";
 
 export class JtlExportService {
   async create(projectId: number, executionCycleIds: number[]): Promise<JtlFile> {
@@ -15,6 +16,7 @@ export class JtlExportService {
       });
 
       const jtlFile: JtlFile = await response.json();
+      jtlFile.url = replaceHost(jtlFile.url);
       return jtlFile;
     });
   }

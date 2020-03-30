@@ -1,6 +1,7 @@
 import { Report } from "../domain";
 import environment from "../environment";
 import { fetchGuard, fetchOK } from "./fetch-adapter";
+import { replaceHost } from "./replaceHost";
 
 export class ReportService {
 
@@ -9,7 +10,10 @@ export class ReportService {
     return fetchGuard(async () => {
       const response = await fetchOK(`${environment.apiBaseURL}/projects/${projectId}/reports`);
       const reports: Report[] = await response.json();
-      return reports;
+      return reports.map((report) => {
+        report.uri = replaceHost(report.uri);
+        return report;
+      });
     })
   }
 
@@ -25,7 +29,9 @@ export class ReportService {
       });
 
       const report: Report = await response.json();
+      report.uri = replaceHost(report.uri)
       return report;
     });
   }
+
 }

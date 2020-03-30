@@ -11,6 +11,7 @@ require 'hailstorm/initializer/eager_load'
 require 'hailstorm/support/configuration'
 require 'hailstorm/support/schema'
 require 'active_record/base'
+require 'active_record/errors'
 require 'hailstorm/support/log4j_backed_logger'
 
 ENV['HAILSTORM_ENV'] = 'gem_integration' unless ENV['HAILSTORM_ENV']
@@ -26,6 +27,8 @@ ActiveRecord::Base.logger = Hailstorm::Support::Log4jBackedLogger.get_logger(Act
 ActiveRecord::Base.establish_connection(connection_spec)
 begin
   ActiveRecord::Base.connection.drop_database(connection_spec[:database])
+rescue ActiveRecord::ActiveRecordError
+  puts "Database #{connection_spec[:database]} does not exist, creating..."
 ensure
   ActiveRecord::Base.establish_connection(connection_spec.merge(database: nil))
   ActiveRecord::Base.connection.create_database(connection_spec[:database])

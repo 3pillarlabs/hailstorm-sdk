@@ -7,7 +7,7 @@ plugins {
 }
 
 group = 'com.3pillarglobal.labs'
-version = '0.0.1-SNAPSHOT'
+version = '1.0.0'
 sourceCompatibility = '1.8'
 
 configurations {
@@ -38,7 +38,7 @@ test {
 }
 
 docker {
-	name "hailstorm/${bootJar.baseName}"
+	name "hailstorm/${bootJar.baseName}:${version}"
 	copySpec.from(tasks.bootJar.outputs.files.singleFile).into("build")
 	buildArgs([JAR_FILE: "build/*.jar"])
 }

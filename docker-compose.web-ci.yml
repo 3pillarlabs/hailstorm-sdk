@@ -1,0 +1,9 @@
+version: '3.2'
+services:
+  hailstorm-db:
+    networks:
+      - hailstorm_integration
+
+  hailstorm-api:
+    networks:
+      - hailstorm_integration
