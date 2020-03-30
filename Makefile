@@ -76,9 +76,6 @@ WEB_DEPENDENCY_CHANGES =	${CHANGES} hailstorm-web-client; \
 								fi; \
 							fi
 
-JRUBY := jruby-9.1.9.0
-
-
 install:
 	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make install; fi
 
@@ -203,7 +200,6 @@ web_integration_before_install_steps:
 	set -ev
 	make hailstorm_site_instance
 	${TRAVIS_BUILD_DIR}/.travis/write_web_aws_keys.sh
-	rvm install ${JRUBY}
 	make docker_compose_binary
 	make COMPOSE=web-client hailstorm_db_users
 
@@ -214,7 +210,6 @@ web_integration_before_install:
 
 web_integration_install_steps:
 	set -ev
-	rvm use ${JRUBY}
 	make PROJECT=web-client FORCE=yes install build package
 	make PROJECT=gem FORCE=yes install build local_publish
 	mkdir -p ${TRAVIS_BUILD_DIR}/hailstorm-api/pkg

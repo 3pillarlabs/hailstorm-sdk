@@ -95,7 +95,7 @@ jobs:
       before_install:
         - make install_aws
       install:
-        - make PROJECT=gem install
+        - make PROJECT=gem FORCE=yes install
       script:
         - make PROJECT=gem coverage
       after_script:
@@ -112,7 +112,7 @@ jobs:
         - make install_aws
         - make PROJECT=gem FORCE=yes install build local_publish
       install:
-        - make PROJECT=cli install
+        - make PROJECT=cli FORCE=yes install
       script:
         - make PROJECT=cli coverage
       after_script:
@@ -129,7 +129,7 @@ jobs:
         - make install_aws
         - make PROJECT=gem FORCE=yes install build local_publish
       install:
-        - make PROJECT=api install
+        - make PROJECT=api FORCE=yes install
       script:
         - make PROJECT=api coverage
       after_script:
@@ -144,7 +144,7 @@ jobs:
       before_install:
         - make install_aws
       install:
-        - make PROJECT=file-server install
+        - make PROJECT=file-server FORCE=yes install
       script:
         - make PROJECT=file-server coverage
       after_script:
@@ -159,7 +159,7 @@ jobs:
       before_install:
         - make install_aws
       install:
-        - make PROJECT=client-exchange install
+        - make PROJECT=client-exchange FORCE=yes install
       script:
         - make PROJECT=client-exchange coverage
       after_script:
@@ -174,7 +174,7 @@ jobs:
       before_install:
         - make install_aws
       install:
-        - make PROJECT=web-client install
+        - make PROJECT=web-client FORCE=yes install
       script:
         - make PROJECT=web-client coverage
       after_script:
@@ -215,12 +215,17 @@ jobs:
       env:
         - MOZ_HEADLESS=1
         - TAG_VALUE="Hailstorm Site - web-client"
+        - JRUBY=jruby-9.1.9.0
+        - NODE_VERSION=lts/dubnium
       addons:
         firefox: latest
       before_install:
-        - nvm install lts/dubnium
+        - nvm install ${NODE_VERSION}
+        - rvm install ${JRUBY}
         - make web_integration_before_install
       install:
+        - nvm use ${NODE_VERSION}
+        - rvm use ${JRUBY}
         - make COMPOSE=web-client web_integration_install
       script:
         - make COMPOSE=web-client web_integration_script
