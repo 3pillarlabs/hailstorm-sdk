@@ -1,3 +1,6 @@
+DOCKER_REPO := hailstorm-api
+PACKAGE_VERSION = $(shell ruby -I ./app -r 'version' -e 'puts Hailstorm::Api::VERSION')
+
 install:
 	bundle install
 
@@ -20,4 +23,19 @@ cc_test_report:
 package:
 	docker build \
 	--rm \
-	-t hailstorm/hailstorm-api:$(shell ruby -I ./app -r 'version' -e 'puts Hailstorm::Api::VERSION') .
+	--label org.opencontainers.image.created="$(shell date -u "+%Y-%m-%dT%H:%M:%S%z")"									\
+	        org.opencontainers.image.revision=$${TRAVIS_COMMIT}															\
+			org.opencontainers.image.licenses=MIT																		\
+			org.opencontainers.image.title="Hailstorm API"																\
+	-t $${DOCKER_ID}/${DOCKER_REPO}:${PACKAGE_VERSION} .
+
+publish:
+	set -ev
+	@docker login --username $${DOCKER_USERNAME} -p $${DOCKER_PERSONAL_ACCESS_TOKEN}
+	docker tag $${DOCKER_ID}/${DOCKER_REPO}:${PACKAGE_VERSION} $${DOCKER_ID}/${DOCKER_REPO}:latest
+	docker push $${DOCKER_ID}/${DOCKER_REPO}:${PACKAGE_VERSION}
+	docker push $${DOCKER_ID}/${DOCKER_REPO}:latest
+
+
+docker_image_id:
+	@echo $${DOCKER_ID} ${DOCKER_REPO} ${PACKAGE_VERSION}

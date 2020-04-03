@@ -18,8 +18,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "clean": "rimraf build",
-    "package": "docker build -t hailstorm/web-client:1.0.0 ."
+    "clean": "rimraf build"
   },
   "eslintConfig": {
     "extends": "react-app"

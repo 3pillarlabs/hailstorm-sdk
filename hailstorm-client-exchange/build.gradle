@@ -1,3 +1,5 @@
+import java.time.Instant
+
 plugins {
 	id 'org.springframework.boot' version '2.2.1.RELEASE'
 	id 'io.spring.dependency-management' version '1.0.8.RELEASE'
@@ -38,9 +40,16 @@ test {
 }
 
 docker {
-	name "hailstorm/${bootJar.baseName}:${version}"
+	name "${System.getenv("DOCKER_ID")}/${bootJar.baseName}:${version}"
 	copySpec.from(tasks.bootJar.outputs.files.singleFile).into("build")
 	buildArgs([JAR_FILE: "build/*.jar"])
+	labels([
+		"org.opencontainers.image.created": Date.from(Instant.now())
+												.format("yyyy-MM-dd'T'Hms.SZ", TimeZone.getTimeZone("UTC")),
+		"org.opencontainers.image.revision": System.getenv("TRAVIS_COMMIT"),
+		"org.opencontainers.image.licenses": "MIT",
+		"org.opencontainers.image.title": rootProject.name
+	])
 }
 
 jacocoTestReport {

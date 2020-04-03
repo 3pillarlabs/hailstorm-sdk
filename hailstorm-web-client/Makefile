@@ -1,3 +1,6 @@
+DOCKER_REPO := hailstorm-web-client
+PACKAGE_VERSION = $(shell cat package.json | jq -r '.version')
+
 clean:
 	npm run clean
 
@@ -23,4 +26,21 @@ build:
 
 package:
 	find build -type f -exec cat {} + | sha1sum | cut -f1 -d' ' > BUILD_ID
-	npm run package
+	docker build \
+	--rm \
+	--label org.opencontainers.image.created=$(shell date -u "+%Y-%m-%dT%H:%M:%S%z")									\
+	        org.opencontainers.image.revision=$${TRAVIS_COMMIT}															\
+			org.opencontainers.image.licenses=MIT																		\
+			org.opencontainers.image.title="Hailstorm Web"																\
+	-t $${DOCKER_ID}/${DOCKER_REPO}:${PACKAGE_VERSION} .
+
+publish:
+	set -ev
+	@docker login --username $${DOCKER_USERNAME} -p $${DOCKER_PERSONAL_ACCESS_TOKEN}
+	docker tag $${DOCKER_ID}/${DOCKER_REPO}:${PACKAGE_VERSION} $${DOCKER_ID}/${DOCKER_REPO}:latest
+	docker push $${DOCKER_ID}/${DOCKER_REPO}:${PACKAGE_VERSION}
+	docker push $${DOCKER_ID}/${DOCKER_REPO}:latest
+
+
+docker_image_id:
+	@echo $${DOCKER_ID} ${DOCKER_REPO} ${PACKAGE_VERSION}

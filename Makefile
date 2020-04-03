@@ -76,6 +76,15 @@ WEB_DEPENDENCY_CHANGES =	${CHANGES} hailstorm-web-client; \
 								fi; \
 							fi
 
+# $(call docker_image_id,project_dir)
+define docker_image_id
+$(shell cd $1 && make docker_image_id)
+endef
+
+RELEASE_VERSION = $(shell cat VERSION)
+
+GIT_RELEASE_TAG = $(shell git tag --list 'releases/${RELEASE_VERSION}')
+
 install:
 	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make install; fi
 
@@ -88,14 +97,16 @@ coverage:
 integration:
 	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make integration; fi
 
-publish:
-	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make publish; fi
-
 package:
 	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make package; fi
 
 build:
 	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make build; fi
+
+publish:
+	if ${TRAVIS_BUILD_DIR}/.travis/new-dcr-tag.sh $(call docker_image_id,${PROJECT_NAME}); then \
+		cd ${PROJECT_PATH} && make publish; \
+	fi
 
 
 install_aws:
@@ -161,6 +172,7 @@ ready_hailstorm_site:
 		sleep 30; \
 	done
 
+
 cli_integration_before_install_steps:
 	set -ev
 	make hailstorm_site_instance
@@ -173,13 +185,19 @@ cli_integration_before_install:
 	if ${CHANGES} hailstorm-cli; then make cli_integration_before_install_steps; fi
 
 
-cli_integration_install_steps:
+cli_install_steps:
 	set -ev
-	rvm use
 	make PROJECT=gem FORCE=yes install build local_publish
 	mkdir -p ${TRAVIS_BUILD_DIR}/hailstorm-cli/pkg
 	cp ${TRAVIS_BUILD_DIR}/hailstorm-gem/pkg/hailstorm-*.gem ${TRAVIS_BUILD_DIR}/hailstorm-cli/pkg/.
 	make PROJECT=cli FORCE=yes install build package
+
+
+cli_integration_install_steps:
+	set -ev
+	if ${TRAVIS_BUILD_DIR}/.travis/new-dcr-tag.sh $(call docker_image_id,hailstorm-cli); then \
+		make cli_install_steps; \
+	fi
 	docker-compose ${COMPOSE_FILES} up -d
 	sleep 60
 	make ready_hailstorm_site
@@ -208,18 +226,36 @@ web_integration_before_install:
 	if [ -n "$$(${WEB_DEPENDENCY_CHANGES})" ]; then make web_integration_before_install_steps; fi
 
 
-web_integration_install_steps:
+api_package:
 	set -ev
-	make PROJECT=web-client FORCE=yes install build package
 	make PROJECT=gem FORCE=yes install build local_publish
 	mkdir -p ${TRAVIS_BUILD_DIR}/hailstorm-api/pkg
 	cp ${TRAVIS_BUILD_DIR}/hailstorm-gem/pkg/hailstorm-*.gem ${TRAVIS_BUILD_DIR}/hailstorm-api/pkg/.
 	make PROJECT=api FORCE=yes install package
-	make PROJECT=file-server FORCE=yes install package
-	make PROJECT=client-exchange FORCE=yes install package
+
+
+web_integration_install_steps:
+	set -ev
+	if ${TRAVIS_BUILD_DIR}/.travis/new-dcr-tag.sh $(call docker_image_id,hailstorm-web-client); then \
+		make PROJECT=web-client FORCE=yes install build package; \
+	fi
+
+	if ${TRAVIS_BUILD_DIR}/.travis/new-dcr-tag.sh $(call docker_image_id,hailstorm-api); then \
+		make api_package; \
+	fi
+
+	if ${TRAVIS_BUILD_DIR}/.travis/new-dcr-tag.sh $(call docker_image_id,hailstorm-file-server); then \
+		make PROJECT=file-server FORCE=yes install package; \
+	fi
+
+	if ${TRAVIS_BUILD_DIR}/.travis/new-dcr-tag.sh $(call docker_image_id,hailstorm-client-exchange); then \
+		make PROJECT=client-exchange FORCE=yes install package; \
+	fi
+
 	docker-compose ${COMPOSE_FILES} up -d
 	sleep 180
 	make ready_hailstorm_site
+
 
 web_integration_install:
 	if [ -n "$$(${WEB_DEPENDENCY_CHANGES})" ]; then make web_integration_install_steps; fi
@@ -233,4 +269,16 @@ web_integration_after_script:
 	if [ -n "$$(${WEB_DEPENDENCY_CHANGES})" ]; then \
 		aws ec2 terminate-instances --instance-ids "${SITE_INSTANCE_ID}"; \
 		docker-compose ${COMPOSE_FILES} down; \
+	fi
+
+
+publish_web_packages:
+	for component in web-client api file-server client-exchange; do \
+		make PROJECT=$${component} publish; \
+	done
+
+
+release_tag:
+	if [ -z "${GIT_RELEASE_TAG}" ]; then \
+		git tag -a "releases/${RELEASE_VERSION}" -m "'Release tag ${RELEASE_VERSION}'"; \
 	fi
