@@ -644,7 +644,6 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     AMI_ID              = '3pg-hailstorm'.freeze
     SECURITY_GROUP      = 'Hailstorm'.freeze
     SECURITY_GROUP_DESC = 'Allows SSH traffic from anywhere and all internal TCP, UDP and ICMP traffic'.freeze
-    BUCKET_NAME         = 'brickred-perftest'.freeze
     SSH_USER            = 'ubuntu'.freeze
     SSH_IDENTITY        = 'hailstorm'.freeze
     INSTANCE_TYPE       = 'm5a.large'.freeze

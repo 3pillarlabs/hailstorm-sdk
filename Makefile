@@ -38,12 +38,20 @@ DOCKER_COMPOSE_PREFIX := hailstorm-sdk_
 
 DOCKER_NETWORK := hailstorm
 
-ifeq ($(COMPOSE), cli)
+ifeq ($(COMPOSE), cli-verify)
 COMPOSE_FILES := -f docker-compose-cli.yml -f docker-compose-cli.ci.yml -f docker-compose.dc-sim.yml
 endif
 
-ifeq ($(COMPOSE), web-client)
+ifeq ($(COMPOSE), cli)
+COMPOSE_FILES := -f docker-compose-cli.yml
+endif
+
+ifeq ($(COMPOSE), web-client-verify)
 COMPOSE_FILES := -f docker-compose.yml -f docker-compose.dc-sim.yml -f docker-compose.web-ci.yml
+endif
+
+ifeq ($(COMPOSE), web)
+COMPOSE_FILES := -f docker-compose.yml
 endif
 
 SITE_INSTANCE_ID = $$(cat ~/.SITE_INSTANCE_ID 2> /dev/null)
@@ -132,18 +140,6 @@ hailstorm_agent:
 	cd ${TRAVIS_BUILD_DIR}/setup/data-center && docker build -t hailstorm3/hailstorm-agent .
 
 
-hailstorm_db_users:
-	set -ev
-	if [ -n "${TRAVIS}" ]; then sudo systemctl stop mysql; fi
-	docker-compose ${COMPOSE_FILES} up -d hailstorm-db
-	sleep 20
-	@docker run --rm --network ${DOCKER_COMPOSE_PREFIX}${DOCKER_NETWORK} mysql:5 \
-	mysql -h hailstorm-db -uroot -p"$${MYSQL_ROOT_PASSWORD}" -e \
-	"grant all privileges on *.* to 'hailstorm'@'%' identified by 'hailstorm'; \
-	grant all privileges on *.* to 'hailstorm_dev'@'%' identified by 'hailstorm_dev'"
-	docker-compose ${COMPOSE_FILES} down
-
-
 hailstorm_site_instance:
 	set -ev
 	make install_aws
@@ -178,7 +174,7 @@ cli_integration_before_install_steps:
 	make hailstorm_site_instance
 	${TRAVIS_BUILD_DIR}/.travis/write_cli_aws_keys.sh
 	make docker_compose_binary
-	make COMPOSE=cli DOCKER_NETWORK=hailstorm_integration hailstorm_db_users
+	if [ -n "${TRAVIS}" ]; then sudo systemctl stop mysql; fi
 
 
 cli_integration_before_install:
@@ -199,7 +195,6 @@ cli_integration_install_steps:
 		make cli_install_steps; \
 	fi
 	docker-compose ${COMPOSE_FILES} up -d
-	sleep 60
 	make ready_hailstorm_site
 
 
@@ -219,7 +214,7 @@ web_integration_before_install_steps:
 	make hailstorm_site_instance
 	${TRAVIS_BUILD_DIR}/.travis/write_web_aws_keys.sh
 	make docker_compose_binary
-	make COMPOSE=web-client hailstorm_db_users
+	if [ -n "${TRAVIS}" ]; then sudo systemctl stop mysql; fi
 
 
 web_integration_before_install:
@@ -253,7 +248,6 @@ web_integration_install_steps:
 	fi
 
 	docker-compose ${COMPOSE_FILES} up -d
-	sleep 180
 	make ready_hailstorm_site
 
 
@@ -282,3 +276,27 @@ release_tag:
 	if [ -z "${GIT_RELEASE_TAG}" ]; then \
 		git tag -a "releases/${RELEASE_VERSION}" -m "'Release tag ${RELEASE_VERSION}'"; \
 	fi
+
+
+docker_compose_up:
+	docker-compose ${COMPOSE_FILES} up -d
+
+
+docker_compose_down:
+	docker-compose ${COMPOSE_FILES} down
+
+
+cli_integration_up:
+	make COMPOSE=cli-verify docker_compose_up
+
+
+cli_integration_down:
+	make COMPOSE=cli-verify docker_compose_down
+
+
+web_integration_up:
+	make COMPOSE=web-client-verify docker_compose_up
+
+
+web_integration_down:
+	make COMPOSE=web-client-verify docker_compose_down

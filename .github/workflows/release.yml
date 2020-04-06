@@ -17,7 +17,11 @@ jobs:
           echo "::set-env name=release_version::$(cat VERSION)"
       - name: Build package
         run: |
-          tar -czf ${{ env.release_version }}.tar.gz docker-compose.yml docker-compose-cli.yml
+          cd hailstorm-cli
+          make release_makefile
+          cd ../
+          mv hailstorm-cli/Makefile.release ./Makefile
+          tar -czf ${{ env.release_version }}.tar.gz docker-compose.yml docker-compose-cli.yml Makefile
       - name: Get commit message
         run: |
           echo "::set-env name=commit_message::$(git log --format=%B -n 1 ${{ github.sha }})"

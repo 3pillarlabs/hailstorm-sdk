@@ -46,7 +46,7 @@ docker {
 	labels([
 		"org.opencontainers.image.created": Date.from(Instant.now())
 												.format("yyyy-MM-dd'T'Hms.SZ", TimeZone.getTimeZone("UTC")),
-		"org.opencontainers.image.revision": System.getenv("TRAVIS_COMMIT"),
+		"org.opencontainers.image.revision": System.getenv("TRAVIS_COMMIT") || "",
 		"org.opencontainers.image.licenses": "MIT",
 		"org.opencontainers.image.title": rootProject.name
 	])

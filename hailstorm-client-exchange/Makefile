@@ -22,7 +22,7 @@ package:
 
 publish:
 	set -ev
-	@docker login --username $${DOCKER_USERNAME} -p $${DOCKER_PERSONAL_ACCESS_TOKEN}
+	@docker login --username $${DOCKER_ID} -p $${DOCKER_PASSWORD}
 	docker tag $${DOCKER_ID}/${DOCKER_REPO}:${PACKAGE_VERSION} $${DOCKER_ID}/${DOCKER_REPO}:latest
 	docker push $${DOCKER_ID}/${DOCKER_REPO}:${PACKAGE_VERSION}
 	docker push $${DOCKER_ID}/${DOCKER_REPO}:latest

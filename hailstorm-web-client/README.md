@@ -29,6 +29,16 @@ Your app is ready to be deployed!
 
 See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
+### `make integration`
+
+Runs the integration tests with all componenets involved.
+
+```bash
+➜  hailstorm-sdk$ make web_integration_up
+➜  hailstorm-sdk$ cd hailstorm-web-client
+➜  hailstorm-web-client$ make integration
+```
+
 ### `npm run eject`
 
 **Note: this is a one-way operation. Once you `eject`, you can’t go back!**

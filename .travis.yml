@@ -205,11 +205,11 @@ jobs:
       before_install:
         - make cli_integration_before_install
       install:
-        - make COMPOSE=cli cli_integration_install
+        - make COMPOSE=cli-verify cli_integration_install
       script:
         - make PROJECT=cli integration
       after_script:
-        - make COMPOSE=cli cli_integration_after_script
+        - make COMPOSE=cli-verify cli_integration_after_script
       after_success:
         - make PROJECT=cli publish
 
@@ -231,11 +231,11 @@ jobs:
       install:
         - nvm use ${NODE_VERSION}
         - rvm use ${JRUBY}
-        - make COMPOSE=web-client web_integration_install
+        - make COMPOSE=web-client-verify web_integration_install
       script:
-        - make COMPOSE=web-client web_integration_script
+        - make COMPOSE=web-client-verify web_integration_script
       after_script:
-        - make COMPOSE=web-client web_integration_after_script
+        - make COMPOSE=web-client-verify web_integration_after_script
       after_success:
         - make publish_web_packages
 

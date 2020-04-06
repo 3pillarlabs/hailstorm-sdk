@@ -1,47 +1,61 @@
-# Introduction
+# Developer Guide
 ``hailstorm-gem`` is the core Hailstorm library.
 
-# Developer Guide
+## Pre-requisites
+
+- docker
+- docker-compose
+- openjdk-8
+- rvm (recommended for development)
+
+## Installation
+
+Instructions to build a local environment for the gem.
+
+### RVM
+
+Install latest jruby-9.1 and replace @global bundler v2.1.4 with v.2.0.1.
+
 ```bash
-docker-compose up hailstorm-db -d
+rvm install jruby-9.1.17.0
+rvm use jruby-9.1.17.0@global
+gem uninstall -x bundler
+gem install bundler -v 2.0.1
+```
+
+### Rest of the setup
+
+```bash
 cd hailstorm-gem
-rvm gemset create hailstorm-dev
-rvm use @hailstorm-dev
-gem install --no-rdoc --no-ri bundler
+rvm gemset create hailstorm-gem
+rvm use jruby-9.1.17.0@hailstorm-gem
+echo jruby-9.1.17.0@hailstorm-gem > .ruby-version
 make install
 ```
 
-## Unit tests (specs)
+## Unit tests (rspec)
 ```bash
+docker-compose up -d hailstorm-db
+docker-compose logs -f
+# wait for database to initialize and CTRL+C
 make test
 ```
 
-## Integration tests
-This requires an AWS account and a little more setup. Ensure your AWS account has a VPC with a public subnet.
+### Coverage
 
-### AWS tests
+```bash
+make coverage
+```
+Coverage report is generated in ``coverage`` directory.
+
+## Integration tests (cucumber)
+This requires an AWS account and a little more setup. Ensure your AWS account has a VPC with a public subnet.
 
 ```bash
 cp features/data/keys-sample.yml features/data/keys.yml
 ```
 
 Edit ``features/data/keys.yml`` to add your AWS access and secret keys.
-
-#### Bring up the target site
-
-Copy ``setup/hailstorm-site/vagrant-site-sample.yml`` to ``setup/hailstorm-site/vagrant-site.yml`` and edit the
-properties.
-
-```bash
-vagrant up aws-site
-```
-
-### Data Center tests
-
-```bash
-vagrant up /data-center/
-```
-This will bring up 3 virtual machines, one that acts as the target system and two load generating agents.
 
 ### Execution
 ```bash
@@ -54,10 +68,3 @@ cucumber --tag @end-to-end
 # All scenarios
 cucumber
 ```
-
-### Unit test coverage
-
-```bash
-make coverage
-```
-Coverage report is generated in ``coverage`` directory.
