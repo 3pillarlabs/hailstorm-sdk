@@ -2,7 +2,13 @@ FROM jruby:9.1.17.0-jre
 
 WORKDIR /usr/local/lib/hailstorm-cli
 
-RUN apt-get update && apt-get install -y default-mysql-client git
+RUN apt-get update && apt-get install -y default-mysql-client git && rm -rf /var/lib/apt/lists/*
+
+ENV DOCKERIZE_VERSION v0.6.1
+
+RUN wget -q https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
+    && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
+    && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
 
 RUN gem install cucumber -v 2.99.0 && mkdir pkg
 

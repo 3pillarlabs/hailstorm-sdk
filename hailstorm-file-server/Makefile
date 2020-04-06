@@ -1,3 +1,6 @@
+DOCKER_REPO := hailstorm-file-server
+PACKAGE_VERSION = $(shell grep -e '^version' build.gradle | cut -f2 -d'=' | sed s/\'/\"/g | perl -ne '/^\s*"(.+)"$$/; print $$1')
+
 clean:
 	./gradlew clean
 
@@ -15,4 +18,14 @@ cc_test_report:
 	if [ -n "${CI}" ]; then ${TRAVIS_BUILD_DIR}/.travis/coverage.sh -u $(shell basename ${PWD}) -t jacoco; fi
 
 package:
-	./gradlew build docker
+	./gradlew clean build docker
+
+publish:
+	set -ev
+	@docker login --username $${DOCKER_ID} -p $${DOCKER_PASSWORD}
+	docker tag $${DOCKER_ID}/${DOCKER_REPO}:${PACKAGE_VERSION} $${DOCKER_ID}/${DOCKER_REPO}:latest
+	docker push $${DOCKER_ID}/${DOCKER_REPO}:${PACKAGE_VERSION}
+	docker push $${DOCKER_ID}/${DOCKER_REPO}:latest
+
+docker_image_id:
+	@echo $${DOCKER_ID} ${DOCKER_REPO} ${PACKAGE_VERSION}

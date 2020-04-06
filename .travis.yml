@@ -9,6 +9,7 @@ env:
     - CC_TEST_REPORTER_ID=3e42f82fe2b2f0601cafe4eca93a8c9d296dfa8f7af67d2e846a182a834bde59
     - CI_NODE_TOTAL=6
     - PATH=~/bin:${PATH}
+    - DOCKER_ID=hailstorm3
 
 stages:
   - name: test
@@ -16,7 +17,9 @@ stages:
   - name: coverage
     if: branch = develop
   - name: integration
-    if: branch = develop AND type = pull_request
+    if: branch = master AND type = pull_request
+  - name: tag
+    if: branch = master AND type = push
 
 
 jobs:
@@ -202,11 +205,13 @@ jobs:
       before_install:
         - make cli_integration_before_install
       install:
-        - make COMPOSE=cli cli_integration_install
+        - make COMPOSE=cli-verify cli_integration_install
       script:
         - make PROJECT=cli integration
       after_script:
-        - make COMPOSE=cli cli_integration_after_script
+        - make COMPOSE=cli-verify cli_integration_after_script
+      after_success:
+        - make PROJECT=cli publish
 
     - stage: integration
       name: "hailstorm-web-client integration"
@@ -226,8 +231,18 @@ jobs:
       install:
         - nvm use ${NODE_VERSION}
         - rvm use ${JRUBY}
-        - make COMPOSE=web-client web_integration_install
+        - make COMPOSE=web-client-verify web_integration_install
       script:
-        - make COMPOSE=web-client web_integration_script
+        - make COMPOSE=web-client-verify web_integration_script
       after_script:
-        - make COMPOSE=web-client web_integration_after_script
+        - make COMPOSE=web-client-verify web_integration_after_script
+      after_success:
+        - make publish_web_packages
+
+
+    # ------------ INTEGRATION -----------------------------------
+    - stage: tag
+      name: "hailstorm-sdk tag"
+      language: minimal
+      script:
+        - make release_tag

@@ -38,12 +38,20 @@ DOCKER_COMPOSE_PREFIX := hailstorm-sdk_
 
 DOCKER_NETWORK := hailstorm
 
-ifeq ($(COMPOSE), cli)
+ifeq ($(COMPOSE), cli-verify)
 COMPOSE_FILES := -f docker-compose-cli.yml -f docker-compose-cli.ci.yml -f docker-compose.dc-sim.yml
 endif
 
-ifeq ($(COMPOSE), web-client)
+ifeq ($(COMPOSE), cli)
+COMPOSE_FILES := -f docker-compose-cli.yml
+endif
+
+ifeq ($(COMPOSE), web-client-verify)
 COMPOSE_FILES := -f docker-compose.yml -f docker-compose.dc-sim.yml -f docker-compose.web-ci.yml
+endif
+
+ifeq ($(COMPOSE), web)
+COMPOSE_FILES := -f docker-compose.yml
 endif
 
 SITE_INSTANCE_ID = $$(cat ~/.SITE_INSTANCE_ID 2> /dev/null)
@@ -76,6 +84,15 @@ WEB_DEPENDENCY_CHANGES =	${CHANGES} hailstorm-web-client; \
 								fi; \
 							fi
 
+# $(call docker_image_id,project_dir)
+define docker_image_id
+$(shell cd $1 && make docker_image_id)
+endef
+
+RELEASE_VERSION = $(shell cat VERSION)
+
+GIT_RELEASE_TAG = $(shell git tag --list 'releases/${RELEASE_VERSION}')
+
 install:
 	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make install; fi
 
@@ -88,14 +105,16 @@ coverage:
 integration:
 	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make integration; fi
 
-publish:
-	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make publish; fi
-
 package:
 	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make package; fi
 
 build:
 	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make build; fi
+
+publish:
+	if ${TRAVIS_BUILD_DIR}/.travis/new-dcr-tag.sh $(call docker_image_id,${PROJECT_NAME}); then \
+		cd ${PROJECT_PATH} && make publish; \
+	fi
 
 
 install_aws:
@@ -119,18 +138,6 @@ hailstorm_site:
 
 hailstorm_agent:
 	cd ${TRAVIS_BUILD_DIR}/setup/data-center && docker build -t hailstorm3/hailstorm-agent .
-
-
-hailstorm_db_users:
-	set -ev
-	if [ -n "${TRAVIS}" ]; then sudo systemctl stop mysql; fi
-	docker-compose ${COMPOSE_FILES} up -d hailstorm-db
-	sleep 20
-	@docker run --rm --network ${DOCKER_COMPOSE_PREFIX}${DOCKER_NETWORK} mysql:5 \
-	mysql -h hailstorm-db -uroot -p"$${MYSQL_ROOT_PASSWORD}" -e \
-	"grant all privileges on *.* to 'hailstorm'@'%' identified by 'hailstorm'; \
-	grant all privileges on *.* to 'hailstorm_dev'@'%' identified by 'hailstorm_dev'"
-	docker-compose ${COMPOSE_FILES} down
 
 
 hailstorm_site_instance:
@@ -161,27 +168,33 @@ ready_hailstorm_site:
 		sleep 30; \
 	done
 
+
 cli_integration_before_install_steps:
 	set -ev
 	make hailstorm_site_instance
 	${TRAVIS_BUILD_DIR}/.travis/write_cli_aws_keys.sh
 	make docker_compose_binary
-	make COMPOSE=cli DOCKER_NETWORK=hailstorm_integration hailstorm_db_users
+	if [ -n "${TRAVIS}" ]; then sudo systemctl stop mysql; fi
 
 
 cli_integration_before_install:
 	if ${CHANGES} hailstorm-cli; then make cli_integration_before_install_steps; fi
 
 
-cli_integration_install_steps:
+cli_install_steps:
 	set -ev
-	rvm use
 	make PROJECT=gem FORCE=yes install build local_publish
 	mkdir -p ${TRAVIS_BUILD_DIR}/hailstorm-cli/pkg
 	cp ${TRAVIS_BUILD_DIR}/hailstorm-gem/pkg/hailstorm-*.gem ${TRAVIS_BUILD_DIR}/hailstorm-cli/pkg/.
 	make PROJECT=cli FORCE=yes install build package
+
+
+cli_integration_install_steps:
+	set -ev
+	if ${TRAVIS_BUILD_DIR}/.travis/new-dcr-tag.sh $(call docker_image_id,hailstorm-cli); then \
+		make cli_install_steps; \
+	fi
 	docker-compose ${COMPOSE_FILES} up -d
-	sleep 60
 	make ready_hailstorm_site
 
 
@@ -201,25 +214,42 @@ web_integration_before_install_steps:
 	make hailstorm_site_instance
 	${TRAVIS_BUILD_DIR}/.travis/write_web_aws_keys.sh
 	make docker_compose_binary
-	make COMPOSE=web-client hailstorm_db_users
+	if [ -n "${TRAVIS}" ]; then sudo systemctl stop mysql; fi
 
 
 web_integration_before_install:
 	if [ -n "$$(${WEB_DEPENDENCY_CHANGES})" ]; then make web_integration_before_install_steps; fi
 
 
-web_integration_install_steps:
+api_package:
 	set -ev
-	make PROJECT=web-client FORCE=yes install build package
 	make PROJECT=gem FORCE=yes install build local_publish
 	mkdir -p ${TRAVIS_BUILD_DIR}/hailstorm-api/pkg
 	cp ${TRAVIS_BUILD_DIR}/hailstorm-gem/pkg/hailstorm-*.gem ${TRAVIS_BUILD_DIR}/hailstorm-api/pkg/.
 	make PROJECT=api FORCE=yes install package
-	make PROJECT=file-server FORCE=yes install package
-	make PROJECT=client-exchange FORCE=yes install package
+
+
+web_integration_install_steps:
+	set -ev
+	if ${TRAVIS_BUILD_DIR}/.travis/new-dcr-tag.sh $(call docker_image_id,hailstorm-web-client); then \
+		make PROJECT=web-client FORCE=yes install build package; \
+	fi
+
+	if ${TRAVIS_BUILD_DIR}/.travis/new-dcr-tag.sh $(call docker_image_id,hailstorm-api); then \
+		make api_package; \
+	fi
+
+	if ${TRAVIS_BUILD_DIR}/.travis/new-dcr-tag.sh $(call docker_image_id,hailstorm-file-server); then \
+		make PROJECT=file-server FORCE=yes install package; \
+	fi
+
+	if ${TRAVIS_BUILD_DIR}/.travis/new-dcr-tag.sh $(call docker_image_id,hailstorm-client-exchange); then \
+		make PROJECT=client-exchange FORCE=yes install package; \
+	fi
+
 	docker-compose ${COMPOSE_FILES} up -d
-	sleep 180
 	make ready_hailstorm_site
+
 
 web_integration_install:
 	if [ -n "$$(${WEB_DEPENDENCY_CHANGES})" ]; then make web_integration_install_steps; fi
@@ -234,3 +264,39 @@ web_integration_after_script:
 		aws ec2 terminate-instances --instance-ids "${SITE_INSTANCE_ID}"; \
 		docker-compose ${COMPOSE_FILES} down; \
 	fi
+
+
+publish_web_packages:
+	for component in web-client api file-server client-exchange; do \
+		make PROJECT=$${component} publish; \
+	done
+
+
+release_tag:
+	if [ -z "${GIT_RELEASE_TAG}" ]; then \
+		git tag -a "releases/${RELEASE_VERSION}" -m "'Release tag ${RELEASE_VERSION}'"; \
+	fi
+
+
+docker_compose_up:
+	docker-compose ${COMPOSE_FILES} up -d
+
+
+docker_compose_down:
+	docker-compose ${COMPOSE_FILES} down
+
+
+cli_integration_up:
+	make COMPOSE=cli-verify docker_compose_up
+
+
+cli_integration_down:
+	make COMPOSE=cli-verify docker_compose_down
+
+
+web_integration_up:
+	make COMPOSE=web-client-verify docker_compose_up
+
+
+web_integration_down:
+	make COMPOSE=web-client-verify docker_compose_down

@@ -3,10 +3,10 @@
 build/
 coverage/
 spec/
+features/
 .gitignore
 .rspec
 .rubocop.yml
 .ruby-version
 .simplecov
 README.md
-.git/

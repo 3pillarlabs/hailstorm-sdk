@@ -1,0 +1,36 @@
+---
+layout: post
+title:  "Release 5.0.0 is Out!"
+date:   2020-04-05 15:45:00 +0530
+categories: jekyll update
+---
+
+Hailstorm 5.0.0 is out with new features and a new distribution format.
+
+## New Web User Interface
+Hailstorm 5.0.0 features a whole new user interface that is fast and hopefully, intuitive. The Web UI enables you to:
+
+- Manage multiple performance testing projects.
+- Execute tests across the Amazon Clouds and your own data centers.
+- Generate and store reports.
+- Create low cost clusters for load generation on EC2 with the in-built cost calculator.
+
+### Screenshot Gallery
+<a data-flickr-embed="true" data-footer="true" href="https://www.flickr.com/photos/50138912@N08/albums/72157713763445913" title="Hailstorm 5.0.0 Release"><img src="https://live.staticflickr.com/65535/49737531758_4a69c6dc49_z.jpg" width="640" height="480" alt="Hailstorm 5.0.0 Release"></a><script async src="//embedr.flickr.com/assets/client-code.js" charset="utf-8"></script>
+
+## Other Improvements
+
+- Load generating EC2 instances are always launched in a VPC. By default, a Hailstorm specific VPC is created for easier maintainence
+  by an Ops team.
+
+- Enhanced calculator for suggesting the maximum number of threads for a selected instance.
+
+## Distribution Format
+
+**Docker** is used to distribute the different components and **Docker Compose** is used to set up a single command deploy for the
+Web UI as well as the CLI. Installing Hailstorm has never been easier than this.
+
+## Issues and Feedback
+
+If you find issues in installing Hailstorm, or using Hailstorm, or you want to provide feedback, report them using
+the [issue tracker](https://github.com/3pillarlabs/hailstorm-sdk/issues).

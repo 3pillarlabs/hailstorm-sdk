@@ -1,0 +1,46 @@
+on:
+  push:
+    tags:
+      - 'releases/**'
+
+name: Create release with asset
+
+jobs:
+  build:
+    name: Create release with asset
+    runs-on:  ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+      - name: Get release version
+        run: |
+          echo "::set-env name=release_version::$(cat VERSION)"
+      - name: Build package
+        run: |
+          cd hailstorm-cli
+          make release_makefile
+          cd ../
+          mv hailstorm-cli/Makefile.release ./Makefile
+          tar -czf ${{ env.release_version }}.tar.gz docker-compose.yml docker-compose-cli.yml Makefile
+      - name: Get commit message
+        run: |
+          echo "::set-env name=commit_message::$(git log --format=%B -n 1 ${{ github.sha }})"
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: ${{ env.commit_message }}
+      - name: Upload release asset
+        id: upload-releast-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ env.release_version }}.tar.gz
+          asset_name: ${{ env.release_version }}.tar.gz
+          asset_content_type: application/gzip
