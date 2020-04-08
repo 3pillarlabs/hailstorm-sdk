@@ -2,7 +2,11 @@ FROM jruby:9.1.17.0-jre
 
 WORKDIR /usr/local/lib/hailstorm-cli
 
-RUN apt-get update && apt-get install -y default-mysql-client git && rm -rf /var/lib/apt/lists/*
+RUN groupadd hailstorm \
+    && useradd -g hailstorm -m -s /bin/bash hailstorm \
+    && apt-get update \
+    && apt-get install -y default-mysql-client git vim \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV DOCKERIZE_VERSION v0.6.1
 
@@ -31,6 +35,4 @@ ENV GEM_PATH /usr/local/bundle/gems
 
 RUN gem install bundler -v 2.0.1 && bundle install
 
-WORKDIR /hailstorm
-
-CMD [ "sh" ]
+CMD [ "/bin/bash" ]

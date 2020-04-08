@@ -111,7 +111,7 @@ hailstorm3/hailstorm-cli:1.0.0 dockerize -wait tcp://hailstorm-db:3306 bash
 When the CLI starts, it shows a prompt:
 
 ```bash
-root@ab7ecdeac102:/hailstorm#
+hailstorm@ab7ecdeac102:/hailstorm#
 ```
 
 The current directory on the host is mapped to ``/hailstorm`` in the container. Any files saved to this location in the container
@@ -122,7 +122,7 @@ will persist across container restarts.
 Use the ``create_hailstorm_app`` utility to create a project.
 
 ```bash
-root@ab7ecdeac102:/hailstorm# create_hailstorm_app shopping_cart
+hailstorm@ab7ecdeac102:/hailstorm# create_hailstorm_app shopping_cart
 ```
 
 Truncated output...
@@ -135,11 +135,12 @@ Truncated output...
 Done!
 ```
 
-#### Get started with a CLI project
+#### First time install
 
+This needs to be done only once when a new project is created.
 ```bash
-root@ab7ecdeac102:/hailstorm# cd shopping_cart
-root@ab7ecdeac102:/hailstorm/shopping_cart# bundle install
+hailstorm@ab7ecdeac102:/hailstorm# cd shopping_cart
+hailstorm@ab7ecdeac102:/hailstorm/shopping_cart# bundle install
 ```
 
 The dependencies should install within a few seconds.
@@ -148,10 +149,13 @@ Bundle complete! 8 Gemfile dependencies, 68 gems now installed.
 Bundled gems are installed into `/usr/local/bundle`
 ```
 
-Start the CLI.
+#### Start the CLI
+
+Subsequently, you can just start the CLI.
 
 ```bash
-root@ab7ecdeac102:/hailstorm/shopping_cart# ./script/hailstorm
+hailstorm@ab7ecdeac102:/hailstorm# cd shopping_cart
+hailstorm@ab7ecdeac102:/hailstorm/shopping_cart# ./script/hailstorm
 ```
 
 ```text

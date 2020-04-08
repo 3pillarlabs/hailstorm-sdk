@@ -22,6 +22,7 @@ create_mysql_user:
 cc_test_report:
 	if [ -n "${CI}" ]; then ${TRAVIS_BUILD_DIR}/.travis/coverage.sh -u $(shell basename ${PWD}) -t simplecov; fi
 
+.PHONY: build
 build:
 	rake build
 
@@ -60,7 +61,8 @@ open_console:
 	--rm \
 	--network hailstorm-sdk_hailstorm \
 	-e DATABASE_HOST=hailstorm-db \
-	-v $${PWD}:/hailstorm \
+	--mount type=bind,source=$${PWD},target=/hailstorm \
+	--mount type=volume,source=hailstorm-home,target=/home \
 	$${DOCKER_ID}/${DOCKER_REPO}:${CLI_VERSION} dockerize -wait tcp://hailstorm-db:3306 bash
 
 
