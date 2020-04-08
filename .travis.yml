@@ -240,7 +240,7 @@ jobs:
         - make publish_web_packages
 
 
-    # ------------ INTEGRATION -----------------------------------
+    # ------------ TAG -----------------------------------
     - stage: tag
       name: "hailstorm-sdk tag"
       language: minimal
