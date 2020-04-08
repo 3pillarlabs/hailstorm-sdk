@@ -119,6 +119,6 @@ class Hailstorm::Support::Workspace
   end
 
   def user_home
-    @user_home ||= ENV['HOME']
+    @user_home ||= (ENV['HAILSTORM_WORKSPACE_ROOT'] || ENV['HOME'])
   end
 end
