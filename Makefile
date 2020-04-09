@@ -235,6 +235,8 @@ web_integration_install_steps:
 	set -ev
 	if ${TRAVIS_BUILD_DIR}/.travis/new-dcr-tag.sh $(call docker_image_id,hailstorm-web-client); then \
 		make PROJECT=web-client FORCE=yes install build package; \
+	else \
+		make PROJECT=web-client FORCE=yes install; \
 	fi
 
 	if ${TRAVIS_BUILD_DIR}/.travis/new-dcr-tag.sh $(call docker_image_id,hailstorm-api); then \
