@@ -1,0 +1,28 @@
+#!/usr/bin/env jruby
+#
+# Hailstorm executable
+# @author Sayantam Dey
+
+if ARGV.empty?
+  # REPL interface
+  require File.expand_path('../../config/progressive', __FILE__)
+  Hailstorm::Initializer::Progressive.show_while do
+    require File.expand_path('../../config/boot', __FILE__)
+    require 'hailstorm/controller/cli'
+  end
+  Hailstorm::Controller::Cli.new(Hailstorm.application).process_commands
+else
+  # command execution interface
+  require File.expand_path('../../config/boot', __FILE__)
+  require 'hailstorm/cli/cmd_parser'
+  Hailstorm::Cli::CmdParser.new.with_default_handlers.parse!(ARGV) do |options|
+    begin
+      # Execute the command in CLI
+      require 'hailstorm/controller/cli'
+      Hailstorm::Controller::Cli.new(Hailstorm.application).process_cmd_line(options)
+    rescue StandardError => error
+      warn error.message
+      raise
+    end
+  end
+end

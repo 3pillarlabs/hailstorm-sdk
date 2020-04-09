@@ -4,19 +4,43 @@
 # loaded once.
 #
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
+require 'bundler/setup'
 require 'simplecov'
-require 'hailstorm/application'
-require 'hailstorm/support/configuration'
-require 'active_record/base'
-require 'test_schema'
 
 $CLASSPATH << File.dirname(__FILE__)
-ENV['HAILSTORM_ENV'] = 'test'
+
+require 'hailstorm/initializer/java_classpath'
+require 'hailstorm/initializer/eager_load'
+require 'hailstorm/support/configuration'
+require 'hailstorm/support/schema'
+require 'active_record/base'
+require 'test_schema'
+require 'hailstorm/support/thread'
+require 'hailstorm/support/log4j_backed_logger'
+require 'hailstorm/behavior/file_store'
+
+ENV['HAILSTORM_ENV'] = 'test' unless ENV['HAILSTORM_ENV']
+
+# disable threading in unit tests
+class Hailstorm::Support::Thread
+  def self.start(*args)
+    yield(*args)
+  end
+end
+
+BUILD_PATH = File.join(File.expand_path('../..', __FILE__), 'build', 'spec').freeze
+FileUtils.rm_rf(BUILD_PATH)
+FileUtils.mkdir_p(BUILD_PATH)
 
 RSpec.configure do |config|
+  def logger
+    @logger ||= Hailstorm::Support::Log4jBackedLogger.get_logger(RSpec)
+  end
+
   config.treat_symbols_as_metadata_keys_with_true_values = true
   config.run_all_when_everything_filtered = true
   config.filter_run :focus
+  config.add_setting(:build_path, default: BUILD_PATH)
 
   # Run specs in random order to surface order dependencies. If you find an
   # order dependency and want to debug it, you can fix the order by providing
@@ -25,13 +49,28 @@ RSpec.configure do |config|
   config.order = 'random'
 
   config.prepend_before(:suite) do
-    app = Hailstorm::Application.initialize!('hailstorm_spec', '.', {
+    connection_spec = {
       adapter: 'jdbcmysql',
-      database: 'hailstorm_gem_test',
+      database: "hailstorm_#{ENV['HAILSTORM_ENV']}",
       username: 'hailstorm_dev',
       password: 'hailstorm_dev'
-    }, Hailstorm::Support::Configuration.new)
-    app.multi_threaded = false # disable threading in unit tests
+    }
+
+    ActiveRecord::Base.logger = Hailstorm::Support::Log4jBackedLogger.get_logger(ActiveRecord::Base)
+    ActiveRecord::Base.establish_connection(connection_spec) # this is lazy, does not fail!
+    begin
+      ActiveRecord::Base.connection.exec_query('select 1')
+    rescue ActiveRecord::ActiveRecordError
+      ActiveRecord::Base.establish_connection(connection_spec.merge(database: nil))
+      ActiveRecord::Base.connection.create_database(connection_spec[:database])
+      ActiveRecord::Base.establish_connection(connection_spec)
+    end
+
+    Hailstorm::Support::Schema.create_schema
+
+    at_exit do
+      ActiveRecord::Base.connection.disconnect! if ActiveRecord::Base.connected?
+    end
   end
 
   config.append_after(:suite) do
@@ -42,6 +81,14 @@ RSpec.configure do |config|
   config.around(:each) do |ex|
     txn = ActiveRecord::Base.connection.begin_transaction
     ex.run
-    txn.rollback
+    begin
+      txn.rollback if ActiveRecord::Base.connected?
+    rescue ActiveRecord::ConnectionNotEstablished
+      # no op
+    end
+  end
+
+  config.after(:each) do
+    Hailstorm.fs = nil
   end
 end

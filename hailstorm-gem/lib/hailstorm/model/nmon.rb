@@ -1,344 +1,285 @@
 require 'hailstorm/model'
+require 'hailstorm/behavior/sshable'
 require 'hailstorm/model/target_host'
 require 'hailstorm/support/ssh'
+require 'hailstorm/support/nmon_calculator'
 
 # Nmon monitor for target hosts
 # @author Sayantam Dey
 class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
+
+  include Hailstorm::Behavior::SSHable
+
+  # Path to nmon output files on target_host
+  NMON_OUTPUT_PATH = '/tmp/nmon_output'.freeze
+
+  before_validation :set_defaults
+
   validates :executable_path, :ssh_identity, :user_name, presence: true, if: proc { |r| r.active? }
 
   validates :sampling_interval, numericality: { greater_than: 0 }, if: proc { |r| r.active? }
 
-  validate :identity_file_exists, if: proc { |r| r.active? }
+  validate :identity_file_ok, if: proc { |r| r.active? }
 
-  before_validation :set_defaults
-
-  # Check nmon is installed at configured location and terminate if already
-  # executing.
-  # (see Hailstorm::Behavior::Moniterable#setup)
-  def setup
-    logger.debug { "#{self.class}##{__method__}" }
-    Hailstorm::Support::SSH.start(*ssh_connection_spec) do |ssh|
-      if ssh.file_exists?(self.executable_path)
-        unless self.executable_pid.blank?
-          ssh.terminate_process(self.executable_pid)
-          self.executable_pid = nil
+  # Operations of a monitor
+  module MoniterableOps
+    # Check nmon is installed at configured location and terminate if already
+    # executing.
+    # (see Hailstorm::Behavior::Moniterable#setup)
+    def setup
+      logger.debug { "#{self.class}##{__method__}" }
+      Hailstorm::Support::SSH.start(*ssh_connection_spec) do |ssh|
+        unless ssh.file_exists?(self.executable_path)
+          raise(Hailstorm::Exception, "nmon not found at #{self.executable_path} on #{self.host_name}.")
         end
-      else
-        raise(Hailstorm::Exception, "nmon not found at #{target.executable_path} on #{target.host_name}.")
+
+        break if self.executable_pid.blank?
+
+        ssh.terminate_process(self.executable_pid)
+        self.executable_pid = nil
       end
     end
-  end
 
-  # start nmon on target_host
-  # (see Hailstorm::Behavior::Moniterable#start_monitoring)
-  def start_monitoring
-    logger.debug { "#{self.class}##{__method__}" }
-    if self.executable_pid.nil?
+    # start nmon on target_host
+    # (see Hailstorm::Behavior::Moniterable#start_monitoring)
+    def start_monitoring
+      logger.debug { "#{self.class}##{__method__}" }
+      return unless self.executable_pid.nil?
+
       Hailstorm::Support::SSH.start(*ssh_connection_spec) do |ssh|
-        unless ssh.directory_exists?(nmon_output_path)
-          ssh.make_directory(nmon_output_path)
-        end
+        ssh.make_directory(NMON_OUTPUT_PATH) unless ssh.directory_exists?(NMON_OUTPUT_PATH)
 
-        command = format('%s -F %s -s %d -t -p', self.executable_path,
-                         nmon_outfile_path, self.sampling_interval)
+        command = format('%<bin_path>s -F %<out_file>s -s %<interval>d -t -p',
+                         bin_path: self.executable_path,
+                         out_file: nmon_outfile_path,
+                         interval: self.sampling_interval)
         nmon_pid = ssh.exec!(command)
         nmon_pid.chomp!
         self.executable_pid = nmon_pid
       end
     end
-  end
 
-  # (see Hailstorm::Behavior::Moniterable#stop_monitoring)
-  def stop_monitoring
-    logger.debug { "#{self.class}##{__method__}" }
-    unless self.executable_pid.nil?
+    # (see Hailstorm::Behavior::Moniterable#stop_monitoring)
+    def stop_monitoring(doze_time = 5)
+      logger.debug { "#{self.class}##{__method__}" }
+      return if self.executable_pid.nil?
+
       Hailstorm::Support::SSH.start(*ssh_connection_spec) do |ssh|
-        if ssh.process_running?(self.executable_pid)
-          ssh.exec!("kill -USR2 #{self.executable_pid}")
-          sleep(5)
-          if ssh.process_running?(self.executable_pid)
-            raise(Hailstorm::Exception, "nmon could not be stopped on #{self.host_name} (#{self.role_name})")
-          else
-            self.executable_pid = nil
-          end
-        end
-      end
-    end
-  end
+        break unless ssh.process_running?(self.executable_pid)
 
-  # (see Hailstorm::Behavior::Moniterable#cleanup)
-  def cleanup
-    logger.debug { "#{self.class}##{__method__}" }
-    Hailstorm::Support::SSH.start(*ssh_connection_spec) do |ssh|
-      unless self.executable_pid.nil?
-        ssh.terminate_process(executable_pid)
+        ssh.exec!("kill -USR2 #{self.executable_pid}")
+        sleep(doze_time)
+        if ssh.process_running?(self.executable_pid)
+          raise(Hailstorm::Exception, "nmon could not be stopped on #{self.host_name} (#{self.role_name})")
+        end
+
         self.executable_pid = nil
       end
-
-      ssh.exec!("rm -rf #{nmon_output_path}")
-    end
-  end
-
-  # (see Hailstorm::Behavior::Moniterable#download_remote_log)
-  def download_remote_log(local_log_path)
-    logger.debug { "#{self.class}##{__method__}" }
-
-    local_log_file_path = File.join(local_log_path, nmon_outfile_name)
-    Hailstorm::Support::SSH.start(*ssh_connection_spec) do |ssh|
-      ssh.download(nmon_outfile_path, local_log_file_path)
     end
 
-    [nmon_outfile_name]
-  end
-
-  # (see Hailstorm::Behavior::Moniterable#analyze_log_files)
-  # Note that every time this method is called, the average and
-  # trends statistics are re-computed.
-  # @param [Array] log_file_paths (String)
-  def analyze_log_files(log_file_paths, start_time, end_time)
-    logger.debug { "#{self.class}##{__method__}" }
-
-    reset_counters
-
-    # compute the count of samples collected and only collect same number of samples
-    # from log files (adding 1 for millisecond correction)
-    samples_count = ((end_time - start_time) / self.sampling_interval).to_i + 1
-    cpu_samples_count = 0
-    memory_samples_count = 0
-
-    # nmon will output a single log file per invocation
-    log_file_path = log_file_paths.first
-    cpu_rexp = Regexp.compile('^CPU_ALL')
-    mem_rexp = Regexp.compile('^MEM')
-    comma_rexp = Regexp.compile('\s*,\s*')
-
-    cpu_trend_file = File.open(cpu_trend_file_path, 'w')
-    # User,Sys,Total
-
-    memory_trend_file = File.open(memory_trend_file_path, 'w')
-    swap_trend_file = File.open(swap_trend_file_path, 'w')
-
-    File.open(log_file_path, 'r') do |file|
-      file.each_line do |line|
-        line.chomp!
-
-        if cpu_rexp.match(line) && (cpu_samples_count < samples_count)
-          # this is the CPU_ALL line
-          # 0       1                 2       3
-          # CPU_ALL,CPU Total ubuntu,<User%>,<Sys%>,Wait%,Idle%,Busy,CPUs
-          cpu_tokens = line.split(comma_rexp).slice(2, 2).collect(&:to_f)
-          cpu_tokens << average_cpu_usage(cpu_tokens.inject(0.0) { |s, e| s += e })
-
-          cpu_trend_file.puts(cpu_tokens.join(','))
-          cpu_samples_count += 1
+    # (see Hailstorm::Behavior::Moniterable#cleanup)
+    def cleanup
+      logger.debug { "#{self.class}##{__method__}" }
+      Hailstorm::Support::SSH.start(*ssh_connection_spec) do |ssh|
+        unless self.executable_pid.nil?
+          ssh.terminate_process(executable_pid)
+          self.executable_pid = nil
         end
 
-        if mem_rexp.match(line) && (memory_samples_count < samples_count)
-          # this is the MEM line
-          mem_tokens = line.split(comma_rexp)
+        ssh.exec!("rm -rf #{NMON_OUTPUT_PATH}")
+      end
+    end
+  end
 
-          mem_total = mem_tokens[2].to_f
-          swap_total = mem_tokens[5].to_f
-          mem_free = mem_tokens[6].to_f
-          swap_free = mem_tokens[9].to_f
+  # Reporting functions for a monitor
+  module MoniterableReporter
 
-          memory_used = mem_total - mem_free
-          memory_trend_file.puts average_memory_usage(memory_used)
+    # @see Hailstorm::Behavior::Moniterable#populate_averages
+    def calculate_average_stats(started_at, stopped_at)
+      logger.debug { "#{self.class}.#{__method__}" }
+      local_log_file_path = download_remote_log
+      averages = []
+      File.open(local_log_file_path, 'r') do |log_io|
+        averages.push(*analyze_log_file(log_io, started_at, stopped_at))
+      end
+      averages
+    end
 
-          swap_used = swap_total - swap_free
-          swap_trend_file.puts average_swap_usage(swap_used)
+    # Note that every time this method is called, the average and
+    # trends statistics are re-computed.
+    # @param [IO] log_io
+    def analyze_log_file(log_io, start_time, end_time)
+      logger.debug { "#{self.class}##{__method__}" }
+      # compute the count of samples collected and only collect same number of samples
+      # from log files (adding 1 for millisecond correction)
+      samples_count = ((end_time - start_time) / self.sampling_interval).to_i + 1
+      calculator = Hailstorm::Support::NmonCalculator.new(log_io, samples_count)
 
-          memory_samples_count += 1
+      with_output do |observer|
+        calculator.analyze_each_sample do |cpu_sample, mem_sample, swap_sample|
+          observer.next_cpu_sample(cpu_sample)
+          observer.next_mem_sample(mem_sample)
+          observer.next_swap_sample(swap_sample)
+        end
+      end
+
+      [calculator.average_cpu_usage, calculator.average_mem_usage, calculator.average_swap_usage]
+    end
+
+    # (see Hailstorm::Behavior::Moniterable#cpu_usage_trend)
+    def cpu_usage_trend
+      if block_given?
+        File.open(cpu_trend_file_path, 'r') do |io|
+          yield(io)
+        end
+        File.unlink(cpu_trend_file_path)
+      else
+        File.open(cpu_trend_file_path, 'r')
+      end
+    end
+
+    # (see #cpu_usage_trend)
+    def memory_usage_trend
+      if block_given?
+        File.open(memory_trend_file_path, 'r') do |io|
+          yield(io)
+        end
+        File.unlink(memory_trend_file_path)
+      else
+        File.open(memory_trend_file_path, 'r')
+      end
+    end
+
+    # (see #cpu_usage_trend)
+    def swap_usage_trend
+      if block_given?
+        File.open(swap_trend_file_path, 'r') do |io|
+          yield(io)
+        end
+        File.unlink(swap_trend_file_path)
+      else
+        File.open(swap_trend_file_path, 'r')
+      end
+    end
+
+    # (see Hailstorm::Behavior::Moniterable#each_cpu_usage_sample)
+    def each_cpu_usage_sample(cpu_usage_file_path)
+      File.open(cpu_usage_file_path, 'r') do |inf|
+        inf.each_line do |line|
+          line.chomp!
+          sample = line.split(',').last.to_f
+          yield sample
+        end
+      end
+
+      File.unlink(cpu_usage_file_path)
+    end
+
+    # (see Hailstorm::Behavior::Moniterable#each_memory_usage_sample)
+    def each_memory_usage_sample(memory_usage_file_path)
+      File.open(memory_usage_file_path, 'r') do |inf|
+        inf.each_line do |line|
+          line.chomp!
+          sample = line.to_f
+          yield sample
+        end
+      end
+
+      File.unlink(memory_usage_file_path)
+    end
+
+    # (see Hailstorm::Behavior::Moniterable#each_swap_usage_sample)
+    def each_swap_usage_sample(swap_usage_file_path)
+      File.open(swap_usage_file_path, 'r') do |inf|
+        inf.each_line do |line|
+          line.chomp!
+          sample = line.to_f
+          yield sample
+        end
+      end
+
+      File.unlink(swap_usage_file_path)
+    end
+
+    private
+
+    def workspace
+      @workspace ||= Hailstorm.workspace(self.project.project_code)
+    end
+
+    def cpu_trend_file_path
+      File.join(workspace.tmp_path, "cpu_trend-#{current_execution_context}-#{id}.log")
+    end
+
+    def memory_trend_file_path
+      File.join(workspace.tmp_path, "memory_trend-#{current_execution_context}-#{id}.log")
+    end
+
+    def swap_trend_file_path
+      File.join(workspace.tmp_path, "swap_trend-#{current_execution_context}-#{id}.log")
+    end
+
+    def download_remote_log
+      logger.debug { "#{self.class}##{__method__}" }
+      local_log_file_path = File.join(workspace.tmp_path, nmon_outfile_name)
+      Hailstorm::Support::SSH.start(*ssh_connection_spec) do |ssh|
+        ssh.download(nmon_outfile_path, local_log_file_path)
+      end
+      local_log_file_path
+    end
+
+    def with_output
+      subject = Object.new
+      class << subject
+        attr_accessor :cpu_io, :mem_io, :swap_io
+
+        def next_cpu_sample(sample)
+          # User,Sys,Total
+          cpu_io.puts(sample) if sample
         end
 
-        break if (cpu_samples_count >= samples_count) && (memory_samples_count >= samples_count)
+        def next_mem_sample(sample)
+          mem_io.puts(sample) if sample
+        end
+
+        def next_swap_sample(sample)
+          swap_io.puts(sample) if sample
+        end
       end
-    end
-  ensure
-    cpu_trend_file.close unless cpu_trend_file.nil?
-    memory_trend_file.close unless memory_trend_file.nil?
-    swap_trend_file.close unless swap_trend_file.nil?
-  end
 
-  # (see Hailstorm::Behavior::Moniterable#average_cpu_usage)
-  # Since Nmon uses a log file approach, the start_time and end_time options
-  # are ignored. The *args used are for internal use only, to get the computed
-  # value, call this method without any arguments.
-  def average_cpu_usage(*args)
-    if (args.length == 1) && args.first.is_a?(Float)
-      @cumulative_cpu_usage ||= 0.0
-      @cpu_samples_count ||= 0
-      @cumulative_cpu_usage += args.first
-      @cpu_samples_count += 1
+      subject.cpu_io = File.open(cpu_trend_file_path, 'w')
+      subject.mem_io = File.open(memory_trend_file_path, 'w')
+      subject.swap_io = File.open(swap_trend_file_path, 'w')
 
-      args.first
-    else
-      @average_cpu_usage ||= (@cumulative_cpu_usage.to_f / @cpu_samples_count)
+      yield subject
+    ensure
+      subject.cpu_io.close
+      subject.mem_io.close
+      subject.swap_io.close
     end
   end
 
-  # (see #average_cpu_usage)
-  def average_memory_usage(*args)
-    if (args.length == 1) && args.first.is_a?(Float)
-      @cumulative_memory_usage ||= 0.0
-      @memory_samples_count ||= 0
-      @cumulative_memory_usage += args.first
-      @memory_samples_count += 1
-
-      args.first
-    else
-      @average_memory_usage ||= (@cumulative_memory_usage.to_f / @memory_samples_count)
-    end
-  end
-
-  # (see #average_cpu_usage)
-  def average_swap_usage(*args)
-    if (args.length == 1) && args.first.is_a?(Float)
-      @cumulative_swap_usage ||= 0.0
-      @swap_samples_count ||= 0
-      @cumulative_swap_usage += args.first
-      @swap_samples_count += 1
-
-      args.first
-    else
-      @average_swap_usage ||= (@cumulative_swap_usage.to_f / @swap_samples_count)
-    end
-  end
-
-  # (see Hailstorm::Behavior::Moniterable#cpu_usage_trend)
-  def cpu_usage_trend
-    if block_given?
-      File.open(cpu_trend_file_path, 'r') do |io|
-        yield(io)
-      end
-      File.unlink(cpu_trend_file_path)
-    else
-      File.open(cpu_trend_file_path, 'r')
-    end
-  end
-
-  # (see #cpu_usage_trend)
-  def memory_usage_trend
-    if block_given?
-      File.open(memory_trend_file_path, 'r') do |io|
-        yield(io)
-      end
-      File.unlink(memory_trend_file_path)
-    else
-      File.open(memory_trend_file_path, 'r')
-    end
-  end
-
-  # (see #cpu_usage_trend)
-  def swap_usage_trend
-    if block_given?
-      File.open(swap_trend_file_path, 'r') do |io|
-        yield(io)
-      end
-      File.unlink(swap_trend_file_path)
-    else
-      File.open(swap_trend_file_path, 'r')
-    end
-  end
-
-  # (see Hailstorm::Behavior::Moniterable#each_cpu_usage_sample)
-  def each_cpu_usage_sample(cpu_usage_file_path)
-    File.open(cpu_usage_file_path, 'r') do |inf|
-      inf.each_line do |line|
-        line.chomp!
-        sample = line.split(',').last.to_f
-        yield sample
-      end
-    end
-
-    File.unlink(cpu_usage_file_path)
-  end
-
-  # (see Hailstorm::Behavior::Moniterable#each_memory_usage_sample)
-  def each_memory_usage_sample(memory_usage_file_path)
-    File.open(memory_usage_file_path, 'r') do |inf|
-      inf.each_line do |line|
-        line.chomp!
-        sample = line.to_f
-        next unless sample > 0.0
-        yield sample
-      end
-    end
-
-    File.unlink(memory_usage_file_path)
-  end
-
-  # (see Hailstorm::Behavior::Moniterable#each_swap_usage_sample)
-  def each_swap_usage_sample(swap_usage_file_path)
-    File.open(swap_usage_file_path, 'r') do |inf|
-      inf.each_line do |line|
-        line.chomp!
-        sample = line.to_f
-        yield sample
-      end
-    end
-
-    File.unlink(swap_usage_file_path)
-  end
+  include MoniterableOps
+  include MoniterableReporter
 
   private
 
   # Full path to nmon log file on target_host
   def nmon_outfile_path
-    @nmon_outfile_path ||= [nmon_output_path, nmon_outfile_name].join('/')
+    @nmon_outfile_path ||= [NMON_OUTPUT_PATH, nmon_outfile_name].join('/')
   end
 
   def nmon_outfile_name
     @nmon_outfile_name ||= [log_file_name, 'nmon'].join('.')
   end
 
-  # Path to nmon output files on target_host
-  def nmon_output_path
-    '/tmp/nmon_output'
-  end
-
-  def identity_file_exists
-    unless File.exist?(identity_file_path)
-      errors.add(:ssh_identity, "not found at #{identity_file_path}")
-    end
-  end
-
-  def identity_file_path
-    File.join(Hailstorm.root, Hailstorm.config_dir,
-              self.ssh_identity.gsub(/\.pem$/, '').concat('.pem'))
-  end
-
-  # Array of options to connect to target_host with SSH. Pass to SSH#start
-  # as *ssh_connection_spec
-  def ssh_connection_spec
-    [self.host_name, self.user_name, { keys: identity_file_path }]
+  def identity_file_name
+    @identity_file_name ||= self.ssh_identity.gsub(/\.pem$/, '').concat('.pem')
   end
 
   # Set default values for attributes if they are not set
   def set_defaults
     self.executable_path ||= '/usr/bin/nmon'
     self.sampling_interval ||= 10
-  end
-
-  def cpu_trend_file_path
-    File.join(Hailstorm.tmp_path, "cpu_trend-#{current_execution_context}-#{id}.log")
-  end
-
-  def memory_trend_file_path
-    File.join(Hailstorm.tmp_path, "memory_trend-#{current_execution_context}-#{id}.log")
-  end
-
-  def swap_trend_file_path
-    File.join(Hailstorm.tmp_path, "swap_trend-#{current_execution_context}-#{id}.log")
-  end
-
-  def reset_counters
-    @cumulative_cpu_usage = 0
-    @cumulative_memory_usage = 0
-    @cumulative_swap_usage = 0
-    @cpu_samples_count = 0
-    @memory_samples_count = 0
-    @swap_samples_count = 0
   end
 end

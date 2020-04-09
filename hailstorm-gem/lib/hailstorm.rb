@@ -1,40 +1,42 @@
-require 'java'
-
-require 'ostruct'
 require 'active_support/all'
-require 'active_record'
-require 'action_dispatch/http/mime_type'
-require 'action_view'
 
-require 'hailstorm/version'
-require 'hailstorm/behavior/loggable'
-
-ActiveRecord::Base.raise_in_transactional_callbacks = true
-
-# Defines the namespace and module static accessors.
+# Defines the namespace.
 # @author Sayantam Dey
 module Hailstorm
 
-  include Hailstorm::Behavior::Loggable
+  PROJECT_WORKSPACE_KEY = :project_workspace_key
 
-  # The application root path. Access this by calling <tt>Hailstorm.root</tt>
-  @@root = nil
-  mattr_reader :root #:nodoc:
+  # Reference to FileStore implementation
+  # @return [Hailstorm::Behavior::FileStore]
+  mattr_accessor :fs
 
-  # Sets the root path of the application
-  # @param [String] root path of application
-  # @return [String]
-  def self.root=(new_root)
-    @@root = new_root
+  # Workspace reference for workspace actions
+  # @return [Hailstorm::Support::Workspace]
+  def self.workspace(project_code)
+    current_thread = Thread.current
+    unless current_thread.thread_variable?(PROJECT_WORKSPACE_KEY)
+      current_thread.thread_variable_set(PROJECT_WORKSPACE_KEY, {})
+    end
+
+    # @type [Hash] project_workspace
+    project_workspace = current_thread.thread_variable_get(PROJECT_WORKSPACE_KEY)
+    unless project_workspace.key?(project_code)
+      require 'hailstorm/support/workspace'
+      project_workspace[project_code] = Hailstorm::Support::Workspace.new(project_code)
+      current_thread.thread_variable_set(PROJECT_WORKSPACE_KEY, project_workspace)
+    end
+
+    project_workspace[project_code]
   end
 
-  mattr_accessor :app_name
+  # @return [String] path to templates directory
+  def self.gem_templates_path
+    File.expand_path('../../templates', __FILE__)
+  end
 
-  mattr_accessor :application
-
-  # Directory name used to store database and other files.
-  def self.db_dir
-    'db'
+  # @return [Symbol] current environment, default :development
+  def self.env
+    (ENV['HAILSTORM_ENV'] || :development).to_sym
   end
 
   # Directory name for application specific (JMeter) artifacts
@@ -45,49 +47,4 @@ module Hailstorm
   def self.log_dir
     'log'
   end
-
-  def self.tmp_dir
-    'tmp'
-  end
-
-  def self.tmp_path
-    File.join(root, tmp_dir)
-  end
-
-  def self.templates_path
-    File.expand_path('../../templates', __FILE__)
-  end
-
-  def self.reports_dir
-    'reports'
-  end
-
-  def self.config_dir
-    'config'
-  end
-
-  def self.vendor_dir
-    'vendor'
-  end
-
-  def self.script_dir
-    'script'
-  end
-
-  def self.environment_file_path
-    File.join(self.root, self.config_dir, 'environment.rb')
-  end
-
-  def self.env
-    (ENV['HAILSTORM_ENV'] || 'production').to_sym
-  end
-
-  def self.log4j_dir
-    File.join(self.config_dir, 'log4j')
-  end
-
-  def self.results_import_dir
-    File.join(self.log_dir, 'import')
-  end
-
 end

@@ -1,4 +1,5 @@
 require 'hailstorm/model'
+require 'hailstorm/model/target_stat'
 require 'hailstorm/behavior/moniterable'
 require 'hailstorm/support/thread'
 
@@ -24,12 +25,12 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
   def self.moniterable_klass(monitor_type)
     monitor_type.constantize
   rescue Exception
-    require(monitor_type.underscore)
+    require(monitor_type.to_s.underscore)
     retry
   end
 
   # Calls #setup() and saves changes on success.
-  def call_setup
+  def do_setup
     setup if self.active?
     self.save!
   rescue StandardError => e
@@ -46,38 +47,39 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
     # disable all hosts and delegate to monitor#setup to enable specific hosts
     moniterables(project, false).each { |t| t.update_column(:active, false) }
 
-    config.target_hosts.each do |host_def|
+    host_definitions(config.monitors).each do |host_def|
       # update type nmemonic to real type
-      host_def[:type] = "Hailstorm::Model::#{host_def[:type].to_s.camelize}"
-      target_host = project.target_hosts
-                           .where(host_def.slice(:host_name, :type))
-                           .first_or_initialize(host_def.except(:type))
-
-      monitor = if target_host.persisted?
-                  target_host
-                else # not persisted class -> TargetHost
-                  target_host.becomes(moniterable_klass(host_def[:type]))
-                end
-      if monitor.new_record?
-        monitor.save!
-      else
-        monitor.update_attributes!(host_def)
-      end
-
+      monitor = _to_monitor(host_def, project)
       # invoke configure in new thread
-      Hailstorm::Support::Thread.start(monitor, &:call_setup)
+      Hailstorm::Support::Thread.start(monitor, &:do_setup)
     end
 
     begin
       Hailstorm::Support::Thread.join
-    rescue
+    rescue StandardError
       raise(Hailstorm::Exception, 'One or more target hosts could not be setup for monitoring.')
     end
   end
 
+  def self._to_monitor(host_def, project)
+    host_def[:type] = "Hailstorm::Model::#{host_def[:type].to_s.camelize}"
+    target_host = project.target_hosts
+                         .where(host_def.slice(:host_name, :type))
+                         .first_or_initialize(host_def.except(:type))
+
+    if target_host.new_record?
+      monitor = target_host.becomes(moniterable_klass(host_def[:type]))
+      monitor.save!
+    else
+      monitor = target_host
+      target_host.update_attributes!(host_def)
+    end
+    monitor
+  end
+
   # Calls #start_monitoring().
   # Saves states changes on success after method call.
-  def call_start_monitoring
+  def do_start_monitoring
     start_monitoring
     self.save!
   rescue StandardError => e
@@ -90,22 +92,22 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
   def self.monitor_all(project)
     logger.debug { "#{self}.#{__method__}" }
     moniterables(project).each do |target_host|
-      Hailstorm::Support::Thread.start(target_host, &:call_start_monitoring)
+      Hailstorm::Support::Thread.start(target_host, &:do_start_monitoring)
     end
 
-    Hailstorm::Support::Thread.join
+    begin
+      Hailstorm::Support::Thread.join
+    rescue StandardError
+      raise(Hailstorm::Exception, 'Monitoring could not be started on one or more hosts')
+    end
   end
 
   # Calls #stop_monitoring() and persists state changes. After changes are
   # persisted, calls ExecutionCycle#collect_target_stats.
-  def call_stop_monitoring(aborted = false)
+  def do_stop_monitoring
     stop_monitoring
     self.save!
     logger.info "Monitoring stopped at #{self.host_name}"
-    unless aborted
-      logger.info "Collecting usage data from #{self.host_name}..."
-      self.project.current_execution_cycle.collect_target_stats(self)
-    end
   rescue StandardError => e
     logger.error(e.message)
     raise
@@ -113,17 +115,24 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
 
   # Stops monitoring on all target hosts. Each target_host is stopped in a new
   # thread. Blocks till all threads are done.
-  def self.stop_all_monitoring(project, aborted = false)
+  def self.stop_all_monitoring(project, execution_cycle, create_target_stat: true)
     logger.debug { "#{self}.#{__method__}" }
     moniterables(project).each do |target_host|
-      Hailstorm::Support::Thread.start(target_host) { |t| t.call_stop_monitoring(aborted) }
+      Hailstorm::Support::Thread.start(target_host) do |t|
+        t.do_stop_monitoring
+        Hailstorm::Model::TargetStat.create_target_stat(execution_cycle, t) if create_target_stat
+      end
     end
 
-    Hailstorm::Support::Thread.join
+    begin
+      Hailstorm::Support::Thread.join
+    rescue StandardError
+      raise(Hailstorm::Exception, 'Monitoring could not be stopped on one or more hosts')
+    end
   end
 
   # Calls #cleanup() and persists state changes
-  def call_cleanup
+  def do_cleanup
     cleanup
     self.save!
   rescue StandardError => e
@@ -134,10 +143,14 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
   def self.terminate(project)
     logger.debug { "#{self}.#{__method__}" }
     moniterables(project).each do |target_host|
-      Hailstorm::Support::Thread.start(target_host, &:call_cleanup)
+      Hailstorm::Support::Thread.start(target_host, &:do_cleanup)
     end
 
-    Hailstorm::Support::Thread.join
+    begin
+      Hailstorm::Support::Thread.join
+    rescue StandardError
+      raise(Hailstorm::Exception, 'Monitoring could not be terminated on one or more hosts')
+    end
   end
 
   def self.moniterables(project, only_active = true)
@@ -146,27 +159,30 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
     query
   end
 
-  # @param [Hailstorm::Model::ExecutionCycle] execution_cycle
-  # @param [Array] log_file_paths
-  def calculate_average_stats(execution_cycle, log_file_paths)
-    raise(ArgumentError, 'block required') unless block_given?
-    logger.debug { "#{self.class}.#{__method__}" }
+  # Iterates through the moniters and returns the host definitions
+  # @param [Array<Hailstorm::Support::Configuration::TargetHost>] monitors
+  # @return [Array] of Hash, with attributes mapped to Hailstorm::Model::TargetHost
+  def self.host_definitions(monitors)
+    logger.debug { "#{self.class}##{__method__}" }
+    host_defs = []
+    monitors.each do |monitor|
+      monitor.groups.each do |group|
+        group.hosts.each do |host|
+          hdef = host.instance_values.symbolize_keys
+          hdef[:type] = monitor.monitor_type
+          hdef[:role_name] = group.role
+          %i[executable_path ssh_identity user_name
+             sampling_interval active].each do |sym|
 
-    @current_execution_context = execution_cycle.id
-    analyze_log_files(log_file_paths, execution_cycle.started_at,
-                      execution_cycle.stopped_at)
-
-    stat = OpenStruct.new
-    stat.average_cpu_usage = average_cpu_usage(execution_cycle.started_at, execution_cycle.stopped_at)
-    stat.average_memory_usage = average_memory_usage(execution_cycle.started_at, execution_cycle.stopped_at)
-    stat.average_swap_usage = average_swap_usage(execution_cycle.started_at, execution_cycle.stopped_at)
-
-    yield(stat)
-
-    # remove log files
-    unless log_file_paths.nil?
-      log_file_paths.each { |f| File.unlink(f) } if Hailstorm.env == :production
+            # take values from monitor unless the hdef contains the key
+            hdef[sym] = monitor.send(sym) unless hdef.key?(sym)
+          end
+          hdef[:active] = true if hdef[:active].nil?
+          host_defs.push(hdef)
+        end
+      end
     end
+    host_defs
   end
 
   protected
@@ -174,7 +190,7 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
   # Returns an identifier which is unique for current execution cycle. Can
   # be used to named persistent data on disk or database
   def current_execution_context
-    @current_execution_context || self.project.current_execution_cycle.id
+    @current_execution_context ||= self.project.current_execution_cycle.id
   end
 
   # Computes a uniform name for a log file that is created by a monitor
@@ -183,15 +199,8 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
   # The format of the name: host_#{full_host_name_like_this}-#{current_execution_cycle.id}
   # @return [String] file name
   def log_file_name
-    @log_file_name ||= format(
-      'host_%s-%d', self.host_name.tr('.', '_'),
-      self.project.current_execution_cycle.id
-    )
-  end
-
-  private
-
-  def command
-    Hailstorm.application.command_processor
+    @log_file_name ||= format('host_%<host_name>s-%<execution_id>d',
+                              host_name: self.host_name.tr('.', '_'),
+                              execution_id: self.project.current_execution_cycle.id)
   end
 end

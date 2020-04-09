@@ -1,0 +1,7 @@
+build/
+.idea/
+.ruby-version
+coverage/
+.jrubyrc
+keys.yml
+/pkg/

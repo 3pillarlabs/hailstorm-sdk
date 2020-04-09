@@ -1,1 +1,48 @@
+require 'bundler/setup'
 require "bundler/gem_tasks"
+require 'logger'
+
+module TempFixForRakeLastComment
+  def last_comment
+    respond_to?(:last_description) ? last_description : ''
+  end
+end
+
+Rake::Application.send :include, TempFixForRakeLastComment
+
+logger = Logger.new(STDOUT)
+
+namespace :db do
+
+  desc "Setup database for development and testing"
+  task :setup do
+    require 'active_support/all'
+    require 'active_record'
+    require 'active_record/base'
+    connection_spec = {
+        adapter: 'jdbcmysql',
+        username: 'hailstorm_dev',
+        password: 'hailstorm_dev'
+    }
+
+    ActiveRecord::Base.logger = logger
+    %i[hailstorm_test].each do |schema_name|
+      schema_spec = connection_spec.merge({database: schema_name.to_s})
+      ActiveRecord::Base.establish_connection(schema_spec)
+      begin
+        ActiveRecord::Base.connection.exec_query('select 1')
+      rescue ActiveRecord::ActiveRecordError
+        ActiveRecord::Base.establish_connection(connection_spec)
+        ActiveRecord::Base.connection.create_database(schema_name)
+        logger.info { "Created #{schema_name}" }
+      end
+    end
+  end
+end
+
+begin
+  require 'rspec/core/rake_task'
+  RSpec::Core::RakeTask.new(:spec)
+rescue LoadError => e
+  logger.error(e)
+end

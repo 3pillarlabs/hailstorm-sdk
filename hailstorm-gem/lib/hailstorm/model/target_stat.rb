@@ -13,27 +13,27 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
 
   belongs_to :target_host
 
-  before_create :populate_averages
-
-  after_create :write_blobs
+  after_create :write_blobs, if: ->(r) { r.target_host.active? }
 
   default_scope { select(DEFAULT_SELECT_COLUMNS.collect { |e| "target_stats.#{e}" }.join(',')) }
 
-  attr_accessor :log_file_paths
-
-  def self.create_target_stats(execution_cycle, target_host, log_file_paths)
+  def self.create_target_stat(execution_cycle, target_host)
     logger.debug { "#{self}.#{__method__}" }
     target_stat = target_host.target_stats.build(execution_cycle_id: execution_cycle.id)
-    target_stat.log_file_paths = log_file_paths
+    target_stat.average_cpu_usage,
+    target_stat.average_memory_usage,
+    target_stat.average_swap_usage = target_host.calculate_average_stats(execution_cycle.started_at,
+                                                                         execution_cycle.stopped_at)
     target_stat.save!
+    target_stat
   end
 
   # @return [String] path to outfile file
-  def utilization_graph
-    grapher_klass = com.brickred.tsg.hailstorm.ResourceUtilizationGraph
-    grapher = grapher_klass.new(utilization_graph_path,
-                                self.target_host.sampling_interval)
-
+  def utilization_graph(width: 640, height: 600, builder: nil, working_path:)
+    output_path = File.join(working_path, "target_stat_graph_#{self.id}")
+    grapher = GraphBuilderFactory.utilization_graph(output_path,
+                                                    self.target_host.sampling_interval,
+                                                    other_builder: builder)
     grapher.startBuilder
 
     cpu_usage_file_path = dump_usage_data(:cpu, :cpu_usage_trend)
@@ -49,125 +49,43 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
       grapher.addSwapUsageSample(sample.to_f)
     end
 
-    grapher.finish(640, 600) # returns path to graph file
-  end
-
-  def self.cpu_comparison_graph(execution_cyles)
-    grapher_klass = com.brickred.tsg.hailstorm.TargetComparisonGraph
-    grapher = grapher_klass.getCpuComparisionBuilder(comparison_graph_path(:cpu,
-                                                                           execution_cyles))
-    # repeated total_threads_count cause a collapsed graph - bug #Research-440
-    domain_labels = []
-    execution_cyles.each do |execution_cycle|
-      domain_label = execution_cycle.total_threads_count.to_s
-      if domain_labels.include?(domain_label)
-        domain_label.concat("-#{execution_cycle.id}")
-      end
-      domain_labels.push(domain_label)
-      execution_cycle.target_stats.includes(:target_host).each do |target_stat|
-        grapher.addDataItem(target_stat.average_cpu_usage,
-                            target_stat.target_host.host_name,
-                            domain_label)
-      end
-    end
-
-    grapher.build(640, 300) unless domain_labels.empty?
-  end
-
-  def self.memory_comparison_graph(execution_cyles)
-    grapher_klass = com.brickred.tsg.hailstorm.TargetComparisonGraph
-    grapher = grapher_klass.getMemoryComparisionBuilder(comparison_graph_path(:memory,
-                                                                              execution_cyles))
-    # repeated total_threads_count cause a collapsed graph - bug #Research-440
-    domain_labels = []
-    execution_cyles.each do |execution_cycle|
-      domain_label = execution_cycle.total_threads_count.to_s
-      if domain_labels.include?(domain_label)
-        domain_label.concat("-#{execution_cycle.id}")
-      end
-      domain_labels.push(domain_label)
-      execution_cycle.target_stats.includes(:target_host).each do |target_stat|
-        grapher.addDataItem(target_stat.average_memory_usage,
-                            target_stat.target_host.host_name,
-                            domain_label)
-      end
-    end
-
-    grapher.build(640, 300) unless domain_labels.empty?
+    grapher.finish(width, height) # returns path to graph file
   end
 
   private
 
-  def populate_averages
-    logger.debug { "#{self.class}.#{__method__}" }
-    self.target_host.calculate_average_stats(execution_cycle, log_file_paths) do |stats|
-      %i[average_cpu_usage average_memory_usage average_swap_usage].each do |attr|
-        value = stats.send(attr)
-        self.send("#{attr}=", value)
-      end
-    end
-  end
-
   # Fetches data for blob columns and fills them
   def write_blobs
     logger.debug { "#{self.class}.#{__method__}" }
-    write_cpu_blob
-    write_memory_blob
-    write_swap_blob
+    self.target_host.cpu_usage_trend do |io|
+      write_metric_blob(io, metric: :cpu, attribute_name: :cpu_usage_trend)
+    end
+
+    self.target_host.memory_usage_trend do |io|
+      write_metric_blob(io, metric: :memory, attribute_name: :memory_usage_trend)
+    end
+
+    self.target_host.swap_usage_trend do |io|
+      write_metric_blob(io, metric: :swap, attribute_name: :swap_usage_trend)
+    end
   end
 
-  def write_cpu_blob
+  def write_metric_blob(io, metric:, attribute_name:)
     logger.debug { "#{self.class}.#{__method__}" }
-    path = blob_file_path(:cpu)
+    path = blob_file_path(metric)
     File.open(path, 'wb') do |out|
       gz = Zlib::GzipWriter.new(out)
-      self.target_host.cpu_usage_trend do |io|
-        gz.write(io.read(1024)) until io.eof?
-      end
+      gz.write(io.read(1024)) until io.eof?
       gz.close
     end
-    self.update_attribute(:cpu_usage_trend, IO.binread(path))
 
-    File.unlink(path)
-  end
-
-  def write_memory_blob
-    logger.debug { "#{self.class}.#{__method__}" }
-    path = blob_file_path(:memory)
-    File.open(path, 'wb') do |out|
-      gz = Zlib::GzipWriter.new(out)
-      self.target_host.memory_usage_trend do |io|
-        gz.write(io.read(1024)) until io.eof?
-      end
-      gz.close
-    end
-    self.update_attribute(:memory_usage_trend, IO.binread(path))
-
-    File.unlink(path)
-  end
-
-  def write_swap_blob
-    logger.debug { "#{self.class}.#{__method__}" }
-    path = blob_file_path(:swap)
-    File.open(path, 'wb') do |out|
-      gz = Zlib::GzipWriter.new(out)
-      self.target_host.swap_usage_trend do |io|
-        gz.write(io.read(1024)) until io.eof?
-      end
-      gz.close
-    end
-    self.update_attribute(:swap_usage_trend, IO.binread(path))
-
+    self.update_attribute(attribute_name, IO.binread(path))
     File.unlink(path)
   end
 
   def blob_file_path(metric, inflated = false)
-    File.join(Hailstorm.tmp_path,
+    File.join(Hailstorm.workspace(self.execution_cycle.project.project_code).tmp_path,
               "#{metric}_trend-#{self.execution_cycle.id}-#{self.target_host.id}.log#{inflated ? '' : '.gz'}")
-  end
-
-  def utilization_graph_path
-    File.join(Hailstorm.root, Hailstorm.reports_dir, "target_stat_graph_#{self.id}")
   end
 
   # Dumps the uncompressed metric blobs to a temporary location
@@ -193,10 +111,18 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
     file_path
   end
 
-  def self.comparison_graph_path(metric, execution_cycles)
-    start_id = execution_cycles.first.id
-    end_id = execution_cycles.last.id
-    File.join(Hailstorm.root, Hailstorm.reports_dir,
-              "#{metric}_comparison_graph_#{start_id}-#{end_id}")
+  # Factory for building graph builders
+  class GraphBuilderFactory
+
+    def self.utilization_graph(output_path, sampling_interval, other_builder: nil)
+      if other_builder.nil?
+        grapher_klass = com.brickred.tsg.hailstorm.ResourceUtilizationGraph
+        grapher_klass.new(output_path, sampling_interval)
+      else
+        other_builder.output_path = output_path
+        other_builder.sampling_interval = sampling_interval
+        other_builder
+      end
+    end
   end
 end

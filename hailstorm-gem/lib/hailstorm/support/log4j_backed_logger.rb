@@ -54,7 +54,7 @@ class Hailstorm::Support::Log4jBackedLogger
 
   def error(msg = nil)
     if block_given?
-      log_message(:warn, yield) if error?
+      log_message(:error, yield) if error?
     else
       log_message(:error, msg)
     end
@@ -72,24 +72,13 @@ class Hailstorm::Support::Log4jBackedLogger
     end
   end
 
+  # logger.add is used by net-ssh
   def add(severity, message = nil, progname = nil)
     # map the severity & log_method
     log4j_severity,
-    log_method_sym = case severity
-                     when Logger::DEBUG
-                       [logger_level_impl::DEBUG, :debug]
-                     when Logger::INFO
-                       [logger_level_impl::INFO, :info]
-                     when Logger::WARN
-                       [logger_level_impl::WARN, :warn]
-                     when Logger::ERROR
-                       [logger_level_impl::ERROR, :error]
-                     when Logger::FATAL
-                       [logger_level_impl::FATAL, :fatal]
-                     else
-                       [logger_level_impl::DEBUG, :debug]
-                     end
+    log_method_sym = map_severity(severity)
     return unless @log4j_logger.isEnabledFor(log4j_severity)
+
     if message.nil?
       message = if block_given?
                   yield
@@ -107,13 +96,17 @@ class Hailstorm::Support::Log4jBackedLogger
                        msg
                      end
     logger_message.chomp! unless logger_message.frozen?
-    with_context { @log4j_logger.send(log_method_sym, logger_message) }
+    with_context do
+      @log4j_logger.send(log_method_sym, logger_message)
+      [log_method_sym, logger_message]
+    end
   end
 
   def with_context
     logger_mdc_impl.put('caller', caller(3).first)
     begin
-      yield
+      args = yield
+      extended_logging(*args)
     ensure
       logger_mdc_impl.remove('caller')
     end
@@ -131,6 +124,12 @@ class Hailstorm::Support::Log4jBackedLogger
     org.apache.log4j.MDC
   end
 
+  # @param [Symbol] _log_level
+  # @param [String] _message
+  def extended_logging(_log_level, _message)
+    # noop
+  end
+
   def method_missing(method_name, *_args)
     self.warn { "#{method_name}: Undefined method -- call stack:\n#{caller.join("\n")}" }
     super
@@ -138,6 +137,36 @@ class Hailstorm::Support::Log4jBackedLogger
 
   def respond_to_missing?(*)
     super
+  end
+
+  @logger_levels = nil
+  def self.logger_levels
+    @logger_levels ||= %i[
+      debug
+      info
+      warn
+      error
+      fatal
+    ]
+  end
+
+  private
+
+  def map_severity(severity)
+    case severity
+    when Logger::DEBUG
+      [logger_level_impl::DEBUG, :debug]
+    when Logger::INFO
+      [logger_level_impl::INFO, :info]
+    when Logger::WARN
+      [logger_level_impl::WARN, :warn]
+    when Logger::ERROR
+      [logger_level_impl::ERROR, :error]
+    when Logger::FATAL
+      [logger_level_impl::FATAL, :fatal]
+    else
+      [logger_level_impl::DEBUG, :debug]
+    end
   end
 
 end

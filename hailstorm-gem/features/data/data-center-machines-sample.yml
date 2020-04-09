@@ -1,8 +1,0 @@
-# Enumerate your data center machine IP addresses or host names here for the integration test
-machines:
-  - host A
-  - host B
-
-
-# Uncomment and set the port if using a non-standard SSH port, like when using Docker with xhyve VM
-#ssh_port: 8022

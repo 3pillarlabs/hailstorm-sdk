@@ -1,0 +1,27 @@
+@import "~bulma/sass/utilities/_all.sass";
+
+.logBox {
+  display: block;
+  font-family: $family-monospace;
+  font-size: $size-7;
+  height: 30vh;
+  overflow-x: auto;
+  overflow-y: scroll;
+  white-space: nowrap;
+
+  .debug {
+    color: $grey-light;
+  }
+
+  .info {
+    color: $info;
+  }
+
+  .warn {
+    color: $warning;
+  }
+
+  .error, .fatal {
+    color: $danger;
+  }
+}

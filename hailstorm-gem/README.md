@@ -1,92 +1,61 @@
-# Introduction
-``hailstorm-gem`` is the core Hailstorm library and CLI of the Hailstorm application suite.
-
-# User Guide
-Refer to the [Hailstorm Wiki](https://github.com/3pillarlabs/hailstorm-sdk/wiki) for the user guide.
-
 # Developer Guide
-Use the User Guide to setup your own Hailstorm virtual machine. Once this is done, create a development environment
-in the virtual machine. SSH to the VM and -
+``hailstorm-gem`` is the core Hailstorm library.
+
+## Pre-requisites
+
+- docker
+- docker-compose
+- openjdk-8
+- rvm (recommended for development)
+
+## Installation
+
+Instructions to build a local environment for the gem.
+
+### RVM
+
+Install latest jruby-9.1 and replace @global bundler v2.1.4 with v.2.0.1.
+
 ```bash
-cd /vagrant/hailstorm-gem
-rvm gemset create hailstorm-dev
-rvm use @hailstorm-dev
-gem install --no-rdoc --no-ri bundler
-bundle install
+rvm install jruby-9.1.17.0
+rvm use jruby-9.1.17.0@global
+gem uninstall -x bundler
+gem install bundler -v 2.0.1
 ```
 
-You are all set.
+### Rest of the setup
 
-## Unit tests (specs)
 ```bash
-rspec
+cd hailstorm-gem
+rvm gemset create hailstorm-gem
+rvm use jruby-9.1.17.0@hailstorm-gem
+echo jruby-9.1.17.0@hailstorm-gem > .ruby-version
+make install
 ```
 
-## Integration tests
+## Unit tests (rspec)
+```bash
+docker-compose up -d hailstorm-db
+docker-compose logs -f
+# wait for database to initialize and CTRL+C
+make test
+```
+
+### Coverage
+
+```bash
+make coverage
+```
+Coverage report is generated in ``coverage`` directory.
+
+## Integration tests (cucumber)
 This requires an AWS account and a little more setup. Ensure your AWS account has a VPC with a public subnet.
-
-### AWS tests
 
 ```bash
 cp features/data/keys-sample.yml features/data/keys.yml
 ```
 
-Edit ``features/data/keys-sample.yml`` to add your AWS access and secret keys.
-
-### Data Center tests
-To execute the data-center integration tests, two nodes need to be setup.
-
-**Note** - The ``resources/data-center/Dockerfile`` can also be used to build Docker images to run on data-center machines.
-This is a considerably easier process to ensure that the nodes in the data center are setup correctly to work with
-Hailstorm. However, note that the Docker container enables SSH using an insecure key, it is essential that the SSH port
-be protected from access outside the data-center.
-
-### Linux
-For Linux, use the Docker containers.
-
-#### Build an image
-```bash
-cd resources/data-center
-docker build -t hailstorm-data-center-node:latest .
-```
-
-#### Run the container and daemonize
-```bash
-docker run -it --rm --name hs-dc-node-1 -d hailstorm-data-center-node:latest
-docker run -it --rm --name hs-dc-node-2 -d hailstorm-data-center-node:latest
-```
-
-To find the IP addresses -
-```bash
-for ctr in $(docker ps | cut -f1 -d' ' | grep -v CONTAINER); do \
-  docker inspect -f '{{ .NetworkSettings.IPAddress }}' $ctr; \
-done
-```
-
-### MacOS
-
-For MacOs, use the VirtualBox VMs using Vagrant.
-```bash
-vagrant up hs-dc-vm-1
-vagrant up hs-dc-vm-2
-```
-The IP addresses are ``192.168.27.10`` and ``192.168.27.20``.
-
-
-### Configuration
-Once the setup is done, copy ``features/data/data-center-machines-sample.yml`` to
-``features/data/data-center-machines.yml`` and add the IP addresses of the Docker containers or Vagrant VMs based on the
-setup.
-
-### Bring up the target sites
-
-Copy ``setup/hailstorm-site/vagrant-site-sample.yml`` to ``setup/hailstorm-site/vagrant-site.yml`` and edit the
-properties.
-
-```bash
-vagrant up site
-vagrant up site-local
-```
+Edit ``features/data/keys.yml`` to add your AWS access and secret keys.
 
 ### Execution
 ```bash

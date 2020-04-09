@@ -1,0 +1,11 @@
+<%= @only_active ? 'Active' : 'All' %> Clusters
+===============================================================================
+<%- @clustered_load_agents.each_with_index do |view_item, index| %>
+<%= index + 1 %>] <%= view_item.clusterable_slug %><%= view_item.cluster_code ? " (#{view_item.cluster_code})": '' %>
+<%= view_item.terminal_table %>
+
+<%- end %>
+<%- if @clustered_load_agents.size == 0 %>
+  None
+
+<%- end %>

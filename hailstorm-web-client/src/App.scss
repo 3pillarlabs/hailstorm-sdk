@@ -1,0 +1,69 @@
+@import "~bulma-3pillar/src/default/default";
+@import "~@fortawesome/fontawesome-free/css/all.css";
+@import "sass/variables";
+
+main {
+  padding: 2.0rem 0 2.0rem 0;
+  .container {
+    .title {
+      color: map-get($map: $shades, $key: "grey-dark");
+    }
+
+    .workspace-main {
+      .level-item, .panel-heading {
+        i {
+          margin-right: 0.3rem;
+        }
+      }
+
+      .panel-block {
+        div.level {
+          width: 100%;
+        }
+      }
+
+      @include until($widescreen) {
+        table {
+          font-size: 0.90rem;
+          th.is-gtk, td.is-gtk {
+            display: none;
+          }
+          th, td {
+            padding: 0.25em 0.30em;
+          }
+        }
+
+        div.is-gtk {
+          display: none;
+        }
+      }
+    }
+
+    .workspace-danger {
+      padding-top: 3.0rem;
+
+      article.boundary {
+        text-align: center;
+      }
+
+      article.message {
+        margin-top: 1.0rem;
+
+        ul {
+          list-style: circle;
+          padding-left: 2.0rem;
+        }
+      }
+    }
+  }
+}
+
+.modal {
+  p {
+    margin-bottom: 1.0rem;
+  }
+}
+
+.force-wrap {
+  word-wrap: anywhere;
+}

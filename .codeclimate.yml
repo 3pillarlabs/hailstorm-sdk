@@ -1,4 +1,9 @@
 version: "2"
+checks:
+  method-complexity:
+    enabled: false
+  method-lines:
+    enabled: false
 plugins:
   rubocop:
     enabled: true
@@ -12,11 +17,23 @@ exclude_patterns:
   - 'hailstorm-gem/Gemfile'
   - 'hailstorm-gem/hailstorm.gemspec'
   - 'hailstorm-gem/Rakefile'
-  - 'hailstorm-gem/bin/**/*'
   - 'hailstorm-gem/features/**/*'
+  - 'hailstorm-gem/lib/hailstorm/java/**/*'
   - 'hailstorm-gem/spec/**/*'
   - 'hailstorm-gem/templates/**/*'
-  - 'hailstorm-gem/tmp/**/*'
-  - 'hailstorm-redis/**/*'
   - 'hailstorm-site/**/*'
-  - 'hailstorm-web/**/*'
+  - 'hailstorm-cli/Gemfile'
+  - 'hailstorm-cli/hailstorm-cli.gemspec'
+  - 'hailstorm-cli/Rakefile'
+  - 'hailstorm-cli/bin/**/*'
+  - 'hailstorm-cli/features/**/*'
+  - 'hailstorm-cli/spec/**/*'
+  - 'hailstorm-cli/templates/**/*'
+  - 'hailstorm-api/spec/**/*'
+  - 'hailstorm-web-client/e2e/**/*'
+  - 'hailstorm-web-client/src/**/*.test.tsx'
+  - 'hailstorm-web-client/src/**/*.test.ts'
+  - 'hailstorm-web-client/src/index.tsx'
+  - 'hailstorm-web-client/src/serviceWorker.ts'
+  - 'hailstorm-file-server/src/test/**/*.java'
+  - 'hailstorm-client-exchange/src/test/**/*.java'

@@ -1,0 +1,21 @@
+version: '3.2'
+services:
+  hailstorm-db:
+    image: "hailstorm3/hailstorm-db:2.0.0"
+    hostname: "hailstorm-db"
+    ports:
+      - "3306:3306"
+    networks:
+      - hailstorm
+    volumes:
+      - type: volume
+        source: hailstorm-db
+        target: /var/lib/mysql
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: "true"
+
+networks:
+  hailstorm:
+
+volumes:
+  hailstorm-db:

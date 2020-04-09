@@ -1,24 +1,20 @@
-# README
+# Hailstorm Site
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+This the test application for integration testing of Hailstorm application components.
 
-Things you may want to cover:
+## AWS Build
 
-* Ruby version
+Copy ``setup/hailstorm-site/vagrant-site-sample.yml`` to ``setup/hailstorm-site/vagrant-site.yml`` and edit the
+properties.
 
-* System dependencies
+```bash
+➜  hailstorm-sdk$ vagrant up aws-site
+```
 
-* Configuration
+## Docker Build
 
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+```bash
+➜  hailstorm-sdk$ docker-compose -f docker-compose-cli.yml -f docker-compose-cli.ci.yml -f docker-compose.dc-sim.yml up -d
+```
+In addition to the Hailstorm database, this will bring up 3 containers - one container acts as the target system and
+two as load generating agents.

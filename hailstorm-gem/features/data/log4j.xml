@@ -21,7 +21,7 @@
   </appender>
 
   <appender name="FILE" class="org.apache.log4j.RollingFileAppender">
-    <param name="File" value="/vagrant/hailstorm-gem/tmp/hailstorm_gem_integration.log" />
+    <param name="File" value="/tmp/hailstorm_gem_integration.log" />
     <param name="MaxBackupIndex" value="10" />
     <param name="MaxFileSize" value="5MB" />
     <layout class="org.apache.log4j.PatternLayout">

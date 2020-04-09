@@ -1,0 +1,92 @@
+@import "~bulma/sass/utilities/_all.sass";
+@import "~bulma-3pillar/src/default/_variables.scss";
+@import "../sass/variables";
+
+.stepList {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  height: 640px;
+}
+
+.step {
+  flex: 0 1 auto;
+  width: 12rem;
+  height: 160px;
+  margin: 0 auto;
+  border: 1px solid transparent;
+  border-right: 1px solid rgba($black, 0.1);
+
+  svg {
+    width: 100%;
+    height: 100%;
+
+    circle, line {
+      stroke: $grey-lighter;
+      fill: $grey-lighter;
+    }
+
+    text {
+      font-family: $font-family-heading;
+      fill: $grey-dark;
+    }
+  }
+}
+
+.success {
+  svg {
+    circle, line {
+      stroke: $success;
+      fill: $success;
+    }
+
+    text.stepTitle {
+      fill: $light !important;
+    }
+  }
+}
+
+.active {
+  border: 1px solid rgba($black, 0.1);
+  border-right: 0 !important;
+  border-top-left-radius: $radius-large;
+  border-bottom-left-radius: $radius-large;
+
+  svg {
+    circle, line {
+      stroke: $info;
+      fill: $info;
+    }
+
+    text {
+      fill: $dark;
+      font-weight: bolder;
+    }
+
+    text.stepTitle {
+      fill: $light !important;
+    }
+  }
+}
+
+.stepLevel {
+  margin-bottom: 0 !important;
+}
+
+.stepHeader {
+  padding-bottom: 0.5rem;
+  border-bottom: $header-line;
+}
+
+.stepBody {
+  padding: 0 2rem;
+  margin: 2rem 0;
+}
+
+.stepContent {
+  min-height: 20vh;
+}
+
+.dangerSettings {
+  margin-top: 20rem;
+}

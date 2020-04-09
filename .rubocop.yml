@@ -8,20 +8,34 @@ AllCops:
     - 'hailstorm-gem/Gemfile'
     - 'hailstorm-gem/hailstorm.gemspec'
     - 'hailstorm-gem/Rakefile'
-    - 'hailstorm-gem/bin/**/*'
     - 'hailstorm-gem/features/**/*'
     - 'hailstorm-gem/spec/**/*'
     - 'hailstorm-gem/templates/**/*'
-    - 'hailstorm-gem/tmp/**/*'
+    - 'hailstorm-gem/build/**/*'
     - 'hailstorm-redis/**/*'
     - 'hailstorm-site/**/*'
     - 'hailstorm-web/**/*'
+    - 'hailstorm-cli/Gemfile'
+    - 'hailstorm-cli/hailstorm-cli.gemspec'
+    - 'hailstorm-cli/Rakefile'
+    - 'hailstorm-cli/bin/**/*'
+    - 'hailstorm-cli/features/**/*'
+    - 'hailstorm-cli/spec/**/*'
+    - 'hailstorm-cli/templates/**/*'
+    - 'hailstorm-cli/build/**/*'
+    - 'hailstorm-api/spec/**/*'
+
+Lint/RescueException:
+  Enabled: false
+
+Lint/InheritException:
+  Enabled: false
 
 Layout/EmptyLinesAroundModuleBody:
   Enabled: false
 
-Metrics/LineLength:
-  Max: 120
+Layout/EmptyLinesAroundClassBody:
+  Enabled: false
 
 Style/ClassAndModuleChildren:
   Enabled: false
@@ -29,14 +43,36 @@ Style/ClassAndModuleChildren:
 Style/RedundantSelf:
   Enabled: false
 
-Layout/EmptyLinesAroundClassBody:
+Style/Not:
   Enabled: false
 
-Lint/RescueException:
+Style/RegexpLiteral:
   Enabled: false
+
+Style/ExpandPathArguments:
+  Enabled: false
+
+Style/MixinUsage:
+  Enabled: false
+
+Metrics/LineLength:
+  Max: 120
 
 Metrics/AbcSize:
-  Max: 20
+  Max: 26
 
 Metrics/MethodLength:
-  Max: 15
+  Max: 25
+
+Metrics/ClassLength:
+  Max: 150
+
+Metrics/ModuleLength:
+  Max: 150
+
+Performance/Caller:
+  Enabled: false
+
+Security/YAMLLoad:
+  Enabled: false # safe_load is not as versatile as load
+

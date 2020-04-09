@@ -1,0 +1,118 @@
+version: '3.2'
+services:
+  web:
+    image: "hailstorm3/hailstorm-web-client:1.0.0"
+    ports:
+      - "8080:80"
+    networks:
+      - dmz
+    tty:
+      true
+    depends_on:
+      - file-server
+      - hailstorm-api
+    entrypoint:
+      - "dockerize"
+      - "-wait"
+      - "http://hailstorm-api:8080"
+      - "-wait"
+      - "tcp://file-server:8080"
+      - "-timeout"
+      - "60s"
+      - "start.sh"
+
+  hailstorm-api:
+    image: "hailstorm3/hailstorm-api:1.0.0"
+    ports:
+      - "4567:8080"
+    environment:
+      HAILSTORM_DATABASE_PASSWORD: hailstorm
+      HAILSTORM_ENV: production
+      REDIS_URL: redis://hailstorm-mq/
+    networks:
+      - dmz
+      - hailstorm
+    depends_on:
+      - hailstorm-db
+      - client-exchange
+    volumes:
+      - type: volume
+        source: hailstorm-home
+        target: /home
+    entrypoint:
+      - "dockerize"
+      - "-wait"
+      - "tcp://hailstorm-db:3306"
+      - "-wait"
+      - "tcp://client-exchange:8080"
+      - "-timeout"
+      - "60s"
+      - "rackup"
+      - "-o"
+      - "0.0.0.0"
+      - "-p"
+      - "8080"
+
+  file-server:
+    image: "hailstorm3/hailstorm-file-server:1.0.0"
+    hostname: "file-server"
+    ports:
+      - "9000:8080"
+    networks:
+      - dmz
+    volumes:
+      - type: volume
+        source: hailstorm-file-store
+        target: /hailstorm
+
+  hailstorm-db:
+    image: "hailstorm3/hailstorm-db:2.0.0"
+    hostname: "hailstorm-db"
+    ports:
+      - "3306:3306"
+    networks:
+      - hailstorm
+    volumes:
+      - type: volume
+        source: hailstorm-db
+        target: /var/lib/mysql
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: "true"
+
+  hailstorm-mq:
+    image: "redis:5.0.7-alpine"
+    hostname: "hailstorm-mq"
+    ports:
+      - "6379:6379"
+    networks:
+      - hailstorm
+
+  client-exchange:
+    image: "hailstorm3/hailstorm-client-exchange:1.0.0"
+    hostname: "client-exchange"
+    ports:
+      - "9100:8080"
+    networks:
+      - hailstorm
+      - dmz
+    depends_on:
+      - hailstorm-mq
+    entrypoint:
+      - "dockerize"
+      - "-wait"
+      - "tcp://hailstorm-mq:6379"
+      - "-timeout"
+      - "60s"
+      - "java"
+      - "-jar"
+      - "/app.jar"
+      - "--redisHost=hailstorm-mq"
+
+networks:
+  dmz:
+  hailstorm:
+
+volumes:
+  hailstorm-file-store:
+  hailstorm-db:
+  hailstorm-home:

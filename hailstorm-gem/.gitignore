@@ -1,5 +1,5 @@
 lib/hailstorm/java/bin
-tmp/*
+build/
 .idea
 .ruby-version
 .project
@@ -9,3 +9,4 @@ spec/keys.yml
 coverage/
 features/data/data-center-machines.yml
 features/data/site_server.txt
+/pkg/

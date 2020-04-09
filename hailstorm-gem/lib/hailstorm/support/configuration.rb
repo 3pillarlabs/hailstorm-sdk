@@ -13,6 +13,7 @@ class Hailstorm::Support::Configuration
   # x is the response time of the sample
   attr_accessor :samples_breakup_interval
 
+  # JMeter configuration
   class JMeter
     # JMeter version used in project. The default is 2.4. Specify only the version
     # component, example: 2.5 or 2.6
@@ -21,11 +22,20 @@ class Hailstorm::Support::Configuration
     # JMeter scripts to setup and execute. If left unset all files in app/jmx will be processed
     # for load generation. Multiple files can be specified using an array. File extensions
     # are not needed. If only one test plan is present, this configuration is not needed.
+    # @param [Array<String>] test_plans
     attr_accessor :test_plans
+
+    # Relative file paths from application directory for data files used by JMeter plans.
+    # This is an optional property.
+    attr_accessor :data_files
 
     # URL for a custom JMeter installer. The installer file must be a tar gzip and match:
     # /^[a-zA-Z][a-zA-Z0-9_\-\.]*\.ta?r?\.?gz/
     attr_accessor :custom_installer_url
+
+    def initialize
+      self.data_files = []
+    end
 
     # Generic or test_plan specific properties. These will be used when constructing
     # and issuing a JMeter command
@@ -35,19 +45,38 @@ class Hailstorm::Support::Configuration
       @properties[:all] = {} unless @properties.key?(:all)
 
       if block_given?
-        if options.key?(:test_plan)
-          test_plan_name = options[:test_plan].gsub(/\.jmx$/, '')
-          @properties[:test_plan][test_plan_name] = {}
-          yield @properties[:test_plan][test_plan_name]
-        else
-          yield @properties[:all]
-        end
+        yield yield_properties(options)
       else
-        if options.key?(:test_plan)
-          @properties[:all].merge(@properties[:test_plan][options[:test_plan]] || {})
-        else
-          @properties[:all]
-        end
+        properties_context(options)
+      end
+    end
+
+    # @param [String] test_plan
+    # @return [Array<String>]
+    def add_test_plan(test_plan)
+      @test_plans = [] if @test_plans.nil?
+      @test_plans.push(File.strip_ext(test_plan))
+      @test_plans
+    end
+
+    private
+
+    def properties_context(options)
+      if options.key?(:test_plan)
+        test_plan_name = File.strip_ext(options[:test_plan])
+        @properties[:all].merge(@properties[:test_plan][test_plan_name] || {})
+      else
+        @properties[:all]
+      end
+    end
+
+    def yield_properties(options)
+      if options.key?(:test_plan)
+        test_plan_name = File.strip_ext(options[:test_plan])
+        @properties[:test_plan][test_plan_name] = {}
+        @properties[:test_plan][test_plan_name]
+      else
+        @properties[:all]
       end
     end
   end
@@ -239,62 +268,15 @@ class Hailstorm::Support::Configuration
         host = TargetHost.new
         yield host
         @hosts.push(host)
+      elsif args.empty?
+        @hosts
       else
-        if args.empty?
-          @hosts
-        else
-          args.each do |e|
-            host = TargetHost.new
-            host.host_name = e
-            @hosts.push(host)
-          end
+        args.each do |e|
+          host = TargetHost.new
+          host.host_name = e
+          @hosts.push(host)
         end
       end
     end
   end
-
-  # Iterates through the monitors and returns the host definitions
-  # @return [Array] of Hash, with attributes mapped to Hailstorm::Model::TargetHost
-  def target_hosts
-    host_defs = []
-    monitors.each do |monitor|
-      monitor.groups.each do |group|
-        group.hosts.each do |host|
-          hdef = host.instance_values.symbolize_keys
-          hdef[:type] = monitor.monitor_type
-          hdef[:role_name] = group.role
-          %i[executable_path ssh_identity user_name
-             sampling_interval active].each do |sym|
-
-            # take values from monitor unless the hdef contains the key
-            hdef[sym] = monitor.send(sym) unless hdef.key?(sym)
-          end
-          hdef[:active] = true if hdef[:active].nil?
-          host_defs.push(hdef)
-        end
-      end
-    end
-
-    host_defs
-  end
-
-  # Computes the SHA2 hash of the environment file and contents/structure of JMeter
-  # directory.
-  # @return [String]
-  def serial_version
-    digest = Digest::SHA2.new
-
-    Dir[File.join(Hailstorm.root, Hailstorm.app_dir, '**', '*.jmx')].sort.each do |file|
-      digest.update(file)
-    end
-
-    File.open(Hailstorm.environment_file_path, 'r') do |ef|
-      ef.each_line do |line|
-        digest.update(line)
-      end
-    end
-
-    digest.hexdigest
-  end
-  alias compute_serial_version serial_version
 end

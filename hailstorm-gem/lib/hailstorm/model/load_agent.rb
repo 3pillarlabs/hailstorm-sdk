@@ -6,6 +6,7 @@ require 'erubis/tiny'
 # either as a master or as a slave.
 # @author Sayantam Dey
 class Hailstorm::Model::LoadAgent < ActiveRecord::Base
+
   belongs_to :clusterable, polymorphic: true
 
   belongs_to :jmeter_plan
@@ -20,10 +21,7 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
 
   attr_writer :first_use
 
-  def first_use?
-    @first_use
-  end
-
+  # :nocov:
   # This should be defined in the master and slave agent derived classes
   # @abstract
   def start_jmeter
@@ -33,6 +31,22 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
   # This should be defined in the master and slave agent derived classes
   def stop_jmeter(_wait = false, _aborted = false)
     raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
+  end
+
+  # A load agent is neither a "slave" nor a "master"
+  def slave?
+    false
+  end
+
+  # A load agent is neither a "slave" nor a "master"
+  def master?
+    false
+  end
+
+  # :nocov:
+
+  def first_use?
+    @first_use
   end
 
   def jmeter_running?
@@ -49,6 +63,7 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
   # @param [Boolean] force defaults to false
   def upload_scripts(force = false)
     return unless script_upload_needed?(force)
+
     logger.info("Uploading script #{self.jmeter_plan.test_plan_name}...")
     Hailstorm::Support::SSH.start(*ssh_start_args) do |ssh|
       remote_sync(ssh, force)
@@ -56,19 +71,18 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
     self.first_use = false
   end
 
-  # A load agent is neither a "slave" nor a "master"
-  def slave?
-    false
-  end
-
-  # A load agent is neither a "slave" nor a "master"
-  def master?
-    false
-  end
-
   #######################  PROTECTED METHODS #################################
 
   protected
+
+  def evaluate_execute(command_template)
+    return if command_template.nil?
+
+    logger.debug(command_template)
+    command = evaluate_command(command_template)
+    logger.debug(command)
+    execute_jmeter_command(command)
+  end
 
   # Evaluate command assuming command is an erubis template
   def evaluate_command(command_template)
@@ -93,6 +107,22 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
     end
   end
 
+  # wait for graceful shutdown
+  def wait_for_shutdown(ssh, doze_time, max_tries = 3)
+    tries = 0
+    until tries >= max_tries
+      sleep(doze_time)
+      break unless ssh.process_running?(self.jmeter_pid)
+
+      tries += 1
+    end
+
+    return if tries < max_tries
+
+    # graceful shutdown is not happening
+    ssh.terminate_process_tree(self.jmeter_pid)
+  end
+
   #######################  PRIVATE METHODS #################################
   private
 
@@ -107,10 +137,13 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
 
   def upload_files(ssh, test_artifacts)
     logger.debug { "#{self.class}##{__method__}" }
-    root_regexp = Regexp.compile("#{Hailstorm.root}#{File::Separator}")
+    code = self.clusterable.project.project_code
+    root_regexp = Regexp.compile("#{Hailstorm.workspace(code).workspace_path}#{File::Separator}")
     test_artifacts.each do |local|
-      remote = format('%s/%s/%s',
-                      self.clusterable.user_home, Hailstorm.app_name, local.gsub(root_regexp, ''))
+      remote = format('%<home>s/%<app>s/%<path>s',
+                      home: self.clusterable.user_home,
+                      app: code,
+                      path: local.gsub(root_regexp, ''))
 
       ssh.upload(local, remote)
     end

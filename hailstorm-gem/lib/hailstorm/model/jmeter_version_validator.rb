@@ -11,6 +11,7 @@ class Hailstorm::Model::JmeterVersionValidator < ActiveModel::EachValidator
   def validate_each(record, attribute, value)
     validator_klass = Hailstorm::Support::JmeterInstaller::Validator
     return if validator_klass.validate_version(value, MIN_MAJOR, MIN_MINOR)
+
     record.errors[attribute] << (options[:message] || "must be #{MIN_MAJOR}.#{MIN_MINOR} or higher")
   end
 end

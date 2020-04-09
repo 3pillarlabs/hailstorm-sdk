@@ -9,6 +9,8 @@ class Hailstorm::Support::Schema
     @test_schema_tables ||= dev_schema_tables.push(:test_clusters)
   end
 
+  # :nocov:
+
   def create_test_clusters
     ActiveRecord::Migration.create_table(:test_clusters) do |t|
       t.references  :project, null: false
@@ -18,4 +20,5 @@ class Hailstorm::Support::Schema
     end
   end
 
+  # :nocov:
 end

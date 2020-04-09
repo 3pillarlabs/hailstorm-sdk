@@ -1,71 +1,39 @@
 require 'hailstorm/model'
 require 'hailstorm/model/load_agent'
+require 'hailstorm/support/file_helper'
 
 # Models a load agent which executes JMeter in client mode
 # @author Sayantam Dey
 class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
-  GZ_READ_LEN_BYTES = 2 * 1024 * 1024 # 2MB
+  include Hailstorm::Support::FileHelper::InstanceMethods
 
   # Executes JMeter command appropriate to a master agent
   def start_jmeter
     logger.debug { "#{self.class}##{__method__}" }
-    command_template = self.jmeter_plan.master_command(self.private_ip_address,
-                                                       slave_ip_addresses,
-                                                       self.clusterable)
-    return if command_template.nil?
-    logger.debug(command_template)
-    command = evaluate_command(command_template)
-    logger.debug(command)
-    execute_jmeter_command(command)
+    command_template = self.jmeter_plan.master_command(self.private_ip_address, slave_ip_addresses, self.clusterable)
+    evaluate_execute(command_template)
   end
 
   # Stops JMeter execution if all stars are aligned correctly.
-  def stop_jmeter(wait = false, aborted = false)
+  def stop_jmeter(wait = false, aborted = false, doze_time = 60)
     logger.debug { "#{self.class}##{__method__}" }
-    raise(Hailstorm::Exception,
-          "Jmeter is not running on #{self.identifier}##{self.public_ip_address}") unless jmeter_running?
+    unless jmeter_running?
+      raise(Hailstorm::Exception,
+            "Jmeter is not running on #{self.identifier}##{self.public_ip_address}")
+    end
 
     Hailstorm::Support::SSH.start(self.public_ip_address,
-                                  self.clusterable.user_name, self.clusterable.ssh_options) do |ssh|
-
-      terminate_okay = false
+                                  self.clusterable.user_name,
+                                  self.clusterable.ssh_options) do |ssh|
       update_pid = false
       if self.jmeter_plan.loop_forever?
-        terminate_okay = true
+        needs_term = true
       else
-        if ssh.process_running?(self.jmeter_pid)
-          if wait # stop with wait was issued
-            while ssh.process_running?(self.jmeter_pid)
-              logger.info('JMeter is still running, waiting as asked...')
-              sleep(60)
-            end
-            logger.info('JMeter has exited, proceeding...')
-            update_pid = true
-
-          elsif aborted # abort command was issued
-            terminate_okay = true
-
-          else
-            raise(Hailstorm::Exception, "Jmeter is still running! Run 'abort' if you really mean to stop.")
-          end
-        else
-          update_pid = true
-        end
+        needs_term, update_pid = determine_term_need(ssh, wait, aborted, doze_time)
       end
 
-      if terminate_okay
-        ssh.exec!(evaluate_command(self.jmeter_plan.stop_command))
-        # wait a bit for graceful shutdown
-        tries = 0
-        until tries >= 3
-          sleep(60)
-          break unless ssh.process_running?(self.jmeter_pid)
-          tries += 1
-        end
-        if tries >= 3
-          # graceful shutdown is not happening
-          ssh.terminate_process_tree(self.jmeter_pid)
-        end
+      if needs_term
+        terminate_remote_jmeter(ssh, doze_time)
         update_pid = true
       end
 
@@ -92,27 +60,17 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
                                       .concat(underscored_ip_address)
                                       .concat(".#{Regexp.last_match(1)}") # interpose identifier before file extn
 
-    remote_file_path = [self.jmeter_plan.remote_log_dir, remote_file_name].join('/')
+    remote_file_path = "#{self.jmeter_plan.remote_log_dir}/#{remote_file_name}"
     local_file_path = File.join(local_log_path, local_file_name)
     local_compressed_file_path = "#{local_file_path}.gz"
 
     Hailstorm::Support::SSH.start(self.public_ip_address, self.clusterable.user_name,
                                   self.clusterable.ssh_options) do |ssh|
 
-      ssh.exec!("gzip -q #{remote_file_path}") # Research-604
+      ssh.exec!("gzip -q #{remote_file_path}") # downloading a compressed file is orders of magnitude faster than raw
       ssh.download("#{remote_file_path}.gz", local_compressed_file_path)
     end
-    File.open(local_file_path, 'w') do |uncompressed_file|
-      File.open(local_compressed_file_path, 'r') do |compressed_file|
-        gz = Zlib::GzipReader.new(compressed_file)
-        until ((bytes = gz.read(GZ_READ_LEN_BYTES))).nil?
-          uncompressed_file.print(bytes)
-        end
-        gz.close
-      end
-    end
-    File.unlink(local_compressed_file_path)
-
+    gunzip_file(local_compressed_file_path, local_file_path, true)
     local_file_name
   end
 
@@ -140,5 +98,35 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
 
   def slaves
     self.clusterable.slave_agents.where(jmeter_plan_id: self.jmeter_plan_id)
+  end
+
+  def determine_term_need(ssh, wait, aborted, doze_time)
+    needs_term = false
+    update_pid = false
+    if ssh.process_running?(self.jmeter_pid)
+      if wait # stop with wait was issued
+        while ssh.process_running?(self.jmeter_pid)
+          logger.info('JMeter is still running, waiting as asked...')
+          sleep(doze_time)
+        end
+        logger.info('JMeter has exited, proceeding...')
+        update_pid = true
+
+      elsif aborted # abort command was issued
+        needs_term = true
+
+      else
+        raise(Hailstorm::JMeterRunningException)
+      end
+    else
+      update_pid = true
+    end
+
+    [needs_term, update_pid]
+  end
+
+  def terminate_remote_jmeter(ssh, doze_time)
+    ssh.exec!(evaluate_command(self.jmeter_plan.stop_command))
+    wait_for_shutdown(ssh, doze_time)
   end
 end
