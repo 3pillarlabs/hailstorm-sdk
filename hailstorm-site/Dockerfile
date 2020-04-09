@@ -1,5 +1,11 @@
 FROM ruby:2.4
 
+ENV DOCKERIZE_VERSION v0.6.1
+
+RUN wget -q https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
+    && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
+    && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
+
 WORKDIR /usr/local/lib/hailstorm-site
 
 RUN apt-get update && apt-get install -y default-mysql-client nodejs
@@ -18,6 +24,4 @@ ENV RAILS_ENV container
 
 EXPOSE 80
 
-CMD bundle exec rake db:setup && \
-    bundle exec rake db:migrate && \
-    bundle exec rackup -o 0.0.0.0 -p 80 -E container
+CMD [ "/usr/local/lib/hailstorm-site/startup.sh" ]

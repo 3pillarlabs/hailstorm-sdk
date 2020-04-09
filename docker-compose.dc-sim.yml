@@ -1,13 +1,20 @@
 version: '3.2'
 services:
   hailstorm-site:
-    image: "hailstorm3/hailstorm-site:1.0.0"
+    image: "hailstorm3/hailstorm-site:1.1.0"
     hostname: "hailstorm-site"
     networks:
       hailstorm_integration:
         ipv4_address: 192.168.20.100
     depends_on:
       - hailstorm-db
+    entrypoint:
+      - "dockerize"
+      - "-wait"
+      - "tcp://hailstorm-db:3306"
+      - "-timeout"
+      - "60s"
+      - "/usr/local/lib/hailstorm-site/startup.sh"
 
   hailstorm-agent-1:
     image: "hailstorm3/hailstorm-agent:1.0.0"

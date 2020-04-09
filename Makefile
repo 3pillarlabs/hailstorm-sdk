@@ -195,7 +195,7 @@ cli_integration_install_steps:
 		make cli_install_steps; \
 	fi
 	docker-compose ${COMPOSE_FILES} up -d
-	# wait for docker containers to initialize - TODO: dockerize hailstorm-site image
+	# wait for docker containers to initialize - TODO: periodically check docker logs
 	sleep 180
 	make ready_hailstorm_site
 
