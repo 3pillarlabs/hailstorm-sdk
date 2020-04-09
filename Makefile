@@ -86,7 +86,7 @@ WEB_DEPENDENCY_CHANGES =	${CHANGES} hailstorm-web-client; \
 
 # $(call docker_image_id,project_dir)
 define docker_image_id
-$(shell cd $1 && make docker_image_id)
+$(shell cd $1 && make -s docker_image_id)
 endef
 
 RELEASE_VERSION = $(shell cat VERSION)
