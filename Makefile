@@ -91,7 +91,9 @@ endef
 
 RELEASE_VERSION = $(shell cat VERSION)
 
-GIT_RELEASE_TAG = $(shell git tag --list 'releases/${RELEASE_VERSION}')
+GIT_RELEASE_TAG := releases/${RELEASE_VERSION}
+
+PUSHED_RELEASE_TAG = $(shell git tag --list '${GIT_RELEASE_TAG}')
 
 install:
 	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make install; fi
@@ -278,10 +280,18 @@ publish_web_packages:
 	done
 
 
+push_release_tag:
+	set -ev
+	git tag "${GIT_RELEASE_TAG}"
+	git config --global credential.helper store
+	echo "https://${GITHUB_ACCESS_TOKEN}:x-oauth-basic@github.com" > ~/.git-credentials
+	git config --global user.email "labs@3pillarglobal.com"
+	git config --global user.name "3Pillar Open Source"
+	git push origin "${GIT_RELEASE_TAG}"
+
+
 release_tag:
-	if [ -z "${GIT_RELEASE_TAG}" ]; then \
-		git tag -a "releases/${RELEASE_VERSION}" -m "'Release tag ${RELEASE_VERSION}'"; \
-	fi
+	if [ -z "${PUSHED_RELEASE_TAG}" ]; then make push_release_tag; fi
 
 
 docker_compose_up:
