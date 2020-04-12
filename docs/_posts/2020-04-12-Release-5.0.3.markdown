@@ -1,0 +1,11 @@
+---
+layout: post
+title:  "Release 5.0.3"
+date:   2020-04-12 15:45:00 +0530
+categories: jekyll update
+---
+
+Hailstorm 5.0.3 with a critical fix and improvement.
+
+- Reference to an unknown docker network fixed in CLI Makefile
+- Release name and asset name have ``hailstorm`` prefix.
