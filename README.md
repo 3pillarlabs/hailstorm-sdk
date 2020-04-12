@@ -22,9 +22,9 @@ limited to UNIX hosts with [nmon](http://nmon.sourceforge.net/pmwiki.php).
 
 ### Setup
 
-#### :tada: Download the latest release [Hailstorm 5.0.0](https://github.com/3pillarlabs/hailstorm-sdk/releases/tag/releases%2F5.0.0).
+#### :tada: Download the latest release [Hailstorm 5.0.3](https://github.com/3pillarlabs/hailstorm-sdk/releases/tag/releases%2F5.0.3).
 
-From version ``5.0.0`` onwards, each release consists of three files:
+Every release consists of three files:
 
 - hailstorm-web/docker-compose.yml
 - hailstorm-cli/docker-compose.yml
