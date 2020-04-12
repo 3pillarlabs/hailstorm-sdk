@@ -13,7 +13,7 @@ env:
 
 stages:
   - name: test
-    if: branch NOT IN (master, develop)
+    if: (branch NOT IN (master, develop)) AND (tag IS blank)
   - name: coverage
     if: branch = develop
   - name: integration
