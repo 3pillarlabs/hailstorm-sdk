@@ -26,9 +26,9 @@ limited to UNIX hosts with [nmon](http://nmon.sourceforge.net/pmwiki.php).
 
 From version ``5.0.0`` onwards, each release consists of three files:
 
-- docker-compose.yml
-- docker-compose-cli.yml
-- Makefile
+- hailstorm-web/docker-compose.yml
+- hailstorm-cli/docker-compose.yml
+- hailstorm-cli/Makefile
 
 The release is a tar+gz file. Unpack to any directory on your filesystem.
 
@@ -39,6 +39,7 @@ This is the recommended approach for most users.
 To start the web interface:
 ```bash
 $ cd /path/to/unpacked/release
+$ cd hailstorm-web
 $ docker-compose up
 ```
 
@@ -89,9 +90,9 @@ The CLI is meant for advanced users who need low level customization and/or serv
 ### Running the CLI
 
 ```bash
-# Spin up docker containers in the background
-$ docker-compose -f docker-compose-cli.yml up -d
-# Start the CLI
+$ cd /path/to/unpacked/release
+$ cd hailstorm-cli
+$ docker-compose up -d
 $ make
 ```
 
@@ -100,9 +101,9 @@ The CLI will wait for the docker containers to be available. It should take less
 docker run \
 -it \
 --rm \
---network hailstorm-sdk_hailstorm \
+--network hailstorm-cli_hailstorm \
 -e DATABASE_HOST=hailstorm-db \
--v /path/to/unpacked/release:/hailstorm \
+-v /path/to/unpacked/release/hailstorm-cli:/hailstorm \
 hailstorm3/hailstorm-cli:1.0.0 dockerize -wait tcp://hailstorm-db:3306 bash
 2020/04/04 20:30:17 Waiting for: tcp://hailstorm-db:3306
 2020/04/04 20:30:17 Connected to tcp://hailstorm-db:3306
@@ -111,7 +112,7 @@ hailstorm3/hailstorm-cli:1.0.0 dockerize -wait tcp://hailstorm-db:3306 bash
 When the CLI starts, it shows a prompt:
 
 ```bash
-hailstorm@ab7ecdeac102:/hailstorm#
+hailstorm@ab7ecdeac102:/hailstorm$
 ```
 
 The current directory on the host is mapped to ``/hailstorm`` in the container. Any files saved to this location in the container
@@ -122,7 +123,7 @@ will persist across container restarts.
 Use the ``create_hailstorm_app`` utility to create a project.
 
 ```bash
-hailstorm@ab7ecdeac102:/hailstorm# create_hailstorm_app shopping_cart
+hailstorm@ab7ecdeac102:/hailstorm$ create_hailstorm_app shopping_cart
 ```
 
 Truncated output...
@@ -139,8 +140,8 @@ Done!
 
 This needs to be done only once when a new project is created.
 ```bash
-hailstorm@ab7ecdeac102:/hailstorm# cd shopping_cart
-hailstorm@ab7ecdeac102:/hailstorm/shopping_cart# bundle install
+hailstorm@ab7ecdeac102:/hailstorm$ cd shopping_cart
+hailstorm@ab7ecdeac102:/hailstorm/shopping_cart$ bundle install
 ```
 
 The dependencies should install within a few seconds.
@@ -154,8 +155,8 @@ Bundled gems are installed into `/usr/local/bundle`
 Subsequently, you can just start the CLI.
 
 ```bash
-hailstorm@ab7ecdeac102:/hailstorm# cd shopping_cart
-hailstorm@ab7ecdeac102:/hailstorm/shopping_cart# ./script/hailstorm
+hailstorm@ab7ecdeac102:/hailstorm$ cd shopping_cart
+hailstorm@ab7ecdeac102:/hailstorm/shopping_cart$ ./script/hailstorm
 ```
 
 ```text
@@ -164,7 +165,7 @@ Type help to get started...
 hs > _
 ```
 
-To bring down the containers, exit the CLI container, and execute on the host: ``docker-compose -f docker-compose-cli.yml down``.
+To bring down the containers, exit the CLI container, and execute on the host: ``docker-compose down``.
 
 ## License
 

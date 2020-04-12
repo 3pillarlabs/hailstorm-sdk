@@ -17,11 +17,7 @@ jobs:
           echo "::set-env name=release_version::$(cat VERSION)"
       - name: Build package
         run: |
-          cd hailstorm-cli
-          make release_makefile
-          cd ../
-          mv hailstorm-cli/Makefile.release ./Makefile
-          tar -czf ${{ env.release_version }}.tar.gz docker-compose.yml docker-compose-cli.yml Makefile
+          ./.github/workflows/build.sh ${{ env.release_version }}
       - name: Get commit message
         run: |
           echo "::set-env name=commit_message::$(git log --format=%B -n 1 ${{ github.sha }})"
@@ -41,6 +37,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./${{ env.release_version }}.tar.gz
+          asset_path: ./hailstorm-${{ env.release_version }}.tar.gz
           asset_name: ${{ env.release_version }}.tar.gz
           asset_content_type: application/gzip
