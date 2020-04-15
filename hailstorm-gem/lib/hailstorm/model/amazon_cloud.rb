@@ -540,9 +540,12 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     # The AMI ID to search for and create
     def ami_id
       [Defaults::AMI_ID,
-       "j#{self.project.jmeter_version}"].tap do |lst|
-        self.project.custom_jmeter_installer_url ? lst.push(self.project.project_code) : lst
-      end.push(arch).join('-')
+       "j#{self.project.jmeter_version}"]
+          .push(self.project.custom_jmeter_installer_url ? self.project.project_code : nil)
+          .push(arch)
+          .push(Hailstorm.production? ? nil : Hailstorm.env)
+          .compact
+          .join('-')
     end
 
     # Base AMI to use to create Hailstorm AMI based on the region and instance_type
@@ -557,20 +560,20 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
     def region_base_ami_map
       @region_base_ami_map ||= [
-        { region: 'us-east-1',      ami: 'ami-d05e75b8' }, # US East (Virginia)
-        { region: 'us-east-2',      ami: 'ami-8b92b4ee' }, # US East (Ohio)
-        { region: 'us-west-1',      ami: 'ami-df6a8b9b' }, # US West (N. California)
-        { region: 'us-west-2', 	    ami: 'ami-5189a661' }, # US West (Oregon)
-        { region: 'ca-central-1',   ami: 'ami-b3d965d7' }, # Canada (Central)
-        { region: 'eu-west-1',      ami: 'ami-47a23a30' }, # EU (Ireland)
-        { region: 'eu-central-1',   ami: 'ami-accff2b1' }, # EU (Frankfurt)
-        { region: 'eu-west-2',      ami: 'ami-cc7066a8' }, # EU (London)
-        { region: 'ap-northeast-1', ami: 'ami-785c491f' }, # Asia Pacific (Tokyo)
-        { region: 'ap-southeast-1', ami: 'ami-2378f540' }, # Asia Pacific (Singapore)
-        { region: 'ap-southeast-2', ami: 'ami-e94e5e8a' }, # Asia Pacific (Sydney)
-        { region: 'ap-northeast-2', ami: 'ami-94d20dfa' }, # Asia Pacific (Seoul)
-        { region: 'ap-south-1',     ami: 'ami-49e59a26' }, # Asia Pacific (Mumbai)
-        { region: 'sa-east-1',      ami: 'ami-34afc458' }  # South America (Sao Paulo)
+        { region: 'us-east-1',      ami: 'ami-07ebfd5b3428b6f4d' }, # US East (Virginia)
+        { region: 'us-east-2',      ami: 'ami-0fc20dd1da406780b' }, # US East (Ohio)
+        { region: 'us-west-1',      ami: 'ami-03ba3948f6c37a4b0' }, # US West (N. California)
+        { region: 'us-west-2', 	    ami: 'ami-0d1cd67c26f5fca19' }, # US West (Oregon)
+        { region: 'ca-central-1',   ami: 'ami-0d0eaed20348a3389' }, # Canada (Central)
+        { region: 'eu-west-1',      ami: 'ami-035966e8adab4aaad' }, # EU (Ireland)
+        { region: 'eu-central-1',   ami: 'ami-0b418580298265d5c' }, # EU (Frankfurt)
+        { region: 'eu-west-2',      ami: 'ami-006a0174c6c25ac06' }, # EU (London)
+        { region: 'ap-northeast-1', ami: 'ami-07f4cb4629342979c' }, # Asia Pacific (Tokyo)
+        { region: 'ap-southeast-1', ami: 'ami-09a4a9ce71ff3f20b' }, # Asia Pacific (Singapore)
+        { region: 'ap-southeast-2', ami: 'ami-02a599eb01e3b3c5b' }, # Asia Pacific (Sydney)
+        { region: 'ap-northeast-2', ami: 'ami-0cd7b0de75f5a35d1' }, # Asia Pacific (Seoul)
+        { region: 'ap-south-1',     ami: 'ami-0620d12a9cf777c87' }, # Asia Pacific (Mumbai)
+        { region: 'sa-east-1',      ami: 'ami-05494b93950efa2fd' }  # South America (Sao Paulo)
       ].reduce({}) { |s, e| s.merge(e[:region] => { ARCH_64 => e[:ami] }) }
     end
   end
