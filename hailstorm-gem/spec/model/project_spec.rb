@@ -12,7 +12,7 @@ describe Hailstorm::Model::Project do
       it 'should have JMeter version as 3.2' do
         project = Hailstorm::Model::Project.new(project_code: 'project_spec')
         project.save!
-        expect(project.jmeter_version).to eq '3.2'
+        expect(project.jmeter_version).to eq '5.2.1'
       end
     end
 

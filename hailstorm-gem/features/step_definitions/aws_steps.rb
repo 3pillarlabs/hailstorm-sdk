@@ -41,7 +41,7 @@ Then(/^installed JMeter version should be '(.+?)'$/) do |expected_jmeter_version
   require 'hailstorm/support/ssh'
   jmeter_version_out = ''
   Hailstorm::Support::SSH.start((@load_agent || @ec2_instance).public_ip_address, @aws.user_name, @aws.ssh_options) do |ssh|
-    ssh.exec!("$HOME/jmeter/bin/jmeter --version | grep '3.2'") do |_ch, stream, data|
+    ssh.exec!("$HOME/jmeter/bin/jmeter --version") do |_ch, stream, data|
       jmeter_version_out << data if stream == :stdout
     end
   end
@@ -103,4 +103,15 @@ end
 
 And(/^instance type is '(.+?)'$/) do |instance_type|
   @aws.instance_type = instance_type
+end
+
+
+And(/^there is no AMI with name '([^']+)'$/) do |ami_name|
+  ec2 = @aws.send(:ec2, true)
+  ami = ec2.images.with_owner('self').find { |img| img.name == ami_name }
+  if ami
+    snapshot_ids = ami.block_devices.select { |blkdev| blkdev.key?(:ebs) }.map { |blkdev| blkdev[:ebs][:snapshot_id] }
+    ami.delete
+    snapshot_ids.each { |snapshot_id| ec2.snapshots[snapshot_id].delete }
+  end
 end

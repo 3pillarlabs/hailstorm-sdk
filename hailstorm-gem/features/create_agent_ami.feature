@@ -30,10 +30,11 @@ Feature: Create Amazon Machine Image
   Scenario: Create or use an existing base AMI
     Given Amazon is chosen as the cluster
     When I choose 'us-east-1' region
-    And the JMeter version for the project is '3.2'
+    And there is no AMI with name '3pg-hailstorm-j5.2.1-x86_64-gem_integration'
+    And the JMeter version for the project is '5.2.1'
     And a public VPC subnet is available
     And create the AMI
-    Then an AMI with name '3pg-hailstorm-j3.2-x86_64' should exist
+    Then an AMI with name '3pg-hailstorm-j5.2.1-x86_64-gem_integration' should exist
 
   @terminate_instance
   @smoke
@@ -42,7 +43,7 @@ Feature: Create Amazon Machine Image
     And I choose 'us-east-1' region
     And a public VPC subnet is available
     And instance type is 't2.small'
-    And an AMI with name '3pg-hailstorm-j3.2-x86_64' exists
+    And an AMI with name '3pg-hailstorm-j5.2.1-x86_64-gem_integration' exists
     When I start a new load agent
-    Then installed JMeter version should be '3.2'
+    Then installed JMeter version should be '5.2.1'
     And custom properties should be added

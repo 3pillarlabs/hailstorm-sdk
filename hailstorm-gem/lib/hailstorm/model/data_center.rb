@@ -115,7 +115,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     Hailstorm::Support::SSH.start(load_agent.private_ip_address, self.user_name, ssh_options) do |ssh|
       output = ssh.exec!("#{jmeter_home}/bin/jmeter -n -v")
       logger.debug { "Output of JMeter version check #{output}" }
-      if /Version\s#{self.project.jmeter_version}.*/m =~ output || /#{self.project.jmeter_version}\s+r\d+/m =~ output
+      if /Version\s#{self.project.jmeter_version}.*/m =~ output || /#{self.project.jmeter_version}\s*/m =~ output
         jmeter_version_ok = true
       end
     end
