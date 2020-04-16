@@ -541,11 +541,11 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     def ami_id
       [Defaults::AMI_ID,
        "j#{self.project.jmeter_version}"]
-          .push(self.project.custom_jmeter_installer_url ? self.project.project_code : nil)
-          .push(arch)
-          .push(Hailstorm.production? ? nil : Hailstorm.env)
-          .compact
-          .join('-')
+        .push(self.project.custom_jmeter_installer_url ? self.project.project_code : nil)
+        .push(arch)
+        .push(Hailstorm.production? ? nil : Hailstorm.env)
+        .compact
+        .join('-')
     end
 
     # Base AMI to use to create Hailstorm AMI based on the region and instance_type
