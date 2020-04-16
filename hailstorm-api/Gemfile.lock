@@ -147,7 +147,7 @@ PLATFORMS
 
 DEPENDENCIES
   activerecord-jdbcmysql-adapter (= 1.3.24)
-  hailstorm (= 5.0.0)
+  hailstorm
   jdbc-mysql (~> 5.1)
   puma
   redis

@@ -28,5 +28,5 @@ and generate reports.'
   gem.executables   = gem.files.grep(%r{^bin/\b}).map { |f| File.basename(f) }
   gem.require_paths = %w[lib]
 
-  gem.add_runtime_dependency('hailstorm', ['= 5.0.1'])
+  gem.add_runtime_dependency('hailstorm')
 end
