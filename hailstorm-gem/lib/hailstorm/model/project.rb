@@ -373,6 +373,6 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   class Defaults
     MASTER_SLAVE_MODE = false
     SAMPLES_BREAKUP_INTERVAL = '1,3,5'.freeze
-    JMETER_VERSION = 3.2
+    JMETER_VERSION = '5.2.1'.freeze
   end
 end
