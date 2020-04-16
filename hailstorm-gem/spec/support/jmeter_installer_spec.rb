@@ -40,7 +40,7 @@ describe Hailstorm::Support::JmeterInstaller do
             instr = @instructions[0]
             download_file = "apache-jmeter-#{@installer.jmeter_version}.tgz"
             download_url = "https://archive.apache.org/dist/jmeter/binaries/#{download_file}"
-            expect(instr).to eql("wget -q '#{download_url}' -O #{download_file}")
+            expect(instr).to eql("wget '#{download_url}' -O #{download_file}")
           end
           it 'should create a jmeter symlink' do
             instr = @instructions[2]
@@ -66,7 +66,7 @@ describe Hailstorm::Support::JmeterInstaller do
         end
         it 'should download from download_url' do
           instr = @instructions[0]
-          expect(instr).to eql("wget -q '#{@installer.download_url}' -O #{@download_file}")
+          expect(instr).to eql("wget '#{@installer.download_url}' -O #{@download_file}")
         end
         it 'should create a jmeter symlink' do
           instr = @instructions[2]
