@@ -17,7 +17,7 @@ services:
       - "/usr/local/lib/hailstorm-site/startup.sh"
 
   hailstorm-agent-1:
-    image: "hailstorm3/hailstorm-agent:1.0.0"
+    image: "hailstorm3/hailstorm-agent:1.0.1"
     hostname: "hailstorm-agent-1"
     networks:
       hailstorm_integration:
@@ -26,7 +26,7 @@ services:
       - hailstorm-site
 
   hailstorm-agent-2:
-    image: "hailstorm3/hailstorm-agent:1.0.0"
+    image: "hailstorm3/hailstorm-agent:1.0.1"
     hostname: "hailstorm-agent-2"
     networks:
       hailstorm_integration:

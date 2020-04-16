@@ -12,7 +12,8 @@ COPY install_java.sh /root/
 RUN chmod +x /root/install_java.sh && sleep 1 && /root/install_java.sh
 
 # Install JMeter
-ARG JMETER_SOURCE=https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-3.2.tgz
+ARG JMETER_VERSION=3.2
+ENV JMETER_SOURCE=https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz
 COPY install_jmeter.sh /root/
 RUN chmod +x /root/install_jmeter.sh && sleep 1 && /root/install_jmeter.sh $JMETER_SOURCE /root
 
