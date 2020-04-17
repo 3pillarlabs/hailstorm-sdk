@@ -1,0 +1,10 @@
+---
+layout: post
+title:  "Release 5.0.4"
+date:   2020-04-17 11:00:00 +0530
+categories: jekyll update
+---
+
+Hailstorm 5.0.4 released with following changes:
+
+- Upgraded default JMeter version to latest 5.2.1

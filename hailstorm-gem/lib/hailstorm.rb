@@ -3,6 +3,8 @@ require 'active_support/all'
 # Defines the namespace.
 # @author Sayantam Dey
 module Hailstorm
+  # HAILSTORM_ENV value representing a production environment
+  PRODUCTION_ENV = :production
 
   PROJECT_WORKSPACE_KEY = :project_workspace_key
 
@@ -46,5 +48,9 @@ module Hailstorm
 
   def self.log_dir
     'log'
+  end
+
+  def self.production?
+    self.env == PRODUCTION_ENV
   end
 end

@@ -4,9 +4,6 @@ require 'hailstorm'
 # Defines static accessors.
 # @author Sayantam Dey
 module Hailstorm
-
-  PRODUCTION_ENV = :production
-
   @root = nil
   @app_name = nil
   @application = nil
@@ -97,9 +94,5 @@ module Hailstorm
       Hailstorm.vendor_dir,
       Hailstorm.script_dir
     ]
-  end
-
-  def self.production?
-    self.env == PRODUCTION_ENV
   end
 end
