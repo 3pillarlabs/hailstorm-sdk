@@ -117,16 +117,19 @@ class AmazonConfig extends WizardBase {
     );
 
     this.accessKey.setValue(awsCredentials.accessKey);
+    browser.pause(250);
     this.secretKey.setValue(awsCredentials.secretKey);
+    browser.pause(250);
     if (maxThreadsPerAgent) {
       this.advancedMode.click();
       browser.waitUntil(() => this.maxThreadsPerInstance.isExisting());
       this.maxThreadsPerInstance.setValue(maxThreadsPerAgent);
+      browser.pause(250);
     }
 
     this.selectRegion(region);
     const submitBtn = $('button*=Save');
-    submitBtn.waitForEnabled(1000);
+    submitBtn.waitForEnabled(15000);
     submitBtn.click();
   }
 
@@ -139,7 +142,7 @@ class AmazonConfig extends WizardBase {
     browser.pause(500);
     const levelTwo = this.regionOptions.find((opt) => opt.getText() === levelTwoRegion);
     levelTwo.click();
-    browser.waitUntil(() => $(`//input[@value="${levelTwoRegion}"]`).isExisting());
+    browser.waitUntil(() => $(`//input[@value="${levelTwoRegion}"]`).isExisting(), 10000);
   }
 
   proceedToNextStep() {
