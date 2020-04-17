@@ -83,7 +83,7 @@ class Hailstorm::Support::JmeterInstaller
     # Instructions for installation from a tarball
     def install_instructions
       [
-        "wget '#{jmeter_download_url}' -O #{jmeter_download_file}",
+        "curl -L -o #{jmeter_download_file} '#{jmeter_download_url}'",
         "tar -xzf #{jmeter_download_file}",
         "ln -s #{user_home}/#{jmeter_directory} #{user_home}/jmeter"
       ]
