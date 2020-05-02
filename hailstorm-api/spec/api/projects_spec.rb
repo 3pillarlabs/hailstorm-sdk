@@ -176,6 +176,7 @@ describe 'api/projects' do
   context 'DELETE /projects/:id' do
     before(:each) do
       @project = Hailstorm::Model::Project.create!(title: 'Acme Priming', project_code: 'acme_priming')
+      Hailstorm.fs.stub!(:purge_project)
     end
 
     context 'existing ProjectConfiguration' do
