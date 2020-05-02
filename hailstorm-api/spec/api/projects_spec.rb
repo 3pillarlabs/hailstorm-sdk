@@ -198,5 +198,10 @@ describe 'api/projects' do
         expect { Hailstorm::Model::Project.find(@project.id) }.to raise_error(ActiveRecord::RecordNotFound)
       end
     end
+
+    it 'should purge project resources on file server' do
+      Hailstorm.fs.should_receive(:purge_project)
+      @browser.delete("/projects/#{@project.id}")
+    end
   end
 end

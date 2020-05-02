@@ -42,22 +42,4 @@ public class ReportsController {
         List<ReportMetaData> reports = reportFileService.getReportMetaDataList(prefix);
         return ResponseEntity.ok().body(reports);
     }
-
-    @GetMapping("/reports/{prefix}/{fileId}/{fileName}")
-    @ResponseBody
-    public ResponseEntity<Resource> serveFile(@PathVariable("prefix") String prefix,
-                                              @PathVariable("fileId") String fileId,
-                                              @PathVariable("fileName") String fileName) {
-
-        Resource file = null;
-        try {
-            file = reportFileService.getReport(prefix, fileId, fileName);
-        } catch (FileNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
-                .body(file);
-    }
 }

@@ -4,6 +4,7 @@ require 'yaml'
 require 'rack'
 require 'net/http'
 require 'json'
+require 'httparty'
 
 require 'hailstorm/behavior/loggable'
 require 'hailstorm/behavior/file_store'
@@ -107,7 +108,7 @@ class WebFileStore
 
     JSON.parse(response.body).map do |attrs|
       symbol_attrs = attrs.symbolize_keys
-      symbol_attrs.merge(uri: "#{uri_path}/#{symbol_attrs[:id]}/#{symbol_attrs[:title]}")
+      symbol_attrs.merge(uri: "#{scheme_host_port}/#{symbol_attrs[:id]}/#{symbol_attrs[:title]}")
     end
   end
 
@@ -123,6 +124,14 @@ class WebFileStore
       title: data[:originalName],
       url: "#{scheme_host_port}/#{data[:id]}/#{data[:originalName]}"
     }
+  end
+
+  # Removes all resources related to a project
+  # @param [String] project_code
+  def purge_project(project_code)
+    scheme_host_port = "http://#{file_server_config[:host]}:#{file_server_config[:port]}"
+    uri_path = "#{scheme_host_port}/files/#{project_code}"
+    HTTParty.delete(uri_path)
   end
 
   private

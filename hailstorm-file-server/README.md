@@ -18,6 +18,20 @@ path on the local file system.
 ./gradlew bootRun --args=--basePath=/tmp/hailstorm/dev
 ```
 
+## Development Server
+
+```bash
+make dev_run
+```
+
+The run args will ensure compatibility with other services spun with ``docker-compose``.
+
+## Unit Tests
+
+```bash
+make test
+```
+
 # Docker
 
 - Map the ``/hailstorm`` path in the container to ``/tmp/hailstorm/dev`` on local file system.

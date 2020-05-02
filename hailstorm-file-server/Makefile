@@ -29,3 +29,6 @@ publish:
 
 docker_image_id:
 	@echo $${DOCKER_ID} ${DOCKER_REPO} ${PACKAGE_VERSION}
+
+dev_run:
+	./gradlew bootRun --args='--basePath=/tmp/hailstorm/dev/fs --server.port=9000'

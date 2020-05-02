@@ -121,8 +121,8 @@ describe WebFileStore do
       data = wfs.fetch_reports('acme_test')
       expect(data.size).to be == 2
       expect(data[0].keys.sort).to eq(%i[id uri title].sort)
-      expect(data[0][:uri]).to be == 'http://webfs.hailstorm:9000/reports/acme_test/123/a.docx'
-      expect(data[1][:uri]).to be == 'http://webfs.hailstorm:9000/reports/acme_test/456/b.docx'
+      expect(data[0][:uri]).to be == 'http://webfs.hailstorm:9000/123/a.docx'
+      expect(data[1][:uri]).to be == 'http://webfs.hailstorm:9000/456/b.docx'
     end
   end
 
@@ -151,6 +151,14 @@ describe WebFileStore do
       wfs.read_identity_file('123/foo.pem') do |io|
         expect(io.read).to eq('---')
       end
+    end
+  end
+
+  context '#purge_project' do
+    it 'should delete the project resources on the file server' do
+      HTTParty.should_receive(:delete)
+      wfs = WebFileStore.new
+      wfs.purge_project('project_code')
     end
   end
 end

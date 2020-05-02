@@ -39,3 +39,6 @@ publish:
 
 docker_image_id:
 	@echo $${DOCKER_ID} ${DOCKER_REPO} ${PACKAGE_VERSION}
+
+dev_run:
+	rackup -p 4567

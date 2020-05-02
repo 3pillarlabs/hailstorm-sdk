@@ -31,7 +31,7 @@ export function DataCenterForm({
     sshPort: number;
   }) => {
     return FileServer
-      .sendFile(pemFile!)
+      .sendFile(pemFile!, undefined, undefined, activeProject.code)
       .then(async ({id}: SavedFile) => {
         const attrs: DataCenterCluster = {
           userName,
@@ -149,6 +149,7 @@ export function DataCenterForm({
                   disabled={isSubmitting}
                   preventDefault={true}
                   accept=".pem"
+                  pathPrefix={activeProject.code}
                 >
                   <div className="file has-name is-right is-fullwidth">
                     <label className="file-label">

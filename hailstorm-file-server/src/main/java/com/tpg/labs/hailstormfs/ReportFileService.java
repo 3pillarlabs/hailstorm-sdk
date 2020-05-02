@@ -31,10 +31,9 @@ public interface ReportFileService {
     /**
      * Get the report file from file system.
      *
-     * @param prefix
      * @param fileId
      * @param fileName
      * @return
      */
-    Resource getReport(String prefix, String fileId, String fileName) throws FileNotFoundException;
+    Resource getReport(String fileId, String fileName) throws FileNotFoundException;
 }

@@ -44,3 +44,13 @@ make test
 make coverage
 ```
 Coverage report is generated in ``coverage`` directory.
+
+## Development Server
+
+To just run the API in development mode. This ensures compatibility with the other components
+when they are spun as ``docker-compose`` services.
+```bash
+make dev_run
+```
+
+> code changes require a process restart.

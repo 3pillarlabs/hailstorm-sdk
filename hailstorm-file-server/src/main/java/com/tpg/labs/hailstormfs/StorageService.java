@@ -5,6 +5,8 @@ import org.springframework.core.io.Resource;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.util.stream.Stream;
 
 public interface StorageService {
 
@@ -19,24 +21,34 @@ public interface StorageService {
     String saveFile(FileMetaData fileMetaData, FileTransferDelegate fileTransferDelegate) throws IOException;
 
     /**
-     * Saves the file to storage under the <code>parentPath</code> directory.
+     * Saves the file to storage with a <code>tag</code> directory.
      *
      * @param fileMetaData
      * @param fileTransferDelegate
-     * @param parentPath
+     * @param tag
      * @return
      * @throws IOException
      */
     String saveFile(FileMetaData fileMetaData,
                     FileTransferDelegate fileTransferDelegate,
-                    String parentPath) throws IOException;
+                    String tag) throws IOException;
 
     /**
      * Delete a file
      *
      * @param fileId
+     * @throws IOException
      */
-    void deleteFile(String fileId);
+    void deleteFile(String fileId) throws IOException;
+
+    /**
+     * Delete a tagged file.
+     *
+     * @param fileId
+     * @param tag
+     * @throws IOException
+     */
+    void deleteFile(String fileId, String tag) throws IOException;
 
     /**
      * Get a file by Id and name
@@ -49,21 +61,26 @@ public interface StorageService {
     Resource getFile(String fileId, String fileName) throws FileNotFoundException;
 
     /**
-     * Get a file by Id and name under a given path.
+     * Removes all files with given prefix.
      *
-     * @param fileId
-     * @param fileName
-     * @param parentPath
-     * @return
-     * @throws FileNotFoundException
+     * @param prefix
      */
-    Resource getFile(String fileId, String fileName, String parentPath) throws FileNotFoundException;
+    void removeFilesWithPrefix(String prefix) throws IOException;
 
     /**
-     * Make the path components if they do not exist
+     * Stream the paths matching a prefix.
      *
-     * @param components
-     * @return the created path
+     * @param prefix
+     * @return
      */
-    File makePath(String... components);
+    Stream<Path> listPaths(String prefix);
+
+    /**
+     * Select paths that match the given tag.
+     *
+     * @param prefix
+     * @param tag
+     * @return
+     */
+    Stream<Path> listPaths(String prefix, String tag);
 }
