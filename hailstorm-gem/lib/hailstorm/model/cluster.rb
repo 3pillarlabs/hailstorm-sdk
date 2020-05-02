@@ -143,6 +143,10 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
         clusterable.max_threads_per_agent = cluster_config.max_threads_per_agent
       end
 
+      if clusterable.respond_to?(:machines) && !clusterable.machines.is_a?(Array)
+        clusterable.machines = [ clusterable.machines ]
+      end
+
       clusterable
     end
 

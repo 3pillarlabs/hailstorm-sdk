@@ -220,6 +220,28 @@ describe Hailstorm::Model::Cluster do
         expect(amz_cloud.first.ssh_port).to eql(8022)
       end
     end
+    context ':data_center' do
+      [%W[192.168.20.10], %W[192.168.20.10 192.168.20.20]].each do |machines|
+        it "should persist all configuration options with #{machines}" do
+          config = Hailstorm::Support::Configuration.new
+          config.clusters(:data_center) do |dc|
+            dc.title = 'Cluster One'
+            dc.user_name = 'root'
+            dc.ssh_identity = '1/insecure.pem'
+            dc.machines = machines
+            dc.active = false
+          end
+
+          cluster = Hailstorm::Model::Cluster.new(cluster_type: Hailstorm::Model::DataCenter.to_s)
+          cluster.project = Hailstorm::Model::Project.where(project_code: 'cluster_spec').first_or_create!
+          cluster.save!
+          cluster.configure(config.clusters.first)
+          dc = Hailstorm::Model::DataCenter.where(project_id: cluster.project.id).first
+          expect(dc).to_not be_nil
+          expect(dc.machines).to eql(machines)
+        end
+      end
+    end
   end
 
   context '.generate_all_load' do
