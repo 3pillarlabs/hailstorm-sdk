@@ -50,4 +50,19 @@ describe ClustersHelper do
       expect(cluster_attrs.keys.sort).to eq(%W[code clientStatsCount loadAgentsCount].sort)
     end
   end
+
+  context '#sort_clusters' do
+    it 'should put all active clusters on top' do
+      clusters = [
+        { disabled: true },
+        { },
+        { },
+        { disabled: true },
+        { }
+      ]
+
+      sorted = clusters.map(&:stringify_keys).sort { |a, b| @cluster_api_sim.sort_clusters(a, b) }
+      expect(sorted).to eq([{}, {}, {}, { disabled: true }.stringify_keys, { disabled: true }.stringify_keys])
+    end
+  end
 end

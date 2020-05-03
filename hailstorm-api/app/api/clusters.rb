@@ -45,8 +45,12 @@ get '/projects/:project_id/clusters' do |project_id|
 
   # @type [Hailstorm::Support::Configuration] hailstorm_config
   hailstorm_config = deep_decode(project_config.stringified_config)
-  JSON.dump(hailstorm_config.clusters
-                            .map { |e| to_cluster_attributes(e, project: project).merge(projectId: project_id) })
+  JSON.dump(
+    hailstorm_config.clusters
+                    .map { |e| to_cluster_attributes(e, project: project).merge(projectId: project_id) }
+                    .sort { |a, b| sort_clusters(a, b) }
+  )
+
 end
 
 delete '/projects/:project_id/clusters/:id' do |project_id, id|
