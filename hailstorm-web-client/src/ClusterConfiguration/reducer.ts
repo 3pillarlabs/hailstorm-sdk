@@ -44,13 +44,6 @@ export function reducer(
       break;
     }
 
-    case ClusterConfigurationActionTypes.UnsetClusters: {
-      const activeProject = { ...state.activeProject! };
-      activeProject.clusters = undefined;
-      nextState = { ...state, activeProject };
-      break;
-    }
-
     default:
       nextState = state;
       break;
@@ -67,14 +60,15 @@ function onSetClusterConfiguration(
     ...state.activeProject!,
     clusters: action.payload
   };
+
   if (
     state.wizardState &&
     state.wizardState.activeTab === WizardTabTypes.Cluster &&
-    activeProject.clusters!.length > 0 &&
-    !state.wizardState.activeCluster
+    activeProject.clusters!.length > 0
   ) {
     const wizardState = { ...state.wizardState };
     wizardState.activeCluster = activeProject.clusters![0];
+    delete wizardState.reloadTab;
     return { ...state, activeProject, wizardState };
   }
 

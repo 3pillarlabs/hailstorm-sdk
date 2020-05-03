@@ -62,6 +62,51 @@ describe 'api/clusters' do
       expect(res[1]['type']).to eq('DataCenter')
       expect(res[1]['sshIdentity']).to eq({name: 'foo.pem', path: '123'}.stringify_keys)
     end
+
+    it 'should sort active clusters above disabled ones' do
+      hailstorm_config = Hailstorm::Support::Configuration.new
+      hailstorm_config.clusters(:amazon_cloud) do |cluster|
+        # @type [Hailstorm::Support::Configuration::AmazonCloud] cluster
+        cluster.access_key = 'A'
+        cluster.secret_key = 'a'
+        cluster.region = 'us-east-1'
+        cluster.instance_type = 'm5a.large'
+        cluster.max_threads_per_agent = 50
+      end
+
+      hailstorm_config.clusters(:amazon_cloud) do |cluster|
+        # @type [Hailstorm::Support::Configuration::AmazonCloud] cluster
+        cluster.access_key = 'A'
+        cluster.secret_key = 'a'
+        cluster.region = 'us-west-1'
+        cluster.instance_type = 'm5a.large'
+        cluster.max_threads_per_agent = 50
+        cluster.active = false
+      end
+
+      hailstorm_config.clusters(:data_center) do |dc|
+        # @type [Hailstorm::Support::Configuration::DataCenter] dc
+        dc.title = 'Ice station Zebra'
+        dc.user_name = 'ubuntu'
+        dc.ssh_identity = '123/foo.pem'
+        dc.machines = %W[172.16.0.10 172.16.0.20 172.16.0.30]
+        dc.ssh_port = 8022
+      end
+
+      project = Hailstorm::Model::Project.create!(project_code: File.strip_ext(File.basename(__FILE__)))
+      ProjectConfiguration.create!(
+          project_id: project.id,
+          stringified_config: deep_encode(hailstorm_config)
+      )
+
+      @browser.get("/projects/#{project.id}/clusters")
+      puts @browser.last_response.body
+      expect(@browser.last_response).to be_ok
+      res = JSON.parse(@browser.last_response.body)
+      expect(res[0]['disabled']).to be_nil
+      expect(res[1]['disabled']).to be_nil
+      expect(res[2]['disabled']).to be_true
+    end
   end
 
   context 'POST /projects/:project_id/clusters' do
