@@ -66,7 +66,7 @@ module ClustersHelper
     dc.title = api_params[:title]
     dc.user_name = api_params[:userName]
     dc.ssh_identity = "#{api_params[:sshIdentity]['path']}/#{api_params[:sshIdentity]['name']}"
-    dc.machines = api_params[:machines]
+    dc.machines = to_array(api_params[:machines])
     dc.ssh_port = api_params[:port] if api_params[:port].presence
     dc
   end
@@ -131,5 +131,11 @@ module ClustersHelper
   # @return [Integer]
   def string_to_id(str)
     str.to_java_string.hash_code
+  end
+
+  # @param [Object] any
+  # @return [Array]
+  def to_array(any)
+    any.is_a?(Array) ? any : [any]
   end
 end

@@ -148,7 +148,7 @@ Vagrant.configure(2) do |config|
           if [ ! -e /root/jmeter ]; then
             chmod +x /vagrant/setup/data-center/install_jmeter.sh && \
             /vagrant/setup/data-center/install_jmeter.sh \
-            https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-3.2.tgz \
+            https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.2.1.tgz \
             /root
           fi
         X

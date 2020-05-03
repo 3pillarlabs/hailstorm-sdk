@@ -38,6 +38,8 @@ class Hailstorm::Model::Project < ActiveRecord::Base
 
   after_create :create_workspace
 
+  after_destroy :destroy_workspace
+
   # Services for commands
   module ServiceInterface
     # Sets up the project for first time or subsequent use
@@ -256,9 +258,18 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     self.project_code.gsub!(/[\W]+/, '_')
   end
 
-  def create_workspace
-    Hailstorm.workspace(self.project_code).create_file_layout
+  # Delegate for project workspace methods
+  module WorkspaceDelegate
+    def create_workspace
+      Hailstorm.workspace(self.project_code).create_file_layout
+    end
+
+    def destroy_workspace
+      Hailstorm.workspace(self.project_code).remove_workspace
+    end
   end
+
+  include WorkspaceDelegate
 
   # Executes results operations
   class ResultsOperationExecutor

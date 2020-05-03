@@ -46,4 +46,14 @@ describe Hailstorm::Support::Workspace do
       expect(workspace.app_entries).to be_empty
     end
   end
+
+  context '#remove_workspace' do
+    it 'should delete the project workspace directory' do
+      workspace = Hailstorm::Support::Workspace.new('workspace_spec')
+      workspace.create_file_layout
+      expect(File.exist?(workspace.workspace_path)).to be_true
+      workspace.remove_workspace
+      expect(File.exist?(workspace.workspace_path)).to be_false
+    end
+  end
 end

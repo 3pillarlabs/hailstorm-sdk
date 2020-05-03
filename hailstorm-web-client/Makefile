@@ -44,3 +44,6 @@ publish:
 
 docker_image_id:
 	@echo $${DOCKER_ID} ${DOCKER_REPO} ${PACKAGE_VERSION}
+
+dev_run:
+	BROWSER=none PORT=8080 npm start

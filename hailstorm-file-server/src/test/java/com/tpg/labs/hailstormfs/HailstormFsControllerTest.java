@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.mockito.Mockito.*;
 
+
 @SpringBootTest
 @AutoConfigureMockMvc
 class HailstormFsControllerTest {
@@ -76,5 +77,11 @@ class HailstormFsControllerTest {
 
         this.mvc.perform(get("/ceb007e9182/a.txt"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    public void shouldPurgeFilesWithPrefix() throws Exception {
+        this.mvc.perform(delete("/files/abc"))
+                .andExpect(status().is2xxSuccessful());
     }
 }

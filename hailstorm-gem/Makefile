@@ -28,8 +28,9 @@ integration: create_mysql_user setup_db
 	${TRAVIS_BUILD_DIR}/.travis/write_gem_aws_keys.sh
 	cucumber --tags ${TAG_FLAGS}
 
+.PHONY: build
 build:
-	rake build
+	rake clean build
 
 local_publish:
 	rake install
