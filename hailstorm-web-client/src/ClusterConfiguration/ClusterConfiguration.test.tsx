@@ -108,6 +108,18 @@ describe('<ClusterConfiguration />', () => {
     expect(spy).toBeCalled();
   });
 
+  it('should load clusters when reloadTab is true', async () => {
+    appState.wizardState!.reloadTab = true;
+    const [spy, listPromise] = mockClusterList([{
+      accessKey: 'A', instanceType: 't2.small', maxThreadsByInstance: 25, region: 'us-east-1', secretKey: 's', title: 'aws-us-east-1',
+      type: "AWS", code: 'aws-223', id: 223
+    } as AmazonCluster]);
+    const component = mount(createComponent());
+    component.update();
+    await listPromise;
+    expect(spy).toBeCalled();
+  });
+
   describe('when no clusters have been added', () => {
     it('should disable Next button', () => {
       const component = mount(createComponent());

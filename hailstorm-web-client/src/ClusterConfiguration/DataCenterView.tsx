@@ -31,7 +31,7 @@ export function DataCenterView({
               {cluster.machines.map((value) => (<ReadOnlyField {...{value}} />))}
             </div>
           </div>
-          <ReadOnlyField label="SSH Port" value={cluster.sshPort} />
+          <ReadOnlyField label="SSH Port" value={cluster.sshPort || 22} />
         </div>
       </div>
       {activeProject && dispatch && (<div className="card-footer">

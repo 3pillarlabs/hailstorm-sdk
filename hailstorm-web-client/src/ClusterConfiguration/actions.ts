@@ -6,8 +6,7 @@ export enum ClusterConfigurationActionTypes {
   RemoveCluster = '[ClusterConfiguration] RemoveCluster',
   SaveCluster = '[ClusterConfiguration] SaveCluster',
   SetClusterConfiguration = '[ClusterConfiguration] SetClusterConfiguration',
-  ChooseClusterOption = '[ClusterConfiguration] ChooseClusterOption',
-  UnsetClusters = '[ClusterConfiguration] UnsetClusters'
+  ChooseClusterOption = '[ClusterConfiguration] ChooseClusterOption'
 }
 
 export class ActivateClusterAction implements Action {
@@ -35,15 +34,9 @@ export class ChooseClusterOptionAction implements Action {
   constructor() {}
 }
 
-export class UnsetClustersAction implements Action {
-  readonly type = ClusterConfigurationActionTypes.UnsetClusters;
-  constructor() {}
-}
-
 export type ClusterConfigurationActions =
   | ActivateClusterAction
   | RemoveClusterAction
   | SaveClusterAction
   | SetClusterConfigurationAction
-  | ChooseClusterOptionAction
-  | UnsetClustersAction;
+  | ChooseClusterOptionAction;

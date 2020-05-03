@@ -98,17 +98,23 @@ function onEditInProjectWizard(state: NewProjectWizardState, action: EditInProje
     const done = project.incomplete ? {
       [WizardTabTypes.Project]: true,
     } : {
-        [WizardTabTypes.Project]: true,
-        [WizardTabTypes.JMeter]: true,
-        [WizardTabTypes.Cluster]: true,
-        [WizardTabTypes.Review]: true,
-      };
+      [WizardTabTypes.Project]: true,
+      [WizardTabTypes.JMeter]: true,
+      [WizardTabTypes.Cluster]: true,
+      [WizardTabTypes.Review]: true,
+    };
+
     const wizardState: NewProjectWizardProgress = {
       activeTab: project.incomplete || action.payload.activeTab === undefined ? WizardTabTypes.Project : action.payload.activeTab,
       done,
       activeJMeterFile: project.jmeter ? project.jmeter.files[0] : undefined,
       activeCluster: project.clusters && project.clusters.length > 0 ? project.clusters[0] : undefined
     };
+
+    if (action.payload.reloadTab) {
+      wizardState.reloadTab = action.payload.reloadTab;
+    }
+
     return { ...state, wizardState, activeProject: project };
   }
 }

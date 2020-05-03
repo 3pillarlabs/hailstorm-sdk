@@ -94,6 +94,15 @@ module ClustersHelper
     hailstorm_config.clusters.find { |cluster_cfg| cluster_id.to_i == compute_title_id(cluster_cfg) }
   end
 
+  # @param [Hash] a_cluster
+  # @param [Hash] b_cluster
+  # @return [Fixnum]
+  def sort_clusters(a_cluster, b_cluster)
+    a_score = a_cluster['disabled'] ? 0 : 1
+    b_score = b_cluster['disabled'] ? 0 : 1
+    b_score <=> a_score
+  end
+
   private
 
   def data_center_attrs(cluster_cfg)

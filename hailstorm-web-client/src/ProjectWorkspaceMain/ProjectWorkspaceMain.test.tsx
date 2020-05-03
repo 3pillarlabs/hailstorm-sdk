@@ -5,7 +5,7 @@ import { AppStateContext } from '../appStateContext';
 import { ClusterService } from "../services/ClusterService";
 import { JMeterService } from "../services/JMeterService";
 import { JMeter, Cluster, AmazonCluster, InterimProjectState } from '../domain';
-import { MemoryRouter, Route } from 'react-router';
+import { MemoryRouter, Route, RouteComponentProps } from 'react-router';
 import { ReportService } from '../services/ReportService';
 import { ExecutionCycleService } from '../services/ExecutionCycleService';
 
@@ -211,8 +211,12 @@ describe('<ProjectWorkspaceMain />', () => {
   });
 
   it('should edit Clusters', () => {
-    const NewProjectWizard = () => (
-      <div id="NewProjectWizard"></div>
+    const NewProjectWizard = ({location}: RouteComponentProps) => (
+      <div id="NewProjectWizard">
+        {Object.keys(location.state).map((stateKey) => (<div key={stateKey}>
+          {stateKey} |
+        </div>))}
+      </div>
     );
 
     const dispatch = jest.fn();
@@ -237,5 +241,6 @@ describe('<ProjectWorkspaceMain />', () => {
     component.find('ClusterList button').simulate('click');
     component.update();
     expect(component).toContainExactlyOneMatchingElement("#NewProjectWizard");
+    expect(component.find('#NewProjectWizard')).toIncludeText('reloadTab');
   });
 });
