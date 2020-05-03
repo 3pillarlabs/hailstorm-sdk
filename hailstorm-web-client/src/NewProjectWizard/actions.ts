@@ -63,7 +63,7 @@ export class UpdateProjectTitleAction implements Action {
 
 export class EditInProjectWizard implements Action {
   readonly type = NewProjectWizardActionTypes.EditInProjectWizard;
-  constructor(public payload: {project: Project, activeTab?: WizardTabTypes}) {}
+  constructor(public payload: {project: Project, activeTab?: WizardTabTypes, reloadTab?: boolean}) {}
 }
 
 export class UnsetProjectAction implements Action {

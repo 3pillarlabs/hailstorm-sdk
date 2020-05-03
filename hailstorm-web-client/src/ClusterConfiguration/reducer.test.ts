@@ -1,6 +1,6 @@
 import { reducer } from './reducer';
 import { NewProjectWizardState, WizardTabTypes } from '../NewProjectWizard/domain';
-import { ActivateClusterAction, RemoveClusterAction, SaveClusterAction, SetClusterConfigurationAction, ChooseClusterOptionAction, UnsetClustersAction } from './actions';
+import { ActivateClusterAction, RemoveClusterAction, SaveClusterAction, SetClusterConfigurationAction, ChooseClusterOptionAction } from './actions';
 import { Cluster, AmazonCluster } from '../domain';
 
 describe('reducer', () => {
@@ -77,8 +77,10 @@ describe('reducer', () => {
       code: 'singing-penguin-23'
     };
 
+    state.wizardState!.reloadTab = true;
     const nextState = reducer(state, new SetClusterConfigurationAction([savedCluster]));
     expect(nextState.wizardState!.activeCluster).toEqual(savedCluster);
+    expect(nextState.wizardState!.reloadTab).toBeUndefined();
   });
 
   it('should set Cluster configuration in the project workspace', () => {
@@ -323,35 +325,5 @@ describe('reducer', () => {
     }, new RemoveClusterAction({...cluster, disabled: true}));
 
     expect(nextState.activeProject!.incomplete).toBeTruthy();
-  });
-
-  it('should unset the clusters in the active project', () => {
-    const cluster: Cluster = { id: 23, type: 'DataCenter', title: 'RACK 1' };
-    const jmeterFile = { id: 12, name: 'a.jmx', properties: new Map([["foo", "1"]]) };
-    const nextState = reducer({
-      activeProject: {
-        id: 1,
-        code: 'a',
-        title: 'A',
-        running: false,
-        clusters: [ cluster ],
-        jmeter: {
-          files: [ jmeterFile ]
-        }
-      },
-      wizardState: {
-        activeTab: WizardTabTypes.Cluster,
-        done: {
-          [WizardTabTypes.Project]: true,
-          [WizardTabTypes.JMeter]: true,
-          [WizardTabTypes.Cluster]: true,
-          [WizardTabTypes.Review]: true
-        },
-        activeCluster: { ...cluster },
-        activeJMeterFile: jmeterFile
-      }
-    }, new UnsetClustersAction());
-
-    expect(nextState.activeProject!.clusters).toBeUndefined();
   });
 });

@@ -1,3 +1,4 @@
+require 'ostruct'
 require 'spec_helper'
 require 'helpers/clusters_helper'
 require 'hailstorm/support/configuration'
@@ -35,6 +36,18 @@ describe ClustersHelper do
         expect(@data_center.machines).to be_a_kind_of(Array)
         expect(@data_center.machines).to eq([@api_params[:machines]])
       end
+    end
+  end
+
+  context '#to_cluster_attributes' do
+    it 'should extract common attributes from a cluster' do
+      cluster_cfg = OpenStruct.new({cluster_type: 'any', cluster_code: 'cluster-1', active: true})
+      cluster = Hailstorm::Model::Cluster.new
+      cluster.stub_chain(:cluster_instance, :client_stats, :count).and_return(2)
+      cluster.stub_chain(:cluster_instance, :load_agents, :count).and_return(3)
+      Hailstorm::Model::Cluster.stub_chain(:where, :find_by_cluster_code).and_return(cluster)
+      cluster_attrs = @cluster_api_sim.to_cluster_attributes(cluster_cfg, project: Hailstorm::Model::Project.new)
+      expect(cluster_attrs.keys.sort).to eq(%W[code clientStatsCount loadAgentsCount].sort)
     end
   end
 end
