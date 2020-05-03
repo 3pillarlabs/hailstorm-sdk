@@ -136,6 +136,6 @@ module ClustersHelper
   # @param [Object] any
   # @return [Array]
   def to_array(any)
-    any.is_a?(Array) ? any : [ any ]
+    any.is_a?(Array) ? any : [any]
   end
 end

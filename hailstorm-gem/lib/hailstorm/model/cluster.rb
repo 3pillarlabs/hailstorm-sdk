@@ -144,7 +144,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
       end
 
       if clusterable.respond_to?(:machines) && !clusterable.machines.is_a?(Array)
-        clusterable.machines = [ clusterable.machines ]
+        clusterable.machines = [clusterable.machines]
       end
 
       clusterable

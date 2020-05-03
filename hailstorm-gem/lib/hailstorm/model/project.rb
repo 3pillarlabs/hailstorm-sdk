@@ -258,13 +258,18 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     self.project_code.gsub!(/[\W]+/, '_')
   end
 
-  def create_workspace
-    Hailstorm.workspace(self.project_code).create_file_layout
+  # Delegate for project workspace methods
+  module WorkspaceDelegate
+    def create_workspace
+      Hailstorm.workspace(self.project_code).create_file_layout
+    end
+
+    def destroy_workspace
+      Hailstorm.workspace(self.project_code).remove_workspace
+    end
   end
 
-  def destroy_workspace
-    Hailstorm.workspace(self.project_code).remove_workspace
-  end
+  include WorkspaceDelegate
 
   # Executes results operations
   class ResultsOperationExecutor
