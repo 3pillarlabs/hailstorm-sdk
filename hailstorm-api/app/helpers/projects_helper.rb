@@ -31,7 +31,12 @@ module ProjectsHelper
     project_attrs[:code] = project.project_code
     add_current_execution_cycle(project, project_attrs)
     add_last_execution_cycle(project, project_attrs)
-    add_auto_stop_attribute(project, project_attrs)
+    begin
+      add_auto_stop_attribute(project, project_attrs)
+    rescue StandardError => e
+      logger.warn(e.message) if respond_to?(:logger)
+    end
+
     add_incomplete_attribute(project, project_attrs)
     project_attrs
   end

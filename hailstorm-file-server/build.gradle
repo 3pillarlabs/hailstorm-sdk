@@ -9,7 +9,7 @@ plugins {
 }
 
 group = 'com.3pillarglobal.labs'
-version = '1.0.0'
+version = '1.1.0'
 sourceCompatibility = '1.8'
 
 repositories {
@@ -35,10 +35,10 @@ docker {
 	labels([
 			"org.opencontainers.image.created": Date.from(Instant.now())
 													.format("yyyy-MM-dd'T'Hms.SZ", TimeZone.getTimeZone("UTC")),
-			"org.opencontainers.image.revision": System.getenv("TRAVIS_COMMIT"),
+			"org.opencontainers.image.revision": System.getenv("TRAVIS_COMMIT") || "",
 			"org.opencontainers.image.licenses": "MIT",
 			"org.opencontainers.image.title": rootProject.name
-	])
+	] as Map<String, String>)
 }
 
 jacocoTestReport {

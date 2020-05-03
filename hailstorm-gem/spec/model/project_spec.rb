@@ -442,5 +442,13 @@ describe Hailstorm::Model::Project do
       project.purge_clusters
     end
   end
+
+  context '#destroy' do
+    it 'should remove the project workspace' do
+      project = Hailstorm::Model::Project.create!(project_code: 'project_spec_remove_workspace')
+      project.should_receive(:destroy_workspace)
+      project.destroy!
+    end
+  end
 end
 

@@ -176,6 +176,7 @@ describe 'api/projects' do
   context 'DELETE /projects/:id' do
     before(:each) do
       @project = Hailstorm::Model::Project.create!(title: 'Acme Priming', project_code: 'acme_priming')
+      Hailstorm.fs.stub!(:purge_project)
     end
 
     context 'existing ProjectConfiguration' do
@@ -197,6 +198,11 @@ describe 'api/projects' do
         expect(@browser.last_response).to be_successful
         expect { Hailstorm::Model::Project.find(@project.id) }.to raise_error(ActiveRecord::RecordNotFound)
       end
+    end
+
+    it 'should purge project resources on file server' do
+      Hailstorm.fs.should_receive(:purge_project)
+      @browser.delete("/projects/#{@project.id}")
     end
   end
 end

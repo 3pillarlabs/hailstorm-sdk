@@ -12,7 +12,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Optional;
 
 @Controller
 public class HailstormFsController {
@@ -37,7 +36,7 @@ public class HailstormFsController {
     }
 
     @DeleteMapping("/{fileId}")
-    public ResponseEntity deleteFile(@PathVariable("fileId") String fileId) {
+    public ResponseEntity deleteFile(@PathVariable("fileId") String fileId) throws IOException {
         logger.debug("path: {}", fileId);
         storageService.deleteFile(fileId);
         return ResponseEntity.ok().build();
@@ -58,5 +57,11 @@ public class HailstormFsController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
                 .body(file);
+    }
+
+    @DeleteMapping("/files/{prefix}")
+    public ResponseEntity<String> removeFilesWithPrefix(@PathVariable("prefix") String prefix) throws IOException {
+        storageService.removeFilesWithPrefix(prefix);
+        return ResponseEntity.noContent().build();
     }
 }

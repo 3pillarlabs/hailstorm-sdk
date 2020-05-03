@@ -17,53 +17,34 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
-public class ReportFileServiceImpl implements ReportFileService, InitializingBean {
+public class ReportFileServiceImpl implements ReportFileService {
 
-    public static final String REPORTS_DIR = "reports";
+    static final String REPORTS_TAG = "reports";
 
-    private File baseLocation;
-    private StorageService localStorageService;
+    private final StorageService localStorageService;
 
     @Autowired
-    public void setLocalStorageService(StorageService localStorageService) {
+    public ReportFileServiceImpl(StorageService localStorageService) {
         this.localStorageService = localStorageService;
     }
 
     @Override
-    public void afterPropertiesSet() throws Exception {
-        baseLocation = localStorageService.makePath(REPORTS_DIR);
-    }
-
-    @Override
     public String saveFile(FileMetaData fileMetaData, FileTransferDelegate fileTransferDelegate) throws IOException {
-        File dest = new File(baseLocation, fileMetaData.getPathPrefix());
-        return localStorageService.saveFile(fileMetaData, fileTransferDelegate, dest.getAbsolutePath());
+        return localStorageService.saveFile(fileMetaData, fileTransferDelegate, REPORTS_TAG);
     }
 
     @Override
     public List<ReportMetaData> getReportMetaDataList(String prefix) throws IOException {
-        Path startPath = Paths.get(baseLocation.getAbsolutePath(), prefix);
-        if (!startPath.toFile().exists()) {
-            return Collections.emptyList();
-        }
-
-        Stream<ReportMetaData> stream = Files.list(startPath)
-                .flatMap(path -> {
-                    try {
-                        return Files.list(path);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .map(path -> new ReportMetaData(path.getParent().getFileName().toString(),
-                        path.getFileName().toString()));
+        Stream<ReportMetaData> stream = localStorageService
+                .listPaths(prefix, REPORTS_TAG)
+                .map(path -> new ReportMetaData(
+                        path.getParent().getFileName().toString(), path.getFileName().toString()));
 
         return stream.collect(Collectors.toList());
     }
 
     @Override
-    public Resource getReport(String prefix, String fileId, String fileName) throws FileNotFoundException {
-        File dest = new File(baseLocation, prefix);
-        return localStorageService.getFile(fileId, fileName, dest.getAbsolutePath());
+    public Resource getReport(String fileId, String fileName) throws FileNotFoundException {
+        return localStorageService.getFile(fileId, fileName);
     }
 }

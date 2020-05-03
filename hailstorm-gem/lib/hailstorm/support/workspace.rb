@@ -112,6 +112,11 @@ class Hailstorm::Support::Workspace
     end
   end
 
+  # Removes the project workspace recursively
+  def remove_workspace
+    FileUtils.rm_rf(self.workspace_path)
+  end
+
   private
 
   def workspace_dir_path(dir)

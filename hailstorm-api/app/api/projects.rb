@@ -73,6 +73,7 @@ end
 delete '/projects/:id' do |id|
   found_project = Hailstorm::Model::Project.find(id)
   Hailstorm::Model::Project.transaction do
+    Hailstorm.fs.purge_project(found_project.project_code)
     project_configuration = ProjectConfiguration.where(project: found_project).first
     project_configuration.destroy! if project_configuration
     found_project.destroy!
