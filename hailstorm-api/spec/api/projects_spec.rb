@@ -69,7 +69,7 @@ describe 'api/projects' do
       list = JSON.parse(@browser.last_response.body)
       expect(list.size).to eq(1)
       first = list[0]
-      expect(first.keys.sort).to eq(%W[id code title running autoStop incomplete currentExecutionCycle lastExecutionCycle].sort)
+      expect(first.keys.sort).to eq(%W[id code title running autoStop incomplete currentExecutionCycle lastExecutionCycle live].sort)
       expect(first['currentExecutionCycle'].keys.sort).to eq(%W[id projectId startedAt threadsCount status].sort)
       expect(first['lastExecutionCycle'].keys.sort).to eq(%W[id projectId startedAt threadsCount stoppedAt status responseTime throughput].sort)
     end

@@ -126,7 +126,7 @@ module ProjectsHelper
   # @param [Hash] project_attrs
   def add_live_attribute(project, project_attrs)
     project_clusters = project.clusters.all
-    if project_clusters.size > 0 &&
+    if !project_clusters.empty? &&
        project_clusters.all? { |cluster| cluster.cluster_type == Hailstorm::Model::DataCenter.name }
 
       project_attrs.delete(:live)
