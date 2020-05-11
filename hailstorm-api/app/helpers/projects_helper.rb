@@ -3,6 +3,9 @@ require 'hailstorm/model/project'
 require 'hailstorm/model/execution_cycle'
 require 'model/project_configuration'
 require 'helpers/execution_cycles_helper'
+require 'hailstorm/model/amazon_cloud'
+require 'hailstorm/model/data_center'
+require 'hailstorm/model/load_agent'
 
 # Helper for projects API
 module ProjectsHelper
@@ -38,6 +41,7 @@ module ProjectsHelper
     end
 
     add_incomplete_attribute(project, project_attrs)
+    add_live_attribute(project, project_attrs)
     project_attrs
   end
 
@@ -116,5 +120,23 @@ module ProjectsHelper
 
     found_project.settings_modified = true
     found_project.update_attribute(:serial_version, current_serial_version)
+  end
+
+  # @param [Hailstorm::Model::Project] project
+  # @param [Hash] project_attrs
+  def add_live_attribute(project, project_attrs)
+    project_clusters = project.clusters.all
+    if project_clusters.size > 0 &&
+       project_clusters.all? { |cluster| cluster.cluster_type == Hailstorm::Model::DataCenter.name }
+
+      project_attrs.delete(:live)
+      return
+    end
+
+    project_attrs[:live] = Hailstorm::Model::LoadAgent
+                           .joins('JOIN amazon_clouds ON amazon_clouds.id = load_agents.clusterable_id')
+                           .where(amazon_clouds: { project_id: project.id })
+                           .where('load_agents.identifier IS NOT NULL')
+                           .count('load_agents.id') > 0
   end
 end

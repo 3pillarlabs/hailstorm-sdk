@@ -15,20 +15,33 @@ export const reducer: (
       break;
 
     case ProjectWorkspaceActionTypes.SetRunning:
-      nextState = {...state!, running: action.payload};
+      nextState = state ? {...state, running: action.payload} : state;
       break;
 
     case ProjectWorkspaceActionTypes.SetInterimState:
-      nextState = {...state!, interimState: action.payload};
+      nextState = state ? {...state, interimState: action.payload} : state;
       break;
 
     case ProjectWorkspaceActionTypes.UnsetInterimState:
-      nextState = {...state!};
-      delete nextState.interimState;
+      if (state) {
+        nextState = {...state};
+        delete nextState.interimState;
+      } else {
+        nextState = state;
+      }
+
       break;
 
     case ProjectWorkspaceActionTypes.UpdateProject:
-      nextState = {...state!, ...action.payload};
+      if (state) {
+        nextState = {...state, ...action.payload};
+        if (state.live && action.payload.live === false) {
+          delete nextState.live;
+        }
+      } else {
+        nextState = state;
+      }
+
       break;
 
     default:

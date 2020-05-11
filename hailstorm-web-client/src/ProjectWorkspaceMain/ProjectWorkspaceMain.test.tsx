@@ -241,6 +241,94 @@ describe('<ProjectWorkspaceMain />', () => {
     component.find('ClusterList button').simulate('click');
     component.update();
     expect(component).toContainExactlyOneMatchingElement("#NewProjectWizard");
-    expect(component.find('#NewProjectWizard')).toIncludeText('reloadTab');
+  });
+
+  it('should show "Live" status text when project is live', () => {
+    const component = mount(
+      <AppStateContext.Provider
+        value={{
+          appState: {
+            runningProjects: [],
+            activeProject: {id: 1, code: 'a', title: 'A', running: false, live: true},
+          },
+          dispatch: jest.fn()
+        }}
+      >
+        <ProjectWorkspaceMain />
+      </AppStateContext.Provider>
+    );
+
+    expect(component).toContainExactlyOneMatchingElement('TerminateProject');
+  });
+
+  it('should show "Live" status text when project interim state is terminating', () => {
+    const component = mount(
+      <AppStateContext.Provider
+        value={{
+          appState: {
+            runningProjects: [],
+            activeProject: {
+              id: 1,
+              code: "a",
+              title: "A",
+              running: true,
+              interimState: InterimProjectState.TERMINATING,
+            },
+          },
+          dispatch: jest.fn(),
+        }}
+      >
+        <ProjectWorkspaceMain />
+      </AppStateContext.Provider>
+    );
+
+    expect(component).toContainExactlyOneMatchingElement('TerminateProject');
+  });
+
+  it('should not show "Live" status text when project is running', () => {
+    const component = mount(
+      <AppStateContext.Provider
+        value={{
+          appState: {
+            runningProjects: [],
+            activeProject: {
+              id: 1,
+              code: "a",
+              title: "A",
+              running: true
+            },
+          },
+          dispatch: jest.fn(),
+        }}
+      >
+        <ProjectWorkspaceMain />
+      </AppStateContext.Provider>
+    );
+
+    expect(component).not.toContainExactlyOneMatchingElement('TerminateProject');
+  });
+
+  it('should not show "Live" status text when project interim state is not terminating', () => {
+    const component = mount(
+      <AppStateContext.Provider
+        value={{
+          appState: {
+            runningProjects: [],
+            activeProject: {
+              id: 1,
+              code: "a",
+              title: "A",
+              running: true,
+              interimState: InterimProjectState.STOPPING
+            },
+          },
+          dispatch: jest.fn(),
+        }}
+      >
+        <ProjectWorkspaceMain />
+      </AppStateContext.Provider>
+    );
+
+    expect(component).not.toContainExactlyOneMatchingElement('TerminateProject');
   });
 });

@@ -13,6 +13,7 @@ export interface Project {
   clusters?: Cluster[];
   incomplete?: boolean;
   destroyed?: boolean;
+  live?: boolean;
 }
 
 export interface ExecutionCycle {
@@ -50,7 +51,7 @@ export enum InterimProjectState {
   STOPPING = "stopping",
   ABORTING = "aborting",
   TERMINATING = "terminating",
-  DELETING = "deleting",
+  DELETING = "deleting"
 }
 
 export interface LogEvent {
