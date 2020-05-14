@@ -1,6 +1,6 @@
 import { JtlFile } from "../domain";
 import environment from "../environment";
-import { fetchGuard, fetchOK } from "./fetch-adapter";
+import { fetchGuard, fetchOK } from "../fetch-adapter";
 import { replaceHost } from "./replaceHost";
 
 export class JtlExportService {

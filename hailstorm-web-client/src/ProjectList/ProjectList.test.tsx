@@ -32,22 +32,30 @@ describe('<ProjectList />', () => {
           id: 10, projectId: 1, startedAt: new Date(), threadsCount: 50
         },
         currentExecutionCycle: {
-          id: 1234, projectId: 1, startedAt: new Date(), threadsCount: 100
+          id: 1000, projectId: 1, startedAt: new Date(), threadsCount: 100
         }
       },
       {
         id: 2, code: 'b', title: 'B', autoStop: true, running: false, lastExecutionCycle: {
-          id: 1, projectId: 2, startedAt: new Date(), stoppedAt: new Date(), status: ExecutionCycleStatus.STOPPED
+          id: 10, projectId: 2, startedAt: new Date(), stoppedAt: new Date(), status: ExecutionCycleStatus.STOPPED
         }
       },
       {
         id: 3, code: 'c', title: 'C', autoStop: true, running: false, lastExecutionCycle: {
-          id: 2, projectId: 3, startedAt: new Date(), stoppedAt: new Date(), status: ExecutionCycleStatus.ABORTED
+          id: 20, projectId: 3, startedAt: new Date(), stoppedAt: new Date(), status: ExecutionCycleStatus.ABORTED
         }
       },
       {
         id: 4, code: 'd', title: 'D', autoStop: true, running: false
       },
+      {
+        id: 5, code: 'e', title: 'E', autoStop: false, running: false, lastExecutionCycle: {
+          id: 30, projectId: 5, startedAt: new Date(), status: ExecutionCycleStatus.FAILED
+        }
+      },
+      {
+        id: 6, code: 'f', title: 'F', running: false, incomplete: true
+      }
     ]);
 
     const apiSpy = jest.spyOn(ProjectService.prototype, 'list').mockReturnValueOnce(dataPromise);
@@ -67,7 +75,7 @@ describe('<ProjectList />', () => {
     expect(component.find('div.running')).toContainMatchingElements(1, '.is-warning');
     expect(component.find('div.justCompleted')).toContainMatchingElements(1, '.is-success');
     expect(component.find('div.justCompleted')).toContainMatchingElements(1, '.is-warning');
-    expect(component.find('div.others')).toContainMatchingElements(1, '.is-light');
+    expect(component.find('div.others')).toContainMatchingElements(2, '.is-light');
   });
 
   it('should redirect to new project wizard if there are no projects', async () => {

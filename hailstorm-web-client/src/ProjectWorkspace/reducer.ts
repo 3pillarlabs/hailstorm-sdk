@@ -8,26 +8,30 @@ export const reducer: (
   state,
   action
 ) => {
-  let nextState: Project | undefined;
+  let nextState: Project | undefined = state;
   switch (action.type) {
     case ProjectWorkspaceActionTypes.SetProject:
       nextState = action.payload;
       break;
 
     case ProjectWorkspaceActionTypes.SetRunning:
-      nextState = state ? {...state, running: action.payload} : state;
+      if (state) {
+        nextState = {...state, running: action.payload};
+      }
+
       break;
 
     case ProjectWorkspaceActionTypes.SetInterimState:
-      nextState = state ? {...state, interimState: action.payload} : state;
+      if (state) {
+        nextState = {...state, interimState: action.payload};
+      }
+
       break;
 
     case ProjectWorkspaceActionTypes.UnsetInterimState:
       if (state) {
         nextState = {...state};
         delete nextState.interimState;
-      } else {
-        nextState = state;
       }
 
       break;
@@ -38,14 +42,11 @@ export const reducer: (
         if (state.live && action.payload.live === false) {
           delete nextState.live;
         }
-      } else {
-        nextState = state;
       }
 
       break;
 
     default:
-      nextState = state;
       break;
   }
 

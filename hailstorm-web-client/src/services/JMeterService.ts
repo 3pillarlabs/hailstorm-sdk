@@ -1,6 +1,6 @@
 import { JMeter, JMeterFile } from "../domain";
 import environment from "../environment";
-import { fetchGuard, fetchOK } from "./fetch-adapter";
+import { fetchGuard, fetchOK } from "../fetch-adapter";
 
 export function reviver(key: string, value: any): any {
   return key === 'properties' ? new Map(value) : value;

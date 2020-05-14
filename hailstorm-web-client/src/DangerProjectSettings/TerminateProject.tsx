@@ -25,6 +25,15 @@ function TerminateButton({
   );
 }
 
+interface ModalProps {
+  showModal: boolean;
+  setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
+  project: Project;
+  isUnderstood: boolean;
+  setIsUnderstood: React.Dispatch<React.SetStateAction<boolean>>;
+  handleTerminate: () => void;
+}
+
 function ConfirmModal({
   showModal,
   setShowModal,
@@ -32,14 +41,7 @@ function ConfirmModal({
   isUnderstood,
   setIsUnderstood,
   handleTerminate
-}:{
-  showModal: boolean;
-  setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
-  project: Project;
-  isUnderstood: boolean;
-  setIsUnderstood: React.Dispatch<React.SetStateAction<boolean>>;
-  handleTerminate: () => void;
-}) {
+}: ModalProps) {
   return (
     <Modal isActive={showModal}>
       <div className={`modal${showModal ? " is-active" : ""} ${styles.modal}`}>
@@ -84,21 +86,8 @@ function ConfirmModal({
   );
 }
 
-function TwoColumn({
-  showModal,
-  setShowModal,
-  project,
-  isUnderstood,
-  setIsUnderstood,
-  handleTerminate
-}:{
-  showModal: boolean;
-  setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
-  project: Project;
-  isUnderstood: boolean;
-  setIsUnderstood: React.Dispatch<React.SetStateAction<boolean>>;
-  handleTerminate: () => void;
-}) {
+function TwoColumn(props: ModalProps) {
+  const {setShowModal, project} = props;
   return (
     <>
       <div className="columns">
@@ -118,26 +107,13 @@ function TwoColumn({
           </article>
         </div>
       </div>
-      <ConfirmModal {...{showModal, setShowModal, project, isUnderstood, setIsUnderstood, handleTerminate}} />
+      <ConfirmModal {...props} />
     </>
   );
 }
 
-function SingleColumn({
-  showModal,
-  setShowModal,
-  project,
-  isUnderstood,
-  setIsUnderstood,
-  handleTerminate
-}:{
-  showModal: boolean;
-  setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
-  project: Project;
-  isUnderstood: boolean;
-  setIsUnderstood: React.Dispatch<React.SetStateAction<boolean>>;
-  handleTerminate: () => void;
-}) {
+function SingleColumn(props: ModalProps) {
+  const {setShowModal, project} = props;
   return (
     <p>
       <p className="has-text-left">
@@ -147,7 +123,7 @@ function SingleColumn({
       <p className="has-text-left">
         Terminate project to save cloud costs after testing.
       </p>
-      <ConfirmModal {...{showModal, setShowModal, project, isUnderstood, setIsUnderstood, handleTerminate}} />
+      <ConfirmModal {...props} />
     </p>
   );
 }

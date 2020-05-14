@@ -1,7 +1,7 @@
 import { JMeterFileUploadState } from "../NewProjectWizard/domain";
 import environment from "../environment";
 import { reviver } from "./JMeterService";
-import { fetchOK } from "./fetch-adapter";
+import { fetchOK } from "../fetch-adapter";
 
 export class JMeterValidationService {
 

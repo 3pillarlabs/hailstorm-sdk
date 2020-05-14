@@ -1,10 +1,13 @@
 require 'hailstorm/initializer/eager_load'
 require 'initializer/log_config'
-require 'initializer/logger_redis_ext'
+require 'initializer/redis_logger'
+require 'hailstorm/support/log4j_backed_logger'
+require 'initializer/logger_redis_ext' unless Hailstorm.env == :test
 require 'hailstorm/initializer/java_classpath'
 require 'initializer/db_config'
 require 'initializer/migrations'
 require 'web_file_store'
+require 'version'
 
 Hailstorm.fs = WebFileStore.new
 
@@ -32,7 +35,7 @@ options '*' do
 end
 
 get '/' do
-  JSON.dump(%w[/projects /execution_cycles])
+  JSON.dump(paths: %w[/projects /execution_cycles], version: Hailstorm::Api::VERSION)
 end
 
 require 'helpers/api_helper'
@@ -46,7 +49,7 @@ error ActiveRecord::RecordNotFound do
 end
 
 require 'hailstorm/exceptions'
-error do
+error StandardError do
   bubbled_error = env['sinatra.error']
   logger.error(bubbled_error.message)
   if bubbled_error.is_a?(Hailstorm::ThreadJoinException)
