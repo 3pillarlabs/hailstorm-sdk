@@ -1,6 +1,6 @@
 import { AmazonCluster, DataCenterCluster, Cluster } from "../domain";
 import environment from "../environment";
-import { fetchOK, fetchGuard } from './fetch-adapter';
+import { fetchOK, fetchGuard } from '../fetch-adapter';
 
 export class ClusterService {
 

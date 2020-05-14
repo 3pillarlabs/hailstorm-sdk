@@ -1,6 +1,6 @@
 import { ExecutionCycleStatus, ExecutionCycle } from "../domain";
 import environment from "../environment";
-import { fetchGuard, fetchOK } from "./fetch-adapter";
+import { fetchGuard, fetchOK } from "../fetch-adapter";
 
 function reviver(key: string, value: any): any {
   return (value ? (key === 'startedAt' || key === 'stoppedAt' ? new Date(value) : value) : value);

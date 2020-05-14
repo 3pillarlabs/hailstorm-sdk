@@ -1,7 +1,4 @@
-require 'initializer/redis_logger'
-require 'hailstorm/support/log4j_backed_logger'
-
-return if Hailstorm.env == :test
+# Extension to Hailstorm logger. A future release could replace this with a log4j or logback appender.
 
 REDIS_LOGGER = RedisLogger.new
 

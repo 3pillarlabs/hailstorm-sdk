@@ -1,6 +1,6 @@
 import { AWSRegionList } from "../ClusterConfiguration/domain";
 import environment from "../environment";
-import { fetchGuard, fetchOK } from "./fetch-adapter";
+import { fetchGuard, fetchOK } from "../fetch-adapter";
 
 export class AWSRegionService {
 

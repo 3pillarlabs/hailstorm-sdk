@@ -9,6 +9,7 @@ import { SetJMeterConfigurationAction } from '../JMeterConfiguration/actions';
 import { SetClusterConfigurationAction } from '../ClusterConfiguration/actions';
 import { WizardTabTypes } from '../NewProjectWizard/domain';
 import { Redirect } from 'react-router';
+import { TerminateProject, highlightTerminate } from '../DangerProjectSettings/TerminateProject';
 
 export const ProjectWorkspaceMain: React.FC = () => {
   const {appState, dispatch} = useContext(AppStateContext);
@@ -35,15 +36,21 @@ export const ProjectWorkspaceMain: React.FC = () => {
 
   if (redirectLocation) {
     let pathname: string;
+    const projectState = appState.activeProject ? {...appState.activeProject} : undefined;
     if (redirectLocation === WizardTabTypes.JMeter) {
       pathname = `/wizard/projects/${appState.activeProject!.id}/jmeter_plans`;
+
     } else if (redirectLocation === WizardTabTypes.Cluster) {
+      if (projectState) {
+        delete projectState.clusters;
+      }
+
       pathname = `/wizard/projects/${appState.activeProject!.id}/clusters`;
     } else {
       pathname = `/wizard/projects/${appState.activeProject!.id}`
     }
 
-    return (<Redirect to={{pathname, state: {project: appState.activeProject, activeTab: redirectLocation, reloadTab: true}}} />);
+    return (<Redirect to={{pathname, state: {project: projectState, activeTab: redirectLocation}}} />);
   }
 
   return (
@@ -52,25 +59,40 @@ export const ProjectWorkspaceMain: React.FC = () => {
         <JMeterPlanList
           showEdit={true}
           jmeter={
-            appState.activeProject && appState.activeProject.jmeter ?
-            appState.activeProject.jmeter :
-            {files: []}
+            appState.activeProject && appState.activeProject.jmeter
+              ? appState.activeProject.jmeter
+              : { files: [] }
           }
-          disableEdit={appState.activeProject && (appState.activeProject.running || appState.activeProject.interimState !== undefined)}
+          disableEdit={
+            appState.activeProject &&
+            (appState.activeProject.running ||
+              appState.activeProject.interimState !== undefined)
+          }
           onEdit={() => setRedirectLocation(WizardTabTypes.JMeter)}
         />
         <ClusterList
-          clusters={appState.activeProject ? appState.activeProject.clusters : undefined}
+          clusters={
+            appState.activeProject ? appState.activeProject.clusters : undefined
+          }
           showEdit={true}
-          disableEdit={appState.activeProject && (appState.activeProject.running || appState.activeProject.interimState !== undefined)}
+          disableEdit={
+            appState.activeProject &&
+            (appState.activeProject.running ||
+              appState.activeProject.interimState !== undefined)
+          }
           onEdit={() => setRedirectLocation(WizardTabTypes.Cluster)}
         />
       </div>
       <div className="column is-6">
-        <ControlPanel {...{reloadReports}} />
+        <ControlPanel {...{ reloadReports }} />
       </div>
       <div className="column is-3">
-        <ReportsList {...{loadReports, setLoadReports}} />
+        {appState.activeProject && highlightTerminate(appState.activeProject) && (
+          <div className="message is-warning">
+            <TerminateProject display={"SingleColumn"} />
+          </div>
+        )}
+        <ReportsList {...{ loadReports, setLoadReports }} />
       </div>
     </div>
   );

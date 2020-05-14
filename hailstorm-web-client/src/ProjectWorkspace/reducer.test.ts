@@ -65,4 +65,17 @@ describe("ProjectWorkspace reducer", () => {
     nextState = reducer(nextState, new SetRunningAction(false));
     expect(nextState!.running).toEqual(false);
   });
+
+  it('should remove the live attribute if project update payload is not live', () => {
+    const nextState = reducer({
+      id: 1,
+      code: 'a',
+      title: 'B',
+      running: false,
+      autoStop: false,
+      live: true
+    }, new UpdateProjectAction({live: false}));
+
+    expect(nextState).not.toHaveProperty('live');
+  });
 });

@@ -100,10 +100,22 @@ describe('<ProjectWorkspaceHeader />', () => {
     [
       { match: "Starting", state: InterimProjectState.STARTING, verb: 'starting' },
       { match: "Stopping", state: InterimProjectState.STOPPING, verb: 'stopping' },
-      { match: "Aborting", state: InterimProjectState.ABORTING, verb: 'aborting' },
-    ].forEach(({match, state, verb}) => it(`should match "${match}..." status text when project is ${verb}`, () => {
+      { match: "Aborting", state: InterimProjectState.ABORTING, verb: 'aborting' }
+    ].forEach(({
+        match,
+        state,
+        verb
+      }) => it(`should match "${match}..." status text when project is ${verb}`, () => {
       const component = mount(
-        <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: {...project, interimState: state}}, dispatch}}>
+        <AppStateContext.Provider
+          value={{
+            appState: {
+              runningProjects: [],
+              activeProject: { ...project, interimState: state },
+            },
+            dispatch,
+          }}
+        >
           <ProjectWorkspaceHeader />
         </AppStateContext.Provider>
       );
@@ -113,7 +125,15 @@ describe('<ProjectWorkspaceHeader />', () => {
 
     it('should show "Running" status text when project is running', () => {
       const component = mount(
-        <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: {...project, running: true}}, dispatch}}>
+        <AppStateContext.Provider
+          value={{
+            appState: {
+              runningProjects: [],
+              activeProject: { ...project, running: true },
+            },
+            dispatch,
+          }}
+        >
           <ProjectWorkspaceHeader />
         </AppStateContext.Provider>
       );

@@ -68,7 +68,6 @@ function onSetClusterConfiguration(
   ) {
     const wizardState = { ...state.wizardState };
     wizardState.activeCluster = activeProject.clusters![0];
-    delete wizardState.reloadTab;
     return { ...state, activeProject, wizardState };
   }
 

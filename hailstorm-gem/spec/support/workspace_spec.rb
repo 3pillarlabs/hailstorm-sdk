@@ -1,6 +1,7 @@
 require 'spec_helper'
 
 require 'hailstorm/support/workspace'
+require 'stringio'
 
 describe Hailstorm::Support::Workspace do
 
@@ -54,6 +55,27 @@ describe Hailstorm::Support::Workspace do
       expect(File.exist?(workspace.workspace_path)).to be_true
       workspace.remove_workspace
       expect(File.exist?(workspace.workspace_path)).to be_false
+    end
+  end
+
+  context '#write_identity_file' do
+    it 'should copy from io' do
+      read_io = StringIO.new('Hello World')
+      write_io = StringIO.new('', 'w')
+      File.stub!(:open).and_yield(write_io)
+      workspace = Hailstorm::Support::Workspace.new('workspace_spec')
+      abs_path = workspace.write_identity_file('insecure', read_io)
+      expect(abs_path).to_not be_nil
+      expect(read_io.string).to eq(write_io.string)
+    end
+  end
+
+  context '#purge' do
+    it 'should re-create file layout and remove files' do
+      FileUtils.stub!(:rm_rf)
+      workspace = Hailstorm::Support::Workspace.new('workspace_spec')
+      workspace.should_receive(:create_file_layout)
+      workspace.purge
     end
   end
 end

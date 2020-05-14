@@ -1,12 +1,13 @@
 require 'spec_helper'
 require 'json'
-require 'app/api/projects'
+require 'api/projects'
 
 require 'hailstorm/model/project'
 require 'hailstorm/model/jmeter_plan'
 require 'hailstorm/model/execution_cycle'
 require 'hailstorm/model/cluster'
 require 'hailstorm/model/target_host'
+require 'hailstorm/exceptions'
 
 describe 'api/projects' do
   before(:each) do
@@ -69,7 +70,7 @@ describe 'api/projects' do
       list = JSON.parse(@browser.last_response.body)
       expect(list.size).to eq(1)
       first = list[0]
-      expect(first.keys.sort).to eq(%W[id code title running autoStop incomplete currentExecutionCycle lastExecutionCycle].sort)
+      expect(first.keys.sort).to eq(%W[id code title running autoStop incomplete currentExecutionCycle lastExecutionCycle live].sort)
       expect(first['currentExecutionCycle'].keys.sort).to eq(%W[id projectId startedAt threadsCount status].sort)
       expect(first['lastExecutionCycle'].keys.sort).to eq(%W[id projectId startedAt threadsCount stoppedAt status responseTime throughput].sort)
     end
@@ -145,6 +146,15 @@ describe 'api/projects' do
           expect(@browser.last_response.status).to be == 422
         end
       end
+
+      context Hailstorm::ThreadJoinException do
+        it 'should return 500 status' do
+          thread_exception = Hailstorm::ThreadJoinException.new([StandardError.new('mock nested error')])
+          Hailstorm::Model::Project.any_instance.stub(:stop).and_raise(thread_exception)
+          @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'stop'}))
+          expect(@browser.last_response).to be_server_error
+        end
+      end
     end
 
     context 'with "title" param' do
@@ -170,6 +180,12 @@ describe 'api/projects' do
       attrs = JSON.parse(@browser.last_response.body)
       expect(attrs.keys).to include('code')
       expect(attrs.keys).to include('id')
+    end
+
+    it 'should return 404 if project is not found' do
+      Hailstorm::Model::Project.stub!(:find).and_raise(ActiveRecord::RecordNotFound.new("mock error"))
+      @browser.get("/projects/404")
+      expect(@browser.last_response).to be_not_found
     end
   end
 

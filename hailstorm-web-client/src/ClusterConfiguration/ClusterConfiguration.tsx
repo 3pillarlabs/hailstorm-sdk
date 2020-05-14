@@ -25,7 +25,7 @@ export const ClusterConfiguration: React.FC = () => {
     console.debug("ClusterConfiguration#useEffect()");
     if (!state.activeProject) return;
 
-    if (state.activeProject.clusters === undefined || (state.wizardState && state.wizardState.reloadTab)) {
+    if (state.activeProject.clusters === undefined) {
       setShowLoader(true);
       ApiFactory()
         .clusters()
