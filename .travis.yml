@@ -16,7 +16,7 @@ stages:
     if: (branch NOT IN (master, develop)) AND (tag IS blank)
   - name: coverage
     if: branch = develop
-  - name: integration
+  - name: publish
     if: branch = master AND type = pull_request
   - name: tag
     if: branch = master AND type = push
@@ -184,9 +184,9 @@ jobs:
         - make PROJECT=web-client cc_test_report
 
 
-    # ------------ INTEGRATION -----------------------------------
-    - stage: integration
-      name: "hailstorm-gem integration"
+    # ------------ PUBLISH -----------------------------------
+    - stage: publish
+      name: "hailstorm-gem publish"
       language: ruby
       rvm: jruby-9.1.17.0
       jdk: openjdk8
@@ -195,8 +195,8 @@ jobs:
       script:
         - make PROJECT=gem integration
 
-    - stage: integration
-      name: "hailstorm-cli integration"
+    - stage: publish
+      name: "hailstorm-cli publish"
       language: ruby
       rvm: jruby-9.1.17.0
       jdk: openjdk8
@@ -213,8 +213,8 @@ jobs:
       after_success:
         - make PROJECT=cli publish
 
-    - stage: integration
-      name: "hailstorm-web-client integration"
+    - stage: publish
+      name: "hailstorm-web-client publish"
       language: java
       jdk: openjdk8
       env:

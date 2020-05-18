@@ -22,7 +22,7 @@ limited to UNIX hosts with [nmon](http://nmon.sourceforge.net/pmwiki.php).
 
 ### Setup
 
-#### :tada: Download the latest release [Hailstorm 5.0.9](https://github.com/3pillarlabs/hailstorm-sdk/releases/tag/releases%2F5.0.9).
+#### :tada: Download the latest release [Hailstorm 5.4.10](https://github.com/3pillarlabs/hailstorm-sdk/releases/tag/releases%2F5.4.10).
 
 Every release consists of three files:
 
@@ -75,8 +75,7 @@ To start the web interface as a daemon:
 $ docker-compose up -d
 ```
 
-It takes up to sixty seconds for the system to initialize completely. If you get a connection reset message in the browser, wait for
-a few seconds and refresh the browser. While you are waiting, you can see the logs with ``docker-compose logs -f``.
+It takes up to sixty seconds for the system to initialize completely. If you get a connection reset message in the browser, wait for a few seconds and refresh the browser. While you are waiting, you can see the logs with ``docker-compose logs -f``.
 
 ## CLI Interface
 

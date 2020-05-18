@@ -1,5 +1,7 @@
 DOCKER_REPO := hailstorm-api
 PACKAGE_VERSION = $(shell ruby -I ./app -r 'version' -e 'puts Hailstorm::Api::VERSION')
+API_PORT := 4567
+TIMEOUT = 300
 
 install:
 	bundle install
@@ -41,4 +43,16 @@ docker_image_id:
 	@echo $${DOCKER_ID} ${DOCKER_REPO} ${PACKAGE_VERSION}
 
 dev_run:
-	rackup -p 4567
+	rackup -p ${API_PORT}
+
+listen_port:
+	@ok=0; \
+	elapsed=0; \
+	while [ $$elapsed -lt $(TIMEOUT) ] && [ $$ok -eq 0 ]; do \
+	  curl -s http://localhost:${API_PORT}/ && ok=1; \
+	  if [ $$elapsed -lt $(TIMEOUT) ] && [ $$ok -eq 0 ]; then \
+	    sleep 10; \
+		elapsed=$$(expr $$elapsed + 10); \
+	  fi; \
+	done; \
+	[ $$ok -eq 1 ]

@@ -254,8 +254,7 @@ web_integration_install_steps:
 	fi
 
 	docker-compose ${COMPOSE_FILES} up -d
-	# wait for docker containers to initialize - TODO: periodically check docker logs
-	sleep 180
+	make -f hailstorm-api/Makefile listen_port
 	make ready_hailstorm_site
 
 
