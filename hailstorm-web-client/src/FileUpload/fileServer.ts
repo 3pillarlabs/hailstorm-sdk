@@ -1,4 +1,5 @@
 import environment from '../environment';
+import { fetchOK } from '../fetch-adapter';
 
 export const FileServer: {
   uploadURL: string;
@@ -47,16 +48,8 @@ export const FileServer: {
 
   removeFile: (file) => {
     console.debug(`FileServer ---- .removeFile(${file})`);
-    return new Promise(async (resolve, reject) => {
-      try {
-        await fetch(`${environment.fileServerBaseURL}/${file.path}`, {
-          method: 'DELETE'
-        });
-
-        resolve();
-      } catch (error) {
-        reject(error);
-      }
+    return fetchOK(`${environment.fileServerBaseURL}/${file.path}`, {
+      method: 'DELETE'
     });
   }
 };

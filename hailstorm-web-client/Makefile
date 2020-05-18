@@ -1,6 +1,8 @@
 DOCKER_REPO := hailstorm-web-client
 PACKAGE_VERSION = $(shell cat package.json | jq -r '.version')
 
+.PHONY:
+
 clean:
 	npm run clean
 
@@ -10,7 +12,7 @@ install:
 test:
 	npm test -- --watchAll=false
 
-coverage:
+coverage: .PHONY
 	if [ -n "${CI}" ]; then ${TRAVIS_BUILD_DIR}/.travis/coverage.sh -i; fi
 	npm test -- --watchAll=false --coverage
 

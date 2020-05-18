@@ -387,28 +387,4 @@ describe('reducer', () => {
 
     expect(nextState.activeProject!.destroyed).toBeTruthy();
   });
-
-  it('should mark a tab for reload based on action payload', () => {
-    const activeProject: Project = {
-      id: 1,
-      code: 'a',
-      title: 'A',
-      running: false,
-      jmeter: {
-        files: [
-          { id: 1, name: 'a.jmx', properties: new Map([["foo", "10"]]) }        ]
-      },
-      clusters: [
-        { id: 1, title: 'AWS us-east-1', type: 'AWS' }
-      ]
-    };
-
-    const nextState = reducer({activeProject}, new EditInProjectWizard({
-      project: activeProject,
-      activeTab: WizardTabTypes.Cluster,
-      reloadTab: true
-    }));
-
-    expect(nextState.wizardState!.reloadTab).toBe(true);
-  });
 });

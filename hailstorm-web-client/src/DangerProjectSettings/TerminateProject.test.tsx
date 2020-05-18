@@ -14,6 +14,8 @@ jest.mock('../Modal', () => ({
 }));
 
 describe('<TerminateProject />', () => {
+  let project:Project;
+
   const buildComponent = ({
     dispatch,
     projectAttrs
@@ -21,7 +23,7 @@ describe('<TerminateProject />', () => {
     dispatch?: any,
     projectAttrs?: {[K in keyof Project]?: Project[K]}
   } = {}) => {
-    const project: Project = {
+    project = {
       id: 1,
       code: 'a',
       title: 'A',
@@ -31,7 +33,12 @@ describe('<TerminateProject />', () => {
     };
 
     return (
-      <AppStateContext.Provider value={{appState: {activeProject: project, runningProjects: []}, dispatch: (dispatch || jest.fn())}}>
+      <AppStateContext.Provider
+        value={{
+          appState: { activeProject: project, runningProjects: [] },
+          dispatch: dispatch || jest.fn(),
+        }}
+      >
         <TerminateProject />
       </AppStateContext.Provider>
     );
@@ -97,10 +104,12 @@ describe('<TerminateProject />', () => {
   });
 
   describe('when modal is confirmed', () => {
-    it('should set interim state before api invocation', () => {
-      let apiSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
+    it('should set interim state before api invocation', async () => {
+      const apiUpdateSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
+      const apiGetPromise = Promise.resolve<Project>(project);
+      const apiGetSpy = jest.spyOn(ProjectService.prototype, 'get').mockResolvedValueOnce(apiGetPromise);
       const dispatch = jest.fn();
-      const component = mount(buildComponent({dispatch}))
+      const component = mount(buildComponent({dispatch}));
       act(() => {
         component.find('button').simulate('click');
       });
@@ -108,7 +117,9 @@ describe('<TerminateProject />', () => {
       component.update();
       component.find('button.is-danger').simulate('click');
       expect(dispatch).toBeCalled();
-      expect(apiSpy).toBeCalled();
+      expect(apiUpdateSpy).toBeCalled();
+      await apiGetPromise;
+      expect(apiGetSpy).toBeCalled();
     });
   });
 });

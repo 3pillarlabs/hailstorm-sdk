@@ -1,6 +1,6 @@
 import { AWSInstanceChoiceOption } from "../ClusterConfiguration/domain";
 import environment from "../environment";
-import { fetchGuard, fetchOK } from "./fetch-adapter";
+import { fetchGuard, fetchOK } from "../fetch-adapter";
 
 export class AWSEC2PricingService {
   async list(region: string): Promise<AWSInstanceChoiceOption[]> {

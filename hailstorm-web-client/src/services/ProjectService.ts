@@ -1,6 +1,6 @@
 import { Project } from "../domain";
 import environvent from '../environment';
-import { fetchGuard, fetchOK } from "./fetch-adapter";
+import { fetchGuard, fetchOK } from "../fetch-adapter";
 
 export type ProjectActions = 'stop' | 'abort' | 'start' | 'terminate';
 

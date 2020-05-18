@@ -8,7 +8,7 @@ import { ReportService } from "../services/ReportService";
 import { ProjectService } from "../services/ProjectService";
 import { ModalProps } from '../Modal';
 import { act } from '@testing-library/react';
-import { SetRunningAction, SetInterimStateAction } from '../ProjectWorkspace/actions';
+import { SetRunningAction, SetInterimStateAction, UnsetInterimStateAction } from '../ProjectWorkspace/actions';
 import { AppStateContext } from '../appStateContext';
 import { ExecutionCycleService } from '../services/ExecutionCycleService';
 
@@ -69,13 +69,13 @@ describe('<ToolBar />', () => {
     project: Project,
     buttonStates?: {[K in keyof ButtonStateLookup]?: ButtonStateLookup[K]},
     viewTrash?: boolean,
-    executionCycles?: ExecutionCycle[],
+    executionCycles?: CheckedExecutionCycle[],
     statusCheckInterval?: number
-  }) => JSX.Element = ({project, buttonStates, viewTrash, statusCheckInterval}) => (
+  }) => JSX.Element = ({project, buttonStates, viewTrash, statusCheckInterval, executionCycles}) => (
 
     <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: project}, dispatch}}>
       {createToolBar({
-        executionCycles: [],
+        executionCycles: executionCycles || [],
         buttonStates: {
           abort: true,
           stop: true,
@@ -181,7 +181,13 @@ describe('<ToolBar />', () => {
 
   it('should open trash view on View Trash', (done) => {
     const project: Project = createProject();
-    const component = mount(createToolBarHierarchy({project}));
+    const component = mount(
+      createToolBarHierarchy({
+        project,
+        executionCycles: [{id: 201, projectId: 1, startedAt: new Date(), checked: false}]
+      })
+    );
+
     component.find('button[name="trash"]').simulate('click');
     setTimeout(() => {
       done();
@@ -190,12 +196,17 @@ describe('<ToolBar />', () => {
       expect(nextButtonStates.stop).toBeTruthy();
       expect(nextButtonStates.abort).toBeTruthy();
       expect(nextButtonStates.start).toBeTruthy();
+      expect(setExecutionCycles).toHaveBeenCalled();
     }, 0);
   });
 
   it('should restore button state on closing trash view', (done) => {
     const project: Project = createProject({running: true});
-    const component = mount(createToolBarHierarchy({project, buttonStates: {start: true, stop: false, abort: false}, viewTrash: true}));
+    const component = mount(createToolBarHierarchy({
+      project,
+      buttonStates: {start: true, stop: false, abort: false},
+      viewTrash: true
+    }));
     component.find('button[name="trash"]').simulate('click');
     setTimeout(() => {
       done();
@@ -209,7 +220,14 @@ describe('<ToolBar />', () => {
 
   it('should report results on Report', (done) => {
     const project: Project = createProject();
-    const component = mount(createToolBarHierarchy({project, buttonStates: {report: false}}));
+    const component = mount(createToolBarHierarchy({
+      project,
+      buttonStates: {
+        report: false
+      },
+      executionCycles: [{id: 201, projectId: 1, startedAt: new Date(), checked: true}]
+    }));
+
     const apiSpy = jest.spyOn(ReportService.prototype, 'create').mockResolvedValue({
       id: 200,
       projectId: 1,
@@ -254,5 +272,48 @@ describe('<ToolBar />', () => {
       done();
       expect(projectApiSpy).toHaveBeenCalled();
     }, 50);
+  });
+
+  it('should unset interim status on action error', (done) => {
+    const project: Project = createProject();
+    const component = mount(createToolBarHierarchy({project}));
+    const projectUpdateSpy = jest.spyOn(ProjectService.prototype, 'update').mockRejectedValue(new Error('mock error'));
+    component.find('button[name="start"]').simulate('click');
+    expect(projectUpdateSpy).toBeCalled();
+    setTimeout(() => {
+      done();
+      expect(dispatch).toBeCalled();
+      expect(dispatch.mock.calls[1][0]).toBeInstanceOf(UnsetInterimStateAction);
+    }, 0);
+  });
+
+  it('should abort interim status checks if a status check fails', (done) => {
+    const projectApiPromise = Promise.resolve(200);
+    const projectApiSpy = jest.spyOn(ProjectService.prototype, 'update').mockReturnValue(projectApiPromise);
+    jest
+      .spyOn(ExecutionCycleService.prototype, 'get')
+      .mockRejectedValue(new Error('mock error'));
+    const project = createProject({running: true, autoStop: true});
+    mount(createToolBarHierarchy({project, statusCheckInterval: 1}));
+    setTimeout(() => {
+      done();
+      expect(projectApiSpy).not.toHaveBeenCalled();
+    }, 10);
+  });
+
+  it('should abort interim status checks if component is unloaded', (done) => {
+    const exCycle: ExecutionCycle = {id: 20, projectId: 1, startedAt: new Date(), threadsCount: 20};
+    const projectApiPromise = Promise.resolve(200);
+    const projectApiSpy = jest.spyOn(ProjectService.prototype, 'update').mockReturnValue(projectApiPromise);
+    jest
+      .spyOn(ExecutionCycleService.prototype, 'get')
+      .mockResolvedValue({ noRunningTests: false, ...exCycle });
+    const project = createProject({running: true, autoStop: true});
+    const component = mount(createToolBarHierarchy({project, statusCheckInterval: 1}));
+    component.unmount();
+    setTimeout(() => {
+      done();
+      expect(projectApiSpy).not.toHaveBeenCalled();
+    }, 10);
   });
 });

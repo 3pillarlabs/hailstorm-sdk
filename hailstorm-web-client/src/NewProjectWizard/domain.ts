@@ -25,7 +25,6 @@ export interface NewProjectWizardProgress {
   activeJMeterFile?: JMeterFileUploadState;
   activeCluster?: Cluster;
   modifiedAfterReview?: boolean;
-  reloadTab?: boolean;
 }
 
 

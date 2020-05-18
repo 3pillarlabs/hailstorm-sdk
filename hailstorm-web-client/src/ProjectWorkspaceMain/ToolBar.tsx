@@ -121,7 +121,6 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
           break;
 
         default:
-          console.warn(`Unknown action: ${action}`);
           break;
       }
     };

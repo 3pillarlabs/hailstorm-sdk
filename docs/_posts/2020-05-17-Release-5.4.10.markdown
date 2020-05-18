@@ -1,0 +1,14 @@
+---
+layout: post
+title:  "Release 5.4.10"
+date:   2020-05-17 19:30:00 +0530
+categories: jekyll update
+---
+
+**Hailstorm 5.4.10** released with following features and updates:
+
+- Indicate that a project has live resources to terminate (resolves #101)
+- Control verbosiy of log output (resolves #102)
+- Clear log in web console (resolves #103)
+- Set configurable scroll limit (resolves #104)
+- Detect when API is available and resume integration test (resolves #111)
