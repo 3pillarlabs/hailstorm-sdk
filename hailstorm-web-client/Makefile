@@ -49,3 +49,9 @@ docker_image_id:
 
 dev_run:
 	BROWSER=none PORT=8080 npm start
+
+validate:
+	if ${TRAVIS_BUILD_DIR}/.travis/build-condition.sh ${TRAVIS_COMMIT_RANGE} hailstorm-web-client/src; then \
+		git diff ${TRAVIS_COMMIT_RANGE} -- package.json | grep -e '[+\-].*version' > /dev/null; \
+		[ $$? -eq 0 ]; \
+	fi

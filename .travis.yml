@@ -16,6 +16,8 @@ stages:
     if: (branch NOT IN (master, develop)) AND (tag IS blank)
   - name: coverage
     if: branch = develop
+  - name: validate
+    if: branch = master AND type = pull_request
   - name: publish
     if: branch = master AND type = pull_request
   - name: tag
@@ -182,6 +184,19 @@ jobs:
         - make PROJECT=web-client coverage
       after_script:
         - make PROJECT=web-client cc_test_report
+
+
+    # ------------ VALIDATE ----------------------------------
+    - stage: validate
+      name: "hailstorm validate"
+      language: minimal
+      script:
+        - make PROJECT=gem validate
+        - make PROJECT=cli validate
+        - make PROJECT=api validate
+        - make PROJECT=file-server validate
+        - make PROJECT=client-exchange validate
+        - make PROJECT=web-client validate
 
 
     # ------------ PUBLISH -----------------------------------
