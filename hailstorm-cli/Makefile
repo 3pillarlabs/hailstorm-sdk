@@ -81,3 +81,14 @@ docker_image_id:
 
 release_makefile:
 	@./release-makefile.sh ${DOCKER_REPO} ${RELEASE_VERSION}
+
+validate:
+	CLI_VERSION_CHANGED=0; \
+	for glob in bin lib templates Gemfile.lock; do \
+		if ${TRAVIS_BUILD_DIR}/.travis/build-condition.sh ${TRAVIS_COMMIT_RANGE} hailstorm-cli/$$glob; then \
+			${TRAVIS_BUILD_DIR}/.travis/build-condition.sh ${TRAVIS_COMMIT_RANGE} hailstorm-cli/lib/hailstorm/cli/version.rb; \
+			CLI_VERSION_CHANGED=$$?; \
+			break; \
+		fi; \
+	done; \
+	[ $$CLI_VERSION_CHANGED -eq 0 ]

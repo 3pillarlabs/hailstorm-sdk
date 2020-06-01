@@ -29,3 +29,9 @@ publish:
 
 docker_image_id:
 	@echo $${DOCKER_ID} ${DOCKER_REPO} ${PACKAGE_VERSION}
+
+validate:
+	if ${TRAVIS_BUILD_DIR}/.travis/build-condition.sh ${TRAVIS_COMMIT_RANGE} hailstorm-client-exchange/src/main; then \
+		git diff ${TRAVIS_COMMIT_RANGE} -- build.gradle | grep -e '[+\-]version' > /dev/null; \
+		[ $$? -eq 0 ]; \
+	fi

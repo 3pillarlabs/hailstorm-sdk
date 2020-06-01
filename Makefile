@@ -113,6 +113,9 @@ package:
 build:
 	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make build; fi
 
+validate:
+	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make validate; fi
+
 publish:
 	if ${TRAVIS_BUILD_DIR}/.travis/new-dcr-tag.sh $(call docker_image_id,${PROJECT_NAME}); then \
 		cd ${PROJECT_PATH} && make publish; \
