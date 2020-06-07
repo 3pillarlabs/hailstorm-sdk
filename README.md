@@ -22,7 +22,7 @@ limited to UNIX hosts with [nmon](http://nmon.sourceforge.net/pmwiki.php).
 
 ### Setup
 
-#### :tada: Download the latest release [Hailstorm 5.4.10](https://github.com/3pillarlabs/hailstorm-sdk/releases/tag/releases%2F5.4.10).
+#### :tada: Download the [latest  Hailstorm release](https://github.com/3pillarlabs/hailstorm-sdk/releases/latest).
 
 Every release consists of three files:
 
