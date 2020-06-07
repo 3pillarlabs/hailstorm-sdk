@@ -294,7 +294,9 @@ push_release_tag:
 
 release_tag:
 	if [ -z "${PUSHED_RELEASE_TAG}" ]; then \
-		${CHANGES} docker-compose.yml && make push_release_tag; \
+		if ${CHANGES} docker-compose.yml; then \
+			make push_release_tag; \
+		fi; \
 	fi
 
 
