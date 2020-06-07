@@ -2,7 +2,9 @@
 
 _Summary of the change_
 
-**Fixes** #_issue_
+# Linked Issues
+
+- fixes #_issue_
 
 # Checklist
 
