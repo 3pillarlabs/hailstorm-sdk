@@ -89,7 +89,7 @@ define docker_image_id
 $(shell cd $1 && make -s docker_image_id)
 endef
 
-RELEASE_VERSION = $(shell cat VERSION)
+RELEASE_VERSION = $(shell ${TRAVIS_BUILD_DIR}/.travis/calc_next_rel_version.sh)
 
 GIT_RELEASE_TAG := releases/${RELEASE_VERSION}
 
@@ -112,6 +112,9 @@ package:
 
 build:
 	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make build; fi
+
+validate:
+	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make validate; fi
 
 publish:
 	if ${TRAVIS_BUILD_DIR}/.travis/new-dcr-tag.sh $(call docker_image_id,${PROJECT_NAME}); then \
@@ -290,7 +293,9 @@ push_release_tag:
 
 
 release_tag:
-	if [ -z "${PUSHED_RELEASE_TAG}" ]; then make push_release_tag; fi
+	if [ -z "${PUSHED_RELEASE_TAG}" ]; then \
+		${CHANGES} docker-compose.yml && make push_release_tag; \
+	fi
 
 
 docker_compose_up:

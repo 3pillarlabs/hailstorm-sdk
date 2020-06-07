@@ -34,3 +34,9 @@ build:
 
 local_publish:
 	rake install
+
+validate:
+	if ${TRAVIS_BUILD_DIR}/.travis/build-condition.sh ${TRAVIS_COMMIT_RANGE} hailstorm-gem/lib; then \
+		${TRAVIS_BUILD_DIR}/.travis/build-condition.sh ${TRAVIS_COMMIT_RANGE} hailstorm-gem/lib/hailstorm/version.rb; \
+		[ $$? -eq 0 ]; \
+	fi

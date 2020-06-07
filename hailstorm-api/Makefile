@@ -56,3 +56,14 @@ listen_port:
 	  fi; \
 	done; \
 	[ $$ok -eq 1 ]
+
+validate:
+	API_VERSION_CHANGED=0; \
+	for glob in app config *.rb config.ru Gemfile.lock; do \
+		if ${TRAVIS_BUILD_DIR}/.travis/build-condition.sh ${TRAVIS_COMMIT_RANGE} hailstorm-api/$$glob; then \
+			${TRAVIS_BUILD_DIR}/.travis/build-condition.sh ${TRAVIS_COMMIT_RANGE} hailstorm-api/app/version.rb; \
+			API_VERSION_CHANGED=$$?; \
+			break; \
+		fi; \
+	done; \
+	[ $$API_VERSION_CHANGED -eq 0 ]

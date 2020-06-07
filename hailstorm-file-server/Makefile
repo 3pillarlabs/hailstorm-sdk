@@ -32,3 +32,9 @@ docker_image_id:
 
 dev_run:
 	./gradlew bootRun --args='--basePath=/tmp/hailstorm/dev/fs --server.port=9000'
+
+validate:
+	if ${TRAVIS_BUILD_DIR}/.travis/build-condition.sh ${TRAVIS_COMMIT_RANGE} hailstorm-file-server/src/main; then \
+		git diff ${TRAVIS_COMMIT_RANGE} -- build.gradle | grep -e '[+\-]version' > /dev/null; \
+		[ $$? -eq 0 ]; \
+	fi
