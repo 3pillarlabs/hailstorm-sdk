@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.org/3pillarlabs/hailstorm-sdk.svg?branch=develop)](https://travis-ci.org/3pillarlabs/hailstorm-sdk)
 [![Maintainability](https://api.codeclimate.com/v1/badges/f6dc4763071d01bcd14e/maintainability)](https://codeclimate.com/github/3pillarlabs/hailstorm-sdk/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/f6dc4763071d01bcd14e/test_coverage)](https://codeclimate.com/github/3pillarlabs/hailstorm-sdk/test_coverage)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](https://github.com/3pillarlabs/hailstorm-sdk/blob/develop/CODE_OF_CONDUCT.md)
 
 A cloud-aware library and applications for distributed load testing using JMeter and support for server monitoring.
 
@@ -168,13 +169,18 @@ To bring down the containers, exit the CLI container, and execute on the host: `
 
 ## License
 
-The source code is distributed under the MIT license.
+The source code is distributed under the [MIT License](https://opensource.org/licenses/MIT).
+
+## Contributing
+
+Bug reports and pull requests are welcome on GitHub at https://github.com/3pillarlabs/hailstorm-sdk/. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/3pillarlabs/hailstorm-sdk/blob/develop/CODE_OF_CONDUCT.md).
+
+## Code of Conduct
+
+Everyone interacting in the Hailstorm project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/3pillarlabs/hailstorm-sdk/blob/develop/CODE_OF_CONDUCT.md).
 
 ## About this project
 
 Copyright (c) 2012 3Pillar Global
 
-**Hailstorm** is developed, and maintained by open source volunteers at [3Pillar Global](https://www.3pillarglobal.com/).
-Hailstorm is not an official 3Pillar Global product (experimental or otherwise), but 3Pillar Global owns the code.
-
-Contributions welcome!
+**Hailstorm** is developed, and maintained by open source volunteers at [3Pillar Global](https://www.3pillarglobal.com/). Hailstorm is not an official 3Pillar Global product (experimental or otherwise), but 3Pillar Global owns the code.
