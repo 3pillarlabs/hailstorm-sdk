@@ -41,12 +41,4 @@ limited to UNIX hosts.'
   gem.add_dependency('nokogiri', '~> 1.6.3.1')
   gem.add_dependency('rubyzip', '= 1.2.1')
   gem.add_dependency('terminal-table', '= 1.4.5')
-
-  gem.add_development_dependency('activerecord-jdbcmysql-adapter', ['~> 1.3'])
-  gem.add_development_dependency('activerecord-jdbcsqlite3-adapter', ['~> 1.3'])
-  gem.add_development_dependency('cucumber', '~> 2.99')
-  gem.add_development_dependency('rspec', '~> 2.13.0')
-  gem.add_development_dependency('rubocop', '~> 0.59.2')
-  gem.add_development_dependency('ruby-debug')
-  gem.add_development_dependency('simplecov')
 end
