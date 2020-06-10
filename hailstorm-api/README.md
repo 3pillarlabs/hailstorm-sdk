@@ -22,8 +22,8 @@
 # switching over to hailstorm-api
 ➜  hailstorm-gem$ cd ../hailstorm-api
 ➜  hailstorm-api$ rvm gemset create hailstorm-api
-➜  hailstorm-api$ rvm use jruby-9.1.17.0@hailstorm-api
-➜  hailstorm-api$ echo jruby-9.1.17.0@hailstorm-api > .ruby-version
+➜  hailstorm-api$ rvm use jruby-9.2.11.1@hailstorm-api
+➜  hailstorm-api$ echo jruby-9.2.11.1@hailstorm-api > .ruby-version
 
 # Install the Hailstorm gem
 ➜  hailstorm-api$ gem install ../hailstorm-gem/pkg/*.gem

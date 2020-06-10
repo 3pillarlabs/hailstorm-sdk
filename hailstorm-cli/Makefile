@@ -27,6 +27,7 @@ build:
 	rake build
 
 package:
+	bundle package && \
 	docker build 																										\
 	--build-arg HAILSTORM_VERSION=$(shell ruby -I ./lib -r 'hailstorm/version' -e 'puts Hailstorm::VERSION') 			\
 	--rm																												\
@@ -63,7 +64,8 @@ open_console:
 	-e DATABASE_HOST=hailstorm-db \
 	--mount type=bind,source=$${PWD},target=/hailstorm \
 	--mount type=volume,source=hailstorm-home,target=/home \
-	$${DOCKER_ID}/${DOCKER_REPO}:${CLI_VERSION} dockerize -wait tcp://hailstorm-db:3306 bash
+	$${DOCKER_ID}/${DOCKER_REPO}:${CLI_VERSION} dockerize -wait tcp://hailstorm-db:3306 \
+	bash -c 'chmod 777 /hailstorm && cd /hailstorm && su hailstorm'
 
 
 open_test_console:

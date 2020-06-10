@@ -14,13 +14,10 @@ Instructions to build a local environment for the gem.
 
 ### RVM
 
-Install latest jruby-9.1 and replace @global bundler v2.1.4 with v.2.0.1.
+Install JRuby.
 
 ```bash
-rvm install jruby-9.1.17.0
-rvm use jruby-9.1.17.0@global
-gem uninstall -x bundler
-gem install bundler -v 2.0.1
+rvm install jruby-9.2.11.1
 ```
 
 ### Rest of the setup
@@ -28,8 +25,8 @@ gem install bundler -v 2.0.1
 ```bash
 cd hailstorm-gem
 rvm gemset create hailstorm-gem
-rvm use jruby-9.1.17.0@hailstorm-gem
-echo jruby-9.1.17.0@hailstorm-gem > .ruby-version
+rvm use jruby-9.2.11.1@hailstorm-gem
+echo jruby-9.2.11.1@hailstorm-gem > .ruby-version
 make install
 ```
 

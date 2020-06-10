@@ -23,6 +23,7 @@ cc_test_report:
 	if [ -n "${CI}" ]; then ${TRAVIS_BUILD_DIR}/.travis/coverage.sh -u $(shell basename ${PWD}) -t simplecov; fi
 
 package:
+	bundle package && \
 	docker build \
 	--rm \
 	--label org.opencontainers.image.created="$(shell date -u "+%Y-%m-%dT%H:%M:%S%z")"									\

@@ -1,4 +1,7 @@
-FROM jruby:9.1.17.0-jre
+FROM jruby:9.2.11.1-jre8
+
+# throw errors if Gemfile has been modified since Gemfile.lock
+RUN bundle config --global frozen 1
 
 WORKDIR /usr/local/lib/hailstorm-cli
 
@@ -14,25 +17,8 @@ RUN wget -q https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VE
     && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
     && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
 
-RUN gem install cucumber -v 2.99.0 && mkdir pkg
-
-COPY pkg/hailstorm-*.gem ./pkg/
-
-RUN gem install pkg/hailstorm-*.gem
-
-ARG HAILSTORM_VERSION
-
-RUN echo "#!/bin/sh" > /usr/local/bin/create_hailstorm_app && \
-    echo -n \
-    exec "hailstorm -g /usr/local/bundle/gems/hailstorm-$HAILSTORM_VERSION-java" >> \
-    /usr/local/bin/create_hailstorm_app && \
-    echo ' $*' >> /usr/local/bin/create_hailstorm_app && \
-    chmod +x /usr/local/bin/create_hailstorm_app
-
 COPY . .
 
-ENV GEM_PATH /usr/local/bundle/gems
-
-RUN gem install bundler -v 2.0.1 && bundle install
+RUN bundle install
 
 CMD [ "/bin/bash" ]

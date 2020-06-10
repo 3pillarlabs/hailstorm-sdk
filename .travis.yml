@@ -30,7 +30,7 @@ jobs:
     - stage: test
       name: "hailstorm-gem test"
       language: ruby
-      rvm: jruby-9.1.17.0
+      rvm: jruby-9.2.11.1
       jdk: openjdk8
       install:
         - make PROJECT=gem install
@@ -40,7 +40,7 @@ jobs:
     - stage: test
       name: "hailstorm-cli test"
       language: ruby
-      rvm: jruby-9.1.17.0
+      rvm: jruby-9.2.11.1
       jdk: openjdk8
       before_install:
         - make PROJECT=gem FORCE=yes install build local_publish
@@ -52,7 +52,7 @@ jobs:
     - stage: test
       name: "hailstorm-api test"
       language: ruby
-      rvm: jruby-9.1.17.0
+      rvm: jruby-9.2.11.1
       jdk: openjdk8
       before_install:
         - make PROJECT=gem FORCE=yes install build local_publish
@@ -93,7 +93,7 @@ jobs:
     - stage: coverage
       name: "hailstorm-gem coverage"
       language: ruby
-      rvm: jruby-9.1.17.0
+      rvm: jruby-9.2.11.1
       jdk: openjdk8
       env:
         - CI_NODE_INDEX=0
@@ -109,7 +109,7 @@ jobs:
     - stage: coverage
       name: "hailstorm-cli coverage"
       language: ruby
-      rvm: jruby-9.1.17.0
+      rvm: jruby-9.2.11.1
       jdk: openjdk8
       env:
         - CI_NODE_INDEX=1
@@ -126,7 +126,7 @@ jobs:
     - stage: coverage
       name: "hailstorm-api coverage"
       language: ruby
-      rvm: jruby-9.1.17.0
+      rvm: jruby-9.2.11.1
       jdk: openjdk8
       env:
         - CI_NODE_INDEX=2
@@ -203,7 +203,7 @@ jobs:
     - stage: publish
       name: "hailstorm-gem publish"
       language: ruby
-      rvm: jruby-9.1.17.0
+      rvm: jruby-9.2.11.1
       jdk: openjdk8
       install:
         - make PROJECT=gem install
@@ -213,7 +213,7 @@ jobs:
     - stage: publish
       name: "hailstorm-cli publish"
       language: ruby
-      rvm: jruby-9.1.17.0
+      rvm: jruby-9.2.11.1
       jdk: openjdk8
       env:
         - TAG_VALUE="Hailstorm Site - cli"
@@ -235,7 +235,7 @@ jobs:
       env:
         - MOZ_HEADLESS=1
         - TAG_VALUE="Hailstorm Site - web-client"
-        - JRUBY=jruby-9.1.17.0
+        - JRUBY=jruby-9.2.11.1
         - NODE_VERSION=lts/dubnium
       addons:
         firefox: latest
