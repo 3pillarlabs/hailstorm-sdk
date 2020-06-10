@@ -7,6 +7,7 @@
 - docker-compose
 - openjdk-8
 - rvm (recommended for development)
+- vagrant (needed for running integration tests)
 
 ## Installation
 
@@ -21,8 +22,8 @@
 # switching over to hailstorm-cli
 ➜  hailstorm-gem$ cd ../hailstorm-cli
 ➜  hailstorm-cli$ rvm gemset create hailstorm-cli
-➜  hailstorm-cli$ rvm use jruby-9.1.17.0@hailstorm-cli
-➜  hailstorm-cli$ echo jruby-9.1.17.0@hailstorm-cli > .ruby-version
+➜  hailstorm-cli$ rvm use jruby-9.2.11.1@hailstorm-cli
+➜  hailstorm-cli$ echo jruby-9.2.11.1@hailstorm-cli > .ruby-version
 
 # Install the Hailstorm gem
 ➜  hailstorm-cli$ gem install ../hailstorm-gem/pkg/*.gem
@@ -49,17 +50,20 @@ This requires an AWS account and a little more setup. Ensure your AWS account ha
 
 ### Bring up the target site
 
-Change directory to parent.
+**Change directory to parent.**
 
 ```bash
 ➜  hailstorm-cli$ cd ../
 ➜  hailstorm-sdk$
 ```
-Copy ``setup/hailstorm-site/vagrant-site-sample.yml`` to ``setup/hailstorm-site/vagrant-site.yml`` and edit the
-properties.
+
+**Copy ``setup/hailstorm-site/vagrant-site-sample.yml`` to ``setup/hailstorm-site/vagrant-site.yml`` and edit the
+properties.**
+
+**Install the [Vagrant AWS Plugin](https://github.com/mitchellh/vagrant-aws).**
 
 ```bash
-➜  hailstorm-sdk$ vagrant up aws-site
+➜  hailstorm-sdk$ vagrant up aws-site --provider=aws
 ```
 
 ### Data Center Simulation
@@ -112,4 +116,14 @@ Bring down the docker containers.
 ```bash
 ➜  hailstorm-cli$ cd ../
 ➜  hailstorm-sdk$ docker-compose -f docker-compose-cli.yml -f docker-compose-cli.ci.yml -f docker-compose.dc-sim.yml down
+```
+
+Bring down the target site.
+```bash
+➜  hailstorm-sdk$ vagrant halt aws-site
+```
+
+or delete it completely
+```bash
+➜  hailstorm-sdk$ vagrant destroy aws-site
 ```

@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.org/3pillarlabs/hailstorm-sdk.svg?branch=develop)](https://travis-ci.org/3pillarlabs/hailstorm-sdk)
 [![Maintainability](https://api.codeclimate.com/v1/badges/f6dc4763071d01bcd14e/maintainability)](https://codeclimate.com/github/3pillarlabs/hailstorm-sdk/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/f6dc4763071d01bcd14e/test_coverage)](https://codeclimate.com/github/3pillarlabs/hailstorm-sdk/test_coverage)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](https://github.com/3pillarlabs/hailstorm-sdk/blob/develop/CODE_OF_CONDUCT.md)
 
 A cloud-aware library and applications for distributed load testing using JMeter and support for server monitoring.
 
@@ -95,34 +96,18 @@ $ docker-compose up -d
 $ make
 ```
 
-The CLI will wait for the docker containers to be available. It should take less than a minute. You should see output like this:
-```text
-docker run \
--it \
---rm \
---network hailstorm-cli_hailstorm \
--e DATABASE_HOST=hailstorm-db \
--v /path/to/unpacked/release/hailstorm-cli:/hailstorm \
-hailstorm3/hailstorm-cli:1.0.0 dockerize -wait tcp://hailstorm-db:3306 bash
-2020/04/04 20:30:17 Waiting for: tcp://hailstorm-db:3306
-2020/04/04 20:30:17 Connected to tcp://hailstorm-db:3306
-```
-
-When the CLI starts, it shows a prompt:
+The CLI will wait for the docker containers to be available. It should take less than a minute. When the CLI starts, it shows a prompt:
 
 ```bash
 hailstorm@ab7ecdeac102:/hailstorm$
 ```
 
-The current directory on the host is mapped to ``/hailstorm`` in the container. Any files saved to this location in the container
-will persist across container restarts.
+The current directory on the host is mapped to ``/hailstorm`` in the container. Any files saved to this location in the container will persist across container restarts.
 
 #### Create a CLI project
 
-Use the ``create_hailstorm_app`` utility to create a project.
-
 ```bash
-hailstorm@ab7ecdeac102:/hailstorm$ create_hailstorm_app shopping_cart
+hailstorm@ab7ecdeac102:/hailstorm$ hailstorm shopping_cart
 ```
 
 Truncated output...
@@ -135,23 +120,7 @@ Truncated output...
 Done!
 ```
 
-#### First time install
-
-This needs to be done only once when a new project is created.
-```bash
-hailstorm@ab7ecdeac102:/hailstorm$ cd shopping_cart
-hailstorm@ab7ecdeac102:/hailstorm/shopping_cart$ bundle install
-```
-
-The dependencies should install within a few seconds.
-```text
-Bundle complete! 8 Gemfile dependencies, 68 gems now installed.
-Bundled gems are installed into `/usr/local/bundle`
-```
-
 #### Start the CLI
-
-Subsequently, you can just start the CLI.
 
 ```bash
 hailstorm@ab7ecdeac102:/hailstorm$ cd shopping_cart
@@ -168,13 +137,18 @@ To bring down the containers, exit the CLI container, and execute on the host: `
 
 ## License
 
-The source code is distributed under the MIT license.
+The source code is distributed under the [MIT License](https://opensource.org/licenses/MIT).
+
+## Contributing
+
+Bug reports and pull requests are welcome on GitHub at https://github.com/3pillarlabs/hailstorm-sdk/. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/3pillarlabs/hailstorm-sdk/blob/develop/CODE_OF_CONDUCT.md).
+
+## Code of Conduct
+
+Everyone interacting in the Hailstorm project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/3pillarlabs/hailstorm-sdk/blob/develop/CODE_OF_CONDUCT.md).
 
 ## About this project
 
 Copyright (c) 2012 3Pillar Global
 
-**Hailstorm** is developed, and maintained by open source volunteers at [3Pillar Global](https://www.3pillarglobal.com/).
-Hailstorm is not an official 3Pillar Global product (experimental or otherwise), but 3Pillar Global owns the code.
-
-Contributions welcome!
+**Hailstorm** is developed, and maintained by open source volunteers at [3Pillar Global](https://www.3pillarglobal.com/). Hailstorm is not an official 3Pillar Global product (experimental or otherwise), but 3Pillar Global owns the code.

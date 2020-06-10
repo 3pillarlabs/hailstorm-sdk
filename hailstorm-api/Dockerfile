@@ -1,4 +1,7 @@
-FROM jruby:9.1.17.0-jre
+FROM jruby:9.2.11.1-jre8
+
+# throw errors if Gemfile has been modified since Gemfile.lock
+RUN bundle config --global frozen 1
 
 WORKDIR /usr/local/lib/hailstorm-api
 
@@ -14,23 +17,9 @@ RUN wget -q https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VE
     && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
     && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
 
-ENV GEM_PATH /usr/local/bundle/gems
-
-RUN gem install bundler -v 2.0.1
-
-RUN mkdir pkg
-
-COPY pkg/hailstorm-*.gem ./pkg/
-
-RUN gem install pkg/hailstorm-*.gem
-
-COPY Gemfile Gemfile.lock ./
-
-RUN bundle install
-
 COPY . .
 
-RUN chown -R rack:rack /usr/local/lib/hailstorm-api
+RUN bundle install && chown -R rack:rack /usr/local/lib/hailstorm-api
 
 EXPOSE 8080
 
