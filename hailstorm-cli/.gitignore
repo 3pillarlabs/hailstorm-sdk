@@ -5,3 +5,4 @@ coverage/
 .jrubyrc
 keys.yml
 /pkg/
+vendor/

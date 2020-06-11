@@ -1,7 +1,9 @@
 require 'bundler/setup'
-require "bundler/gem_tasks"
+require 'bundler/gem_tasks'
 require 'logger'
 
+# https://stackoverflow.com/questions/35893584/nomethoderror-undefined-method-last-comment-after-upgrading-to-rake-11
+# Remove this monkey patch after updating rspec
 module TempFixForRakeLastComment
   def last_comment
     respond_to?(:last_description) ? last_description : ''
@@ -9,6 +11,7 @@ module TempFixForRakeLastComment
 end
 
 Rake::Application.send :include, TempFixForRakeLastComment
+# end of monkey patch
 
 logger = Logger.new(STDOUT)
 

@@ -7,11 +7,11 @@ install:
 	bundle install
 
 test: create_mysql_user
-	JRUBY_OPTS="--debug" rspec -f HailstormCiFormatter
+	JRUBY_OPTS="--debug" bundle exec rspec -f HailstormCiFormatter
 
 coverage: create_mysql_user
 	if [ -n "${CI}" ]; then ${TRAVIS_BUILD_DIR}/.travis/coverage.sh -i; fi
-	HAILSTORM_COVERAGE="true" JRUBY_OPTS="--debug" rspec -f HailstormCiFormatter
+	HAILSTORM_COVERAGE="true" JRUBY_OPTS="--debug" bundle exec rspec -f HailstormCiFormatter
 
 create_mysql_user:
 	if [ -n "${CI}" ]; \
@@ -24,9 +24,10 @@ cc_test_report:
 
 .PHONY: build
 build:
-	rake build
+	bundle exec rake build
 
 package:
+	bundle package && \
 	docker build 																										\
 	--build-arg HAILSTORM_VERSION=$(shell ruby -I ./lib -r 'hailstorm/version' -e 'puts Hailstorm::VERSION') 			\
 	--rm																												\
@@ -63,7 +64,8 @@ open_console:
 	-e DATABASE_HOST=hailstorm-db \
 	--mount type=bind,source=$${PWD},target=/hailstorm \
 	--mount type=volume,source=hailstorm-home,target=/home \
-	$${DOCKER_ID}/${DOCKER_REPO}:${CLI_VERSION} dockerize -wait tcp://hailstorm-db:3306 bash
+	$${DOCKER_ID}/${DOCKER_REPO}:${CLI_VERSION} dockerize -wait tcp://hailstorm-db:3306 \
+	bash -c 'chmod 777 /hailstorm && cd /hailstorm && su hailstorm'
 
 
 open_test_console:

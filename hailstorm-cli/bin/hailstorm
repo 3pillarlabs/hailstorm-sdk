@@ -31,17 +31,19 @@ end
 options.parse!
 
 if ARGV.length > 0
-  hailstorm_cli_path = File.expand_path('../..', __FILE__)
+  require 'ostruct'
 
-  $LOAD_PATH.unshift("#{hailstorm_gem_path}/lib")
+  gems = []
+  if hailstorm_gem_path
+    $LOAD_PATH.unshift("#{hailstorm_gem_path}/lib")
+    gems.push(OpenStruct.new(name: 'hailstorm', path: hailstorm_gem_path))
+  end
+
+  hailstorm_cli_path = File.expand_path('../..', __FILE__)
   $LOAD_PATH.unshift("#{hailstorm_cli_path}/lib")
+  gems.push(OpenStruct.new(name: 'hailstorm-cli', path: hailstorm_cli_path))
 
   require 'hailstorm/initializer'
-
-  gems = [
-    OpenStruct.new(name: 'hailstorm', path: hailstorm_gem_path),
-    OpenStruct.new(name: 'hailstorm-cli', path: hailstorm_cli_path),
-  ]
   Hailstorm::Initializer.create_project!(Dir.pwd, ARGV.first, false, gems)
 else
   puts options.to_s
