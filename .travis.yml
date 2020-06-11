@@ -10,6 +10,7 @@ env:
     - CI_NODE_TOTAL=6
     - PATH=~/bin:${PATH}
     - DOCKER_ID=hailstorm3
+    - JRUBY_OPTS='-J-XX:+TieredCompilation -J-XX:TieredStopAtLevel=1 -J-Xss2m -Xcompile.invokedynamic=false'
 
 stages:
   - name: test

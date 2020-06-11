@@ -7,11 +7,11 @@ install:
 	bundle install
 
 test: create_mysql_user
-	JRUBY_OPTS="--debug" rspec -f HailstormCiFormatter
+	JRUBY_OPTS="--debug" bundle exec rspec -f HailstormCiFormatter
 
 coverage: create_mysql_user
 	if [ -n "${CI}" ]; then ${TRAVIS_BUILD_DIR}/.travis/coverage.sh -i; fi
-	HAILSTORM_COVERAGE="true" JRUBY_OPTS="--debug" rspec -f HailstormCiFormatter
+	HAILSTORM_COVERAGE="true" JRUBY_OPTS="--debug" bundle exec rspec -f HailstormCiFormatter
 
 create_mysql_user:
 	if [ -n "${CI}" ]; \
@@ -24,7 +24,7 @@ cc_test_report:
 
 .PHONY: build
 build:
-	rake build
+	bundle exec rake build
 
 package:
 	bundle package && \

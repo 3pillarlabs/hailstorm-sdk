@@ -34,7 +34,6 @@ limited to UNIX hosts.'
   gem.add_dependency('activerecord-jdbc-adapter', ['~> 1.3'])
   gem.add_dependency('aws-sdk', '= 1.57.0')
   gem.add_dependency('haikunator', '= 1.1.0')
-  gem.add_dependency('httparty', '= 0.13.1')
   gem.add_dependency('i18n', ['~> 0.7'])
   gem.add_dependency('net-sftp', '= 2.1.2')
   gem.add_dependency('net-ssh', '~> 4.2')
