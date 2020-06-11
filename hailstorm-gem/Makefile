@@ -6,14 +6,14 @@ install:
 	bundle install
 
 test: create_mysql_user setup_db
-	JRUBY_OPTS="--debug" rspec -f HailstormCiFormatter
+	JRUBY_OPTS="--debug" bundle exec rspec -f HailstormCiFormatter
 
 coverage: create_mysql_user setup_db
 	if [ -n "${CI}" ]; then ${TRAVIS_BUILD_DIR}/.travis/coverage.sh -i; fi
-	HAILSTORM_COVERAGE="true" JRUBY_OPTS="--debug" rspec -f HailstormCiFormatter
+	HAILSTORM_COVERAGE="true" JRUBY_OPTS="--debug" bundle exec rspec -f HailstormCiFormatter
 
 setup_db:
-	rake db:setup
+	bundle exec rake db:setup
 
 create_mysql_user:
 	if [ -n "${CI}" ]; \
@@ -26,14 +26,14 @@ cc_test_report:
 
 integration: create_mysql_user setup_db
 	${TRAVIS_BUILD_DIR}/.travis/write_gem_aws_keys.sh
-	cucumber --tags ${TAG_FLAGS}
+	bundle exec cucumber --tags ${TAG_FLAGS}
 
 .PHONY: build
 build:
-	rake clean build
+	bundle exec rake clean build
 
 local_publish:
-	rake install
+	bundle exec rake install
 
 validate:
 	if ${TRAVIS_BUILD_DIR}/.travis/build-condition.sh ${TRAVIS_COMMIT_RANGE} hailstorm-gem/lib; then \

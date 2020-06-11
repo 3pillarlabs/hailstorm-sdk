@@ -7,11 +7,11 @@ install:
 	bundle install
 
 test: create_mysql_user
-	JRUBY_OPTS="--debug" rspec -f HailstormCiFormatter
+	JRUBY_OPTS="--debug" bundle exec rspec -f HailstormCiFormatter
 
 coverage: create_mysql_user
 	if [ -n "${CI}" ]; then ${TRAVIS_BUILD_DIR}/.travis/coverage.sh -i; fi
-	HAILSTORM_COVERAGE="true" JRUBY_OPTS="--debug" rspec -f HailstormCiFormatter
+	HAILSTORM_COVERAGE="true" JRUBY_OPTS="--debug" bundle exec rspec -f HailstormCiFormatter
 
 create_mysql_user:
 	if [ -n "${CI}" ]; \
@@ -44,7 +44,7 @@ docker_image_id:
 	@echo $${DOCKER_ID} ${DOCKER_REPO} ${PACKAGE_VERSION}
 
 dev_run:
-	rackup -p ${API_PORT}
+	bundle exec rackup -p ${API_PORT}
 
 listen_port:
 	@ok=0; \
