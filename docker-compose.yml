@@ -22,7 +22,7 @@ services:
       - "start.sh"
 
   hailstorm-api:
-    image: "hailstorm3/hailstorm-api:1.0.6"
+    image: "hailstorm3/hailstorm-api:1.0.7"
     ports:
       - "4567:8080"
     environment:
