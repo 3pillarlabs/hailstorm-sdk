@@ -10,6 +10,7 @@ require 'hailstorm/behavior/provisionable'
 require 'hailstorm/behavior/clusterable'
 require 'hailstorm/model/client_stat'
 require 'hailstorm/support/collection_helper'
+require 'hailstorm/support/aws_adapter'
 
 # Base class for any platform (/Clusterable) that hosts the load generating set of nodes.
 class Hailstorm::Model::Cluster < ActiveRecord::Base
@@ -72,9 +73,9 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
       cluster_line_items = []
       config.clusters.each do |cluster_config|
         cluster_config.active = true if cluster_config.active.nil?
-        # eager-load 'AWS', since some parts of it are auto-loaded. autoloading
-        # is apparently not thread safe.
-        AWS.eager_autoload! if cluster_config.aws_required? && require('aws')
+        # eager-load 'AWS', since some parts of it are auto-loaded.
+        # Auto-loading is apparently not thread safe.
+        Hailstorm::Support::AwsAdapter.eager_autoload! if cluster_config.aws_required?
         cluster = save_cluster!(cluster_config, project)
         cluster_line_items.push([cluster, cluster_config, force])
       end

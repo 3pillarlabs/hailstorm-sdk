@@ -75,7 +75,7 @@ module Hailstorm
     attr_reader :region, :reason
 
     # @param [String] region
-    # @param [Object] reason AWS::EC2::Image#state_reason
+    # @param [Object] reason Hailstorm::Support::AwsAdapter::EC2::Image#state_reason
     def initialize(region, reason)
       @region = region
       @reason = reason

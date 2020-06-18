@@ -17,19 +17,20 @@ end
 
 
 Then /^the AMI should exist$/ do
-  ec2 = @aws.send(:ec2, true)
+  ec2 = @aws.send(:ec2, true).ec2
   expect(ec2.images[@ami_id]).to exist
 end
 
 
 When(/^(?:I |)create the AMI$/) do
   expect(@aws).to be_valid
+  @aws.create_security_group
   @aws.send(:create_agent_ami)
 end
 
 
 Then(/^an AMI with name '(.+?)' (?:should |)exists?$/) do |ami_name|
-  ec2 = @aws.send(:ec2, true)
+  ec2 = @aws.send(:ec2, true).ec2
   avail_amis = ec2.images.with_owner(:self).select {|e| e.state == :available}
   ami_names = avail_amis.collect(&:name)
   expect(ami_names).to include(ami_name)
@@ -76,7 +77,7 @@ end
 After do |scenario|
   if scenario.source_tag_names.include?('@terminate_instance')
     if @load_agent
-      ec2 = @aws.send(:ec2, true)
+      ec2 = @aws.send(:ec2, true).ec2
       ec2_instance = ec2.instances[@load_agent.identifier]
       ec2_instance.terminate if ec2_instance
       @aws.cleanup
@@ -92,12 +93,14 @@ end
 
 
 And(/^a public VPC subnet is available$/) do
-  ec2 = @aws.send(:ec2)
+  ec2 = @aws.send(:ec2, true).ec2
   public_subnet = ec2.vpcs.collect(&:subnets).flatten.collect(&:to_a).flatten.find do |sn|
     sn.route_table.routes.find {|r| r.internet_gateway && r.internet_gateway.id != 'local'}
   end
+
   expect(public_subnet).to_not be_nil
   @aws.vpc_subnet_id = public_subnet.id
+  @aws.send(:ec2).vpc_subnet_id = @aws.vpc_subnet_id
 end
 
 
@@ -107,7 +110,7 @@ end
 
 
 And(/^there is no AMI with name '([^']+)'$/) do |ami_name|
-  ec2 = @aws.send(:ec2, true)
+  ec2 = @aws.send(:ec2, true).ec2
   ami = ec2.images.with_owner('self').find { |img| img.name == ami_name }
   if ami
     snapshot_ids = ami.block_devices.select { |blkdev| blkdev.key?(:ebs) }.map { |blkdev| blkdev[:ebs][:snapshot_id] }

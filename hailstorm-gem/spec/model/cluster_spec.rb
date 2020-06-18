@@ -63,6 +63,8 @@ def clusterables_stub!
 
   Hailstorm::Model::AmazonCloud.any_instance.stub(:transfer_identity_file)
   Hailstorm::Model::DataCenter.any_instance.stub(:transfer_identity_file)
+
+  Hailstorm::Support::AwsAdapter.stub!(:eager_autoload!)
 end
 
 describe Hailstorm::Model::Cluster do

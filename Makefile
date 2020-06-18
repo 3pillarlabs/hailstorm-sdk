@@ -99,7 +99,11 @@ install:
 	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make install; fi
 
 test:
-	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make test; fi
+	if [ -z "${TRAVIS_COMMIT_RANGE}" ]; then \
+		cd ${PROJECT_PATH} && make test; \
+	else \
+		if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make test; fi; \
+	fi
 
 coverage:
 	cd ${PROJECT_PATH} && make coverage

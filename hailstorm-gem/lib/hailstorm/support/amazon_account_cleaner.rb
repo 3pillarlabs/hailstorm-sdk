@@ -54,12 +54,12 @@ class Hailstorm::Support::AmazonAccountCleaner
 
   def ec2_map(region)
     @ec2_map ||= {}
-    @ec2_map[region] ||= AWS::EC2.new(aws_config).regions[region]
+    @ec2_map[region] ||= Hailstorm::Support::AwsAdapter::EC2.new(aws_config.merge(region: region))
   end
 
   def terminate_instances(ec2)
-    ec2.instances.each do |instance|
-      next unless instance.status == :running
+    ec2.all_instances.each do |instance|
+      next if instance.status == :terminated
 
       logger.info { "Terminating instance##{instance.id}..." }
       instance.terminate
@@ -69,7 +69,7 @@ class Hailstorm::Support::AmazonAccountCleaner
   end
 
   def deregister_amis(ec2)
-    ec2.images.with_owner(:self).each do |image|
+    ec2.find_self_owned_ami(regexp: Regexp.new(Hailstorm::Model::AmazonCloud::Defaults::AMI_ID)).each do |image|
       next unless image.state == :available
 
       logger.info { "Deregistering AMI##{image.id}..." }
@@ -79,7 +79,7 @@ class Hailstorm::Support::AmazonAccountCleaner
   end
 
   def delete_snapshots(ec2)
-    ec2.snapshots.with_owner(:self).each do |snapshot|
+    ec2.find_self_owned_snapshots.each do |snapshot|
       next unless snapshot.status == :completed
 
       logger.info { "Deleting snapshot##{snapshot.id}" }
@@ -89,14 +89,14 @@ class Hailstorm::Support::AmazonAccountCleaner
   end
 
   def delete_key_pairs(ec2)
-    ec2.key_pairs.each do |key_pair|
+    ec2.all_key_pairs.each do |key_pair|
       key_pair.delete
       logger.info { "Key pair##{key_pair.name} deleted" }
     end
   end
 
   def delete_security_groups(ec2)
-    ec2.security_groups.each do |security_group|
+    ec2.all_security_groups.each do |security_group|
       next unless security_group.name == @default_security_group
 
       security_group.delete

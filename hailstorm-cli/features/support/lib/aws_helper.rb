@@ -11,7 +11,7 @@ module AwsHelper
   end
 
   def tagged_instance(tag_value, region = 'us-east-1', status = :running, tag_key = :Name)
-    require 'aws-sdk-v1'
+    require 'aws'
     config = {}
     config[:access_key_id], config[:secret_access_key] = aws_keys
     @ec2 = AWS::EC2.new(config).regions[region]
