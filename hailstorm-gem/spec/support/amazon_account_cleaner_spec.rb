@@ -15,6 +15,7 @@ describe Hailstorm::Support::AmazonAccountCleaner do
     @account_cleaner.should_receive(:delete_snapshots)
     @account_cleaner.should_receive(:delete_security_groups)
     @account_cleaner.should_receive(:delete_key_pairs)
+    @account_cleaner.stub!(:ec2_adapter).and_return(Hailstorm::Support::AwsAdapter::EC2)
 
     expect(@account_cleaner.send(:regions)).to_not be_empty
     @account_cleaner.cleanup(true, ['us-east-1'])

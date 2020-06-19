@@ -89,6 +89,15 @@ define docker_image_id
 $(shell cd $1 && make -s docker_image_id)
 endef
 
+# $(call when_modified_make,<make target like install, test>)
+define when_modified_make
+if [ -z "${TRAVIS_COMMIT_RANGE}" ]; then \
+	cd ${PROJECT_PATH} && make $1; \
+else \
+	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make $1; fi; \
+fi
+endef
+
 RELEASE_VERSION = $(shell ${TRAVIS_BUILD_DIR}/.travis/calc_next_rel_version.sh)
 
 GIT_RELEASE_TAG := releases/${RELEASE_VERSION}
@@ -96,14 +105,10 @@ GIT_RELEASE_TAG := releases/${RELEASE_VERSION}
 PUSHED_RELEASE_TAG = $(shell git tag --list '${GIT_RELEASE_TAG}')
 
 install:
-	if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make install; fi
+	$(call when_modified_make,install)
 
 test:
-	if [ -z "${TRAVIS_COMMIT_RANGE}" ]; then \
-		cd ${PROJECT_PATH} && make test; \
-	else \
-		if ${CHANGES} ${PROJECT_NAME}; then cd ${PROJECT_PATH} && make test; fi; \
-	fi
+	$(call when_modified_make,test)
 
 coverage:
 	cd ${PROJECT_PATH} && make coverage

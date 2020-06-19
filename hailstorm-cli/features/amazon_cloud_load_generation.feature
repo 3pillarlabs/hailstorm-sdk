@@ -8,6 +8,7 @@ Feature: Generate load from AWS
 
   @smoke
   @end-to-end
+  @aws
   Scenario: Setup project with 10 threads
     When I configure JMeter with following properties
       | property       | value |
@@ -23,18 +24,21 @@ Feature: Generate load from AWS
 
   @smoke
   @end-to-end
+  @aws
   Scenario: Start the test with 10 threads
     When I start load generation
     Then 1 Jmeter instance should be running
 
   @smoke
   @end-to-end
+  @aws
   Scenario: Stop the test with 10 threads
     When I wait for load generation to stop
     Then 1 active load agent should exist
     And 0 Jmeter instances should be running
 
   @end-to-end
+  @aws
   Scenario: Start test for 20 threads
     When I configure JMeter with following properties
       | property       | value |
@@ -50,12 +54,14 @@ Feature: Generate load from AWS
     And 1 Jmeter instance should be running
 
   @end-to-end
+  @aws
   Scenario: Stop the test with 20 threads
     When I wait for load generation to stop
     Then 1 active load agent should exist
     And 0 Jmeter instances should be running
 
   @end-to-end
+  @aws
   Scenario: Start test for 30 threads
     When I configure JMeter with following properties
       | property       | value |
@@ -71,11 +77,13 @@ Feature: Generate load from AWS
     And 2 Jmeter instances should be running
 
   @end-to-end
+  @aws
   Scenario: Stop the test with 30 threads
     When I wait for load generation to stop
     Then 2 active load agents should exist
     And 0 Jmeter instances should be running
 
+  @aws
   Scenario: Re-execute test for 20 threads
     When I configure JMeter with following properties
       | property       | value |
@@ -90,11 +98,13 @@ Feature: Generate load from AWS
     Then 1 active load agent should exist
     And 1 Jmeter instance should be running
 
+  @aws
   Scenario: Stop the new test with 20 threads
     When I wait for load generation to stop
     Then 1 active load agent should exist
     And 0 Jmeter instances should be running
 
+  @aws
   Scenario: Abort a test with 10 threads
     When I configure JMeter with following properties
       | property       | value |
@@ -114,12 +124,14 @@ Feature: Generate load from AWS
 
   @smoke
   @end-to-end
+  @aws
   Scenario: Terminate tests
     When I terminate the setup
     Then 0 load agents should exist
 
   @smoke
   @end-to-end
+  @aws
   Scenario: Generate a report
     When I generate a report
     Then a report file should be created

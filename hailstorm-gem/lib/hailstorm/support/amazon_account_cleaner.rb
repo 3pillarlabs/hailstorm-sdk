@@ -1,4 +1,3 @@
-require 'aws'
 require 'hailstorm/support'
 require 'hailstorm/model/amazon_cloud'
 require 'hailstorm/behavior/loggable'
@@ -54,7 +53,13 @@ class Hailstorm::Support::AmazonAccountCleaner
 
   def ec2_map(region)
     @ec2_map ||= {}
-    @ec2_map[region] ||= Hailstorm::Support::AwsAdapter::EC2.new(aws_config.merge(region: region))
+    @ec2_map[region] ||= ec2_adapter(aws_config.merge(region: region))
+  end
+
+  # @param [Hash] attrs
+  # @return [Hailstorm::Support::AwsAdapter::EC2]
+  def ec2_adapter(attrs)
+    Hailstorm::Support::AwsAdapter::EC2.new(attrs)
   end
 
   def terminate_instances(ec2)

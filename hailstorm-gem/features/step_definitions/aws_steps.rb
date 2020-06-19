@@ -17,8 +17,8 @@ end
 
 
 Then /^the AMI should exist$/ do
-  ec2 = @aws.send(:ec2, true).ec2
-  expect(ec2.images[@ami_id]).to exist
+  ec2 = ec2_resource(region: @aws.region)
+  expect(ec2.images(image_ids: [@ami_id]).first).to_not be_nil
 end
 
 
@@ -30,8 +30,8 @@ end
 
 
 Then(/^an AMI with name '(.+?)' (?:should |)exists?$/) do |ami_name|
-  ec2 = @aws.send(:ec2, true).ec2
-  avail_amis = ec2.images.with_owner(:self).select {|e| e.state == :available}
+  ec2 = ec2_resource(region: @aws.region)
+  avail_amis = ec2.images(owners: %W[self]).select {|e| e.state.to_sym == :available}
   ami_names = avail_amis.collect(&:name)
   expect(ami_names).to include(ami_name)
   @aws.agent_ami = avail_amis.find {|e| e.name == ami_name}.id
@@ -77,8 +77,8 @@ end
 After do |scenario|
   if scenario.source_tag_names.include?('@terminate_instance')
     if @load_agent
-      ec2 = @aws.send(:ec2, true).ec2
-      ec2_instance = ec2.instances[@load_agent.identifier]
+      ec2 = ec2_resource(region: @aws.region)
+      ec2_instance = ec2.instances(instance_ids: [@load_agent.identifier]).first
       ec2_instance.terminate if ec2_instance
       @aws.cleanup
     end
@@ -93,11 +93,7 @@ end
 
 
 And(/^a public VPC subnet is available$/) do
-  ec2 = @aws.send(:ec2, true).ec2
-  public_subnet = ec2.vpcs.collect(&:subnets).flatten.collect(&:to_a).flatten.find do |sn|
-    sn.route_table.routes.find {|r| r.internet_gateway && r.internet_gateway.id != 'local'}
-  end
-
+  public_subnet = select_public_subnets(region: @aws.region).first
   expect(public_subnet).to_not be_nil
   @aws.vpc_subnet_id = public_subnet.id
   @aws.send(:ec2).vpc_subnet_id = @aws.vpc_subnet_id
@@ -110,11 +106,11 @@ end
 
 
 And(/^there is no AMI with name '([^']+)'$/) do |ami_name|
-  ec2 = @aws.send(:ec2, true).ec2
-  ami = ec2.images.with_owner('self').find { |img| img.name == ami_name }
+  ec2 = ec2_resource(region: @aws.region)
+  ami = ec2.images(owners: %W[self]).find { |img| img.name == ami_name }
   if ami
-    snapshot_ids = ami.block_devices.select { |blkdev| blkdev.key?(:ebs) }.map { |blkdev| blkdev[:ebs][:snapshot_id] }
-    ami.delete
-    snapshot_ids.each { |snapshot_id| ec2.snapshots[snapshot_id].delete }
+    snapshot_ids = ami.block_device_mappings.select { |blkdev| blkdev.key?(:ebs) }.map { |blkdev| blkdev[:ebs][:snapshot_id] }
+    ami.deregister
+    snapshot_ids.each { |snapshot_id| ec2.snapshot(snapshot_id).delete }
   end
 end

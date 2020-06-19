@@ -1,3 +1,5 @@
+require 'aws-sdk'
+
 module AwsHelper
 
   def aws_keys
@@ -8,5 +10,25 @@ module AwsHelper
       vals << keys['access_key']
       vals << keys['secret_key']
     }
+  end
+
+  def ec2_resource(region:)
+    ec2_client = Aws::EC2::Client.new(
+      region: region,
+      credentials: Aws::Credentials.new(*aws_keys)
+    )
+
+    Aws::EC2::Resource.new(client: ec2_client)
+  end
+
+  def select_public_subnets(region:)
+    ec2_resource(region: region)
+      .vpcs
+      .flat_map { |vpc| vpc.route_tables.to_a }
+      .select { |route_table| route_table.routes.find { |route| route.gateway_id != 'local' } }
+      .flat_map { |route_table| route_table.associations.to_a }
+      .select { |assoc| assoc.subnet_id }
+      .map { |assoc| assoc.subnet }
+      .select { |subnet| subnet.map_public_ip_on_launch }
   end
 end

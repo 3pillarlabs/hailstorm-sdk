@@ -1,5 +1,3 @@
-require 'aws'
-
 require 'hailstorm'
 require 'hailstorm/model'
 require 'hailstorm/behavior/loggable'
@@ -133,7 +131,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
           logger.info("Stopping agent##{load_agent.identifier}...")
           agent_ec2_instance.stop
           wait_for("#{agent_ec2_instance.id} to stop",
-                   err_attrs: { region: self.region }) { agent_ec2_instance.status.eql?(:stopped) }
+                   err_attrs: { region: self.region }) { ec2.refresh_instance!(agent_ec2_instance).stopped? }
         end
       else
         logger.warn('Could not stop agent as identifier is not available')
@@ -178,7 +176,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         agent_ec2_instance.terminate
         logger.debug { "Waiting for #{agent_ec2_instance.id} to terminate..." }
         wait_for("#{agent_ec2_instance.id} on #{self.region} region to terminate") do
-          agent_ec2_instance.status.eql?(:terminated)
+          ec2.refresh_instance!(agent_ec2_instance).terminated?
         end
       else
         logger.warn("Agent ##{load_agent.identifier} does not exist on EC2")
@@ -198,7 +196,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         logger.info("Restarting agent##{instance.id}...")
         instance.start
       end
-      wait_for("#{instance.id} to restart", err_attrs: { region: self.region }) { instance.status.eql?(:running) }
+      wait_for("#{instance.id} to restart",
+               err_attrs: { region: self.region }) { ec2.refresh_instance!(instance).running? }
     end
 
     def create_agent
@@ -315,9 +314,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
           vpc: ec2.vpc
         )
 
-        security_group.authorize_ingress(:tcp, (self.ssh_port || Defaults::SSH_PORT)) # allow SSH from anywhere
+        security_group.authorize_ingress(:tcp, (self.ssh_port || Defaults::SSH_PORT), cidr: :anywhere) # allow SSH from anywhere
         # allow incoming TCP & UDP to any port within the group
-        %i[tcp udp].each { |proto| security_group.authorize_ingress(proto, 0..65_535, group_id: security_group.id) }
+        %i[tcp udp].each { |proto| security_group.authorize_ingress(proto, 0..65_535) }
         security_group.allow_ping # allow ICMP from anywhere
       end
       security_group
@@ -333,9 +332,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     # @return [Hash]
     def new_ec2_instance_attrs(ami_id, security_group_ids)
       attrs = { image_id: ami_id, key_name: self.ssh_identity, security_group_ids: security_group_ids,
-                instance_type: self.instance_type, subnet: self.vpc_subnet_id }
+                instance_type: self.instance_type, subnet_id: self.vpc_subnet_id }
       attrs[:availability_zone] = self.zone if self.zone
-      attrs[:associate_public_ip_address] = true if self.vpc_subnet_id
       attrs
     end
 
@@ -343,7 +341,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       logger.info { "Instance at #{self.region} running, waiting for system checks and ensuring SSH access..." }
       wait_for("#{instance.id} to start and successful system checks",
                timeout_sec: 600,
-               sleep_duration: 10, err_attrs: { region: self.region }) { ec2.instance_ready?(instance) }
+               sleep_duration: 10,
+               err_attrs: {region: self.region}) { ec2.instance_ready?(ec2.refresh_instance!(instance)) }
+
       ensure_ssh_connectivity(instance)
     rescue Exception => ex
       logger.warn("Failed to create new instance: #{ex.message}")
@@ -361,7 +361,7 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       instance.terminate
       logger.debug { "status: #{instance.status}" }
       wait_for("Instance #{instance.id} to terminate",
-               err_attrs: { region: self.region }) { instance.status.eql?(:terminated) }
+               err_attrs: { region: self.region }) { ec2.refresh_instance!(instance).terminated? }
     end
 
     # Creates a new EC2 instance and returns the instance once it passes all checks.
@@ -504,9 +504,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
         description: 'AMI for distributed performance testing with Hailstorm'
       )
 
-      wait_for("Hailstorm AMI #{ami_id} on #{self.region} to be created") { new_ami.state == :available }
+      wait_for("Hailstorm AMI #{ami_id} on #{self.region} to be created") { ec2.refresh_ami!(new_ami).available? }
       logger.debug { "new_ami.state: #{new_ami.state}" }
-      raise(Hailstorm::AmiCreationFailure.new(self.region, new_ami.state_reason)) unless new_ami.state == :available
 
       new_ami.id
     end
@@ -570,11 +569,10 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
     def create_hailstorm_subnet
       created_vpc = create_hailstorm_vpc
       hailstorm_subnet = ec2.create_subnet(vpc: created_vpc, cidr: Defaults::CIDR_BLOCK)
-      wait_for("#{Defaults::SUBNET_NAME} to be available") do
-        hailstorm_subnet.state.to_sym == :available
-      end
+      wait_for("#{Defaults::SUBNET_NAME} to be available") { ec2.refresh_subnet!(hailstorm_subnet).available? }
 
       hailstorm_subnet.tag('Name', value: Defaults::SUBNET_NAME)
+      ec2.modify_subnet_attribute(hailstorm_subnet, map_public_ip_on_launch: true)
       logger.info { "Created #{Defaults::SUBNET_NAME} subnet - #{hailstorm_subnet.subnet_id}" }
       make_subnet_public(created_vpc, hailstorm_subnet)
       hailstorm_subnet
@@ -582,15 +580,14 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
     # @return [Hailstorm::Support::AwsAdapter::EC2::VPC]
     def create_hailstorm_vpc
+      vpc_tag_name = "#{Defaults::VPC_NAME}_#{Hailstorm.env}"
       hailstorm_vpc = ec2.create_vpc(cidr: Defaults::CIDR_BLOCK)
-      wait_for("#{Defaults::VPC_NAME} VPC to be available") do
-        hailstorm_vpc.state.to_sym == :available
-      end
+      wait_for("#{vpc_tag_name} VPC to be available") { ec2.refresh_vpc!(hailstorm_vpc).available? }
 
-      ec2.modify_vpc_attribute(vpc_id: hailstorm_vpc.vpc_id, enable_dns_support: { value: true })
-      ec2.modify_vpc_attribute(vpc_id: hailstorm_vpc.vpc_id, enable_dns_hostnames: { value: true })
-      hailstorm_vpc.tag('Name', value: Defaults::VPC_NAME)
-      logger.info { "Created #{Defaults::VPC_NAME} VPC - #{hailstorm_vpc.vpc_id}" }
+      ec2.modify_vpc_attribute(hailstorm_vpc.vpc_id, enable_dns_support: { value: true })
+      ec2.modify_vpc_attribute(hailstorm_vpc.vpc_id, enable_dns_hostnames: { value: true })
+      hailstorm_vpc.tag('Name', value: vpc_tag_name)
+      logger.info { "Created #{vpc_tag_name} VPC - #{hailstorm_vpc.vpc_id}" }
       hailstorm_vpc
     end
 
@@ -602,14 +599,13 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       igw.attach(vpc)
       logger.info { "Created Internet Gateway #{igw.internet_gateway_id}" }
 
-      route_table = ec2.create_route_table(vpc: vpc)
+      route_table = ec2.main_route_table(vpc: vpc) || ec2.create_route_table(vpc: vpc)
       route_table.create_route('0.0.0.0/0', internet_gateway: igw)
       wait_for("Route table #{route_table.route_table_id} default route to be created") do
-        default_route = route_table.routes.first
-        default_route && default_route.state == :active
+        route_table.routes.all? { |route| route.state.to_sym == :active }
       end
 
-      subnet.route_table = route_table
+      route_table.associate_with_subnet(subnet_id: subnet.subnet_id)
       logger.info { "Created routing table with default route #{route_table.route_table_id}" }
     end
   end
