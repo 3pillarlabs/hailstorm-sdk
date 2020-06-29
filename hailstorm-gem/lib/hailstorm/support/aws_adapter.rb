@@ -1,5 +1,5 @@
 require 'hailstorm/support'
-require 'aws-sdk'
+require 'aws-sdk-ec2'
 require 'delegate'
 require 'hailstorm/behavior/loggable'
 

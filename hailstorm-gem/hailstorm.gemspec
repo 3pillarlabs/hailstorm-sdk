@@ -32,7 +32,7 @@ limited to UNIX hosts.'
   gem.add_dependency('actionpack', ['= 4.2.8'])
   gem.add_dependency('activerecord', ['= 4.2.8'])
   gem.add_dependency('activerecord-jdbc-adapter', ['~> 1.3'])
-  gem.add_dependency('aws-sdk', '~> 2')
+  gem.add_dependency('aws-sdk-ec2', '~> 1')
   gem.add_dependency('haikunator', '~> 1.1.0')
   gem.add_dependency('i18n', ['~> 0.7'])
   gem.add_dependency('net-sftp', '~> 3.0.0')

@@ -1,4 +1,4 @@
-require 'aws-sdk'
+require 'aws-sdk-ec2'
 
 module AwsHelper
 
@@ -25,7 +25,7 @@ module AwsHelper
     ec2_resource(region: region)
       .vpcs
       .flat_map { |vpc| vpc.route_tables.to_a }
-      .select { |route_table| route_table.routes.find { |route| route.gateway_id != 'local' } }
+      .select { |route_table| (route_table.routes rescue []).find { |route| route && route.gateway_id != 'local' } }
       .flat_map { |route_table| route_table.associations.to_a }
       .select { |assoc| assoc.subnet_id }
       .map { |assoc| assoc.subnet }
