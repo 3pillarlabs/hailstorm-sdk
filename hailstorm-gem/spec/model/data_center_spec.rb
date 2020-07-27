@@ -386,4 +386,12 @@ describe Hailstorm::Model::DataCenter do
       end
     end
   end
+
+  context '#purge' do
+    it 'should not raise error' do
+      dc = Hailstorm::Model::DataCenter.new(user_name: 'root', ssh_identity: 'insecure',
+                                             machines: ['10.0.10.10'], title: 'omega-1', active: true)
+      expect { dc.purge }.to_not raise_error
+    end
+  end
 end

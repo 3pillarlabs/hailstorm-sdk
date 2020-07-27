@@ -15,6 +15,7 @@ require 'active_record/errors'
 require 'hailstorm/support/log4j_backed_logger'
 
 ENV['HAILSTORM_ENV'] = 'gem_integration' unless ENV['HAILSTORM_ENV']
+ENV['HAILSTORM_WORKSPACE_ROOT'] = BUILD_PATH
 
 connection_spec = {
   adapter:  'jdbcmysql',

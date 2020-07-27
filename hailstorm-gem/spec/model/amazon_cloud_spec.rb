@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'ostruct'
 require 'yaml'
 
 require 'hailstorm/model/cluster'
@@ -23,16 +24,18 @@ describe Hailstorm::Model::AmazonCloud do
     aws.stub(:assign_vpc_subnet, nil)
   end
 
-  def mock_ec2_instance(ec2, load_agent, states = nil, public_ip_address = nil, private_ip_address = nil)
-    states_ite = states.each unless states.nil?
-    mock_instance = mock(AWS_ADAPTER_CLASS::EC2::Instance,
-                         id: load_agent.identifier,
-                         instance_id: load_agent.identifier,
-                         public_ip_address: public_ip_address || '120.34.35.58',
-                         private_ip_address: private_ip_address || '10.34.10.20')
-    mock_instance.stub!(:status) { states_ite.next } unless states_ite.nil?
-    ec2.stub!(:find_instance).and_return(mock_instance)
-    mock_instance
+  def stub_find_instance(instance_client, load_agent, status = nil, public_ip_address = nil, private_ip_address = nil)
+    attrs = {
+      instance_id: load_agent.identifier,
+      public_ip_address: public_ip_address || '120.34.35.58',
+      private_ip_address: private_ip_address || '10.34.10.20',
+    }
+
+    attrs.merge!(state: Hailstorm::Behavior::AwsAdaptable::InstanceState.new(name: status.to_s)) if status
+    instance = Hailstorm::Behavior::AwsAdaptable::Instance.new(attrs)
+    instance.stub!("#{status}?".to_sym).and_return(true) if status
+    instance_client.stub!(:find).and_return(instance)
+    instance
   end
 
   before(:each) do
@@ -50,6 +53,98 @@ describe Hailstorm::Model::AmazonCloud do
     expect(@aws).to be_valid
     expect(@aws.region).to eql('us-east-1')
     expect(@aws.slug).to eql('Amazon Cloud, region: us-east-1')
+  end
+
+  context 'AWS client factory' do
+    it 'should make an EC2 instance client' do
+      mock_client = Object.new.extend(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
+      Hailstorm::Support::AwsAdapter
+        .stub!(:clients)
+        .and_return(Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(instance_client: mock_client))
+
+      expect(@aws.send(:instance_client)).to_not be_nil
+      expect(@aws.send(:instance_client)).to be_kind_of(mock_client.class)
+    end
+
+    it 'should make an EC2 security group client' do
+      mock_client = Object.new.extend(Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient)
+      Hailstorm::Support::AwsAdapter
+        .stub!(:clients)
+        .and_return(Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(security_group_client: mock_client))
+
+      expect(@aws.send(:security_group_client)).to_not be_nil
+      expect(@aws.send(:security_group_client)).to be_kind_of(mock_client.class)
+    end
+
+    it 'should make an EC2 key pair client' do
+      mock_client = Object.new.extend(Hailstorm::Behavior::AwsAdaptable::KeyPairClient)
+      Hailstorm::Support::AwsAdapter
+        .stub!(:clients)
+        .and_return(Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(key_pair_client: mock_client))
+
+      expect(@aws.send(:key_pair_client)).to_not be_nil
+      expect(@aws.send(:key_pair_client)).to be_kind_of(mock_client.class)
+    end
+
+    it 'should make EC2 client' do
+      mock_client = Object.new.extend(Hailstorm::Behavior::AwsAdaptable::Ec2Client)
+      Hailstorm::Support::AwsAdapter
+        .stub!(:clients)
+        .and_return(Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(ec2_client: mock_client))
+
+      expect(@aws.send(:ec2_client)).to_not be_nil
+      expect(@aws.send(:ec2_client)).to be_kind_of(mock_client.class)
+    end
+
+    it 'should make AMI client' do
+      mock_client = Object.new.extend(Hailstorm::Behavior::AwsAdaptable::AmiClient)
+      Hailstorm::Support::AwsAdapter
+        .stub!(:clients)
+        .and_return(Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(ami_client: mock_client))
+
+      expect(@aws.send(:ami_client)).to_not be_nil
+      expect(@aws.send(:ami_client)).to be_kind_of(mock_client.class)
+    end
+
+    it 'should make Subnet client' do
+      mock_client = Object.new.extend(Hailstorm::Behavior::AwsAdaptable::SubnetClient)
+      Hailstorm::Support::AwsAdapter
+        .stub!(:clients)
+        .and_return(Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(subnet_client: mock_client))
+
+      expect(@aws.send(:subnet_client)).to_not be_nil
+      expect(@aws.send(:subnet_client)).to be_kind_of(mock_client.class)
+    end
+
+    it 'should make VPC client' do
+      mock_client = Object.new.extend(Hailstorm::Behavior::AwsAdaptable::VpcClient)
+      Hailstorm::Support::AwsAdapter
+        .stub!(:clients)
+        .and_return(Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(vpc_client: mock_client))
+
+      expect(@aws.send(:vpc_client)).to_not be_nil
+      expect(@aws.send(:vpc_client)).to be_kind_of(mock_client.class)
+    end
+
+    it 'should make Internet Gateway client' do
+      mock_client = Object.new.extend(Hailstorm::Behavior::AwsAdaptable::InternetGatewayClient)
+      Hailstorm::Support::AwsAdapter
+        .stub!(:clients)
+        .and_return(Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(internet_gateway_client: mock_client))
+
+      expect(@aws.send(:internet_gateway_client)).to_not be_nil
+      expect(@aws.send(:internet_gateway_client)).to be_kind_of(mock_client.class)
+    end
+
+    it 'should make Route Table client' do
+      mock_client = Object.new.extend(Hailstorm::Behavior::AwsAdaptable::RouteTableClient)
+      Hailstorm::Support::AwsAdapter
+        .stub!(:clients)
+        .and_return(Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(route_table_client: mock_client))
+
+      expect(@aws.send(:route_table_client)).to_not be_nil
+      expect(@aws.send(:route_table_client)).to be_kind_of(mock_client.class)
+    end
   end
 
   context '#default_max_threads_per_agent' do
@@ -265,13 +360,15 @@ describe Hailstorm::Model::AmazonCloud do
 
     context 'security group does not exist' do
       it 'should create EC2 security group' do
-        @aws.stub!(:ec2).and_return(mock(AWS_ADAPTER_CLASS::EC2))
-        @aws.send(:ec2).stub!(:find_security_group).and_return(nil)
-        mock_sec_group = mock(AWS_ADAPTER_CLASS::EC2::SecurityGroup, id: 'sg-a1')
-        @aws.send(:ec2).stub!(:create_security_group).and_return(mock_sec_group)
-        mock_sec_group.should_receive(:authorize_ingress).exactly(3).times
-        mock_sec_group.should_receive(:allow_ping)
-        @aws.send(:ec2).stub!(:vpc).and_return(mock(Hailstorm::Support::AwsAdapter::EC2::VPC))
+        mock_sg_client = mock(Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient)
+        @aws.stub!(:security_group_client).and_return(mock_sg_client)
+        mock_sg_client.stub!(:find).and_return(nil)
+        mock_sec_group = Hailstorm::Behavior::AwsAdaptable::SecurityGroup.new(group_id: 'sg-a1')
+        mock_sg_client.stub!(:create).and_return(mock_sec_group)
+        mock_sg_client.should_receive(:authorize_ingress).exactly(3).times
+        mock_sg_client.should_receive(:allow_ping)
+        mock_ec2_client = mock(Hailstorm::Behavior::AwsAdaptable::Ec2Client)
+        mock_ec2_client.stub!(:find_vpc).and_return('vpc-123')
         @aws.send(:create_security_group)
       end
     end
@@ -280,13 +377,20 @@ describe Hailstorm::Model::AmazonCloud do
   context '#create_ec2_instance' do
     before(:each) do
       @aws.stub!(:ssh_options).and_return({})
-      @mock_instance = mock('MockInstance', id: 'A', public_ip_address: '8.8.8.4')
-      mock_ec2 = mock('MockEC2', create_instance: @mock_instance)
-      mock_ec2.stub!(:instance_ready?).and_return(true)
-      @aws.stub!(:ec2).and_return(mock_ec2)
+      @mock_instance = Hailstorm::Behavior::AwsAdaptable::Instance.new(
+        instance_id: 'A',
+        state: Hailstorm::Behavior::AwsAdaptable::InstanceState.new(name: 'pending'),
+        public_ip_address: nil,
+        private_ip_address: nil
+      )
+
+      mock_instance_client = mock(Hailstorm::Behavior::AwsAdaptable::InstanceClient, create: @mock_instance)
+      mock_instance_client.stub!(:find).and_return(@mock_instance)
+      mock_instance_client.stub!(:ready?).and_return(true)
+      @aws.stub!(:instance_client).and_return(mock_instance_client)
     end
 
-    context 'when ec2_instance_ready? is true' do
+    context 'when ec2 instance is ready' do
       it 'should return clean_instance' do
         @aws.stub!(:ensure_ssh_connectivity).and_return(true)
         instance = @aws.send(:create_ec2_instance, {})
@@ -295,6 +399,14 @@ describe Hailstorm::Model::AmazonCloud do
 
       it 'should raise error if ssh connectivity fails' do
         Hailstorm::Support::SSH.stub!(:ensure_connection).and_return(false)
+        expect { @aws.send(:create_ec2_instance, {}) }.to raise_error(Hailstorm::Exception)
+      end
+    end
+
+    context 'instance creation failed' do
+      it 'should raise error' do
+        @aws.send(:instance_client).stub!(:ready?).and_return(false)
+        @aws.stub!(:wait_for).and_raise(Hailstorm::Exception, 'mock error')
         expect { @aws.send(:create_ec2_instance, {}) }.to raise_error(Hailstorm::Exception)
       end
     end
@@ -428,14 +540,18 @@ describe Hailstorm::Model::AmazonCloud do
   end
 
   context '#start_agent' do
+    before(:each) do
+      @mock_instance_client = mock(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
+      @aws.stub!(:instance_client).and_return(@mock_instance_client)
+    end
+
     context 'agent is not running' do
       context 'agent exists' do
         it 'should restart the agent' do
           load_agent = Hailstorm::Model::MasterAgent.new(identifier: 'i-w23457889113')
-          mock_ec2 = mock(AWS_ADAPTER_CLASS::EC2)
-          mock_instance = mock_ec2_instance(mock_ec2, load_agent, [:stopped, :running])
-          @aws.stub!(:ec2) { mock_ec2 }
-          mock_instance.should_receive(:start)
+          stub_find_instance(@mock_instance_client, load_agent, :stopped)
+          @mock_instance_client.stub!(:running?).and_return(true)
+          @mock_instance_client.should_receive(:start)
           @aws.start_agent(load_agent)
         end
       end
@@ -445,21 +561,24 @@ describe Hailstorm::Model::AmazonCloud do
           @aws.project = Hailstorm::Model::Project.where(project_code: 'amazon_cloud_spec').first_or_create!
           load_agent = Hailstorm::Model::MasterAgent.new
           load_agent.id = 1
-          mock_ec2 = mock(AWS_ADAPTER_CLASS::EC2)
-          @aws.stub!(:ec2) { mock_ec2 }
-          mock_ec_instance = mock_ec2_instance(mock_ec2, load_agent)
-          mock_ec_instance.should_receive(:tag)
-          @aws.stub!(:create_agent).and_return(mock_ec_instance)
+          instance = stub_find_instance(@mock_instance_client, load_agent)
+          @mock_instance_client.should_receive(:tag_name)
+          @aws.stub!(:create_agent).and_return(instance)
           @aws.start_agent(load_agent)
-          expect(load_agent.identifier).to be == mock_ec_instance.instance_id
-          expect(load_agent.public_ip_address).to be == mock_ec_instance.public_ip_address
-          expect(load_agent.private_ip_address).to be == mock_ec_instance.private_ip_address
+          expect(load_agent.identifier).to be == instance.instance_id
+          expect(load_agent.public_ip_address).to be == instance.public_ip_address
+          expect(load_agent.private_ip_address).to be == instance.private_ip_address
         end
       end
     end
   end
 
   context '#stop_agent' do
+    before(:each) do
+      @mock_instance_client = mock(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
+      @aws.stub!(:instance_client).and_return(@mock_instance_client)
+    end
+
     context 'without load_agent#identifier' do
       it 'does nothing' do
         @aws.should_not_receive(:wait_for)
@@ -469,10 +588,9 @@ describe Hailstorm::Model::AmazonCloud do
     context 'with load_agent#identifier' do
       it 'should stop the load_agent#instance' do
         load_agent = Hailstorm::Model::MasterAgent.new(identifier: 'i-w23457889113')
-        mock_ec2 = mock(AWS_ADAPTER_CLASS::EC2)
-        mock_instance = mock_ec2_instance(mock_ec2, load_agent, [:running, :stopped])
-        @aws.stub!(:ec2) { mock_ec2 }
-        mock_instance.should_receive(:stop)
+        stub_find_instance(@mock_instance_client, load_agent, :running)
+        @mock_instance_client.should_receive(:stop)
+        @mock_instance_client.stub!(:stopped?).and_return(true)
         @aws.stop_agent(load_agent)
       end
     end
@@ -495,24 +613,24 @@ describe Hailstorm::Model::AmazonCloud do
 
   context '#before_destroy_load_agent' do
     before(:each) do
-      mock_ec2 = mock(AWS_ADAPTER_CLASS::EC2)
-      @aws.stub!(:ec2) { mock_ec2 }
+      @mock_instance_client = mock(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
+      @aws.stub!(:instance_client).and_return(@mock_instance_client)
       @load_agent = Hailstorm::Model::MasterAgent.new(identifier: 'i-w23457889113')
-      @mock_instance = mock_ec2_instance(mock_ec2, @load_agent, [:terminated])
     end
 
     context 'ec2 instance exists' do
       it 'should terminate the ec2 instance' do
-        @mock_instance.stub!(:exists?).and_return(true)
-        @mock_instance.should_receive(:terminate)
+        stub_find_instance(@mock_instance_client, @load_agent, :terminated)
+        @mock_instance_client.stub!(:terminated?).and_return(true)
+        @mock_instance_client.should_receive(:terminate)
         @aws.before_destroy_load_agent(@load_agent)
       end
     end
 
     context 'ec2 instance does not exist' do
       it 'should do nothing' do
-        @mock_instance.stub!(:exists?).and_return(false)
-        @mock_instance.should_not_receive(:terminate)
+        @mock_instance_client.stub!(:find).and_return(nil)
+        @mock_instance_client.should_not_receive(:terminate)
         @aws.before_destroy_load_agent(@load_agent)
       end
     end
@@ -524,15 +642,14 @@ describe Hailstorm::Model::AmazonCloud do
       @aws.autogenerated_ssh_key = true
       @aws.stub!(:identity_file_path).and_return('secure.pem')
       @aws.ssh_identity = 'secure'
-      @mock_ec2 = mock(Hailstorm::Support::AwsAdapter::EC2)
-      @aws.stub!(:ec2) { @mock_ec2 }
-      @mock_key_pair = mock(AWS_ADAPTER_CLASS::EC2::KeyPair)
+      @mock_key_pair_client = mock(Hailstorm::Behavior::AwsAdaptable::KeyPairClient)
+      @aws.stub!(:key_pair_client).and_return(@mock_key_pair_client)
     end
 
     context 'key_pair exists' do
       it 'should delete the key_pair' do
-        @mock_ec2.stub!(:find_key_pair).and_return(@mock_key_pair)
-        @mock_key_pair.should_receive(:delete)
+        @mock_key_pair_client.stub!(:find).and_return('key-pair-123')
+        @mock_key_pair_client.should_receive(:delete).with(key_pair_id: 'key-pair-123')
         FileUtils.should_receive(:safe_unlink)
         @aws.cleanup
       end
@@ -540,8 +657,8 @@ describe Hailstorm::Model::AmazonCloud do
 
     context 'key_pair does not exist' do
       it 'should do nothing' do
-        @mock_ec2.stub!(:find_key_pair).and_return(nil)
-        @mock_key_pair.should_not_receive(:delete)
+        @mock_key_pair_client.stub!(:find).and_return(nil)
+        @mock_key_pair_client.should_not_receive(:delete)
         FileUtils.should_not_receive(:safe_unlink)
         @aws.cleanup
       end
@@ -586,15 +703,15 @@ describe Hailstorm::Model::AmazonCloud do
         @aws.stub!(:identity_file_path).and_return('/dev/null')
         File.stub!(:exist?).and_return(false)
         @aws.ssh_identity = 'secure'
-        @aws.stub!(:ec2).and_return(mock(AWS_ADAPTER_CLASS::EC2))
-        @mock_key_pair = mock(AWS_ADAPTER_CLASS::EC2::KeyPair, private_key: 'A', name: 'mock_key_pair')
-        @aws.send(:ec2).stub!(:find_key_pair).and_return(@mock_key_pair)
+        @mock_key_pair_client = mock(Hailstorm::Behavior::AwsAdaptable::KeyPairClient)
+        @aws.stub!(:key_pair_client).and_return(@mock_key_pair_client)
+        @mock_key_pair = Hailstorm::Behavior::AwsAdaptable::KeyPair.new(key_material: 'A', key_name: 'mock_key_pair')
       end
 
       context 'ec2 key_pair exists' do
         it 'should add an error on ssh_identity' do
-          @aws.send(:ec2).stub!(:find_key_pair).and_return(@mock_key_pair)
-          @mock_key_pair.should_receive(:delete)
+          @mock_key_pair_client.stub!(:find).and_return(@mock_key_pair)
+          @mock_key_pair_client.should_receive(:delete)
           @aws.should_receive(:create_key_pair)
           @aws.send(:identity_file_exists)
         end
@@ -602,8 +719,8 @@ describe Hailstorm::Model::AmazonCloud do
 
       context 'ec2 key_pair does not exist' do
         it 'should create the ec2 key_pair' do
-          @aws.send(:ec2).stub!(:find_key_pair).and_return(nil)
-          @aws.send(:ec2).stub!(:create_key_pair).and_return(@mock_key_pair)
+          @mock_key_pair_client.stub!(:find).and_return(nil)
+          @mock_key_pair_client.stub!(:create).and_return(@mock_key_pair)
           @mock_key_pair.should_receive(:private_key)
           File.stub!(:chmod)
           @aws.send(:identity_file_exists)
@@ -623,41 +740,46 @@ describe Hailstorm::Model::AmazonCloud do
         @aws.security_group = 'sg-12345'
         @aws.vpc_subnet_id = 'subnet-1234'
         @aws.stub!(:ami_creation_needed?).and_return(true)
+        @aws.stub!(:find_vpc).and_return('vpc-123')
 
-        mock_ec2 = mock(Hailstorm::Support::AwsAdapter::EC2)
-        @aws.stub!(:ec2).and_return(mock_ec2)
-        mock_security_group = mock(AWS_ADAPTER_CLASS::EC2::SecurityGroup, id: @aws.security_group)
-        mock_ec2.stub!(:find_security_group).and_return(mock_security_group)
-        @mock_instance = mock(AWS_ADAPTER_CLASS::EC2::Instance, id: 'i-23456', public_ip_address: '10.34.56.45')
-        mock_ec2.stub!(:create_instance).and_return(@mock_instance)
+        mock_sg_client = mock(Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient)
+        mock_security_group = Hailstorm::Behavior::AwsAdaptable::SecurityGroup.new(group_id: @aws.security_group)
+        mock_sg_client.stub!(:find).and_return(mock_security_group)
+        @aws.stub!(:security_group_client).and_return(mock_sg_client)
 
-        mock_ec2.stub!(:instance_ready?).and_return(true)
+        @mock_instance_client = mock(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
+        @aws.stub!(:instance_client).and_return(@mock_instance_client)
+        mock_instance = Hailstorm::Behavior::AwsAdaptable::Instance.new(
+          instance_id: 'i-23456',
+          public_ip_address: '10.34.56.45',
+          private_ip_address: '172.16.0.10',
+          state: Hailstorm::Behavior::AwsAdaptable::InstanceState.new(name: 'shutting-down')
+        )
+
+        @mock_instance_client.stub!(:create).and_return(mock_instance)
+        @mock_instance_client.stub!(:find).and_return(mock_instance)
+        @mock_instance_client.stub!(:terminated?).and_return(true)
+        @mock_instance_client.stub!(:ready?).and_return(true)
         Hailstorm::Support::SSH.stub!(:ensure_connection).and_return(true)
       end
 
       context 'ami build fails' do
         it 'should raise an exception' do
-          # @mock_instance.stub!(:exists?).and_return(true)
-          states = [:running]
-          @mock_instance.stub!(:status) { states.shift }
           @aws.stub!(:provision)
           @aws.stub!(:register_hailstorm_ami).and_raise(StandardError, 'mocked exception')
-          @mock_instance.should_receive(:terminate)
-          states.push(:terminated)
+          @mock_instance_client.should_receive(:terminate)
           expect { @aws.send(:create_agent_ami) }.to raise_error
         end
       end
 
       context 'ami build succeeds' do
         it 'should assign the AMI id' do
-          # @mock_instance.stub!(:exists?).and_return(true)
-          states = [:running]
-          @mock_instance.stub!(:status) { states.shift }
           @aws.stub!(:provision)
-          mock_ec2_image = mock(AWS_ADAPTER_CLASS::EC2::Image, id: 'ami-12334', state: :available, name: 'same_owner/other_image')
+          mock_ec2_image = Hailstorm::Behavior::AwsAdaptable::Ami.new(image_id: 'ami-12334',
+                                                                      state: 'available',
+                                                                      name: 'same_owner/other_image')
           @aws.stub!(:register_hailstorm_ami).and_return(mock_ec2_image.id)
-          @mock_instance.should_receive(:terminate)
-          states.push(:terminated)
+          @mock_instance_client.should_receive(:terminate)
           @aws.send(:create_agent_ami)
           expect(@aws.agent_ami).to eql(mock_ec2_image.id)
         end
@@ -693,10 +815,10 @@ describe Hailstorm::Model::AmazonCloud do
     context 'an AMI exists' do
       it 'should assign the AMI id to agent_ami' do
         @aws.project = Hailstorm::Model::Project.create!(project_code: __FILE__)
-        mock_ec2 = mock(AWS_ADAPTER_CLASS::EC2)
-        mock_ec2_ami = mock(AWS_ADAPTER_CLASS::EC2::Image, state: :available, name: @aws.send(:ami_id), id: 'ami-123')
-        mock_ec2.stub!(:find_self_owned_ami).and_return(mock_ec2_ami)
-        @aws.stub!(:ec2).and_return(mock_ec2)
+        mock_ami_client = mock(Hailstorm::Behavior::AwsAdaptable::AmiClient)
+        mock_ec2_ami = Hailstorm::Behavior::AwsAdaptable::Ami.new(state: 'available', name: @aws.send(:ami_id), ami_id: 'ami-123')
+        mock_ami_client.stub!(:find_self_owned).and_return(mock_ec2_ami)
+        @aws.stub!(:ami_client).and_return(mock_ami_client)
         @aws.send(:check_for_existing_ami)
         expect(@aws.agent_ami).to be == mock_ec2_ami.id
       end
@@ -708,9 +830,9 @@ describe Hailstorm::Model::AmazonCloud do
       context 'zone is not assigned' do
         it 'should assign the first available zone' do
           @aws.project = Hailstorm::Model::Project.new(project_code: __FILE__, master_slave_mode: true)
-          mock_ec2 = mock(AWS_ADAPTER_CLASS::EC2)
-          mock_ec2.stub!(:first_available_zone).and_return('us-east-1a')
-          @aws.stub!(:ec2).and_return(mock_ec2)
+          mock_ec2_client = mock(Hailstorm::Behavior::AwsAdaptable::Ec2Client)
+          mock_ec2_client.stub!(:first_available_zone).and_return('us-east-1a')
+          @aws.stub!(:ec2_client).and_return(mock_ec2_client)
           @aws.send(:set_availability_zone)
           expect(@aws.zone).to be == 'us-east-1a'
         end
@@ -718,30 +840,19 @@ describe Hailstorm::Model::AmazonCloud do
     end
   end
 
-  context '.purge' do
+  context '#purge' do
     it 'should clean the regions with active Amazon Cloud clusters' do
-      clusters = [
-        { access_key: 'foo', secret_key: 'bar', region: 'us-east-1', active: false },
-        { access_key: 'foo', secret_key: 'bar', region: 'us-west-1', active: false },
-        { access_key: 'foo', secret_key: 'bar', region: 'us-west-2', active: false }
+      attrs = { access_key: 'foo-east-1', secret_key: 'bar-east-1', region: 'us-east-1', active: false }
+      clusterable = Hailstorm::Model::AmazonCloud.new(attrs)
+      clusterable.project = Hailstorm::Model::Project.new(project_code: Digest::SHA2.new.to_s[0..5])
+      stub_aws!(clusterable)
+      clusterable.save!
+      clusterable.update_column(:active, true)
 
-      ].map do |attrs|
-        cluster = Hailstorm::Model::AmazonCloud.new(attrs)
-        cluster.project = Hailstorm::Model::Project.new(project_code: Digest::SHA2.new.to_s[0..5])
-        stub_aws!(cluster)
-        cluster.save!
-        cluster.update_column(:active, true)
-        cluster
-      end
-
-      clusters.last.update_column(:active, false)
-
-      cluster1, cluster2, _cluster3 = clusters
       mock_cleaner = mock(Hailstorm::Support::AmazonAccountCleaner)
-      mock_cleaner.should_receive(:cleanup).with(false, [cluster1.region, cluster2.region])
-      Hailstorm::Model::AmazonCloud.purge(mock_cleaner)
-      expect(cluster1.agent_ami).to be_nil
-      expect(cluster2.agent_ami).to be_nil
+      mock_cleaner.should_receive(:cleanup)
+      clusterable.purge(mock_cleaner)
+      expect(clusterable.agent_ami).to be_nil
     end
   end
 
@@ -775,28 +886,20 @@ describe Hailstorm::Model::AmazonCloud do
   end
 
   context '#create_agent' do
-    it 'should split multiple security groups' do
-      @aws.security_group = 'sg-a, sg-b'
-      @aws.stub!(:ec2).and_return(mock(AWS_ADAPTER_CLASS::EC2))
-      @aws.send(:ec2).stub!(:find_security_group) do |kwargs|
-        mock(AWS_ADAPTER_CLASS::EC2::SecurityGroup, id: kwargs[:name])
+    it 'should run a new EC2 instance' do
+      @aws.security_group = 'sg-a'
+      mock_sg_client = mock(Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient)
+      @aws.stub!(:security_group_client).and_return(mock_sg_client)
+      mock_sg_client.stub!(:find) do |kwargs|
+        Hailstorm::Behavior::AwsAdaptable::SecurityGroup.new(group_id: kwargs[:name])
       end
+
       @aws.should_receive(:new_ec2_instance_attrs) do |_arg1, arg2|
-        expect(arg2).to eql(%w[sg-a sg-b])
+        expect(arg2).to eql(%w[sg-a])
       end
+
       @aws.should_receive(:create_ec2_instance)
       @aws.create_agent
-    end
-  end
-
-  context '#ec2' do
-    it 'should be refresh-able' do
-      @aws.stub!(:aws_adapter) { Object.new }
-      ec2 = @aws.send(:ec2)
-      ec2_other = @aws.send(:ec2)
-      ec2_refreshed = @aws.send(:ec2, true)
-      expect(ec2.object_id).to eql(ec2_other.object_id)
-      expect(ec2.object_id).to_not eql(ec2_refreshed.object_id)
     end
   end
 
@@ -823,7 +926,7 @@ describe Hailstorm::Model::AmazonCloud do
 
   context '#provision' do
     it 'should install Hailstorm dependencies on the ec2 instance' do
-      mock_instance = mock(AWS_ADAPTER_CLASS::EC2::Instance, public_ip_address: '120.34.35.58')
+      mock_instance = Hailstorm::Behavior::AwsAdaptable::Instance.new(public_ip_address: '120.34.35.58')
       mock_ssh = mock(Net::SSH)
       Hailstorm::Support::SSH.stub!(:start).and_yield(mock_ssh)
       @aws.should_receive(:install_java).with(mock_ssh)
@@ -834,28 +937,39 @@ describe Hailstorm::Model::AmazonCloud do
   end
 
   context '#register_hailstorm_ami' do
-    it 'should create an AMI from the instance state' do
+    before(:each) do
       @aws.project = Hailstorm::Model::Project.create!(project_code: __FILE__)
-      mock_instance = mock(AWS_ADAPTER_CLASS::EC2::Instance, instance_id: 'i-67678')
-      mock_ami = mock(AWS_ADAPTER_CLASS::EC2::Image, state: :available, id: 'ami-123')
-      mock_ec2 = mock(AWS_ADAPTER_CLASS::EC2)
-      @aws.stub!(:ec2).and_return(mock_ec2)
-      mock_ec2.stub!(:register_ami).and_return(mock_ami)
-      ami_id = @aws.send(:register_hailstorm_ami, mock_instance)
-      expect(ami_id).to eql(mock_ami.id)
+      @mock_instance = Hailstorm::Behavior::AwsAdaptable::Instance.new(instance_id: 'i-67678')
+      @mock_ami_client = mock(Hailstorm::Behavior::AwsAdaptable::AmiClient)
+      @aws.stub!(:ami_client).and_return(@mock_ami_client)
     end
 
-    it 'should raise Hailstorm::AmiCreationFailure if AMI state is not available' do
-      @aws.project = Hailstorm::Model::Project.create!(project_code: __FILE__)
-      mock_instance = mock(AWS_ADAPTER_CLASS::EC2::Instance, instance_id: 'i-67678')
-      mock_ami = mock(AWS_ADAPTER_CLASS::EC2::Image, state: :pending,
-                      id: 'ami-123', state_reason: OpenStruct.new(code: 'NET', message: 'network error'))
-      mock_ec2 = mock(AWS_ADAPTER_CLASS::EC2)
-      @aws.stub!(:ec2).and_return(mock_ec2)
-      mock_ec2.stub!(:register_ami).and_return(mock_ami)
-      @aws.stub!(:wait_for)
-      expect { @aws.send(:register_hailstorm_ami, mock_instance) }
-        .to raise_error(Hailstorm::AmiCreationFailure) { |error| expect(error.diagnostics).to_not be_blank }
+    it 'should create an AMI from the instance state' do
+      mock_ami = Hailstorm::Behavior::AwsAdaptable::Ami.new(state: 'available', image_id: 'ami-123', name: 'hailstorm')
+      @mock_ami_client.stub!(:register_ami).and_return(mock_ami.id)
+      @mock_ami_client.stub!(:available?).and_return(true)
+      ami_id = @aws.send(:register_hailstorm_ami, @mock_instance)
+      expect(ami_id).to eql(mock_ami.image_id)
+    end
+
+    context 'on failure' do
+      it 'should raise exception' do
+        @mock_ami_client.stub!(:register_ami).and_return('ami-123')
+        @aws.stub!(:wait_for).and_raise(Hailstorm::Exception, 'mock waiter error')
+        state_reason = Hailstorm::Behavior::AwsAdaptable::StateReason.new(code: '10',
+                                                                          message: 'mock AMI creation failure')
+        mock_ami = Hailstorm::Behavior::AwsAdaptable::Ami.new(state: 'failed',
+                                                              image_id: 'ami-123',
+                                                              name: 'hailstorm',
+                                                              state_reason: state_reason)
+        @mock_ami_client.stub!(:find).and_return(mock_ami)
+        expect { @aws.send(:register_hailstorm_ami, @mock_instance) }.to raise_error(Hailstorm::AmiCreationFailure)
+        begin
+          @aws.send(:register_hailstorm_ami, @mock_instance)
+        rescue Hailstorm::AmiCreationFailure => amiFailure
+          expect(amiFailure.diagnostics).to_not be_blank
+        end
+      end
     end
   end
 
@@ -983,30 +1097,37 @@ describe Hailstorm::Model::AmazonCloud do
 
   context '#assign_vpc_subnet' do
     it 'should create a Hailstorm public subnet if it does not exist' do
-      ec2_adapter = mock(AWS_ADAPTER_CLASS::EC2)
-      @aws.stub!(:ec2).and_return(ec2_adapter)
-      ec2_adapter.stub!(:vpc_subnet_id=)
-      ec2_adapter.stub!(:find_subnet).and_return(nil)
-      ec2_adapter.stub!(:modify_vpc_attribute)
-      vpc = mock(AWS_ADAPTER_CLASS::EC2::VPC, state: :available, vpc_id: 'vpc-123')
-      vpc.stub!(:tag)
-      ec2_adapter.stub!(:create_vpc).and_return(vpc)
-      subnet = mock(AWS_ADAPTER_CLASS::EC2::Subnet, state: :available, subnet_id: 'subnet-123')
-      subnet.stub!(:tag)
-      ec2_adapter.stub!(:create_subnet).and_return(subnet)
-      igw = mock(AWS_ADAPTER_CLASS::EC2::InternetGateway, internet_gateway_id: 'igw-123')
-      igw.stub!(:tag)
-      igw.stub!(:attach)
-      ec2_adapter.stub!(:create_internet_gateway).and_return(igw)
-      route_table = mock(AWS_ADAPTER_CLASS::EC2::RouteTable, route_table_id: 'route-123')
-      route_table.stub!(:create_route)
-      route_table.stub!(:associate_with_subnet)
-      ec2_adapter.stub!(:create_route_table).and_return(route_table)
-      route = mock(Aws::EC2::Route, state: :active)
-      route_table.stub!(:routes).and_return([route])
+      mock_vpc_client = mock(Hailstorm::Behavior::AwsAdaptable::VpcClient)
+      @aws.stub!(:vpc_client).and_return(mock_vpc_client)
+      mock_vpc_client.stub!(:modify_attribute)
+      mock_vpc_client.stub!(:tag_name)
+      mock_vpc_client.stub!(:available?).and_return(true)
+      mock_vpc_client.stub!(:create).and_return('vpc-123')
+
+      mock_subnet_client = mock(Hailstorm::Behavior::AwsAdaptable::SubnetClient)
+      @aws.stub!(:subnet_client).and_return(mock_subnet_client)
+      mock_subnet_client.stub!(:find).and_return(nil)
+      mock_subnet_client.stub!(:tag_name)
+      mock_subnet_client.stub!(:available?).and_return(true)
+      mock_subnet_client.stub!(:modify_attribute)
+      mock_subnet_client.stub!(:create).and_return('subnet-123')
+
+      mock_igw_client = mock(Hailstorm::Behavior::AwsAdaptable::InternetGatewayClient)
+      @aws.stub!(:internet_gateway_client).and_return(mock_igw_client)
+      mock_igw_client.stub!(:tag_name)
+      mock_igw_client.stub!(:attach)
+      mock_igw_client.stub!(:create).and_return('igw-123')
+
+      mock_rt_client = mock(Hailstorm::Behavior::AwsAdaptable::RouteTableClient)
+      @aws.stub!(:route_table_client).and_return(mock_rt_client)
+      mock_rt_client.stub!(:create_route)
+      mock_rt_client.stub!(:associate_with_subnet)
+      mock_rt_client.stub!(:main_route_table).and_return('route-123')
+      route = Hailstorm::Behavior::AwsAdaptable::Route.new(state: 'active')
+      mock_rt_client.stub!(:routes).and_return([route])
 
       @aws.send(:assign_vpc_subnet)
-      expect(@aws.vpc_subnet_id).to be == subnet.subnet_id
+      expect(@aws.vpc_subnet_id).to be == 'subnet-123'
     end
   end
 end

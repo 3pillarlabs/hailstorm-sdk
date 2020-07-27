@@ -78,7 +78,7 @@ describe Hailstorm::Support::SSH do
         expect(@ssh.file_exists?('foobar')).to be_false
       end
     end
-    
+
     context '#directory_exists?' do
       it 'should be true if directory exists, false otherwise' do
         @ssh.stub!(:exec!).and_yield(double('Channel'), :stdout, 'foobar')
@@ -97,7 +97,7 @@ describe Hailstorm::Support::SSH do
         expect(@ssh.process_running?(90024)).to be_false
       end
     end
-    
+
     context '#terminate_process' do
       it 'should signal the running process' do
         states = [true, true, true, false].each
@@ -110,12 +110,12 @@ describe Hailstorm::Support::SSH do
     context '#terminate_process_tree' do
       it 'should terminate parent and child processes up to any depth' do
         process_ary = [
-          { ppid: 10, pid: 20 },
-          { ppid: 20, pid: 30 },
-          { ppid: 20, pid: 40 },
-          { ppid: 30, pid: 50 },
-          { ppid: 40, pid: 60 },
-        ].map { |x| OpenStruct.new(x) }
+          { ppid: 10, pid: 20, cmd: 'gen 1' },
+          { ppid: 20, pid: 30, cmd: 'gen 2-1' },
+          { ppid: 20, pid: 40, cmd: 'gen 2-2' },
+          { ppid: 30, pid: 50, cmd: 'gen 3' },
+          { ppid: 40, pid: 60, cmd: 'gen 4' },
+        ].map { |x| Hailstorm::Support::SSH::RemoteProcess.new(x) }
         @ssh.stub!(:remote_processes).and_return(process_ary)
         @ssh.should_receive(:terminate_process).exactly(5).times
         @ssh.terminate_process_tree(20, 0)
@@ -129,7 +129,7 @@ describe Hailstorm::Support::SSH do
         @ssh.make_directory('/tmp/foo')
       end
     end
-    
+
     context '#upload' do
       it 'should delegate to sftp sub system' do
         local, remote = %w[/foo/bar /baz/bar]
@@ -152,7 +152,10 @@ describe Hailstorm::Support::SSH do
 
     context '#find_process_id' do
       it 'should find the process id in remote process table' do
-        @ssh.stub!(:remote_processes).and_return([OpenStruct.new(cmd: 'grep foo', pid: 1234)])
+        @ssh.stub!(:remote_processes).and_return(
+          [Hailstorm::Support::SSH::RemoteProcess.new(cmd: 'grep foo', pid: 1234, ppid: 123)]
+        )
+
         expect(@ssh.find_process_id('grep')).to be == 1234
         expect(@ssh.find_process_id('find')).to be_nil
       end

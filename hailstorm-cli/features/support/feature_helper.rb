@@ -9,6 +9,7 @@ insecure_key_path = File.expand_path('../../data/insecure_key', __FILE__)
 FileUtils.cp(insecure_key_path, "#{insecure_key_path}.pem")
 
 ENV['HAILSTORM_ENV'] = 'cli_integration' unless ENV['HAILSTORM_ENV']
+ENV['HAILSTORM_WORKSPACE_ROOT'] = BUILD_PATH
 
 require 'active_record'
 require 'active_record/base'

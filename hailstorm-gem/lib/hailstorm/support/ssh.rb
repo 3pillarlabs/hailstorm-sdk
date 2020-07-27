@@ -154,9 +154,9 @@ class Hailstorm::Support::SSH
     end
 
     # Sends a 'ps -o pid,ppid,cmd -u $user' to remote host and compiles an
-    # array of processes. Each process is an OpenStruct with following attributes:
+    # array of processes. Each process is an RemoteProcess with following attributes:
     # pid (process ID), ppid (parent process ID), cmd (command string).
-    # @return [Array] OpenStruct: pid, ppid, cmd
+    # @return [Array<RemoteProcess>] pid, ppid, cmd
     def remote_processes
       stdout = ''
       self.exec!("ps -o pid,ppid,cmd -u #{self.options[:user]}") do |_channel, stream, data|
@@ -177,16 +177,31 @@ class Hailstorm::Support::SSH
         next if line.blank? || line.match(/^PID/i)
 
         matcher = ps_line_rexp.match(line)
-        process = OpenStruct.new
-        process.pid = matcher[1].to_i
-        process.ppid = matcher[2].to_i
-        process.cmd = matcher[3]
-        @remote_processes.push(process.freeze)
+        process = RemoteProcess.new(pid: matcher[1], ppid: matcher[2], cmd: matcher[3])
+        @remote_processes.push(process)
       end
 
       @remote_processes
     end
 
+  end
+
+  # Remote process. This is an internal class.
+  class RemoteProcess
+
+    MEMBERS = %i[pid ppid cmd]
+
+    attr_reader *MEMBERS
+
+    def initialize(pid:, ppid:, cmd:)
+      @pid = pid.to_i
+      @ppid = ppid.to_i
+      @cmd = cmd
+    end
+
+    def to_h
+      @attrs ||= MEMBERS.reduce({}) { |s, m|  s.merge(m.to_sym => self.send(m)) }
+    end
   end
 
   # Methods aliased to other names

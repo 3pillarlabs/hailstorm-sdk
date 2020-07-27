@@ -2,405 +2,420 @@ require 'hailstorm/support'
 require 'aws-sdk-ec2'
 require 'delegate'
 require 'hailstorm/behavior/loggable'
+require 'hailstorm/behavior/aws_adaptable'
+require 'ostruct'
 
 # AWS SDK adapter.
 # Route all calls to AWS SDK through this adapter.
 class Hailstorm::Support::AwsAdapter
   include Hailstorm::Behavior::Loggable
 
-  # Eager load AWS components
-  def self.eager_autoload!
-    Aws.eager_autoload!
-  end
-
-  # EC2 adapter
-  class EC2
+  # Abstract class for all client adapters.
+  class AbstractClient
     include Hailstorm::Behavior::Loggable
+    include Hailstorm::Behavior::AwsAdaptable::Taggable
 
-    attr_accessor :vpc_subnet_id
-
-    # @return [Aws::EC2::Resource]
+    # @return [Aws::EC2::Client]
     attr_reader :ec2
 
-    # @param [Hash] aws_config
-    def initialize(aws_config, ec2: nil, vpc: nil)
-      self.vpc_subnet_id = aws_config[:vpc_subnet_id]
-      @ec2 = ec2 || ec2_resource(aws_config.except(:vpc_subnet_id))
-      @vpc = vpc
+    # @param [Aws::EC2::Client] ec2_client
+    def initialize(ec2_client:)
+      @ec2 = ec2_client
     end
 
-    # @return [Hailstorm::Support::AwsAdapter::EC2::VPC]
-    def vpc
-      @vpc ||= self.vpc_subnet_id ? vpc_from(subnet_id: vpc_subnet_id) : nil
+    def tag_name(resource_id:, name:)
+      ec2.create_tags(resources: [resource_id], tags: [{key: 'Name', value: name }])
     end
+  end
 
-    # @return [String]
+  # Client adapter for EC2 methods invoked
+  class Ec2Client < AbstractClient
+    include Hailstorm::Behavior::AwsAdaptable::Ec2Client
+
     def first_available_zone
-      zone = ec2.client
-                .describe_availability_zones.to_h[:availability_zones]
-                .find { |z| z[:state].to_sym == :available }
-      zone ? zone[:zone_name] : nil
+      zone = ec2.describe_availability_zones
+                .availability_zones
+                .find { |z| z.state.to_sym == :available }
+
+      zone ? zone.zone_name : nil
     end
 
-    # @return [Hailstorm::Support::AwsAdapter::EC2::InternetGateway]
-    def create_internet_gateway
-      InternetGateway.new(ec2.create_internet_gateway)
+    def find_vpc(subnet_id:)
+      resp = ec2.describe_subnets(subnet_ids: [subnet_id])
+      return nil if resp.subnets.empty?
+
+      resp.subnets[0].vpc_id
     end
 
-    # @return [Enumerator<Hailstorm::Support::AwsAdapter::EC2::Snapshot>]
     def find_self_owned_snapshots
-      ec2.snapshots(owner_ids: %w[self]).lazy.map { |e| Snapshot.new(e) }
-    end
-
-    # Instance methods for working with EC2 key pairs.
-    module KeyPairMethods
-      # Finds a key pair by name, returns nil if not found.
-      # @param [String] name
-      # @return [Hailstorm::Support::AwsAdapter::EC2::KeyPair]
-      def find_key_pair(name:)
-        key_pair = ec2.key_pair(name)
-        key_pair ? KeyPair.new(key_pair) : nil
-      end
-
-      # @param [String] name
-      # @return [Hailstorm::Support::AwsAdapter::EC2::KeyPair]
-      def create_key_pair(name:)
-        KeyPair.new(ec2.create_key_pair(key_name: name))
-      end
-
-      # @return [Enumerator<Hailstorm::Support::AwsAdapter::EC2::KeyPair>]
-      def all_key_pairs
-        ec2.key_pairs.lazy.map { |e| KeyPair.new(e) }
+      resp = ec2.describe_snapshots(owner_ids: ['self'])
+      resp.snapshots.lazy.map do |snapshot|
+        Hailstorm::Behavior::AwsAdaptable::Snapshot.new(snapshot_id: snapshot.snapshot_id, state: snapshot.state)
       end
     end
 
-    # Instance methods for AWS security group
-    module SecurityGroupMethods
+    def delete_snapshot(snapshot_id:)
+      ec2.delete_snapshot(snapshot_id: snapshot_id)
+    end
+  end
 
-      # @param [String] name
-      # @return [Hailstorm::Support::AwsAdapter::EC2::SecurityGroup]
-      def find_security_group(name:)
-        security_group = (vpc || ec2).security_groups(filters: [{name: 'group-name', values: [name]}]).first
-        security_group ? SecurityGroup.new(security_group) : nil
-      end
+  # AWS KeyPair adapter
+  class KeyPairClient < AbstractClient
+    include Hailstorm::Behavior::AwsAdaptable::KeyPairClient
 
-      # @param [String] name
-      # @param [Hash] kwargs
-      # @return [Hailstorm::Support::AwsAdapter::EC2::SecurityGroup]
-      def create_security_group(name:, **kwargs)
-        attrs = kwargs.except(:vpc)
-        attrs[:vpc_id] = kwargs[:vpc].vpc_id if kwargs.key?(:vpc)
-        attrs[:group_name] = name
-        SecurityGroup.new(ec2.create_security_group(attrs))
-      end
-
-      # @return [Enumerator<Hailstorm::Support::AwsAdapter::EC2::SecurityGroup>]
-      def all_security_groups
-        ec2.security_groups.lazy.map { |e| SecurityGroup.new(e) }
-      end
+    def find(name:)
+      resp = ec2.describe_key_pairs(key_names: [name])
+      key_pair_info = resp.to_h[:key_pairs].first
+      key_pair_info ? key_pair_info[:key_pair_id] : nil
+    rescue Aws::EC2::Errors::ServiceError
+      return nil
     end
 
-    # Instance methods for EC2 Instance
-    module Ec2InstanceMethods
-
-      # @param [String] instance_id
-      # @return [Hailstorm::Support::AwsAdapter::EC2::Instance]
-      def find_instance(instance_id:)
-        instance = ec2.instances(instance_ids: [instance_id]).first
-        instance ? Instance.new(instance) : nil
-      end
-
-      # @param [Hash] attrs EC2 instance attributes
-      # @return [Hailstorm::Support::AwsAdapter::EC2::Instance]
-      def create_instance(attrs, min_count: 1, max_count: 1)
-        req_attrs = attrs.except(:availability_zone, :associate_public_ip_address)
-        req_attrs.merge!(min_count: min_count, max_count: max_count)
-        req_attrs.merge!(placement: {availability_zone: attrs[:availability_zone]}) if attrs.key?(:availability_zone)
-        instance = ec2.create_instances(req_attrs).first
-        Instance.new(ec2.instance(instance.id))
-      end
-
-      # @return [Enumerator<Hailstorm::Support::AwsAdapter::EC2::Instance>]
-      def all_instances
-        ec2.instances.lazy.map { |e| Instance.new(e) }
-      end
-
-      # @param [Hailstorm::Support::AwsAdapter::EC2::Instance] instance
-      # @return [Boolean]
-      def instance_ready?(instance)
-        instance.exists?.tap { |x| logger.debug { "instance.exists?: #{x}" } } &&
-          instance.status.eql?(:running).tap { |x| logger.debug { "instance.status: #{x}" } } &&
-          systems_ok(instance).tap { |x| logger.debug { "systems_ok: #{x}" } }
-      end
-
-      # @param [Hailstorm::Support::AwsAdapter::EC2::Instance] instance
-      def refresh_instance!(instance)
-        ec2_instance = ec2.instance(instance.instance_id)
-        instance.__setobj__(ec2_instance)
-        instance
-      end
-
-      private
-
-      def systems_ok(instance)
-        reachability_pass = ->(f) { f[:name] == 'reachability' && f[:status] == 'passed' }
-        describe_instance_status(instance).reduce(true) do |state, e|
-          system_reachable = e[:system_status][:details].select { |f| reachability_pass.call(f) }.empty?
-          instance_reachable = e[:instance_status][:details].select { |f| reachability_pass.call(f) }.empty?
-          state && !system_reachable && !instance_reachable
-        end
-      end
-
-      def describe_instance_status(ec2_instance)
-        ec2.client.describe_instance_status(instance_ids: [ec2_instance.id]).to_h[:instance_statuses]
-      end
+    def delete(key_pair_id:)
+      ec2.delete_key_pair(key_pair_id: key_pair_id)
     end
 
-    # Instance methods for AMI
-    module AmiMethods
-
-      # @param [Regexp] regexp regular expression to match the AMI name
-      # @return [Hailstorm::Support::AwsAdapter::EC2::Image]
-      def find_self_owned_ami(regexp:)
-        ami = ec2.images(owners: [:self.to_s]).find { |e| e.state.to_sym == :available && regexp.match(e.name) }
-        ami ? Image.new(ami) : nil
-      end
-
-      # @param [String] name
-      # @param [String] instance_id
-      # @param [String] description
-      # @return [Hailstorm::Support::AwsAdapter::EC2::Image]
-      def register_ami(name:, instance_id:, description:)
-        resp = ec2.client.create_image(name: name, instance_id: instance_id, description: description)
-        Image.new(ec2.image(resp.to_h[:image_id]))
-      end
-
-      # Updates the delegation object
-      # @param [Hailstorm::Support::AwsAdapter::EC2::Image] ami
-      # @return [Hailstorm::Support::AwsAdapter::EC2::Image]
-      def refresh_ami!(ami)
-        ec2_image = ec2.image(ami.image_id)
-        ami.__setobj__(ec2_image)
-        ami
-      end
+    def create(name:)
+      resp = ec2.create_key_pair(key_name: name)
+      attribute_keys = %i[key_fingerprint key_material key_name key_pair_id]
+      Hailstorm::Behavior::AwsAdaptable::KeyPair.new(resp.to_h.slice(*attribute_keys))
     end
 
-    # Instance methods for Subnet
-    module SubnetMethods
-
-      # @param [String] name_tag
-      def find_subnet(name_tag:)
-        subnet = ec2.subnets(filters: [{name: 'tag:Name', values: [name_tag]}]).first
-        subnet ? Subnet.new(subnet) : nil
-      end
-
-      # @param [Hailstorm::Support::AwsAdapter::EC2::VPC] vpc
-      # @param [String] cidr
-      # @return [Hailstorm::Support::AwsAdapter::EC2::Subnet]
-      def create_subnet(vpc:, cidr:)
-        Subnet.new(vpc.create_subnet(cidr_block: cidr))
-      end
-
-      # @param [Hailstorm::Support::AwsAdapter::EC2::Subnet] subnet
-      # @param [Hash] kwargs
-      def modify_subnet_attribute(subnet, **kwargs)
-        attrs = kwargs.reduce({}) { |s, e| s.merge(e.first => {value: e.last}) }
-        attrs.merge!(subnet_id: subnet.subnet_id)
-        ec2.client.modify_subnet_attribute(attrs)
-      end
-
-      # @param [Hailstorm::Support::AwsAdapter::EC2::Subnet] subnet
-      def refresh_subnet!(subnet)
-        ec2_subnet = ec2.subnet(subnet.subnet_id)
-        subnet.__setobj__(ec2_subnet)
-        subnet
+    def list
+      ec2.describe_key_pairs.key_pairs.lazy.map do |key_pair|
+        Hailstorm::Behavior::AwsAdaptable::KeyPairInfo.new(key_pair.to_h)
       end
     end
+  end
 
-    # Instance methods for VPC
-    module VpcMethods
+  class InstanceClient < AbstractClient
+    include Hailstorm::Behavior::AwsAdaptable::InstanceClient
 
-      # @param [String] vpc_id
-      # @param [Hash] kwargs
-      def modify_vpc_attribute(vpc_id, **kwargs)
-        ec2.client.modify_vpc_attribute(kwargs.merge(vpc_id: vpc_id))
-      end
+    def find(instance_id:)
+      resp = ec2.describe_instances(instance_ids: [instance_id])
+      return if resp.reservations.blank? || resp.reservations[0].instances.blank?
 
-      # @param [String] cidr
-      # @return [Hailstorm::Support::AwsAdapter::EC2::VPC]
-      def create_vpc(cidr:)
-        VPC.new(ec2.create_vpc(cidr_block: cidr))
-      end
-
-      # @param [Hailstorm::Support::AwsAdapter::EC2::VPC] vpc
-      # @return [Hailstorm::Support::AwsAdapter::EC2::RouteTable]
-      def create_route_table(vpc:)
-        RouteTable.new(ec2.create_route_table(vpc_id: vpc.id))
-      end
-
-      # @param [Hailstorm::Support::AwsAdapter::EC2::VPC] vpc
-      def refresh_vpc!(vpc)
-        ec2_vpc = ec2.vpc(vpc.vpc_id)
-        vpc.__setobj__(ec2_vpc)
-        vpc
-      end
-
-      # @param [Hailstorm::Support::AwsAdapter::EC2::VPC] vpc
-      # @return [Hailstorm::Support::AwsAdapter::EC2::RouteTable]
-      def main_route_table(vpc:)
-        rtb = vpc.route_tables.first
-        rtb ? RouteTable.new(rtb) : nil
-      end
+      decorate(instance: resp.reservations[0].instances[0])
     end
 
-    include KeyPairMethods
-    include SecurityGroupMethods
-    include Ec2InstanceMethods
-    include AmiMethods
-    include SubnetMethods
-    include VpcMethods
+    def decorate(instance:)
+      Hailstorm::Behavior::AwsAdaptable::Instance.new(
+        instance_id: instance.instance_id,
+        state: Hailstorm::Behavior::AwsAdaptable::InstanceState.new(
+          name: instance.state.name,
+          code: instance.state.code
+        ),
+        public_ip_address: instance.public_ip_address,
+        private_ip_address: instance.private_ip_address
+      )
+    end
+    private :decorate
 
-    # For resources that are taggable
-    module Taggable
-
-      # @param [String] key
-      # @param [String] value
-      def tag(key, value:)
-        create_tags(tags: [{key: key, value: value}])
-      end
+    def running?(instance_id:)
+      instance = find(instance_id: instance_id)
+      instance ? instance.running? : false
     end
 
-    # Wrapper for AWS KeyPair type
-    class KeyPair < SimpleDelegator
-      def private_key
-        key_material
-      end
+    def start(instance_id:)
+      resp = ec2.start_instances(instance_ids: [instance_id])
+      return if resp.starting_instances.empty?
+
+      result = resp.starting_instances[0]
+      to_transitional_attributes(result)
     end
 
-    # Wrapper for AWS Instance
-    class Instance < SimpleDelegator
-      include Taggable
+    # @param [Aws::EC2::Types::InstanceStateChange] result
+    # @return [Hailstorm::Behavior::AwsAdaptable::InstanceStateChange]
+    def to_transitional_attributes(result)
+      Hailstorm::Behavior::AwsAdaptable::InstanceStateChange.new(
+        instance_id: result.instance_id,
+        current_state: result.current_state,
+        previous_state: result.previous_state
+      )
+    end
+    private :to_transitional_attributes
 
-      def status
-        state.name.to_sym
-      end
+    def stop(instance_id:)
+      resp = ec2.stop_instances(instance_ids: [instance_id])
+      return if resp.stopping_instances.empty?
 
-      def stopped?
-        status == :stopped
-      end
-
-      def terminated?
-        status == :terminated
-      end
-
-      def running?
-        status == :running
-      end
+      result = resp.stopping_instances[0]
+      to_transitional_attributes(result)
     end
 
-    # Wrapper for AWS SecurityGroup
-    class SecurityGroup < SimpleDelegator
-      def name
-        group_name
-      end
-
-      def authorize_ingress(proto, port_or_range, cidr: nil)
-        ip_perm = { ip_protocol: proto }
-        ip_perm[:from_port] = port_or_range.is_a?(Range) ? port_or_range.first : port_or_range
-        ip_perm[:to_port] = port_or_range.is_a?(Range) ? port_or_range.last : port_or_range
-        ip_perm[:ip_ranges] = [{ cidr_ip: nil }]
-        if cidr
-          ip_perm[:ip_ranges].first[:cidr_ip] = cidr == :anywhere ? '0.0.0.0/0' : cidr
-        else
-          ip_perm[:user_id_group_pairs] = [{group_id: group_id}]
-        end
-
-        __getobj__.authorize_ingress(ip_permissions: [ip_perm])
-      end
-
-      def allow_ping
-        authorize_ingress(:icmp, -1, cidr: :anywhere)
-      end
+    def stopped?(instance_id:)
+      instance = find(instance_id: instance_id)
+      instance ? instance.stopped? : true
     end
 
-    # Wrapper for AWS EC2 Image
-    class Image < SimpleDelegator
-      def state
-        __getobj__.state.to_sym
-      end
+    def terminate(instance_id:)
+      resp = ec2.terminate_instances(instance_ids: [instance_id])
+      return if resp.terminating_instances.empty?
 
-      def available?
-        state == :available
-      end
+      result = resp.terminating_instances[0]
+      to_transitional_attributes(result)
     end
 
-    # Wrapper for AWS Subnet
-    class Subnet < SimpleDelegator
-      include Taggable
-
-      def available?
-        state.to_sym == :available
-      end
+    def terminated?(instance_id:)
+      instance = find(instance_id: instance_id)
+      instance ? instance.terminated? : true
     end
 
-    # Wrapper for AWS EC2 VPC
-    class VPC < SimpleDelegator
-      include Taggable
-
-      def available?
-        state.to_sym == :available
-      end
+    def create(instance_attrs, min_count: 1, max_count: 1)
+      req_attrs = instance_attrs.except(:availability_zone)
+      req_attrs.merge!(min_count: min_count, max_count: max_count)
+      req_attrs.merge!(placement: instance_attrs.slice(:availability_zone)) if instance_attrs.key?(:availability_zone)
+      instance = ec2.run_instances(req_attrs).instances[0]
+      decorate(instance: instance)
     end
 
-    # Wrapper for AWS EC2 InternetGateway
-    class InternetGateway < SimpleDelegator
-      include Taggable
+    def ready?(instance_id:)
+      instance = find(instance_id: instance_id)
+      return false unless instance
 
-      # @param [Hailstorm::Support::AwsAdapter::EC2::VPC] vpc
-      def attach(vpc)
-        attach_to_vpc(vpc_id: vpc.vpc_id)
-      end
+      logger.debug { instance.to_h }
+      instance.running? && systems_ok(instance)
     end
 
-    # Wrapper for Route Table
-    class RouteTable < SimpleDelegator
-
-      # @param [String] destination
-      # @param [Hailstorm::Support::AwsAdapter::EC2::InternetGateway] internet_gateway
-      def create_route(destination, internet_gateway:)
-        __getobj__.create_route(
-          destination_cidr_block: destination,
-          gateway_id: internet_gateway.internet_gateway_id
-        )
+    def systems_ok(instance)
+      reachability_pass = ->(f) { f.name == 'reachability' && f.status == 'passed' }
+      ec2.describe_instance_status(instance_ids: [instance.id]).instance_statuses.reduce(true) do |state, e|
+        system_unreachable = e.system_status.details.select { |f| reachability_pass.call(f) }.empty?
+        instance_unreachable = e.instance_status.details.select { |f| reachability_pass.call(f) }.empty?
+        state && !system_unreachable && !instance_unreachable
       end
     end
+    private :systems_ok
 
-    # Wrapper for Snapshot
-    class Snapshot < SimpleDelegator
+    def list
+      ec2.describe_instances.reservations.flat_map(&:instances).lazy.map { |instance| decorate(instance: instance) }
+    end
+  end
 
-      # @return [Symbol] one of :pending, :completed, or :error
-      def status
-        state.to_sym
+  # AWS security group client
+  class SecurityGroupClient < AbstractClient
+    include Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient
+
+    def find(name:, vpc_id: nil)
+      filters = [{ name: 'group-name', values: [name] }]
+      filters.push({ name: 'vpc-id', values: [vpc_id] }) if vpc_id
+      resp = ec2.describe_security_groups(filters: filters)
+      return if resp.security_groups.empty?
+
+      security_group = resp.security_groups[0]
+      sg_attrs = { group_name: security_group.group_name, group_id: security_group.group_id }
+      sg_attrs[:vpc_id] = security_group.vpc_id if security_group.respond_to?(:vpc_id)
+      Hailstorm::Behavior::AwsAdaptable::SecurityGroup.new(sg_attrs)
+    end
+
+    def create(name:, description:, vpc_id: nil)
+      resp = ec2.create_security_group(group_name: name, description: description, vpc_id: vpc_id)
+      Hailstorm::Behavior::AwsAdaptable::SecurityGroup.new(group_id: resp.group_id)
+    end
+
+    def authorize_ingress(group_id:, protocol:, port_or_range:, cidr: nil)
+      ip_perm = { ip_protocol: protocol.to_s }
+      ip_perm[:from_port] = port_or_range.is_a?(Range) ? port_or_range.first : port_or_range
+      ip_perm[:to_port] = port_or_range.is_a?(Range) ? port_or_range.last : port_or_range
+      ip_perm[:ip_ranges] = [{ cidr_ip: nil }]
+      if cidr
+        ip_perm[:ip_ranges].first[:cidr_ip] = cidr == :anywhere ? '0.0.0.0/0' : cidr
+      else
+        ip_perm[:user_id_group_pairs] = [{group_id: group_id}]
       end
+
+      ec2.authorize_security_group_ingress(group_id: group_id, ip_permissions: [ip_perm])
+    end
+
+    def allow_ping(group_id:)
+      authorize_ingress(group_id: group_id, protocol: :icmp, port_or_range: -1, cidr: :anywhere)
+    end
+
+    def delete(group_id:)
+      ec2.delete_security_group(group_id: group_id)
+    end
+
+    def list
+      ec2.describe_security_groups.security_groups.lazy.map do |sg|
+        Hailstorm::Behavior::AwsAdaptable::SecurityGroup.new(sg.to_h)
+      end
+    end
+  end
+
+  class AmiClient < AbstractClient
+    include Hailstorm::Behavior::AwsAdaptable::AmiClient
+
+    def find_self_owned(ami_name_regexp:)
+      ami = ec2.describe_images(owners: [:self.to_s])
+               .images
+               .find { |e| e.state.to_sym == :available && ami_name_regexp.match(e.name) }
+      return unless ami
+
+      decorate(ami)
+    end
+
+    # @param [Aws::EC2::Types::Image] ami
+    def decorate(ami)
+      state_reason = ami.state_reason ?
+                     Hailstorm::Behavior::AwsAdaptable::StateReason.new(code: ami.state_reason.code,
+                                                                        message: ami.state_reason.message)
+                     :
+                     nil
+      Hailstorm::Behavior::AwsAdaptable::Ami.new(image_id: ami.image_id,
+                                                 name: ami.name,
+                                                 state: ami.state,
+                                                 state_reason: state_reason)
+    end
+    private :decorate
+
+    # @see Hailstorm::Behavior::AwsAdaptable::AmiClient#available?
+    def available?(ami_id:)
+      ami = find(ami_id: ami_id)
+      ami&.available?
+    end
+
+    # @see Hailstorm::Behavior::AwsAdaptable::AmiClient#register_ami
+    def register_ami(name:, instance_id:, description:)
+      resp = ec2.create_image(name: name, instance_id: instance_id, description: description)
+      resp.image_id
+    end
+
+    def deregister(ami_id:)
+      ec2.deregister_image(image_id: ami_id)
+    end
+
+    def find(ami_id:)
+      resp = ec2.describe_images(image_ids: [ami_id])
+      return nil if resp.images.empty?
+
+      decorate(resp.images[0])
+    end
+  end
+
+  # Subnet adapter
+  class SubnetClient < AbstractClient
+    include Hailstorm::Behavior::AwsAdaptable::SubnetClient
+
+    def available?(subnet_id:)
+      resp = query(subnet_id: subnet_id)
+      !resp.subnets.blank? && resp.subnets[0].state.to_sym == :available
+    end
+
+    def create(vpc_id:, cidr:)
+      resp = ec2.create_subnet(cidr_block: cidr, vpc_id: vpc_id)
+      resp.subnet.subnet_id
+    end
+
+    def find(subnet_id: nil, name_tag: nil)
+      resp = query(subnet_id: subnet_id, name_tag: name_tag)
+      return nil if resp.subnets.empty?
+
+      resp.subnets[0].subnet_id
+    end
+
+    def modify_attribute(subnet_id:, **kwargs)
+      attrs = kwargs.reduce({}) { |s, e| s.merge(e.first => { value: e.last }) }
+      attrs.merge!(subnet_id: subnet_id)
+      ec2.modify_subnet_attribute(attrs)
     end
 
     private
 
-    # @param [Hash] aws_config
-    # @return [Aws::EC2::Resource]
-    def ec2_resource(aws_config)
-      ec2_client = Aws::EC2::Client.new(
-        region: aws_config[:region],
-        credentials: Aws::Credentials.new(aws_config[:access_key_id], aws_config[:secret_access_key])
-      )
+    def query(subnet_id: nil, name_tag: nil)
+      params = {}
+      params[:subnet_ids] = [subnet_id] if subnet_id
+      if name_tag
+        params[:filters] = []
+        params[:filters].push(name: 'tag:Name', values: [name_tag])
+      end
 
-      Aws::EC2::Resource.new(client: ec2_client)
+      ec2.describe_subnets(params)
+    end
+  end
+
+  class VpcClient < AbstractClient
+    include Hailstorm::Behavior::AwsAdaptable::VpcClient
+
+    def create(cidr:)
+      resp = ec2.create_vpc(cidr_block: cidr)
+      resp.vpc.vpc_id
     end
 
-    # @param [String] subnet_id
-    # @return [Hailstorm::Support::AwsAdapter::EC2::VPC]
-    def vpc_from(subnet_id:)
-      VPC.new(ec2.subnet(subnet_id).vpc)
+    def modify_attribute(vpc_id:, **kwargs)
+      ec2.modify_vpc_attribute(kwargs.transform_values { |v| {value: v} }.merge(vpc_id: vpc_id))
     end
+
+    def available?(vpc_id:)
+      resp = ec2.describe_vpcs(vpc_ids: [vpc_id])
+      !resp.vpcs.blank? && resp.vpcs[0].state.to_sym == :available
+    end
+  end
+
+  class InternetGatewayClient < AbstractClient
+    include Hailstorm::Behavior::AwsAdaptable::InternetGatewayClient
+
+    def attach(igw_id:, vpc_id:)
+      ec2.attach_internet_gateway(internet_gateway_id: igw_id, vpc_id: vpc_id)
+    end
+
+    def create
+      resp = ec2.create_internet_gateway
+      resp.internet_gateway.internet_gateway_id
+    end
+  end
+
+  class RouteTableClient < AbstractClient
+    include Hailstorm::Behavior::AwsAdaptable::RouteTableClient
+
+    def associate_with_subnet(route_table_id:, subnet_id:)
+      resp = ec2.associate_route_table(route_table_id: route_table_id, subnet_id: subnet_id)
+      resp.association_id
+    end
+
+    def create(vpc_id:)
+      resp = ec2.create_route_table(vpc_id: vpc_id)
+      resp.route_table.route_table_id
+    end
+
+    def create_route(route_table_id:, cidr:, internet_gateway_id:)
+      ec2.create_route(destination_cidr_block: cidr,
+                       gateway_id: internet_gateway_id,
+                       route_table_id: route_table_id)
+    end
+
+    def main_route_table(vpc_id:)
+      resp = ec2.describe_route_tables(filters: [{ name: 'vpc-id', values: [vpc_id] }])
+      rtb = resp.route_tables.find do |route_table|
+        route_table.associations.any? { |rtb_assoc| rtb_assoc.main }
+      end
+
+      rtb ? rtb.route_table_id : nil
+    end
+
+    def routes(route_table_id:)
+      ec2.describe_route_tables(route_table_ids: [route_table_id])
+          .route_tables
+          .first
+          .routes
+          .map { |route| Hailstorm::Behavior::AwsAdaptable::Route.new(state: route.state) }
+    end
+  end
+
+  # @param [Hash] aws_config(access_key_id secret_access_key region)
+  def self.clients(aws_config)
+    unless @clients
+      credentials = Aws::Credentials.new(aws_config[:access_key_id], aws_config[:secret_access_key])
+      ec2_client = Aws::EC2::Client.new(region: aws_config[:region], credentials: credentials)
+      factory_attrs = Hailstorm::Behavior::AwsAdaptable::CLIENT_KEYS.reduce({}) do |attrs, ck|
+        attrs.merge(
+          ck.to_sym => "#{Hailstorm::Support::AwsAdapter.name}::#{ck.to_s.camelize}".constantize
+                                                                                    .new(ec2_client: ec2_client)
+        )
+      end
+
+      @clients = Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(factory_attrs)
+    end
+
+    @clients
   end
 end

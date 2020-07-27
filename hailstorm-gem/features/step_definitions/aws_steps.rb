@@ -96,7 +96,6 @@ And(/^a public VPC subnet is available$/) do
   public_subnet = select_public_subnets(region: @aws.region).first
   expect(public_subnet).to_not be_nil
   @aws.vpc_subnet_id = public_subnet.id
-  @aws.send(:ec2).vpc_subnet_id = @aws.vpc_subnet_id
 end
 
 
