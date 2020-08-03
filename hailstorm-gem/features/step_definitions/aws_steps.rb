@@ -11,7 +11,7 @@ end
 
 When /^I choose '(.+?)' region$/ do |region|
   @aws.region = region
-  @ami_id = @aws.send(:region_base_ami_map)[@aws.region]['64-bit']
+  @ami_id = Hailstorm::Model::Helper::AmiHelper.region_base_ami_map[@aws.region]['64-bit']
   expect(@ami_id).to_not be_nil
 end
 
@@ -24,7 +24,7 @@ end
 
 When(/^(?:I |)create the AMI$/) do
   expect(@aws).to be_valid
-  @aws.create_security_group
+  @aws.send(:create_security_group)
   @aws.send(:create_agent_ami)
 end
 

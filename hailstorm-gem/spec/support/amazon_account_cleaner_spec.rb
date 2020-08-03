@@ -96,7 +96,7 @@ describe Hailstorm::Support::AmazonAccountCleaner do
   context '#delete_security_groups' do
     it 'should delete default Hailstorm security group' do
       sec_group = Hailstorm::Behavior::AwsAdaptable::SecurityGroup.new(
-        group_name: Hailstorm::Model::AmazonCloud::Defaults::SECURITY_GROUP,
+        group_name: Hailstorm::Model::Helper::AmazonCloudDefaults::SECURITY_GROUP,
         group_id: 'sg-123'
       )
 

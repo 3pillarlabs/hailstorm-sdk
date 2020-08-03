@@ -1,5 +1,5 @@
 require 'hailstorm/support'
-require 'hailstorm/model/amazon_cloud'
+require 'hailstorm/model/helper/amazon_cloud_defaults'
 require 'hailstorm/behavior/loggable'
 
 # Standalone script to remove all artifacts associated with an Amazon account -
@@ -14,7 +14,7 @@ class Hailstorm::Support::AmazonAccountCleaner
   def initialize(client_factory:, region_code:, doze_seconds: 5)
     @region_code = region_code
     @doze_seconds = doze_seconds
-    @default_security_group = Hailstorm::Model::AmazonCloud::Defaults::SECURITY_GROUP
+    @default_security_group = Hailstorm::Model::Helper::AmazonCloudDefaults::SECURITY_GROUP
     @ec2_client = client_factory.ec2_client
     @key_pair_client = client_factory.key_pair_client
     @security_group_client = client_factory.security_group_client
@@ -58,7 +58,7 @@ class Hailstorm::Support::AmazonAccountCleaner
 
   def deregister_amis
     ami_client.find_self_owned(
-      ami_name_regexp: Regexp.new(Hailstorm::Model::AmazonCloud::Defaults::AMI_ID)
+      ami_name_regexp: Regexp.new(Hailstorm::Model::Helper::AmazonCloudDefaults::AMI_ID)
     ).each do |image|
       next unless image.available?
 
