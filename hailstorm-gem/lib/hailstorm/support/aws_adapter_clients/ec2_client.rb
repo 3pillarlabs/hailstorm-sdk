@@ -4,8 +4,8 @@ class Hailstorm::Support::AwsAdapter::Ec2Client < Hailstorm::Support::AwsAdapter
 
   def first_available_zone
     zone = ec2.describe_availability_zones
-               .availability_zones
-               .find { |z| z.state.to_sym == :available }
+              .availability_zones
+              .find { |z| z.state.to_sym == :available }
 
     zone ? zone.zone_name : nil
   end

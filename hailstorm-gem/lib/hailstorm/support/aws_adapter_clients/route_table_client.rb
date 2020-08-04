@@ -29,9 +29,9 @@ class Hailstorm::Support::AwsAdapter::RouteTableClient < Hailstorm::Support::Aws
 
   def routes(route_table_id:)
     ec2.describe_route_tables(route_table_ids: [route_table_id])
-        .route_tables
-        .first
-        .routes
-        .map { |route| Hailstorm::Behavior::AwsAdaptable::Route.new(state: route.state) }
+       .route_tables
+       .first
+       .routes
+       .map { |route| Hailstorm::Behavior::AwsAdaptable::Route.new(state: route.state) }
   end
 end

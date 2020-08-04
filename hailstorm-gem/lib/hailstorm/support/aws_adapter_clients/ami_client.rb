@@ -4,8 +4,8 @@ class Hailstorm::Support::AwsAdapter::AmiClient < Hailstorm::Support::AwsAdapter
 
   def find_self_owned(ami_name_regexp:)
     ami = ec2.describe_images(owners: [:self.to_s])
-              .images
-              .find { |e| e.state.to_sym == :available && ami_name_regexp.match(e.name) }
+             .images
+             .find { |e| e.state.to_sym == :available && ami_name_regexp.match(e.name) }
     return unless ami
 
     decorate(ami)

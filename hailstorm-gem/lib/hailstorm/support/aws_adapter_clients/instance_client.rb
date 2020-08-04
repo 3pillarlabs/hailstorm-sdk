@@ -11,13 +11,13 @@ class Hailstorm::Support::AwsAdapter::InstanceClient < Hailstorm::Support::AwsAd
 
   def decorate(instance:)
     Hailstorm::Behavior::AwsAdaptable::Instance.new(
-        instance_id: instance.instance_id,
-        state: Hailstorm::Behavior::AwsAdaptable::InstanceState.new(
-            name: instance.state.name,
-            code: instance.state.code
-        ),
-        public_ip_address: instance.public_ip_address,
-        private_ip_address: instance.private_ip_address
+      instance_id: instance.instance_id,
+      state: Hailstorm::Behavior::AwsAdaptable::InstanceState.new(
+        name: instance.state.name,
+        code: instance.state.code
+      ),
+      public_ip_address: instance.public_ip_address,
+      private_ip_address: instance.private_ip_address
     )
   end
   private :decorate
@@ -39,9 +39,9 @@ class Hailstorm::Support::AwsAdapter::InstanceClient < Hailstorm::Support::AwsAd
   # @return [Hailstorm::Behavior::AwsAdaptable::InstanceStateChange]
   def to_transitional_attributes(result)
     Hailstorm::Behavior::AwsAdaptable::InstanceStateChange.new(
-        instance_id: result.instance_id,
-        current_state: result.current_state,
-        previous_state: result.previous_state
+      instance_id: result.instance_id,
+      current_state: result.current_state,
+      previous_state: result.previous_state
     )
   end
   private :to_transitional_attributes
