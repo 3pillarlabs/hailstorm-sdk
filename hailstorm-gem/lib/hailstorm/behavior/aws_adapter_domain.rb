@@ -43,7 +43,7 @@ module Hailstorm::Behavior::AwsAdapterDomain
     end
 
     %w[pending running shutting-down terminated stopping stopped].each do |state_name|
-      define_method("#{state_name.gsub('-', '_')}?") { state_name.to_sym == status }
+      define_method("#{state_name.tr('-', '_')}?") { state_name.to_sym == status }
     end
   end
 
@@ -63,7 +63,7 @@ module Hailstorm::Behavior::AwsAdapterDomain
     end
 
     def status
-      current_state.name.gsub('-', '_').to_sym
+      current_state.name.tr('-', '_').to_sym
     end
   end
 
@@ -110,7 +110,7 @@ module Hailstorm::Behavior::AwsAdapterDomain
   end
 
   CLIENT_KEYS = %i[ec2_client key_pair_client security_group_client instance_client ami_client
-                   subnet_client vpc_client internet_gateway_client route_table_client]
+                   subnet_client vpc_client internet_gateway_client route_table_client].freeze
 
   ClientFactory = Struct.new(*CLIENT_KEYS, keyword_init: true)
 end

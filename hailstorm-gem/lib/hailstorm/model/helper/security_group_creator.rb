@@ -1,6 +1,7 @@
 require 'hailstorm/model/helper'
-require 'hailstorm/model/helper/security_group_finder'
 require 'hailstorm/behavior/loggable'
+require 'hailstorm/model/helper/security_group_finder'
+require 'hailstorm/model/helper/amazon_cloud_defaults'
 
 # Helper method for creating Hailstorm security group
 class Hailstorm::Model::Helper::SecurityGroupCreator < Hailstorm::Model::Helper::SecurityGroupFinder
@@ -11,26 +12,15 @@ class Hailstorm::Model::Helper::SecurityGroupCreator < Hailstorm::Model::Helper:
 
   # @param [Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient] security_group_client
   # @param [Hailstorm::Behavior::AwsAdaptable::Ec2Client] ec2_client
-  # @param [String] vpc_subnet_id
-  # @param [Integer] ssh_port
-  # @param [String] security_group tag name
-  # @param [String] region
-  # @param [String] security_group_desc
-  def initialize(security_group_client:,
-                 ec2_client:,
-                 vpc_subnet_id: nil,
-                 ssh_port:,
-                 security_group:,
-                 region:,
-                 security_group_desc:)
-
+  # @param [Hailstorm::Model::AmazonCloud] aws_clusterable
+  def initialize(security_group_client:, ec2_client:, aws_clusterable:)
     @security_group_client = security_group_client
     @ec2_client = ec2_client
-    @vpc_subnet_id = vpc_subnet_id
-    @ssh_port = ssh_port
-    @security_group = security_group
-    @region = region
-    @security_group_desc = security_group_desc
+    @vpc_subnet_id = aws_clusterable.vpc_subnet_id
+    @ssh_port = aws_clusterable.ssh_port || Hailstorm::Model::Helper::AmazonCloudDefaults::SSH_PORT
+    @security_group = aws_clusterable.security_group
+    @region = aws_clusterable.region
+    @security_group_desc = Hailstorm::Model::Helper::AmazonCloudDefaults::SECURITY_GROUP_DESC
   end
 
   def create_security_group

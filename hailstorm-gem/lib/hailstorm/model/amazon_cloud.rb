@@ -121,20 +121,13 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   def security_group_finder
     Hailstorm::Model::Helper::SecurityGroupFinder.new(security_group_client: security_group_client,
-                                                      security_group: self.security_group,
                                                       ec2_client: ec2_client,
-                                                      vpc_subnet_id: self.vpc_subnet_id)
+                                                      aws_clusterable: self)
   end
 
   def ec2_instance_helper
-    Hailstorm::Model::Helper::Ec2InstanceHelper.new(key_name: self.ssh_identity,
-                                                    ssh_options: ssh_options,
-                                                    instance_client: instance_client,
-                                                    instance_type: self.instance_type,
-                                                    vpc_subnet_id: self.vpc_subnet_id,
-                                                    zone: self.zone,
-                                                    region: self.region,
-                                                    user_name: self.user_name)
+    Hailstorm::Model::Helper::Ec2InstanceHelper.new(aws_clusterable: self,
+                                                    instance_client: instance_client)
   end
 
   # Sets the first available zone based on configured region
@@ -176,13 +169,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   def create_security_group
     logger.debug { "#{self.class}##{__method__}" }
-    sg_creator = Hailstorm::Model::Helper::SecurityGroupCreator.new(vpc_subnet_id: self.vpc_subnet_id,
+    sg_creator = Hailstorm::Model::Helper::SecurityGroupCreator.new(aws_clusterable: self,
                                                                     ec2_client: ec2_client,
-                                                                    security_group: self.security_group,
-                                                                    security_group_client: security_group_client,
-                                                                    ssh_port: self.ssh_port || DEFAULTS::SSH_PORT,
-                                                                    region: self.region,
-                                                                    security_group_desc: DEFAULTS::SECURITY_GROUP_DESC)
+                                                                    security_group_client: security_group_client)
     sg_creator.create_security_group
   end
 

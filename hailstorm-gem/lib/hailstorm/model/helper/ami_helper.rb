@@ -51,20 +51,20 @@ class Hailstorm::Model::Helper::AmiHelper
 
   def self.region_base_ami_map
     @region_base_ami_map ||= [
-        { region: 'us-east-1',      ami: 'ami-07ebfd5b3428b6f4d' }, # US East (Virginia)
-        { region: 'us-east-2',      ami: 'ami-0fc20dd1da406780b' }, # US East (Ohio)
-        { region: 'us-west-1',      ami: 'ami-03ba3948f6c37a4b0' }, # US West (N. California)
-        { region: 'us-west-2', 	    ami: 'ami-0d1cd67c26f5fca19' }, # US West (Oregon)
-        { region: 'ca-central-1',   ami: 'ami-0d0eaed20348a3389' }, # Canada (Central)
-        { region: 'eu-west-1',      ami: 'ami-035966e8adab4aaad' }, # EU (Ireland)
-        { region: 'eu-central-1',   ami: 'ami-0b418580298265d5c' }, # EU (Frankfurt)
-        { region: 'eu-west-2',      ami: 'ami-006a0174c6c25ac06' }, # EU (London)
-        { region: 'ap-northeast-1', ami: 'ami-07f4cb4629342979c' }, # Asia Pacific (Tokyo)
-        { region: 'ap-southeast-1', ami: 'ami-09a4a9ce71ff3f20b' }, # Asia Pacific (Singapore)
-        { region: 'ap-southeast-2', ami: 'ami-02a599eb01e3b3c5b' }, # Asia Pacific (Sydney)
-        { region: 'ap-northeast-2', ami: 'ami-0cd7b0de75f5a35d1' }, # Asia Pacific (Seoul)
-        { region: 'ap-south-1',     ami: 'ami-0620d12a9cf777c87' }, # Asia Pacific (Mumbai)
-        { region: 'sa-east-1',      ami: 'ami-05494b93950efa2fd' }  # South America (Sao Paulo)
+      { region: 'us-east-1',      ami: 'ami-07ebfd5b3428b6f4d' }, # US East (Virginia)
+      { region: 'us-east-2',      ami: 'ami-0fc20dd1da406780b' }, # US East (Ohio)
+      { region: 'us-west-1',      ami: 'ami-03ba3948f6c37a4b0' }, # US West (N. California)
+      { region: 'us-west-2', 	    ami: 'ami-0d1cd67c26f5fca19' }, # US West (Oregon)
+      { region: 'ca-central-1',   ami: 'ami-0d0eaed20348a3389' }, # Canada (Central)
+      { region: 'eu-west-1',      ami: 'ami-035966e8adab4aaad' }, # EU (Ireland)
+      { region: 'eu-central-1',   ami: 'ami-0b418580298265d5c' }, # EU (Frankfurt)
+      { region: 'eu-west-2',      ami: 'ami-006a0174c6c25ac06' }, # EU (London)
+      { region: 'ap-northeast-1', ami: 'ami-07f4cb4629342979c' }, # Asia Pacific (Tokyo)
+      { region: 'ap-southeast-1', ami: 'ami-09a4a9ce71ff3f20b' }, # Asia Pacific (Singapore)
+      { region: 'ap-southeast-2', ami: 'ami-02a599eb01e3b3c5b' }, # Asia Pacific (Sydney)
+      { region: 'ap-northeast-2', ami: 'ami-0cd7b0de75f5a35d1' }, # Asia Pacific (Seoul)
+      { region: 'ap-south-1',     ami: 'ami-0620d12a9cf777c87' }, # Asia Pacific (Mumbai)
+      { region: 'sa-east-1',      ami: 'ami-05494b93950efa2fd' }  # South America (Sao Paulo)
     ].reduce({}) { |s, e| s.merge(e[:region] => { ARCH_64 => e[:ami] }) }
   end
 
@@ -126,9 +126,9 @@ class Hailstorm::Model::Helper::AmiHelper
   # @return [String] AMI Id of the just registered AMI
   def register_hailstorm_ami(instance)
     new_ami_id = ami_client.register_ami(
-        name: ami_id,
-        instance_id: instance.instance_id,
-        description: 'AMI for distributed performance testing with Hailstorm'
+      name: ami_id,
+      instance_id: instance.instance_id,
+      description: 'AMI for distributed performance testing with Hailstorm'
     )
 
     begin
@@ -152,11 +152,11 @@ class Hailstorm::Model::Helper::AmiHelper
   def ami_id
     [aws_clusterable.ami_prefix,
      "j#{aws_clusterable.project.jmeter_version}"]
-        .push(aws_clusterable.project.custom_jmeter_installer_url ? aws_clusterable.project.project_code : nil)
-        .push(arch)
-        .push(Hailstorm.production? ? nil : Hailstorm.env)
-        .compact
-        .join('-')
+      .push(aws_clusterable.project.custom_jmeter_installer_url ? aws_clusterable.project.project_code : nil)
+      .push(arch)
+      .push(Hailstorm.production? ? nil : Hailstorm.env)
+      .compact
+      .join('-')
   end
 
   # Base AMI to use to create Hailstorm AMI based on the region and instance_type

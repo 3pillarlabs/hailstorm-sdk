@@ -189,9 +189,9 @@ class Hailstorm::Support::SSH
   # Remote process. This is an internal class.
   class RemoteProcess
 
-    MEMBERS = %i[pid ppid cmd]
+    MEMBERS = %i[pid ppid cmd].freeze
 
-    attr_reader *MEMBERS
+    attr_reader(*MEMBERS)
 
     def initialize(pid:, ppid:, cmd:)
       @pid = pid.to_i
@@ -200,7 +200,7 @@ class Hailstorm::Support::SSH
     end
 
     def to_h
-      @attrs ||= MEMBERS.reduce({}) { |s, m|  s.merge(m.to_sym => self.send(m)) }
+      @to_h ||= MEMBERS.reduce({}) { |s, m| s.merge(m.to_sym => self.send(m)) }
     end
   end
 

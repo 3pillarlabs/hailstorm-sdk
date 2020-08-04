@@ -9,6 +9,8 @@ module Hailstorm::Behavior::AwsAdaptable
   module Taggable
     # :nocov:
     # Name tag an AWS resource
+    # @param [String] resource_id
+    # @param [String] name
     def tag_name(resource_id:, name:)
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
@@ -177,11 +179,11 @@ module Hailstorm::Behavior::AwsAdaptable
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
 
-    # @param [Hash] instance_attrs
+    # @param [Hash] _instance_attrs
     # @param [Integer] min_count
     # @param [Integer] max_count
     # @return [Instance]
-    def create(instance_attrs, min_count: 1, max_count: 1)
+    def create(_instance_attrs, min_count: 1, max_count: 1)
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
 
@@ -255,8 +257,8 @@ module Hailstorm::Behavior::AwsAdaptable
     end
 
     # @param [String] subnet_id
-    # @param [Hash] kwargs
-    def modify_attribute(subnet_id:, **kwargs)
+    # @param [Hash] _kwargs
+    def modify_attribute(subnet_id:, **_kwargs)
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
     # :nocov:
@@ -266,8 +268,8 @@ module Hailstorm::Behavior::AwsAdaptable
   module VpcClient
     # :nocov:
     # @param [String] vpc_id
-    # @param [Hash] kwargs
-    def modify_attribute(vpc_id:, **kwargs)
+    # @param [Hash] _kwargs
+    def modify_attribute(vpc_id:, **_kwargs)
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
 

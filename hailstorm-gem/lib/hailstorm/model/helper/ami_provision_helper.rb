@@ -21,9 +21,9 @@ class Hailstorm::Model::Helper::AmiProvisionHelper
   def install_jmeter(ssh)
     logger.info { "Installing JMeter for #{self.region} AMI..." }
     installer = Hailstorm::Support::JmeterInstaller.create
-                    .with(:download_url, self.download_url)
-                    .with(:user_home, self.user_home)
-                    .with(:jmeter_version, self.jmeter_version)
+                                                   .with(:download_url, self.download_url)
+                                                   .with(:user_home, self.user_home)
+                                                   .with(:jmeter_version, self.jmeter_version)
 
     installer.install do |instr|
       ssh.exec!(instr)

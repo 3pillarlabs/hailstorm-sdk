@@ -1,5 +1,6 @@
 require 'spec_helper'
 require 'hailstorm/model/helper/ec2_instance_helper'
+require 'hailstorm/model/amazon_cloud'
 
 describe Hailstorm::Model::Helper::Ec2InstanceHelper do
   before(:each) do
@@ -13,14 +14,15 @@ describe Hailstorm::Model::Helper::Ec2InstanceHelper do
     mock_instance_client = mock(Hailstorm::Behavior::AwsAdaptable::InstanceClient, create: @mock_instance)
     mock_instance_client.stub!(:find).and_return(@mock_instance)
     mock_instance_client.stub!(:ready?).and_return(true)
+    mock_aws = Hailstorm::Model::AmazonCloud.new(ssh_identity: 'hailstorm',
+                                                 user_name: 'ubuntu',
+                                                 vpc_subnet_id: 'subnet-123',
+                                                 instance_type: 't3.large',
+                                                 region: 'us-east-2',
+                                                 zone: 'us-east-2a')
+    mock_aws.stub!(:ssh_options).and_return({})
     @helper = Hailstorm::Model::Helper::Ec2InstanceHelper.new(instance_client: mock_instance_client,
-                                                              ssh_options: {},
-                                                              key_name: 'hailstorm',
-                                                              user_name: 'ubuntu',
-                                                              vpc_subnet_id: 'subnet-123',
-                                                              instance_type: 't3.large',
-                                                              region: 'us-east-2',
-                                                              zone: 'us-east-2a')
+                                                              aws_clusterable: mock_aws)
   end
 
   context 'when ec2 instance is ready' do

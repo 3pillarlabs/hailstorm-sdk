@@ -24,7 +24,7 @@ class Hailstorm::Support::AwsAdapter
     end
 
     def tag_name(resource_id:, name:)
-      ec2.create_tags(resources: [resource_id], tags: [{key: 'Name', value: name }])
+      ec2.create_tags(resources: [resource_id], tags: [{ key: 'Name', value: name }])
     end
   end
 
@@ -62,13 +62,14 @@ class Hailstorm::Support::AwsAdapter
   # AWS KeyPair adapter
   class KeyPairClient < AbstractClient
     include Hailstorm::Behavior::AwsAdaptable::KeyPairClient
+    include Hailstorm::Behavior::Loggable
 
     def find(name:)
       resp = ec2.describe_key_pairs(key_names: [name])
       key_pair_info = resp.to_h[:key_pairs].first
       key_pair_info ? key_pair_info[:key_pair_id] : nil
-    rescue Aws::EC2::Errors::ServiceError
-      return nil
+    rescue Aws::EC2::Errors::ServiceError => service_error
+      logger.warn(service_error.message)
     end
 
     def delete(key_pair_id:)
@@ -88,6 +89,7 @@ class Hailstorm::Support::AwsAdapter
     end
   end
 
+  # EC2 Instance adapter
   class InstanceClient < AbstractClient
     include Hailstorm::Behavior::AwsAdaptable::InstanceClient
 
@@ -163,8 +165,9 @@ class Hailstorm::Support::AwsAdapter
 
     def create(instance_attrs, min_count: 1, max_count: 1)
       req_attrs = instance_attrs.except(:availability_zone)
-      req_attrs.merge!(min_count: min_count, max_count: max_count)
-      req_attrs.merge!(placement: instance_attrs.slice(:availability_zone)) if instance_attrs.key?(:availability_zone)
+      req_attrs[:min_count] = min_count
+      req_attrs[:max_count] = max_count
+      req_attrs[:placement] = instance_attrs.slice(:availability_zone) if instance_attrs.key?(:availability_zone)
       instance = ec2.run_instances(req_attrs).instances[0]
       decorate(instance: instance)
     end
@@ -192,13 +195,13 @@ class Hailstorm::Support::AwsAdapter
     end
   end
 
-  # AWS security group client
+  # AWS security group adapter
   class SecurityGroupClient < AbstractClient
     include Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient
 
     def find(name:, vpc_id: nil)
       filters = [{ name: 'group-name', values: [name] }]
-      filters.push({ name: 'vpc-id', values: [vpc_id] }) if vpc_id
+      filters.push(name: 'vpc-id', values: [vpc_id]) if vpc_id
       resp = ec2.describe_security_groups(filters: filters)
       return if resp.security_groups.empty?
 
@@ -221,7 +224,7 @@ class Hailstorm::Support::AwsAdapter
       if cidr
         ip_perm[:ip_ranges].first[:cidr_ip] = cidr == :anywhere ? '0.0.0.0/0' : cidr
       else
-        ip_perm[:user_id_group_pairs] = [{group_id: group_id}]
+        ip_perm[:user_id_group_pairs] = [{ group_id: group_id }]
       end
 
       ec2.authorize_security_group_ingress(group_id: group_id, ip_permissions: [ip_perm])
@@ -242,6 +245,7 @@ class Hailstorm::Support::AwsAdapter
     end
   end
 
+  # EC2 Image (AMI) adapter
   class AmiClient < AbstractClient
     include Hailstorm::Behavior::AwsAdaptable::AmiClient
 
@@ -256,11 +260,10 @@ class Hailstorm::Support::AwsAdapter
 
     # @param [Aws::EC2::Types::Image] ami
     def decorate(ami)
-      state_reason = ami.state_reason ?
-                     Hailstorm::Behavior::AwsAdaptable::StateReason.new(code: ami.state_reason.code,
-                                                                        message: ami.state_reason.message)
-                     :
-                     nil
+      state_reason = if ami.state_reason
+                       Hailstorm::Behavior::AwsAdaptable::StateReason.new(code: ami.state_reason.code,
+                                                                          message: ami.state_reason.message)
+                     end
       Hailstorm::Behavior::AwsAdaptable::Ami.new(image_id: ami.image_id,
                                                  name: ami.name,
                                                  state: ami.state,
@@ -271,7 +274,7 @@ class Hailstorm::Support::AwsAdapter
     # @see Hailstorm::Behavior::AwsAdaptable::AmiClient#available?
     def available?(ami_id:)
       ami = find(ami_id: ami_id)
-      ami&.available?
+      ami && ami.available?
     end
 
     # @see Hailstorm::Behavior::AwsAdaptable::AmiClient#register_ami
@@ -315,7 +318,7 @@ class Hailstorm::Support::AwsAdapter
 
     def modify_attribute(subnet_id:, **kwargs)
       attrs = kwargs.reduce({}) { |s, e| s.merge(e.first => { value: e.last }) }
-      attrs.merge!(subnet_id: subnet_id)
+      attrs[:subnet_id] = subnet_id
       ec2.modify_subnet_attribute(attrs)
     end
 
@@ -333,6 +336,7 @@ class Hailstorm::Support::AwsAdapter
     end
   end
 
+  # VPC adapter
   class VpcClient < AbstractClient
     include Hailstorm::Behavior::AwsAdaptable::VpcClient
 
@@ -342,7 +346,7 @@ class Hailstorm::Support::AwsAdapter
     end
 
     def modify_attribute(vpc_id:, **kwargs)
-      ec2.modify_vpc_attribute(kwargs.transform_values { |v| {value: v} }.merge(vpc_id: vpc_id))
+      ec2.modify_vpc_attribute(kwargs.transform_values { |v| { value: v } }.merge(vpc_id: vpc_id))
     end
 
     def available?(vpc_id:)
@@ -351,6 +355,7 @@ class Hailstorm::Support::AwsAdapter
     end
   end
 
+  # Internet Gateway Client adapter
   class InternetGatewayClient < AbstractClient
     include Hailstorm::Behavior::AwsAdaptable::InternetGatewayClient
 
@@ -364,6 +369,7 @@ class Hailstorm::Support::AwsAdapter
     end
   end
 
+  # Route table (within a VPC) adapter
   class RouteTableClient < AbstractClient
     include Hailstorm::Behavior::AwsAdaptable::RouteTableClient
 
@@ -386,7 +392,7 @@ class Hailstorm::Support::AwsAdapter
     def main_route_table(vpc_id:)
       resp = ec2.describe_route_tables(filters: [{ name: 'vpc-id', values: [vpc_id] }])
       rtb = resp.route_tables.find do |route_table|
-        route_table.associations.any? { |rtb_assoc| rtb_assoc.main }
+        route_table.associations.any?(&:main)
       end
 
       rtb ? rtb.route_table_id : nil
@@ -394,10 +400,10 @@ class Hailstorm::Support::AwsAdapter
 
     def routes(route_table_id:)
       ec2.describe_route_tables(route_table_ids: [route_table_id])
-          .route_tables
-          .first
-          .routes
-          .map { |route| Hailstorm::Behavior::AwsAdaptable::Route.new(state: route.state) }
+         .route_tables
+         .first
+         .routes
+         .map { |route| Hailstorm::Behavior::AwsAdaptable::Route.new(state: route.state) }
     end
   end
 

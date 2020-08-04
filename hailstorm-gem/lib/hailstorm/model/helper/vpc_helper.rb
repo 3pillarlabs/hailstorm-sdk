@@ -69,7 +69,7 @@ class Hailstorm::Model::Helper::VpcHelper
     route_table_id = route_table_client.main_route_table(vpc_id: vpc_id) || route_table_client.create(vpc_id: vpc_id)
     route_table_client.create_route(route_table_id: route_table_id, cidr: '0.0.0.0/0', internet_gateway_id: igw_id)
     wait_for("Route table #{route_table_id} default route to be created") do
-      route_table_client.routes(route_table_id: route_table_id).all? { |route| route.active? }
+      route_table_client.routes(route_table_id: route_table_id).all?(&:active?)
     end
 
     route_table_client.associate_with_subnet(route_table_id: route_table_id, subnet_id: subnet_id)

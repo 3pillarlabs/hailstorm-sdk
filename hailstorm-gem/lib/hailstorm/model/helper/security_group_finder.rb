@@ -9,15 +9,14 @@ class Hailstorm::Model::Helper::SecurityGroupFinder
 
   # @param [Hailstorm::Behavior::AwsAdaptable::Ec2Client] ec2_client
   # @param [Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient] security_group_client
-  # @param [String] vpc_subnet_id
-  # @param [String] security_group security group name tag
-  def initialize(ec2_client: nil, security_group_client:, vpc_subnet_id: nil, security_group:)
-    raise(ArgumentError, 'ec2_client needed if vpc_subnet_id provided') if vpc_subnet_id && !ec2_client
+  # @param [Hailstorm::Model::AmazonCloud] aws_clusterable
+  def initialize(ec2_client: nil, security_group_client:, aws_clusterable:)
+    raise(ArgumentError, 'ec2_client needed if vpc_subnet_id provided') if aws_clusterable.vpc_subnet_id && !ec2_client
 
     @ec2_client = ec2_client
     @security_group_client = security_group_client
-    @vpc_subnet_id = vpc_subnet_id
-    @security_group = security_group
+    @vpc_subnet_id = aws_clusterable.vpc_subnet_id
+    @security_group = aws_clusterable.security_group
   end
 
   def find_security_group(vpc_id: nil)

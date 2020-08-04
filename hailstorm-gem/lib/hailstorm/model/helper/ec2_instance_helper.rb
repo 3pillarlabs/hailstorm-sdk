@@ -9,25 +9,17 @@ class Hailstorm::Model::Helper::Ec2InstanceHelper
 
   attr_reader :instance_client, :ssh_options, :key_name, :instance_type, :vpc_subnet_id, :zone, :region, :user_name
 
-  # @param [Hash] ssh_options
+  # @param [Hailstorm::Model::AmazonCloud] aws_clusterable
   # @param [Hailstorm::Behavior::AwsAdaptable::InstanceClient] instance_client
-  # @param [String] key_name
-  # @param [String] instance_type
-  # @param [String] vpc_subnet_id
-  # @param [String] zone
-  # @param [String] region
-  # @param [String] user_name
-  def initialize(ssh_options:, instance_client:, key_name:,
-                 instance_type:, vpc_subnet_id:, zone: nil,
-                 region:, user_name:)
+  def initialize(aws_clusterable:, instance_client:)
     @instance_client = instance_client
-    @ssh_options = ssh_options
-    @key_name = key_name
-    @instance_type = instance_type
-    @vpc_subnet_id = vpc_subnet_id
-    @zone = zone
-    @region = region
-    @user_name = user_name
+    @ssh_options = aws_clusterable.ssh_options
+    @key_name = aws_clusterable.ssh_identity
+    @instance_type = aws_clusterable.instance_type
+    @vpc_subnet_id = aws_clusterable.vpc_subnet_id
+    @zone = aws_clusterable.zone
+    @region = aws_clusterable.region
+    @user_name = aws_clusterable.user_name
   end
 
   # Creates a new EC2 instance and returns the instance once it passes all checks.
@@ -62,7 +54,7 @@ class Hailstorm::Model::Helper::Ec2InstanceHelper
     wait_for("#{instance.id} to start and successful system checks",
              timeout_sec: 600,
              sleep_duration: 10,
-             err_attrs: {region: self.region}) { instance_client.ready?(instance_id: instance.id) }
+             err_attrs: { region: self.region }) { instance_client.ready?(instance_id: instance.id) }
   rescue Exception => ex
     logger.warn("Failed to create new instance: #{ex.message}")
     raise(ex)
