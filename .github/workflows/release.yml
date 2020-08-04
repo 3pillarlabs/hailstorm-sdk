@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@master
       - name: Get release version
         run: |
-          echo "::set-env name=release_version::$(cat VERSION)"
+          echo "::set-env name=release_version::$(basename ${{ github.ref }})"
       - name: Build package
         run: |
           ./.github/workflows/build.sh ${{ env.release_version }}

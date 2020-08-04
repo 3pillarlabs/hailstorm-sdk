@@ -38,6 +38,7 @@ RSpec.configure do |config|
     build_path = File.join(File.expand_path('../..', __FILE__), 'build', 'spec')
     FileUtils.rm_rf(build_path)
     FileUtils.mkdir_p(build_path)
+    ENV['HAILSTORM_WORKSPACE_ROOT'] = build_path
     boot_file_path = File.join(build_path, 'config', 'boot.rb')
     FileUtils.mkdir_p(File.join(build_path, Hailstorm.tmp_dir))
     FileUtils.mkdir_p(File.join(build_path, Hailstorm.tmp_dir, 'remove_dir'))

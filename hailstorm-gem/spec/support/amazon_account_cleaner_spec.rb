@@ -1,12 +1,19 @@
 require 'spec_helper'
 require 'hailstorm/support/amazon_account_cleaner'
-require 'aws'
 
 describe Hailstorm::Support::AmazonAccountCleaner do
 
   before(:each) do
-    @account_cleaner = Hailstorm::Support::AmazonAccountCleaner.new(access_key_id: 'A',
-                                                                    secret_access_key: 'B',
+    @client_factory = Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(
+      ec2_client: mock(Hailstorm::Behavior::AwsAdaptable::Ec2Client),
+      key_pair_client: mock(Hailstorm::Behavior::AwsAdaptable::KeyPairClient),
+      security_group_client: mock(Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient),
+      instance_client: mock(Hailstorm::Behavior::AwsAdaptable::InstanceClient),
+      ami_client: mock(Hailstorm::Behavior::AwsAdaptable::AmiClient)
+    )
+
+    @account_cleaner = Hailstorm::Support::AmazonAccountCleaner.new(client_factory: @client_factory,
+                                                                    region_code: 'us-east-1',
                                                                     doze_seconds: 0)
   end
 
@@ -17,85 +24,85 @@ describe Hailstorm::Support::AmazonAccountCleaner do
     @account_cleaner.should_receive(:delete_security_groups)
     @account_cleaner.should_receive(:delete_key_pairs)
 
-    expect(@account_cleaner.send(:regions)).to_not be_empty
-    @account_cleaner.cleanup(true, ['us-east-1'])
+    @account_cleaner.cleanup(remove_key_pairs: true)
   end
 
   context '#terminate_instances' do
     it 'should terminate all instances' do
-      instances = [
-        {status: :stopped, id: 'id-1'},
-        {status: [:running, :terminated].each, id: 'id-2'}
-      ].map do |attrs|
-        instance = mock(AWS::EC2::Instance, id: attrs[:id])
-        instance.stub!(:status) do
-          attrs[:status].is_a?(Enumerator) ? attrs[:status].next : attrs[:status]
-        end
-        instance
+      instance_state = -> (state) { Hailstorm::Behavior::AwsAdaptable::InstanceState.new(name: state.to_s) }
+      stopped_attrs = { state: instance_state.call(:stopped),
+                        instance_id: 'id-1',
+                        public_ip_address: nil,
+                        private_ip_address: nil }
+
+      running_attrs = { state: instance_state.call(:running),
+                        instance_id: 'id-2',
+                        public_ip_address: '1.2.3.4',
+                        private_ip_address: '10.0.1.80' }
+
+      terminated_attrs = { state: instance_state.call(:terminated),
+                           instance_id: 'id-3',
+                           public_ip_address: nil,
+                           private_ip_address: nil }
+
+      instances = [stopped_attrs, running_attrs, terminated_attrs].map do |attrs|
+        Hailstorm::Behavior::AwsAdaptable::Instance.new(attrs)
       end
 
-      instances[0].should_not_receive(:terminate)
-      instances[1].should_receive(:terminate)
-      ec2 = mock(AWS::EC2)
-      ec2.stub!(:instances).and_return(instances)
-
-      @account_cleaner.send(:terminate_instances, ec2)
+      @client_factory.instance_client.should_receive(:terminate).twice
+      @client_factory.instance_client.should_not_receive(:terminate).with(instance_id: 'id-3')
+      @client_factory.instance_client.stub!(:list).and_return(instances.each)
+      @client_factory.instance_client.stub!(:terminated?).and_return(true)
+      @account_cleaner.send(:terminate_instances)
     end
   end
 
   context '#deregister_amis' do
     it 'should deregister all owned AMIs' do
-      images = [
-        {state: :pending, id: 'ami-1'},
-        {state: :available, id: 'ami-2'}
-      ].map do |attrs|
-        mock(AWS::EC2::Image, id: attrs[:id], state: attrs[:state])
-      end
+      images = [{ state: 'pending', image_id: 'ami-1' }, { state: 'available', image_id: 'ami-2' }]
+                 .map { |attrs| Hailstorm::Behavior::AwsAdaptable::Ami.new(attrs) }
 
-      images[0].should_not_receive(:deregister)
-      images[1].should_receive(:deregister)
-      ec2 = mock(AWS::EC2)
-      ec2.stub_chain(:images, :with_owner).and_return(images)
+      @client_factory.ami_client.should_receive(:deregister).once
+      @client_factory.ami_client.should_not_receive(:deregister).with(ami_id: 'ami-1')
+      @client_factory.ami_client.stub!(:find_self_owned).and_return(images)
 
-      @account_cleaner.send(:deregister_amis, ec2)
+      @account_cleaner.send(:deregister_amis)
     end
   end
 
   context '#delete_snapshots' do
     it 'should delete all owned snapshots' do
-      snapshots = [
-        {status: :pending, id: 'snap-1'},
-        {status: :completed, id: 'snap-2'}
-      ].map do |attrs|
-        mock(AWS::EC2::Snapshot, id: attrs[:id], status: attrs[:status])
-      end
+      pending_snapshot = Hailstorm::Behavior::AwsAdaptable::Snapshot.new(state: 'pending', snapshot_id: 'snap-1')
+      completed_snapshot = Hailstorm::Behavior::AwsAdaptable::Snapshot.new(state: 'completed', snapshot_id: 'snap-2')
+      snapshots = [pending_snapshot, completed_snapshot]
 
-      snapshots[0].should_not_receive(:delete)
-      snapshots[1].should_receive(:delete)
-      ec2 = mock(AWS::EC2)
-      ec2.stub_chain(:snapshots, :with_owner).and_return(snapshots)
+      @client_factory.ec2_client.should_not_receive(:delete_snapshot).with(snapshot_id: pending_snapshot.id)
+      @client_factory.ec2_client.should_receive(:delete_snapshot).with(snapshot_id: completed_snapshot.id)
+      @client_factory.ec2_client.stub!(:find_self_owned_snapshots).and_return(snapshots.each)
 
-      @account_cleaner.send(:delete_snapshots, ec2)
+      @account_cleaner.send(:delete_snapshots)
     end
   end
 
   context '#delete_key_pairs' do
     it 'should delete key_pairs' do
-      key_pair = mock(AWS::EC2::KeyPair, name: 's')
-      key_pair.should_receive(:delete)
-      ec2 = mock(AWS::EC2)
-      ec2.stub!(:key_pairs).and_return([key_pair])
-      @account_cleaner.send(:delete_key_pairs, ec2)
+      key_pair_info = Hailstorm::Behavior::AwsAdaptable::KeyPairInfo.new(key_name: 's', key_pair_id: 'kp-123')
+      @client_factory.key_pair_client.should_receive(:delete).with(key_pair_id: 'kp-123')
+      @client_factory.key_pair_client.stub!(:list).and_return([key_pair_info].each)
+      @account_cleaner.send(:delete_key_pairs)
     end
   end
 
   context '#delete_security_groups' do
     it 'should delete default Hailstorm security group' do
-      sec_group = mock(AWS::EC2::SecurityGroup, name: Hailstorm::Model::AmazonCloud::Defaults::SECURITY_GROUP)
-      sec_group.should_receive(:delete)
-      ec2 = mock(AWS::EC2)
-      ec2.stub!(:security_groups).and_return([sec_group])
-      @account_cleaner.send(:delete_security_groups, ec2)
+      sec_group = Hailstorm::Behavior::AwsAdaptable::SecurityGroup.new(
+        group_name: Hailstorm::Model::Helper::AmazonCloudDefaults::SECURITY_GROUP,
+        group_id: 'sg-123'
+      )
+
+      @client_factory.security_group_client.should_receive(:delete).with(group_id: 'sg-123')
+      @client_factory.security_group_client.stub!(:list).and_return([sec_group].each)
+      @account_cleaner.send(:delete_security_groups)
     end
   end
 end

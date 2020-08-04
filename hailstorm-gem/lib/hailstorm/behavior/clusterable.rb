@@ -71,7 +71,7 @@ module Hailstorm::Behavior::Clusterable
         raise(e) if e.is_a?(Hailstorm::Exception)
 
         logger.debug(e.message)
-        logger.debug { "\n".concat(e.backtrace.join("\n")) }
+        logger.debug { "\n".concat(e.backtrace.join("\n"), '') }
         raise(Hailstorm::AgentCreationFailure)
       end
     end
@@ -263,6 +263,12 @@ module Hailstorm::Behavior::Clusterable
   # call to <tt>destory_all_agents()</tt> method.
   def cleanup
     # override and do something appropriate.
+  end
+
+  # Implement this method to provide a way to completely remove all resources that
+  # may have been created by the cluster implementation.
+  def purge(*_args)
+    # override and do something appropriate
   end
 
   # :nocov:

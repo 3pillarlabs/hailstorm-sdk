@@ -1,6 +1,5 @@
-require 'aws'
 require 'hailstorm/support'
-require 'hailstorm/model/amazon_cloud'
+require 'hailstorm/model/helper/amazon_cloud_defaults'
 require 'hailstorm/behavior/loggable'
 
 # Standalone script to remove all artifacts associated with an Amazon account -
@@ -9,38 +8,36 @@ require 'hailstorm/behavior/loggable'
 class Hailstorm::Support::AmazonAccountCleaner
   include Hailstorm::Behavior::Loggable
 
-  attr_reader :aws_config, :doze_seconds
+  attr_reader :doze_seconds, :region_code
+  attr_reader :ec2_client, :key_pair_client, :security_group_client, :instance_client, :ami_client
 
-  def initialize(access_key_id:, secret_access_key:, max_retries: 3, doze_seconds: 5)
-    @aws_config = {
-      access_key_id: access_key_id,
-      secret_access_key: secret_access_key
-    }.merge(logger: logger, max_retries: max_retries)
-
+  def initialize(client_factory:, region_code:, doze_seconds: 5)
+    @region_code = region_code
     @doze_seconds = doze_seconds
-    @default_security_group = Hailstorm::Model::AmazonCloud::Defaults::SECURITY_GROUP
+    @default_security_group = Hailstorm::Model::Helper::AmazonCloudDefaults::SECURITY_GROUP
+    @ec2_client = client_factory.ec2_client
+    @key_pair_client = client_factory.key_pair_client
+    @security_group_client = client_factory.security_group_client
+    @instance_client = client_factory.instance_client
+    @ami_client = client_factory.ami_client
   end
 
-  def cleanup(remove_key_pairs = false, given_regions = nil)
-    (given_regions || regions).each do |region_code|
-      ec2 = ec2_map(region_code)
+  def cleanup(remove_key_pairs: false)
+    logger.info { "Scanning #{region_code} for running instances..." }
+    terminate_instances
 
-      logger.info { "Scanning #{region_code} for running instances..." }
-      terminate_instances(ec2)
+    logger.info { "Scanning #{region_code} for available AMIs..." }
+    deregister_amis
 
-      logger.info { "Scanning #{region_code} for available AMIs..." }
-      deregister_amis(ec2)
+    logger.info { "Scanning #{region_code} for completed Snapshots..." }
+    delete_snapshots
 
-      logger.info { "Scanning #{region_code} for completed Snapshots..." }
-      delete_snapshots(ec2)
+    logger.info { "Scanning #{region_code} for #{@default_security_group} security group..." }
+    delete_security_groups
 
-      logger.info { "Scanning #{region_code} for #{@default_security_group} security group..." }
-      delete_security_groups(ec2)
-
-      if remove_key_pairs
-        logger.info { "Scanning #{region_code} for key pairs..." }
-        delete_key_pairs(ec2)
-      end
+    if remove_key_pairs
+      logger.info { "Scanning #{region_code} for key pairs..." }
+      delete_key_pairs
     end
 
     logger.info 'Cleanup Done!'
@@ -48,59 +45,52 @@ class Hailstorm::Support::AmazonAccountCleaner
 
   private
 
-  def regions
-    @regions ||= %w[ap-northeast-1 ap-southeast-1 eu-west-1 sa-east-1 us-east-1 us-west-1 us-west-2]
-  end
-
-  def ec2_map(region)
-    @ec2_map ||= {}
-    @ec2_map[region] ||= AWS::EC2.new(aws_config).regions[region]
-  end
-
-  def terminate_instances(ec2)
-    ec2.instances.each do |instance|
-      next unless instance.status == :running
+  def terminate_instances
+    instance_client.list.each do |instance|
+      next if instance.status == :terminated
 
       logger.info { "Terminating instance##{instance.id}..." }
-      instance.terminate
-      sleep(doze_seconds) until instance.status == :terminated
+      instance_client.terminate(instance_id: instance.id)
+      sleep(doze_seconds) until instance_client.terminated?(instance_id: instance.id)
       logger.info { "... instance##{instance.id} terminated" }
     end
   end
 
-  def deregister_amis(ec2)
-    ec2.images.with_owner(:self).each do |image|
-      next unless image.state == :available
+  def deregister_amis
+    ami_client.find_self_owned(
+      ami_name_regexp: Regexp.new(Hailstorm::Model::Helper::AmazonCloudDefaults::AMI_ID)
+    ).each do |image|
+      next unless image.available?
 
       logger.info { "Deregistering AMI##{image.id}..." }
-      image.deregister
+      ami_client.deregister(ami_id: image.id)
       logger.info { "... AMI##{image.id} deregistered" }
     end
   end
 
-  def delete_snapshots(ec2)
-    ec2.snapshots.with_owner(:self).each do |snapshot|
-      next unless snapshot.status == :completed
+  def delete_snapshots
+    ec2_client.find_self_owned_snapshots.each do |snapshot|
+      next unless snapshot.completed?
 
       logger.info { "Deleting snapshot##{snapshot.id}" }
-      snapshot.delete
+      ec2_client.delete_snapshot(snapshot_id: snapshot.id)
       logger.info { "... snapshot##{snapshot.id} deleted" }
     end
   end
 
-  def delete_key_pairs(ec2)
-    ec2.key_pairs.each do |key_pair|
-      key_pair.delete
-      logger.info { "Key pair##{key_pair.name} deleted" }
+  def delete_key_pairs
+    key_pair_client.list.each do |key_pair|
+      key_pair_client.delete(key_pair_id: key_pair.key_pair_id)
+      logger.info { "Key pair##{key_pair.key_name} deleted" }
     end
   end
 
-  def delete_security_groups(ec2)
-    ec2.security_groups.each do |security_group|
-      next unless security_group.name == @default_security_group
+  def delete_security_groups
+    security_group_client.list.each do |security_group|
+      next unless security_group.group_name == @default_security_group
 
-      security_group.delete
-      logger.info { "Security group##{security_group.name} deleted" }
+      security_group_client.delete(group_id: security_group.group_id)
+      logger.info { "Security group##{security_group.group_name} deleted" }
     end
   end
 end

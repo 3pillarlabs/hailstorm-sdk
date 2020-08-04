@@ -417,7 +417,7 @@ describe Hailstorm::Model::Cluster do
   end
 
   context '#purge' do
-    it 'should purge all clusters' do
+    it 'should purge all active clusters' do
       config = Hailstorm::Support::Configuration.new
       config.clusters(:amazon_cloud) do |aws|
         aws.access_key = 'key-1'
@@ -428,7 +428,22 @@ describe Hailstorm::Model::Cluster do
 
       clusterables_stub!
       Hailstorm::Model::Cluster.configure_all(@project, config)
-      Hailstorm::Model::AmazonCloud.should_receive(:purge)
+      Hailstorm::Model::AmazonCloud.any_instance.should_receive(:purge)
+      Hailstorm::Model::Cluster.first.purge
+    end
+
+    it 'should not purge inactive clusters' do
+      config = Hailstorm::Support::Configuration.new
+      config.clusters(:amazon_cloud) do |aws|
+        aws.access_key = 'key-1'
+        aws.secret_key = 'secret-1'
+        aws.region = 'us-east-1'
+        aws.active = false
+      end
+
+      clusterables_stub!
+      Hailstorm::Model::Cluster.configure_all(@project, config)
+      Hailstorm::Model::AmazonCloud.any_instance.should_not_receive(:purge)
       Hailstorm::Model::Cluster.first.purge
     end
   end
