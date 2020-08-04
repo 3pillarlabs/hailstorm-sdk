@@ -1,9 +1,11 @@
 require 'sinatra'
 require 'model/aws_ec2_price'
 require 'helpers/aws_ec2_pricing_helper'
-require 'hailstorm/model/amazon_cloud'
+require 'hailstorm/model/helper/amazon_cloud_defaults'
 
 include AwsEc2PricingHelper
+
+AMAZON_CLOUD_DEFAULTS = Hailstorm::Model::Helper::AmazonCloudDefaults
 
 get '/aws_ec2_pricing_options/:region_code' do |region_code|
   timestamp = Time.now
@@ -22,7 +24,7 @@ get '/aws_ec2_pricing_options/:region_code' do |region_code|
 
   prices_data = JSON.parse(raw_prices_data)
   prices_with_max_threads = prices_data.map do |item|
-    max_threads = Hailstorm::Model::AmazonCloud.calc_max_threads_per_instance(instance_type: item['instanceType'])
+    max_threads = AMAZON_CLOUD_DEFAULTS.calc_max_threads_per_instance(instance_type: item['instanceType'])
     item.merge(maxThreadsByInstance: max_threads, numInstances: 1)
   end
 
