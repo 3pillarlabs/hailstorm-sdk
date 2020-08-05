@@ -2,8 +2,19 @@
 class Hailstorm::Support::AwsAdapter::InstanceClient < Hailstorm::Support::AwsAdapter::AbstractClient
   include Hailstorm::Behavior::AwsAdaptable::InstanceClient
 
-  def find(instance_id:)
-    resp = ec2.describe_instances(instance_ids: [instance_id])
+  def find(instance_id:, max_find_tries: 3, wait_seconds: 20)
+    num_tries = 0
+    resp = nil
+    begin
+      resp = ec2.describe_instances(instance_ids: [instance_id])
+    rescue Aws::EC2::Errors::ServiceError
+      raise if num_tries >= max_find_tries
+
+      num_tries += 1
+      sleep(wait_seconds)
+      retry
+    end
+
     return if resp.reservations.blank? || resp.reservations[0].instances.blank?
 
     decorate(instance: resp.reservations[0].instances[0])

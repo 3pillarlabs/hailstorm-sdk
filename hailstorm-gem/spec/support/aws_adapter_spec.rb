@@ -229,6 +229,39 @@ describe Hailstorm::Support::AwsAdapter do
       expect(iterator.next.id).to be == instances[1][:instance_id]
       expect(iterator.next.id).to be == instances[2][:instance_id]
     end
+
+    it 'should retry if describe_instances fails' do
+      resp_attrs = deep_struct(
+        reservations: [
+          {
+            instances: [
+              {
+                instance_id: 'i-1234',
+                state: { code: 12345, name: 'running' },
+                public_ip_address: '23.45.67.89',
+                private_ip_address: '10.0.1.23'
+              }
+            ]
+          }
+        ]
+      )
+
+      instance_found_ite = [false, true].each
+      @mock_ec2.stub!(:describe_instances) do
+        raise(Aws::EC2::Errors::ServiceError.new({}, 'InvalidInstanceIDNotFound')) unless instance_found_ite.next
+        resp_attrs
+      end
+
+      @mock_ec2.should_receive(:describe_instances).twice
+      @client.find(instance_id: 'i-1234', wait_seconds: 0)
+    end
+
+    it 'should raise when number of retries exceeds max retry count' do
+      service_error = Aws::EC2::Errors::ServiceError.new({}, 'InvalidInstanceIDNotFound')
+      @mock_ec2.stub!(:describe_instances).and_raise(service_error)
+
+      expect { @client.find(instance_id: 'i-1234', wait_seconds: 0, max_find_tries: 2) }.to raise_error
+    end
   end
 
   context Hailstorm::Support::AwsAdapter::SecurityGroupClient do
