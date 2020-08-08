@@ -1,3 +1,12 @@
+Before('@aws') do
+  $delete_vpc_once ||= false
+  if !$delete_vpc_once
+    delete_vpc_if_exists('hailstorm_cli_integration', 'us-east-2')
+    $delete_vpc_once = true
+  end
+end
+
+
 Given(/^the "([^"]+)" command line processor is ready$/) do |app_name|
   require 'hailstorm/initializer'
   require 'hailstorm/controller/cli'
@@ -69,17 +78,21 @@ And(/^finalize the configuration$/) do
   write_config(@monitor_active)
 end
 
+
 When(/^(?:I |)start load generation$/) do
   @cli.process_cmd_line('start')
 end
+
 
 When(/^(?:I |)stop load generation with '(.+?)'$/) do |wait|
   @cli.process_cmd_line('stop wait')
 end
 
+
 When(/^(?:I |)abort the load generation$/) do
   @cli.process_cmd_line('abort')
 end
+
 
 When(/^(?:I |)terminate the setup$/) do
   @cli.process_cmd_line('terminate')
@@ -90,6 +103,7 @@ When(/^(?:I |)wait for load generation to stop$/) do
   sleep(60)
   @cli.process_cmd_line('stop wait')
 end
+
 
 When(/^(?:I |)configure JMeter with following properties$/) do |table|
   [
@@ -103,9 +117,11 @@ When(/^(?:I |)configure JMeter with following properties$/) do |table|
   jmeter_properties(table.hashes)
 end
 
+
 When(/^(?:I |)configure following amazon clusters$/) do |table|
   clusters(table.hashes.collect { |e| e.merge(cluster_type: :amazon_cloud) })
 end
+
 
 When(/^(?:I |)configure target monitoring$/) do
   identity_file = File.join(tmp_path, current_project, Hailstorm.config_dir, 'all_purpose.pem')
@@ -116,6 +132,7 @@ When(/^(?:I |)configure target monitoring$/) do
   end
 end
 
+
 Then(/^(\d+) (active |)load agents? should exist$/) do |expected_load_agent_count, active|
   if active.blank?
     Hailstorm::Model::LoadAgent.count.should == expected_load_agent_count.to_i
@@ -124,13 +141,16 @@ Then(/^(\d+) (active |)load agents? should exist$/) do |expected_load_agent_coun
   end
 end
 
+
 Then(/^(\d+) Jmeter instances? should be running$/) do |expected_pid_count|
   Hailstorm::Model::LoadAgent.active.where('jmeter_pid IS NOT NULL').count.should == expected_pid_count.to_i
 end
 
+
 When /^(?:I |)wait for (\d+) seconds$/ do |wait_seconds|
   sleep(wait_seconds.to_i)
 end
+
 
 When /^(\d+) (total|reportable) execution cycles? should exist$/ do |expected_count, total|
   if total.to_sym == :reportable
@@ -140,9 +160,11 @@ When /^(\d+) (total|reportable) execution cycles? should exist$/ do |expected_co
   end
 end
 
+
 Then /^a report file should be created$/ do
   expect(Dir[File.join(tmp_path, current_project, Hailstorm.reports_dir, '*.docx')].count).to be > 0
 end
+
 
 And(/^results import '(.+?)'$/) do |file_path|
   Hailstorm.application.interpret_command('purge')
@@ -152,9 +174,11 @@ And(/^results import '(.+?)'$/) do |file_path|
   expect(Hailstorm::Model::ExecutionCycle.count).to eql(1)
 end
 
+
 And(/^(?:disable |)target monitoring(?:| is disabled)$/) do
   @monitor_active = false
 end
+
 
 When(/^(?:I |)setup the project$/) do
   @cli.process_cmd_line('setup')

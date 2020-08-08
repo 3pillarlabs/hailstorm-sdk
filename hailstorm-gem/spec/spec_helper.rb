@@ -4,7 +4,8 @@
 # loaded once.
 #
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
-require 'bundler/setup'
+require 'bundler'
+Bundler.setup(:default, :test)
 require 'simplecov'
 
 $CLASSPATH << File.dirname(__FILE__)
@@ -31,6 +32,7 @@ end
 BUILD_PATH = File.join(File.expand_path('../..', __FILE__), 'build', 'spec').freeze
 FileUtils.rm_rf(BUILD_PATH)
 FileUtils.mkdir_p(BUILD_PATH)
+ENV['HAILSTORM_WORKSPACE_ROOT'] = BUILD_PATH
 
 RSpec.configure do |config|
   def logger
