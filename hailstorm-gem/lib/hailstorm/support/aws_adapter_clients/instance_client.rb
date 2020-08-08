@@ -96,13 +96,14 @@ class Hailstorm::Support::AwsAdapter::InstanceClient < Hailstorm::Support::AwsAd
     instance = find(instance_id: instance_id)
     return false unless instance
 
-    logger.debug { instance.to_h }
     instance.running? && systems_ok(instance)
   end
 
   def systems_ok(instance)
     reachability_pass = ->(f) { f.name == 'reachability' && f.status == 'passed' }
-    ec2.describe_instance_status(instance_ids: [instance.id]).instance_statuses.reduce(true) do |state, e|
+    resp = ec2.describe_instance_status(instance_ids: [instance.id])
+    logger.debug { resp.to_h }
+    resp.instance_statuses.reduce(true) do |state, e|
       system_unreachable = e.system_status.details.select { |f| reachability_pass.call(f) }.empty?
       instance_unreachable = e.instance_status.details.select { |f| reachability_pass.call(f) }.empty?
       state && !system_unreachable && !instance_unreachable

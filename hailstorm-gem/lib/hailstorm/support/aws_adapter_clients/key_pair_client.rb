@@ -9,6 +9,7 @@ class Hailstorm::Support::AwsAdapter::KeyPairClient < Hailstorm::Support::AwsAda
     key_pair_info ? key_pair_info[:key_pair_id] : nil
   rescue Aws::EC2::Errors::ServiceError => service_error
     logger.warn(service_error.message)
+    nil
   end
 
   def delete(key_pair_id:)
