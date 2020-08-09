@@ -12,9 +12,6 @@ AllCops:
     - 'hailstorm-gem/spec/**/*'
     - 'hailstorm-gem/templates/**/*'
     - 'hailstorm-gem/build/**/*'
-    - 'hailstorm-redis/**/*'
-    - 'hailstorm-site/**/*'
-    - 'hailstorm-web/**/*'
     - 'hailstorm-cli/Gemfile'
     - 'hailstorm-cli/hailstorm-cli.gemspec'
     - 'hailstorm-cli/Rakefile'
@@ -81,4 +78,3 @@ Performance/Caller:
 
 Security/YAMLLoad:
   Enabled: false # safe_load is not as versatile as load
-

@@ -21,7 +21,6 @@ exclude_patterns:
   - 'hailstorm-gem/lib/hailstorm/java/**/*'
   - 'hailstorm-gem/spec/**/*'
   - 'hailstorm-gem/templates/**/*'
-  - 'hailstorm-site/**/*'
   - 'hailstorm-cli/Gemfile'
   - 'hailstorm-cli/hailstorm-cli.gemspec'
   - 'hailstorm-cli/Rakefile'
