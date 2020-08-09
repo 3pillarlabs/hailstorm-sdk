@@ -25,4 +25,6 @@ EXPOSE 8080
 
 USER rack:rack
 
+ENV HAILSTORM_ENV production
+
 CMD [ "rackup", "-o", "0.0.0.0", "-p", "8080" ]
