@@ -21,4 +21,6 @@ COPY . .
 
 RUN bundle install
 
+ENV HAILSTORM_ENV production
+
 CMD [ "/bin/bash" ]
