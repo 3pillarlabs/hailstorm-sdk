@@ -15,5 +15,5 @@ group :test, :development do
   gem 'rspec', '~> 2.13.0'
   gem 'rubocop', '~> 0.59.2'
   gem 'ruby-debug', '~> 0.11.0'
-  gem 'simplecov', '~> 0.17'
+  gem 'simplecov', '~> 0.17.1'
 end
