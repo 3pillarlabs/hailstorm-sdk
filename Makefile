@@ -146,14 +146,6 @@ local_publish:
 	cd ${PROJECT_PATH} && make local_publish
 
 
-hailstorm_site:
-	cd ${TRAVIS_BUILD_DIR}/hailstorm-site && docker build -t hailstorm3/hailstorm-site .
-
-
-hailstorm_agent:
-	cd ${TRAVIS_BUILD_DIR}/setup/data-center && docker build -t hailstorm3/hailstorm-agent .
-
-
 hailstorm_site_instance:
 	set -ev
 	make install_aws

@@ -50,20 +50,11 @@ This requires an AWS account and a little more setup. Ensure your AWS account ha
 
 ### Bring up the target site
 
-**Change directory to parent.**
+Download or clone the [Hailstorm Site repository](https://github.com/3pillarlabs/hailstorm-site) and follow its
+README to set up the target system on AWS.
 
 ```bash
-➜  hailstorm-cli$ cd ../
-➜  hailstorm-sdk$
-```
-
-**Copy ``setup/hailstorm-site/vagrant-site-sample.yml`` to ``setup/hailstorm-site/vagrant-site.yml`` and edit the
-properties.**
-
-**Install the [Vagrant AWS Plugin](https://github.com/mitchellh/vagrant-aws).**
-
-```bash
-➜  hailstorm-sdk$ vagrant up aws-site --provider=aws
+➜  hailstorm-site$ vagrant up aws-site --provider=aws
 ```
 
 ### Data Center Simulation
@@ -76,6 +67,12 @@ Bring up the docker containers that simulate a data center.
 ```
 This will bring up 3 containers in addition to the database - one container acts as the target system and two as load
 generating agents.
+
+#### Data Center Simulation on Vagrant
+
+This is an alternate setup of a local data center for simulation. It uses virtual machines instead of containers. Follow
+the README in [Hailstorm Site repository](https://github.com/3pillarlabs/hailstorm-site). This is the recommended way to
+simulate the data center to collect performance statistics instead of raw functionality checks.
 
 ### AWS keys
 
@@ -101,13 +98,13 @@ docker-compose logs -f
 
 ```bash
 # Important commands and options
-cucumber --tag @smoke
+bundle exec cucumber --tag @smoke
 
 # Common scenarios
-cucumber --tag @end-to-end
+bundle exec cucumber --tag @end-to-end
 
 # All scenarios
-cucumber
+bundle exec cucumber
 ```
 
 ### Post execution
@@ -120,10 +117,10 @@ Bring down the docker containers.
 
 Bring down the target site.
 ```bash
-➜  hailstorm-sdk$ vagrant halt aws-site
+➜  hailstorm-site$ vagrant halt aws-site
 ```
 
 or delete it completely
 ```bash
-➜  hailstorm-sdk$ vagrant destroy aws-site
+➜  hailstorm-site$ vagrant destroy aws-site
 ```
