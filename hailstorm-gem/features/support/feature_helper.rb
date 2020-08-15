@@ -13,16 +13,17 @@ require 'hailstorm/support/schema'
 require 'active_record/base'
 require 'active_record/errors'
 require 'hailstorm/support/log4j_backed_logger'
+require 'hailstorm/support/db_connection'
 
 ENV['HAILSTORM_ENV'] = 'gem_integration' unless ENV['HAILSTORM_ENV']
 ENV['HAILSTORM_WORKSPACE_ROOT'] = BUILD_PATH
 
-connection_spec = {
+connection_spec = Hailstorm::Support::DbConnection.new(
   adapter:  'jdbcmysql',
   database: "hailstorm_#{ENV['HAILSTORM_ENV']}",
   username: 'hailstorm_dev',
   password: 'hailstorm_dev'
-}
+).connection_spec
 
 ActiveRecord::Base.logger = Hailstorm::Support::Log4jBackedLogger.get_logger(ActiveRecord::Base)
 ActiveRecord::Base.establish_connection(connection_spec)

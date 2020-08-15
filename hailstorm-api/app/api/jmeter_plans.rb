@@ -39,7 +39,7 @@ patch '/projects/:project_id/jmeter_plans/:id' do |project_id, id|
   return not_found unless test_plan_name
 
   hailstorm_config.jmeter.properties(test_plan: test_plan_name) { |map| update_map(map, data) }
-  project_config.update_attributes!(stringified_config: deep_encode(hailstorm_config))
+  project_config.update!(stringified_config: deep_encode(hailstorm_config))
 
   path, name = test_plan_name.split('/')
   JSON.dump(
@@ -62,6 +62,6 @@ delete '/projects/:project_id/jmeter_plans/:id' do |project_id, id|
     hailstorm_config.jmeter.data_files.reject! { |e| e == data_file_name } if data_file_name
   end
 
-  project_config.update_attributes!(stringified_config: deep_encode(hailstorm_config))
+  project_config.update!(stringified_config: deep_encode(hailstorm_config))
   204
 end

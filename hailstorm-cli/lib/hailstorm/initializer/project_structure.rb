@@ -1,7 +1,9 @@
 require 'hailstorm/initializer'
+require 'hailstorm/view_adapter'
 
 # Creates the structure for a project
 class Hailstorm::Initializer::ProjectStructure
+  include Hailstorm::ViewAdapter
 
   attr_reader :invocation_path, :arg_app_name, :quiet, :gems
 
@@ -55,10 +57,9 @@ class Hailstorm::Initializer::ProjectStructure
 
   # Process Gemfile - add additional platform specific gems
   def create_gemfile
-    engine = ActionView::Base.new
-    engine.assign(gems: gems)
+    assigns = { gems: gems, arjdbc_version: arjdbc_version }
     File.open(File.join(root_path, 'Gemfile'), 'w') do |f|
-      f.print(engine.render(file: File.join(skeleton_path, 'Gemfile')))
+      f.print(render_template(name: 'Gemfile', prefix: skeleton_path, format: :text, assigns: assigns))
     end
     emit "    wrote #{File.join(arg_app_name, 'Gemfile')}"
   end
@@ -86,10 +87,10 @@ class Hailstorm::Initializer::ProjectStructure
 
   # Process to config/boot.rb
   def config_boot
-    engine = ActionView::Base.new
-    engine.assign(app_name: arg_app_name)
     File.open(File.join(root_path, Hailstorm.config_dir, 'boot.rb'), 'w') do |f|
-      f.print(engine.render(file: File.join(skeleton_path, 'boot')))
+      template_vars = {app_name: arg_app_name}
+      output = render_template(name: 'boot', prefix: skeleton_path, format: :text, assigns: template_vars)
+      f.print(output)
     end
     emit "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, 'boot.rb')}"
   end
@@ -104,5 +105,10 @@ class Hailstorm::Initializer::ProjectStructure
       FileUtils.copy(File.join(skeleton_path, "#{initializer}.rb"), File.join(root_path, Hailstorm.config_dir))
       emit "    wrote #{File.join(arg_app_name, Hailstorm.config_dir, "#{initializer}.rb")}"
     end
+  end
+
+  def arjdbc_version
+    require 'arjdbc/version'
+    ArJdbc::VERSION
   end
 end

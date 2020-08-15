@@ -52,9 +52,11 @@ require 'hailstorm/exceptions'
 error StandardError do
   bubbled_error = env['sinatra.error']
   logger.error(bubbled_error.message)
+  logger.error(bubbled_error.backtrace.join("\n"))
   if bubbled_error.is_a?(Hailstorm::ThreadJoinException)
     bubbled_error.exceptions.each do |inner_error|
       logger.error(inner_error)
+      logger.error(bubbled_error.backtrace.join("\n"))
     end
   end
 

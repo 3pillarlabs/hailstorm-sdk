@@ -34,7 +34,7 @@ post '/projects/:project_id/clusters' do |project_id|
   end
 
   record_data[:projectId] = found_project.id
-  project_config.update_attributes!(stringified_config: deep_encode(hailstorm_config))
+  project_config.update!(stringified_config: deep_encode(hailstorm_config))
   JSON.dump(record_data)
 end
 
@@ -79,7 +79,7 @@ delete '/projects/:project_id/clusters/:id' do |project_id, id|
     end
   end
 
-  project_config.update_attributes!(stringified_config: deep_encode(hailstorm_config))
+  project_config.update!(stringified_config: deep_encode(hailstorm_config))
   204
 end
 
@@ -96,7 +96,7 @@ patch '/projects/:project_id/clusters/:id' do |project_id, id|
   # @type [Hash]
   data = JSON.parse(request.body.read)
   data.each_pair { |key, value| matched_cluster_cfg.send("#{key}=", value) }
-  project_config.update_attributes!(stringified_config: deep_encode(hailstorm_config))
+  project_config.update!(stringified_config: deep_encode(hailstorm_config))
 
   JSON.dump(
     to_cluster_attributes(

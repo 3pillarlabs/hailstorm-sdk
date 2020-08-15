@@ -55,7 +55,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
       def klass.configure_all(project, config, force = false)
         logger.debug { "#{self}.#{__method__}" }
         # disable all clusters and then create/update as per configuration
-        project.clusters(true).each do |cluster|
+        project.clusters.reload.each do |cluster|
           cluster.cluster_instance.update_column(:active, false)
         end
 

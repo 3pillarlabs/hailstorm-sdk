@@ -56,7 +56,7 @@ end
 
 When(/^(?:I |)(capture the output of|execute) the command "([^"]*)"$/) do |capture_execute, command|
   if capture_execute =~ /capture/
-    @last_cmd_out = capture(:stdout) { @cli.process_cmd_line(command) }
+    @last_cmd_out = capture_cmd_output(:stdout) { @cli.process_cmd_line(command) }
     puts @last_cmd_out
   else
     @cli.process_cmd_line(command)

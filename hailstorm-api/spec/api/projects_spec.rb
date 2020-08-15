@@ -110,7 +110,7 @@ describe 'api/projects' do
           Hailstorm::Model::TargetHost.stub!(:terminate)
           @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'terminate'}))
           expect(@browser.last_response).to be_successful
-          expect(Hailstorm::Model::ExecutionCycle.first.status).to eq(Hailstorm::Model::ExecutionCycle::States::TERMINATED.to_s)
+          expect(Hailstorm::Model::ExecutionCycle.first.status).to eq(Hailstorm::Model::ExecutionCycle::States::TERMINATED)
         end
       end
 

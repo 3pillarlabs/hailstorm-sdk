@@ -19,6 +19,7 @@ require 'test_schema'
 require 'hailstorm/support/thread'
 require 'hailstorm/support/log4j_backed_logger'
 require 'hailstorm/behavior/file_store'
+require 'hailstorm/support/db_connection'
 
 ENV['HAILSTORM_ENV'] = 'test' unless ENV['HAILSTORM_ENV']
 
@@ -59,17 +60,8 @@ RSpec.configure do |config|
     }
 
     ActiveRecord::Base.logger = Hailstorm::Support::Log4jBackedLogger.get_logger(ActiveRecord::Base)
-    ActiveRecord::Base.establish_connection(connection_spec) # this is lazy, does not fail!
-    begin
-      ActiveRecord::Base.connection.exec_query('select 1')
-    rescue ActiveRecord::ActiveRecordError
-      ActiveRecord::Base.establish_connection(connection_spec.merge(database: nil))
-      ActiveRecord::Base.connection.create_database(connection_spec[:database])
-      ActiveRecord::Base.establish_connection(connection_spec)
-    end
-
+    Hailstorm::Support::DbConnection.establish!(connection_spec)
     Hailstorm::Support::Schema.create_schema
-
     at_exit do
       ActiveRecord::Base.connection.disconnect! if ActiveRecord::Base.connected?
     end

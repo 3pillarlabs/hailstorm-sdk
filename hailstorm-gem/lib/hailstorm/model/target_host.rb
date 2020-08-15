@@ -72,7 +72,7 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
       monitor.save!
     else
       monitor = target_host
-      target_host.update_attributes!(host_def)
+      target_host.update!(host_def)
     end
     monitor
   end
