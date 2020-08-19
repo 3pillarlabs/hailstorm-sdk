@@ -27,8 +27,8 @@ class Hailstorm::Support::DbConnection
 
   def local_time_zone_id
     local_time = Time.now
-    tz = ActiveSupport::TimeZone.all.find { |tz| tz.utc_offset == local_time.utc_offset }
-    tz.tzinfo.name
+    time_zone = ActiveSupport::TimeZone.all.find { |tz| tz.utc_offset == local_time.utc_offset }
+    time_zone.tzinfo.name
   end
 
   def create_database_if_not_exists

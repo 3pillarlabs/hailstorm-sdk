@@ -10,7 +10,10 @@ describe Hailstorm::Support::DbConnection do
   context 'when database does not exist' do
     it 'should create a database' do
       @connection.stub!(:test_connection!).and_raise(ActiveRecord::ActiveRecordError)
-      @connection.should_receive(:create_database)
+      ActiveRecord::Base.should_receive(:establish_connection)
+      mock_connection = double('Active Record Connection')
+      mock_connection.should_receive(:create_database)
+      ActiveRecord::Base.stub!(:connection).and_return(mock_connection)
       @connection.establish
     end
   end

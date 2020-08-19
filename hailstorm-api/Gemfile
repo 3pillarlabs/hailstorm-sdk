@@ -18,4 +18,3 @@ group :test, :development do
   gem 'ruby-debug', '~> 0.11.0'
   gem 'simplecov', '~> 0.17.1'
 end
-

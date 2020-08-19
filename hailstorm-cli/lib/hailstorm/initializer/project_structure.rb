@@ -88,7 +88,7 @@ class Hailstorm::Initializer::ProjectStructure
   # Process to config/boot.rb
   def config_boot
     File.open(File.join(root_path, Hailstorm.config_dir, 'boot.rb'), 'w') do |f|
-      template_vars = {app_name: arg_app_name}
+      template_vars = { app_name: arg_app_name }
       output = render_template(name: 'boot', prefix: skeleton_path, format: :text, assigns: template_vars)
       f.print(output)
     end

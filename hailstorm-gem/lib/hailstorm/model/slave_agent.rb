@@ -18,10 +18,8 @@ class Hailstorm::Model::SlaveAgent < Hailstorm::Model::LoadAgent
     logger.debug { "#{self.class}##{__method__}" }
     return unless jmeter_running?
 
-    Hailstorm::Support::SSH.start(self.public_ip_address,
-                                  self.clusterable.user_name,
-                                  self.clusterable.ssh_options) do |ssh|
-
+    ssh_args = [self.public_ip_address, self.clusterable.user_name, self.clusterable.ssh_options]
+    Hailstorm::Support::SSH.start(*ssh_args) do |ssh|
       # Since the master is configured to send the slaves a shutdown message,
       # we wait for graceful shutdown.
       wait_for_shutdown(ssh, doze_time)
