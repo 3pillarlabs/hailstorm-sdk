@@ -41,7 +41,7 @@ module JMeterHelper
     hailstorm_config = deep_decode(project_config.stringified_config)
     test_plan_name = "#{data['path']}/#{data['name']}"
     file_id = add_to_config(data, hailstorm_config, test_plan_name)
-    project_config.update_attributes!(stringified_config: deep_encode(hailstorm_config))
+    project_config.update!(stringified_config: deep_encode(hailstorm_config))
     jmeter_attributes(data, file_id, found_project)
   end
 
@@ -100,7 +100,7 @@ module JMeterHelper
         response_data['autoStop'] = !jmeter_plan.loop_forever?
         status 200
       else
-        response_data['validationErrors'] = jmeter_plan.errors.get(:test_plan_name)
+        response_data['validationErrors'] = jmeter_plan.errors[:test_plan_name]
         status 422
       end
     end

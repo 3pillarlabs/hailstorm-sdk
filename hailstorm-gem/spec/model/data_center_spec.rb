@@ -302,7 +302,7 @@ describe Hailstorm::Model::DataCenter do
     context 'with one disabled agent' do
       before(:each) do
         @dc.setup
-        @dc.load_agents.where(public_ip_address: '172.17.0.2').first.update_attributes(active: false)
+        @dc.load_agents.where(public_ip_address: '172.17.0.2').first.update(active: false)
         @dc.setup
       end
       it 'should enable the agent' do

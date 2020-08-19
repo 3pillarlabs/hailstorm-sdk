@@ -14,48 +14,43 @@ describe 'api/execution_cycles' do
     it 'should list execution cycles of a project' do
       project = Hailstorm::Model::Project.create!(project_code: File.strip_ext(File.basename(__FILE__)))
       epoch_time = Time.now
-      ex = Hailstorm::Model::ExecutionCycle.create!(
+      Hailstorm::Model::ExecutionCycle.create!(
         project_id: project.id,
         status: Hailstorm::Model::ExecutionCycle::States::STOPPED,
-        threads_count: 10
+        threads_count: 10,
+        started_at: epoch_time.ago(120.minutes),
+        stopped_at: epoch_time.ago(105.minutes)
       )
 
-      ex.update_column(:started_at, epoch_time.ago(120.minutes))
-      ex.update_column(:stopped_at, epoch_time.ago(105.minutes))
-
-      ex = Hailstorm::Model::ExecutionCycle.create!(
+      Hailstorm::Model::ExecutionCycle.create!(
         project_id: project.id,
         status: Hailstorm::Model::ExecutionCycle::States::STOPPED,
-        threads_count: 20
+        threads_count: 20,
+        started_at: epoch_time.ago(100.minutes),
+        stopped_at: epoch_time.ago(85.minutes)
       )
 
-      ex.update_column(:started_at, epoch_time.ago(100.minutes))
-      ex.update_column(:stopped_at, epoch_time.ago(85.minutes))
-
-      ex = Hailstorm::Model::ExecutionCycle.create!(
+      Hailstorm::Model::ExecutionCycle.create!(
         project_id: project.id,
         status: Hailstorm::Model::ExecutionCycle::States::ABORTED,
-        threads_count: 30
+        threads_count: 30,
+        started_at: epoch_time.ago(90.minutes)
       )
 
-      ex.update_column(:started_at, epoch_time.ago(90.minutes))
-
-      ex = Hailstorm::Model::ExecutionCycle.create!(
+      Hailstorm::Model::ExecutionCycle.create!(
         project_id: project.id,
         status: Hailstorm::Model::ExecutionCycle::States::ABORTED,
-        threads_count: 30
+        threads_count: 30,
+        started_at: epoch_time.ago(80.minutes),
+        stopped_at: epoch_time.ago(75.minutes)
       )
-
-      ex.update_column(:started_at, epoch_time.ago(80.minutes))
-      ex.update_column(:stopped_at, epoch_time.ago(75.minutes))
 
       Hailstorm::Model::ExecutionCycle.create!(
         project_id: project.id,
         status: Hailstorm::Model::ExecutionCycle::States::STARTED,
-        threads_count: 30
+        threads_count: 30,
+        started_at: epoch_time.ago(70.minutes)
       )
-
-      ex.update_column(:started_at, epoch_time.ago(70.minutes))
 
       Hailstorm::Model::ExecutionCycle.any_instance.stub(:avg_90_percentile).and_return(234.56)
       Hailstorm::Model::ExecutionCycle.any_instance.stub(:avg_tps).and_return(23.5)
@@ -63,7 +58,6 @@ describe 'api/execution_cycles' do
       @browser.get("/projects/#{project.id}/execution_cycles")
       expect(@browser.last_response).to be_ok
       res = JSON.parse(@browser.last_response.body)
-      puts res
       expect(res.size).to eq(3)
       expect(res[0]['status']).to eq(Hailstorm::Model::ExecutionCycle::States::STARTED.to_s)
       expect(res[1]['threadsCount']).to eq(20)

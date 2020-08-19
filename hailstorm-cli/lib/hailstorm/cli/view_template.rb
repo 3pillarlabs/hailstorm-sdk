@@ -1,8 +1,10 @@
 require 'terminal-table'
 require 'hailstorm/cli'
+require 'hailstorm/view_adapter'
 
 # CLI View template
 class Hailstorm::Cli::ViewTemplate
+  include Hailstorm::ViewAdapter
 
   # @param [Enumerable<Hailstorm::Model::JMeter>] enumerable
   def render_jmeter_plans(enumerable, only_active = true)
@@ -45,12 +47,7 @@ class Hailstorm::Cli::ViewTemplate
 
   def render_view(template_file, context_vars = {})
     template_path = File.join(Hailstorm.templates_path, 'cli')
-    template_file_path = File.join(template_path, template_file)
-
-    engine = ActionView::Base.new
-    engine.view_paths.push(template_path)
-    engine.assign(context_vars)
-    engine.render(file: template_file_path, formats: [:text], handlers: [:erb])
+    render_template(name: template_file, prefix: template_path, format: :text, assigns: context_vars)
   end
 
   def render_results_show(data, format = nil)

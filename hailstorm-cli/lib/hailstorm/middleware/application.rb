@@ -6,10 +6,10 @@ require 'hailstorm/exceptions'
 require 'hailstorm/behavior/loggable'
 require 'hailstorm/support/configuration'
 require 'hailstorm/support/schema'
+require 'hailstorm/support/db_connection'
 
 # Application Middleware
 class Hailstorm::Middleware::Application
-
   include Hailstorm::Behavior::Loggable
 
   # # Initialize the application and connects to the database
@@ -53,8 +53,7 @@ class Hailstorm::Middleware::Application
   alias reload load_config
 
   def check_database
-    ActiveRecord::Base.establish_connection(connection_spec) # this is lazy, does not fail!
-    create_database_if_not_exists
+    Hailstorm::Support::DbConnection.establish!(connection_spec)
     # create/update the schema
     Hailstorm::Support::Schema.create_schema
   ensure
@@ -91,23 +90,6 @@ class Hailstorm::Middleware::Application
 
   def database_name
     @database_name ||= "hailstorm_#{Hailstorm.env}"
-  end
-
-  def create_database_if_not_exists
-    test_connection!
-  rescue ActiveRecord::ActiveRecordError
-    logger.info 'Database does not exist, creating...'
-    create_database
-  end
-
-  def test_connection!
-    ActiveRecord::Base.connection.exec_query('select 1')
-  end
-
-  def create_database
-    ActiveRecord::Base.establish_connection(connection_spec.merge(database: nil))
-    ActiveRecord::Base.connection.create_database(connection_spec[:database])
-    ActiveRecord::Base.establish_connection(connection_spec)
   end
 
   def connection_spec
