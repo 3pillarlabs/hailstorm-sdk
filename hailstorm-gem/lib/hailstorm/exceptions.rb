@@ -10,14 +10,12 @@ module Hailstorm
     attr_reader :exceptions
 
     # @param [Array] exceptions
-    def initialize(exceptions = nil)
-      return unless exceptions
-
+    def initialize(exceptions = [])
       @exceptions = exceptions.is_a?(Array) ? exceptions : [exceptions]
     end
 
     def message
-      @message ||= exceptions.nil? ? super.message : exceptions.collect(&:message)
+      @message ||= exceptions.empty? ? super.message : exceptions.collect(&:message).join("\n")
     end
   end
 
