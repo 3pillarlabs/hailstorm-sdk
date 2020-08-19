@@ -184,8 +184,8 @@ class Hailstorm::Support::Schema
       ActiveRecord::Migration.create_table(:execution_cycles) do |t|
         t.references  :project, null: false
         t.string      :status, null: false
-        t.timestamp   :started_at, null: false
-        t.timestamp   :stopped_at, default: nil
+        t.datetime    :started_at, null: false
+        t.datetime    :stopped_at, default: nil
         t.integer     :threads_count, null: false, default: 0
       end
     end
@@ -199,7 +199,7 @@ class Hailstorm::Support::Schema
         t.integer     :threads_count, null: false
         t.float       :aggregate_ninety_percentile, default: nil
         t.float       :aggregate_response_throughput, default: nil
-        t.timestamp   :last_sample_at, default: nil
+        t.datetime    :last_sample_at, default: nil
       end
     end
 

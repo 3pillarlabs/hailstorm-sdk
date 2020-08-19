@@ -104,8 +104,8 @@ describe 'api/aws_ec2_pricing_options' do
         Net::HTTP.should_not_receive(:get_response)
 
         raw_data =<<-RAW
-          [{"hourlyCostByInstance": 1.0, "clockSpeed": "3.0 GHz", "dedicatedEbsThroughput": "4500 Mbps", 
-            "instanceType": "m5a.large", "memory": "72 GiB", "networkPerformance": "10 Gigabit", 
+          [{"hourlyCostByInstance": 1.0, "clockSpeed": "3.0 GHz", "dedicatedEbsThroughput": "4500 Mbps",
+            "instanceType": "m5a.large", "memory": "72 GiB", "networkPerformance": "10 Gigabit",
             "normalizationSizeFactor": "72", "vcpu": "36", "id": "VDEFC4X4WEBZM9RA.JRTCKXETXF.6YS6EN2CT7"
           }]
         RAW

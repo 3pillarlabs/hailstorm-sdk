@@ -1,10 +1,10 @@
 require 'ostruct'
+
 require 'active_record'
+ActiveRecord::Base.default_timezone = :local
+
 require 'action_dispatch/http/mime_type'
 require 'action_view'
 require 'hailstorm/version'
-
-ActiveRecord::Base.raise_in_transactional_callbacks = true
-
 require 'hailstorm/model/nmon'
 require 'hailstorm/initializer/file_extn'

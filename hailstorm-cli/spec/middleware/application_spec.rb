@@ -17,18 +17,10 @@ describe Hailstorm::Middleware::Application do
       @app.stub!(:connection_spec).and_return(Hailstorm.application.send(:connection_spec))
       Hailstorm::Support::Schema.stub!(:create_schema)
     end
-    context 'when database does not exist' do
-      it 'should create a database' do
-        @app.stub!(:test_connection!).and_raise(ActiveRecord::ActiveRecordError)
-        @app.should_receive(:create_database)
-        @app.check_database
-      end
-    end
-    context 'when database already exists' do
-      it 'should not create a database' do
-        @app.should_not_receive(:create_database)
-        @app.check_database
-      end
+
+    it 'should establish a database connection' do
+      Hailstorm::Support::DbConnection.should_receive(:establish!)
+      @app.check_database
     end
   end
 
@@ -60,11 +52,11 @@ describe Hailstorm::Middleware::Application do
                 props[:ramp_up] = 0
               end
             end
-            
+
             config.clusters(:amazon_cloud) do |aws|
               aws.region = 'us-east-1a'
             end
-            
+
             config.clusters(:data_center) do |data_center|
               data_center.title = 'Digital Ocean'
             end

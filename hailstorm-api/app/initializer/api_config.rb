@@ -49,13 +49,18 @@ error ActiveRecord::RecordNotFound do
 end
 
 require 'hailstorm/exceptions'
+
+# @param [StandardError] error
+def log_error_backtrace(error)
+  logger.error(error.message)
+  logger.error(error.backtrace.join("\n"))
+end
+
 error StandardError do
   bubbled_error = env['sinatra.error']
-  logger.error(bubbled_error.message)
+  log_error_backtrace(bubbled_error)
   if bubbled_error.is_a?(Hailstorm::ThreadJoinException)
-    bubbled_error.exceptions.each do |inner_error|
-      logger.error(inner_error)
-    end
+    bubbled_error.exceptions.each { |inner_error| log_error_backtrace(inner_error) }
   end
 
   500

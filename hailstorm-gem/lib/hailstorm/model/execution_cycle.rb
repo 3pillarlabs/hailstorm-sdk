@@ -2,7 +2,6 @@
 # ExecutionCycle model
 # @author Sayantam Dey
 
-require 'erubis/engine/eruby'
 require 'nokogiri'
 require 'zip/filesystem'
 
@@ -135,7 +134,12 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   # Mark the execution cycle as started now or at given time
   # @param [Time] time
   def started!(time = nil)
-    self.started_at = (time || Time.now)
+    self.started_at = (time || Time.now) if self.started_at.nil?
+  end
+
+  def status
+    value = read_attribute(:status)
+    value.respond_to?(:to_sym) ? value.to_sym : value
   end
 
   # Mark the execution cycle as stopped
@@ -178,7 +182,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
                                                                    cluster_instance,
                                                                    [result_file_path])
 
-    self.update_attributes!(started_at: client_stat.first_sample_at, stopped_at: client_stat.last_sample_at)
+    self.update!(started_at: client_stat.first_sample_at, stopped_at: client_stat.last_sample_at)
   end
 
   def aborted?

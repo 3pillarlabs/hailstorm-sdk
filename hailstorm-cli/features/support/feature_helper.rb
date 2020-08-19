@@ -14,14 +14,15 @@ ENV['HAILSTORM_WORKSPACE_ROOT'] = BUILD_PATH
 require 'active_record'
 require 'active_record/base'
 require 'active_record/errors'
+require 'hailstorm/support/db_connection'
 
-connection_spec = {
+connection_spec = Hailstorm::Support::DbConnection.new(
   adapter:  'jdbcmysql',
   database: "hailstorm_#{ENV['HAILSTORM_ENV']}",
   username: 'hailstorm',
   password: 'hailstorm',
   host: ENV['DATABASE_HOST'] || 'localhost'
-}
+).connection_spec
 
 ActiveRecord::Base.establish_connection(connection_spec)
 begin

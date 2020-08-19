@@ -65,11 +65,9 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   # @return [Hailstorm::Model::Helper::AmiHelper]
   def ami_helper
-    Hailstorm::Model::Helper::AmiHelper.new(aws_clusterable: self,
-                                            instance_client: instance_client,
-                                            ec2_instance_helper: ec2_instance_helper,
-                                            security_group_finder: security_group_finder,
-                                            ami_client: client_factory.ami_client)
+    attrs = { aws_clusterable: self, ami_client: client_factory.ami_client }
+    add_method_attrs!(attrs, :instance_client, :ec2_instance_helper, :security_group_finder)
+    Hailstorm::Model::Helper::AmiHelper.new(attrs)
   end
 
   include Hailstorm::Model::Concern::ClusterableHelper
@@ -77,6 +75,10 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   ######################### PRIVATE METHODS ####################################
   private
+
+  def add_method_attrs!(attrs, *keys)
+    keys.each { |key| attrs[key] = send(key) }
+  end
 
   def set_defaults
     self.security_group = DEFAULTS::SECURITY_GROUP if self.security_group.blank?
@@ -120,14 +122,13 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   end
 
   def security_group_finder
-    Hailstorm::Model::Helper::SecurityGroupFinder.new(security_group_client: security_group_client,
-                                                      ec2_client: ec2_client,
-                                                      aws_clusterable: self)
+    attrs = { aws_clusterable: self }
+    add_method_attrs!(attrs, :security_group_client, :ec2_client)
+    Hailstorm::Model::Helper::SecurityGroupFinder.new(attrs)
   end
 
   def ec2_instance_helper
-    Hailstorm::Model::Helper::Ec2InstanceHelper.new(aws_clusterable: self,
-                                                    instance_client: instance_client)
+    Hailstorm::Model::Helper::Ec2InstanceHelper.new(aws_clusterable: self, instance_client: instance_client)
   end
 
   # Sets the first available zone based on configured region
@@ -144,13 +145,10 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   end
 
   def assign_vpc_subnet
-    igw_client = client_factory.internet_gateway_client
-    rt_client = client_factory.route_table_client
-    vpc_helper = Hailstorm::Model::Helper::VpcHelper.new(vpc_client: client_factory.vpc_client,
-                                                         subnet_client: client_factory.subnet_client,
-                                                         internet_gateway_client: igw_client,
-                                                         route_table_client: rt_client)
-
+    attrs = {}
+    keys = %i[internet_gateway_client route_table_client vpc_client subnet_client]
+    keys.each { |key| attrs[key] = client_factory.send(key) }
+    vpc_helper = Hailstorm::Model::Helper::VpcHelper.new(attrs)
     self.vpc_subnet_id = vpc_helper.find_or_create_vpc_subnet(subnet_name_tag: DEFAULTS::SUBNET_NAME,
                                                               vpc_name_tag: DEFAULTS::VPC_NAME,
                                                               cidr: DEFAULTS::CIDR_BLOCK)
@@ -161,17 +159,17 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
   end
 
   def identity_file_exists
-    identity_helper = Hailstorm::Model::Helper::AwsIdentityHelper.new(key_pair_client: client_factory.key_pair_client,
-                                                                      ssh_identity: self.ssh_identity,
-                                                                      identity_file_path: identity_file_path)
+    attrs = { key_pair_client: client_factory.key_pair_client }
+    add_method_attrs!(attrs, :ssh_identity, :identity_file_path)
+    identity_helper = Hailstorm::Model::Helper::AwsIdentityHelper.new(attrs)
     identity_helper.validate_or_create_identity
   end
 
   def create_security_group
     logger.debug { "#{self.class}##{__method__}" }
-    sg_creator = Hailstorm::Model::Helper::SecurityGroupCreator.new(aws_clusterable: self,
-                                                                    ec2_client: ec2_client,
-                                                                    security_group_client: security_group_client)
+    attrs = { aws_clusterable: self }
+    add_method_attrs!(attrs, :ec2_client, :security_group_client)
+    sg_creator = Hailstorm::Model::Helper::SecurityGroupCreator.new(attrs)
     sg_creator.create_security_group
   end
 

@@ -84,15 +84,7 @@ module Hailstorm
   end
 
   def self.project_directories
-    [
-      Hailstorm.db_dir,
-      Hailstorm.app_dir,
-      Hailstorm.log_dir,
-      Hailstorm.tmp_dir,
-      Hailstorm.reports_dir,
-      Hailstorm.config_dir,
-      Hailstorm.vendor_dir,
-      Hailstorm.script_dir
-    ]
+    dirs = %i[db_dir app_dir log_dir tmp_dir reports_dir config_dir vendor_dir script_dir]
+    dirs.map { |dir| Hailstorm.send(dir) }
   end
 end

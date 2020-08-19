@@ -293,17 +293,12 @@ class Hailstorm::Support::ReportBuilder
 
   def evaluate_template
     process_images
-
-    context_vars = { report: self }
-    template_file_path = File.join(report_templates_path, report_format, report_type, 'document') # document.xml.erb
-
-    engine = ActionView::Base.new
-    engine.view_paths.push(File.dirname(template_file_path))
-    engine.assign(context_vars)
+    template_dir_path = File.join(report_templates_path, report_format, report_type)
+    lookup_context = ActionView::LookupContext.new([template_dir_path])
+    engine = ActionView::Base.with_empty_template_cache.new(lookup_context)
+    engine.assign(report: self)
     File.open(File.join(current_report_path, 'word', 'document.xml'), 'w') do |docxml|
-      docxml.print(engine.render(file: template_file_path,
-                                 formats: [:xml],
-                                 handlers: [:erb]))
+      docxml.print(engine.render(template: 'document.xml.erb', formats: [:xml], handlers: [:erb]))
     end
   end
 

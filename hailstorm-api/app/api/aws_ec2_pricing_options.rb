@@ -15,7 +15,7 @@ get '/aws_ec2_pricing_options/:region_code' do |region_code|
     if region_price.nil?
       AwsEc2Price.create!(region: region_code, raw_data: raw_prices_data, next_update: timestamp.next_quarter)
     else
-      region_price.update_attributes!(raw_data: raw_prices_data, next_update: timestamp.next_quarter)
+      region_price.update!(raw_data: raw_prices_data, next_update: timestamp.next_quarter)
     end
 
   else
