@@ -6,14 +6,14 @@ describe Hailstorm::Model::Helper::SecurityGroupCreator do
 
   context 'security group does not exist' do
     it 'should create EC2 security group' do
-      mock_sg_client = mock(Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient)
-      mock_sg_client.stub!(:find).and_return(nil)
+      mock_sg_client = instance_double(Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient)
+      allow(mock_sg_client).to receive(:find).and_return(nil)
       mock_sec_group = Hailstorm::Behavior::AwsAdaptable::SecurityGroup.new(group_id: 'sg-a1')
-      mock_sg_client.stub!(:create).and_return(mock_sec_group)
-      mock_sg_client.should_receive(:authorize_ingress).exactly(3).times
-      mock_sg_client.should_receive(:allow_ping)
-      mock_ec2_client = mock(Hailstorm::Behavior::AwsAdaptable::Ec2Client)
-      mock_ec2_client.stub!(:find_vpc).and_return('vpc-123')
+      allow(mock_sg_client).to receive(:create).and_return(mock_sec_group)
+      expect(mock_sg_client).to receive(:authorize_ingress).exactly(3).times
+      expect(mock_sg_client).to receive(:allow_ping)
+      mock_ec2_client = instance_double(Hailstorm::Behavior::AwsAdaptable::Ec2Client)
+      allow(mock_ec2_client).to receive(:find_vpc).and_return('vpc-123')
       mock_aws = Hailstorm::Model::AmazonCloud.new(region: 'us-east-1',
                                                    security_group: 'hailstorm',
                                                    ssh_port: 22,

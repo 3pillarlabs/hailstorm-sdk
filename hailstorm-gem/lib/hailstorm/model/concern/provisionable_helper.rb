@@ -30,7 +30,7 @@ module Hailstorm::Model::Concern::ProvisionableHelper
         logger.info("Stopping agent##{load_agent.identifier}...")
         instance_client.stop(instance_id: load_agent.identifier)
         wait_for("#{agent_ec2_instance.id} to stop",
-                 err_attrs: { region: self.region }) { instance_client.stopped?(agent_ec2_instance) }
+                 err_attrs: { region: self.region }) { instance_client.stopped?(instance_id: agent_ec2_instance) }
       end
     else
       logger.warn('Could not stop agent as identifier is not available')
@@ -101,7 +101,7 @@ module Hailstorm::Model::Concern::ProvisionableHelper
     wait_for("agent##{instance_id} to restart",
              err_attrs: { region: self.region }) { instance_client.running?(instance_id: instance_id) }
 
-    instance_client.find(instance: instance_id)
+    instance_client.find(instance_id: instance_id)
   end
 
   def create_agent

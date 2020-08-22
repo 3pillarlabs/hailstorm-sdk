@@ -8,8 +8,8 @@ describe Hailstorm::Support::Workspace do
   context '#make_app_layout' do
     it 'should create the directory layout' do
       rel_paths = []
-      FileUtils.stub!(:mkdir_p) { |path| rel_paths << path }
-      Hailstorm::Support::Workspace.any_instance.stub(:create_file_layout)
+      allow(FileUtils).to receive(:mkdir_p) { |path| rel_paths << path }
+      allow_any_instance_of(Hailstorm::Support::Workspace).to receive(:create_file_layout)
       workspace = Hailstorm::Support::Workspace.new('workspace_spec')
       layout = {
           jmeter: {
@@ -32,9 +32,9 @@ describe Hailstorm::Support::Workspace do
 
   context '#open_app_file' do
     it 'should yield a file object' do
-      Hailstorm::Support::Workspace.any_instance.stub(:create_file_layout)
+      allow_any_instance_of(Hailstorm::Support::Workspace).to receive(:create_file_layout)
       workspace = Hailstorm::Support::Workspace.new('workspace_spec')
-      File.stub!(:join).and_return(File.expand_path('../../../features/data/hailstorm-site-basic.jmx', __FILE__))
+      allow(File).to receive(:join).and_return(File.expand_path('../../../features/data/hailstorm-site-basic.jmx', __FILE__))
       file_objects = []
       workspace.open_app_file('any') { |io| file_objects << io }
       expect(file_objects).to_not be_empty
@@ -52,9 +52,9 @@ describe Hailstorm::Support::Workspace do
     it 'should delete the project workspace directory' do
       workspace = Hailstorm::Support::Workspace.new('workspace_spec')
       workspace.create_file_layout
-      expect(File.exist?(workspace.workspace_path)).to be_true
+      expect(File.exist?(workspace.workspace_path)).to be true
       workspace.remove_workspace
-      expect(File.exist?(workspace.workspace_path)).to be_false
+      expect(File.exist?(workspace.workspace_path)).to be false
     end
   end
 
@@ -62,7 +62,7 @@ describe Hailstorm::Support::Workspace do
     it 'should copy from io' do
       read_io = StringIO.new('Hello World')
       write_io = StringIO.new('', 'w')
-      File.stub!(:open).and_yield(write_io)
+      allow(File).to receive(:open).and_yield(write_io)
       workspace = Hailstorm::Support::Workspace.new('workspace_spec')
       abs_path = workspace.write_identity_file('insecure', read_io)
       expect(abs_path).to_not be_nil
@@ -72,9 +72,9 @@ describe Hailstorm::Support::Workspace do
 
   context '#purge' do
     it 'should re-create file layout and remove files' do
-      FileUtils.stub!(:rm_rf)
+      allow(FileUtils).to receive(:rm_rf)
       workspace = Hailstorm::Support::Workspace.new('workspace_spec')
-      workspace.should_receive(:create_file_layout)
+      expect(workspace).to receive(:create_file_layout)
       workspace.purge
     end
   end

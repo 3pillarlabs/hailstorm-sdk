@@ -11,7 +11,7 @@ describe Hailstorm::Model::SlaveAgent do
   end
 
   it 'should be a slave' do
-    expect(@slave_agent.slave?).to be_true
+    expect(@slave_agent.slave?).to be true
   end
 
   context '#start_jmeter' do
@@ -19,8 +19,8 @@ describe Hailstorm::Model::SlaveAgent do
       @slave_agent.jmeter_plan = Hailstorm::Model::JmeterPlan.new
       expect(@slave_agent.jmeter_plan).to respond_to(:slave_command)
       command = '/bin/jmeter'
-      @slave_agent.jmeter_plan.stub!(:slave_command).and_return(command)
-      @slave_agent.should_receive(:evaluate_execute).with(command)
+      allow(@slave_agent.jmeter_plan).to receive(:slave_command).and_return(command)
+      expect(@slave_agent).to receive(:evaluate_execute).with(command)
       @slave_agent.start_jmeter
     end
   end
@@ -28,13 +28,13 @@ describe Hailstorm::Model::SlaveAgent do
   context '#stop_jmeter' do
     context 'jmeter_running? == true' do
       it 'should wait_for_shutdown' do
-        @slave_agent.stub!(:jmeter_running?).and_return(true)
+        allow(@slave_agent).to receive(:jmeter_running?).and_return(true)
         @slave_agent.clusterable = Hailstorm::Model::DataCenter.new
         expect(@slave_agent.clusterable).to respond_to(:ssh_options)
-        @slave_agent.clusterable.stub!(:ssh_options).and_return({})
-        Hailstorm::Support::SSH.stub!(:start).and_yield(mock(Net::SSH))
-        @slave_agent.should_receive(:wait_for_shutdown)
-        @slave_agent.should_receive(:update_column).with(:jmeter_pid, nil)
+        allow(@slave_agent.clusterable).to receive(:ssh_options).and_return({})
+        allow(Hailstorm::Support::SSH).to receive(:start).and_yield(class_double(Net::SSH))
+        expect(@slave_agent).to receive(:wait_for_shutdown)
+        expect(@slave_agent).to receive(:update_column).with(:jmeter_pid, nil)
         @slave_agent.stop_jmeter(false, false, 0)
       end
     end

@@ -15,13 +15,13 @@ describe Hailstorm::Model::AmazonCloud do
 
   # @param [Hailstorm::Model::AmazonCloud] aws
   def stub_aws!(aws)
-    aws.stub(:identity_file_exists, nil)
-    aws.stub(:set_availability_zone, nil)
-    aws.stub(:create_agent_ami, nil)
-    aws.stub(:provision_agents, nil)
-    aws.stub(:secure_identity_file, nil)
-    aws.stub(:create_security_group, nil)
-    aws.stub(:assign_vpc_subnet, nil)
+    allow(aws).to receive(:identity_file_exists)
+    allow(aws).to receive(:set_availability_zone)
+    allow(aws).to receive(:create_agent_ami)
+    allow(aws).to receive(:provision_agents)
+    allow(aws).to receive(:secure_identity_file)
+    allow(aws).to receive(:create_security_group)
+    allow(aws).to receive(:assign_vpc_subnet)
   end
 
   before(:each) do
@@ -40,30 +40,24 @@ describe Hailstorm::Model::AmazonCloud do
   context 'AWS client factory' do
     it 'should make an EC2 instance client' do
       mock_client = Object.new.extend(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
-      Hailstorm::Support::AwsAdapter
-        .stub!(:clients)
-        .and_return(Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(instance_client: mock_client))
-
+      client_factory = Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(instance_client: mock_client)
+      allow(Hailstorm::Support::AwsAdapter).to receive(:clients).and_return(client_factory)
       expect(@aws.send(:instance_client)).to_not be_nil
       expect(@aws.send(:instance_client)).to be_kind_of(mock_client.class)
     end
 
     it 'should make an EC2 security group client' do
       mock_client = Object.new.extend(Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient)
-      Hailstorm::Support::AwsAdapter
-        .stub!(:clients)
-        .and_return(Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(security_group_client: mock_client))
-
+      client_factory = Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(security_group_client: mock_client)
+      allow(Hailstorm::Support::AwsAdapter).to receive(:clients).and_return(client_factory)
       expect(@aws.send(:security_group_client)).to_not be_nil
       expect(@aws.send(:security_group_client)).to be_kind_of(mock_client.class)
     end
 
     it 'should make EC2 client' do
       mock_client = Object.new.extend(Hailstorm::Behavior::AwsAdaptable::Ec2Client)
-      Hailstorm::Support::AwsAdapter
-        .stub!(:clients)
-        .and_return(Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(ec2_client: mock_client))
-
+      client_factory = Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(ec2_client: mock_client)
+      allow(Hailstorm::Support::AwsAdapter).to receive(:clients).and_return(client_factory)
       expect(@aws.send(:ec2_client)).to_not be_nil
       expect(@aws.send(:ec2_client)).to be_kind_of(mock_client.class)
     end
@@ -124,7 +118,7 @@ describe Hailstorm::Model::AmazonCloud do
       @aws.project = Hailstorm::Model::Project.new(project_code: 'amazon_cloud_spec')
       @aws.ssh_port = 8022
       @aws.active = true
-      @aws.stub(:identity_file_exists, nil) { true }
+      allow(@aws).to receive(:identity_file_exists)
     end
     context 'agent_ami is not present' do
       it 'should raise an error' do
@@ -154,7 +148,7 @@ describe Hailstorm::Model::AmazonCloud do
 
       context 'agent_ami is not specfied' do
         it 'should be invoked' do
-          @aws.should_receive(:create_security_group)
+          expect(@aws).to receive(:create_security_group)
           @aws.save!
         end
       end
@@ -162,27 +156,27 @@ describe Hailstorm::Model::AmazonCloud do
       context 'agent_ami is specified' do
         it 'should be invoked' do
           @aws.agent_ami = 'ami-42'
-          @aws.should_receive(:create_security_group)
+          expect(@aws).to receive(:create_security_group)
           @aws.save!
         end
       end
     end
 
     it 'should delegate to helper' do
-      @aws.stub!(:client_factory)
+      allow(@aws).to receive(:client_factory)
           .and_return(Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(
-            ec2_client: mock(Hailstorm::Behavior::AwsAdaptable::Ec2Client),
-            security_group_client: mock(Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient)
+            ec2_client: instance_double(Hailstorm::Behavior::AwsAdaptable::Ec2Client),
+            security_group_client: instance_double(Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient)
           ))
 
-      Hailstorm::Model::Helper::SecurityGroupCreator.any_instance.should_receive(:create_security_group)
+      expect_any_instance_of(Hailstorm::Model::Helper::SecurityGroupCreator).to receive(:create_security_group)
       @aws.send(:create_security_group)
     end
   end
 
   context '#agents_to_remove' do
     it 'should yield agents that are not needed for load generation' do
-      @aws.stub!(:agents_to_add).and_return(-1)
+      allow(@aws).to receive(:agents_to_add).and_return(-1)
       @aws.project = Hailstorm::Model::Project.where(project_code: 'amazon_cloud_spec').first_or_create!
       @aws.access_key = 'dummy'
       @aws.secret_key = 'dummy'
@@ -213,7 +207,7 @@ describe Hailstorm::Model::AmazonCloud do
         @aws.save!
 
         @required_load_agent_count = 2
-        @aws.stub!(:required_load_agent_count).and_return(@required_load_agent_count)
+        allow(@aws).to receive(:required_load_agent_count).and_return(@required_load_agent_count)
         @jmeter_plan = Hailstorm::Model::JmeterPlan.create!(project: @aws.project, test_plan_name: 'A',
                                                             content_hash: 'A')
       end
@@ -232,7 +226,7 @@ describe Hailstorm::Model::AmazonCloud do
           Hailstorm::Model::SlaveAgent.create!(clusterable_id: @aws.id, clusterable_type: @aws.class.name,
                                                jmeter_plan: @jmeter_plan)
         end
-        @aws.should_receive(:create_or_enable) do |_arg1, _arg2, arg3|
+        expect(@aws).to receive(:create_or_enable) do |_arg1, _arg2, arg3|
           expect(arg3).to be == :slave_agents
         end
         @aws.send(:process_jmeter_plan, @jmeter_plan)
@@ -286,16 +280,14 @@ describe Hailstorm::Model::AmazonCloud do
 
   context '#identity_file_exists' do
     it 'should validate or create a key pair' do
-      @aws.stub!(:identity_file_path).and_return('/dev/null')
+      allow(@aws).to receive(:identity_file_path).and_return('/dev/null')
       @aws.ssh_identity = 'secure'
-      @aws.stub!(:client_factory)
-          .and_return(Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(
-            key_pair_client: mock(Hailstorm::Behavior::AwsAdaptable::KeyPairClient)
-          ))
+      client_factory = Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(
+        key_pair_client: instance_double(Hailstorm::Behavior::AwsAdaptable::KeyPairClient)
+      )
 
-      Hailstorm::Model::Helper::AwsIdentityHelper
-        .any_instance
-        .should_receive(:validate_or_create_identity)
+      allow(@aws).to receive(:client_factory).and_return(client_factory)
+      expect_any_instance_of(Hailstorm::Model::Helper::AwsIdentityHelper).to receive(:validate_or_create_identity)
 
       @aws.send(:identity_file_exists)
     end
@@ -306,9 +298,9 @@ describe Hailstorm::Model::AmazonCloud do
       context 'zone is not assigned' do
         it 'should assign the first available zone' do
           @aws.project = Hailstorm::Model::Project.new(project_code: __FILE__, master_slave_mode: true)
-          mock_ec2_client = mock(Hailstorm::Behavior::AwsAdaptable::Ec2Client)
-          mock_ec2_client.stub!(:first_available_zone).and_return('us-east-1a')
-          @aws.stub!(:ec2_client).and_return(mock_ec2_client)
+          mock_ec2_client = instance_double(Hailstorm::Behavior::AwsAdaptable::Ec2Client)
+          allow(mock_ec2_client).to receive(:first_available_zone).and_return('us-east-1a')
+          allow(@aws).to receive(:ec2_client).and_return(mock_ec2_client)
           @aws.send(:set_availability_zone)
           expect(@aws.zone).to be == 'us-east-1a'
         end
@@ -319,7 +311,7 @@ describe Hailstorm::Model::AmazonCloud do
   context Hailstorm::Behavior::Provisionable do
     context '#agent_before_save_on_create' do
       it 'should start_agent' do
-        @aws.should_receive(:start_agent)
+        expect(@aws).to receive(:start_agent)
         @aws.agent_before_save_on_create(nil)
       end
     end
@@ -327,13 +319,13 @@ describe Hailstorm::Model::AmazonCloud do
     context '#agents_to_add' do
       context 'required and current count is same' do
         it 'should return 0' do
-          query = mock(ActiveRecord::Relation, count: 5)
+          query = instance_double(ActiveRecord::Relation, count: 5)
           expect(@aws.agents_to_add(query, 5) { }).to be_zero
         end
       end
       context 'required count is greater than the current count' do
         it 'should yield and return the differential' do
-          query = mock(ActiveRecord::Relation, count: 3)
+          query = instance_double(ActiveRecord::Relation, count: 3)
           count = @aws.agents_to_add(query, 5) do |q, c|
             expect(c).to be == 2
             expect(q).to be == query
@@ -349,7 +341,7 @@ describe Hailstorm::Model::AmazonCloud do
       context 'with 2 load agents needed' do
         it 'should create 1 new load agent' do
           stub_aws!(@aws)
-          @aws.stub!(:start_agent)
+          allow(@aws).to receive(:start_agent)
           @aws.project = Hailstorm::Model::Project.create!(project_code: 'amazon_cloud_spec')
           @aws.access_key = 'foo'
           @aws.secret_key = 'bar'
@@ -366,14 +358,14 @@ describe Hailstorm::Model::AmazonCloud do
 
           jmeter_plan.update_column(:active, true)
 
-          Hailstorm::Model::LoadAgent.any_instance.stub(:upload_scripts)
+          allow_any_instance_of(Hailstorm::Model::LoadAgent).to receive(:upload_scripts)
           agent = Hailstorm::Model::MasterAgent.create!(
             clusterable_id: @aws.id,
             clusterable_type: @aws.class.name,
             jmeter_plan: jmeter_plan
           )
 
-          jmeter_plan.stub!(:num_threads).and_return(30)
+          allow(jmeter_plan).to receive(:num_threads).and_return(30)
 
           @aws.create_or_enable({ jmeter_plan_id: jmeter_plan.id, active: true }, jmeter_plan, :master_agents)
 
@@ -387,12 +379,12 @@ describe Hailstorm::Model::AmazonCloud do
   context '#provision_agents' do
     context 'when reconfiguring with multiple JMeter plans and load agents in a cluster' do
       it 'should start the correct load agents' do
-        Hailstorm::Model::JmeterPlan.any_instance.stub(:num_threads).and_return(50)
-        Hailstorm::Model::LoadAgent.any_instance.stub(:upload_scripts)
+        allow_any_instance_of(Hailstorm::Model::JmeterPlan).to receive(:num_threads).and_return(50)
+        allow_any_instance_of(Hailstorm::Model::LoadAgent).to receive(:upload_scripts)
         stub_aws!(@aws)
-        @aws.unstub!(:provision_agents)
+        allow(@aws).to receive(:provision_agents).and_call_original
 
-        @aws.stub!(:start_agent)
+        allow(@aws).to receive(:start_agent)
         @aws.project = Hailstorm::Model::Project.create!(project_code: 'amazon_cloud_spec')
         @aws.access_key = 'foo'
         @aws.secret_key = 'bar'
@@ -441,16 +433,16 @@ describe Hailstorm::Model::AmazonCloud do
   context '#assign_vpc_subnet' do
     it 'should create a Hailstorm public subnet if it does not exist' do
       mock_client_factory = Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(
-        vpc_client: mock(Hailstorm::Behavior::AwsAdaptable::VpcClient),
-        subnet_client: mock(Hailstorm::Behavior::AwsAdaptable::SubnetClient),
-        internet_gateway_client: mock(Hailstorm::Behavior::AwsAdaptable::InternetGatewayClient),
-        route_table_client: mock(Hailstorm::Behavior::AwsAdaptable::RouteTableClient)
+        vpc_client: instance_double(Hailstorm::Behavior::AwsAdaptable::VpcClient),
+        subnet_client: instance_double(Hailstorm::Behavior::AwsAdaptable::SubnetClient),
+        internet_gateway_client: instance_double(Hailstorm::Behavior::AwsAdaptable::InternetGatewayClient),
+        route_table_client: instance_double(Hailstorm::Behavior::AwsAdaptable::RouteTableClient)
       )
 
-      @aws.stub!(:client_factory).and_return(mock_client_factory)
-      Hailstorm::Model::Helper::VpcHelper.any_instance
-                                         .stub(:find_or_create_vpc_subnet)
-                                         .and_return('subnet-123')
+      allow(@aws).to receive(:client_factory).and_return(mock_client_factory)
+      allow_any_instance_of(Hailstorm::Model::Helper::VpcHelper).to receive(
+                                                                      :find_or_create_vpc_subnet
+                                                                    ).and_return('subnet-123')
       @aws.send(:assign_vpc_subnet)
       expect(@aws.vpc_subnet_id).to be == 'subnet-123'
     end
@@ -458,26 +450,26 @@ describe Hailstorm::Model::AmazonCloud do
 
   context '#create_agent_ami' do
     it 'should delegate to helper' do
-      @aws.stub!(:instance_client).and_return(mock(Hailstorm::Behavior::AwsAdaptable::InstanceClient))
-      @aws.stub!(:ec2_instance_helper).and_return(mock(Hailstorm::Model::Helper::Ec2InstanceHelper))
-      @aws.stub!(:security_group_finder).and_return(mock(Hailstorm::Model::Helper::SecurityGroupFinder))
+      allow(@aws).to receive(:instance_client).and_return(instance_double(Hailstorm::Behavior::AwsAdaptable::InstanceClient))
+      allow(@aws).to receive(:ec2_instance_helper).and_return(instance_double(Hailstorm::Model::Helper::Ec2InstanceHelper))
+      allow(@aws).to receive(:security_group_finder).and_return(instance_double(Hailstorm::Model::Helper::SecurityGroupFinder))
       mock_client_factory = Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(
-        ami_client: mock(Hailstorm::Behavior::AwsAdaptable::AmiClient)
+        ami_client: instance_double(Hailstorm::Behavior::AwsAdaptable::AmiClient)
       )
 
-      @aws.stub!(:client_factory).and_return(mock_client_factory)
-      Hailstorm::Model::Helper::AmiHelper.any_instance.should_receive(:create_agent_ami!)
+      allow(@aws).to receive(:client_factory).and_return(mock_client_factory)
+      expect_any_instance_of(Hailstorm::Model::Helper::AmiHelper).to receive(:create_agent_ami!)
       @aws.send(:create_agent_ami)
     end
   end
 
   it 'should instantiate security_group_finder' do
     mock_client_factory = Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(
-      security_group_client: mock(Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient),
-      ec2_client: mock(Hailstorm::Behavior::AwsAdaptable::Ec2Client)
+      security_group_client: instance_double(Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient),
+      ec2_client: instance_double(Hailstorm::Behavior::AwsAdaptable::Ec2Client)
     )
 
-    @aws.stub!(:client_factory).and_return(mock_client_factory)
+    allow(@aws).to receive(:client_factory).and_return(mock_client_factory)
     expect { @aws.send(:security_group_finder) }.to_not raise_error
   end
 
@@ -485,10 +477,10 @@ describe Hailstorm::Model::AmazonCloud do
     @aws.project = Hailstorm::Model::Project.create!(project_code: 'amazon_cloud_spec')
     @aws.ssh_identity = 'secure'
     mock_client_factory = Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(
-      instance_client: mock(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
+      instance_client: instance_double(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
     )
 
-    @aws.stub!(:client_factory).and_return(mock_client_factory)
+    allow(@aws).to receive(:client_factory).and_return(mock_client_factory)
     expect { @aws.send(:ec2_instance_helper) }.to_not raise_error
   end
 end

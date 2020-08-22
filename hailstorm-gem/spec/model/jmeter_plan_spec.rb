@@ -10,10 +10,10 @@ describe Hailstorm::Model::JmeterPlan do
 
   def app_file_fixture
     io = File.open(SOURCE_JMX_PATH, 'r')
-    mock_workspace = mock(Hailstorm::Support::Workspace)
-    mock_workspace.stub!(:create_file_layout)
-    mock_workspace.stub!(:open_app_file).and_yield(io)
-    Hailstorm.stub!(:workspace).and_return(mock_workspace)
+    mock_workspace = instance_double(Hailstorm::Support::Workspace)
+    allow(mock_workspace).to receive(:create_file_layout)
+    allow(mock_workspace).to receive(:open_app_file).and_yield(io)
+    allow(Hailstorm).to receive(:workspace).and_return(mock_workspace)
     [io, mock_workspace]
   end
 
@@ -30,10 +30,10 @@ describe Hailstorm::Model::JmeterPlan do
   context '#validate_plan' do
     before(:each) do
       @jmeter_plan.project = Hailstorm::Model::Project.new(project_code: 'jmeter_spec')
-      workspace = mock(Hailstorm::Support::Workspace)
+      workspace = instance_double(Hailstorm::Support::Workspace)
       @source_jmx_io = File.open(SOURCE_JMX_PATH, 'r')
-      workspace.stub!(:open_app_file).and_yield(@source_jmx_io)
-      Hailstorm.stub!(:workspace).and_return(workspace)
+      allow(workspace).to receive(:open_app_file).and_yield(@source_jmx_io)
+      allow(Hailstorm).to receive(:workspace).and_return(workspace)
     end
 
     after(:each) do
@@ -73,11 +73,11 @@ describe Hailstorm::Model::JmeterPlan do
         expect(@jmeter_plan).to be_valid
       end
     end
-    
+
     context 'when JMeter plan does not have simple data writer' do
       it 'should not be valid' do
-        @jmeter_plan.stub!(:extracted_property_names).and_return([])
-        @jmeter_plan.stub!(:jmeter_document).and_yield(Nokogiri::XML.parse('<foo></foo>'))
+        allow(@jmeter_plan).to receive(:extracted_property_names).and_return([])
+        allow(@jmeter_plan).to receive(:jmeter_document).and_yield(Nokogiri::XML.parse('<foo></foo>'))
         expect(@jmeter_plan).to_not be_valid
       end
     end
@@ -96,15 +96,14 @@ describe Hailstorm::Model::JmeterPlan do
 
   context '.setup' do
     before(:each) do
-      Hailstorm.fs = mock(Hailstorm::Behavior::FileStore)
+      Hailstorm.fs = instance_double(Hailstorm::Behavior::FileStore)
       @project = Hailstorm::Model::Project.create!(project_code: __FILE__)
       @source_jmx_io, mock_workspace = app_file_fixture
-      Hailstorm.fs.stub!(:app_dir_tree).and_return({app: nil}.stringify_keys)
-      Hailstorm.fs.stub!(:transfer_jmeter_artifacts)
-      mock_workspace.stub!(:make_app_layout)
-      mock_workspace.stub!(:app_path)
-      mock_workspace.unstub!(:open_app_file)
-      mock_workspace.stub!(:open_app_file) do |_path, &block|
+      allow(Hailstorm.fs).to receive(:app_dir_tree).and_return({app: nil}.stringify_keys)
+      allow(Hailstorm.fs).to receive(:transfer_jmeter_artifacts)
+      allow(mock_workspace).to receive(:make_app_layout)
+      allow(mock_workspace).to receive(:app_path)
+      allow(mock_workspace).to receive(:open_app_file) do |_path, &block|
         File.open(SOURCE_JMX_PATH, 'r') { |io| block.call(io) }
       end
     end
@@ -122,8 +121,8 @@ describe Hailstorm::Model::JmeterPlan do
         end
       end
       jmx_files = %w[a b]
-      Hailstorm.fs.stub!(:fetch_jmeter_plans).and_return(jmx_files)
-      Hailstorm.fs.stub!(:normalize_file_path) { |args| args }
+      allow(Hailstorm.fs).to receive(:fetch_jmeter_plans).and_return(jmx_files)
+      allow(Hailstorm.fs).to receive(:normalize_file_path) { |args| args }
       Hailstorm::Model::JmeterPlan.setup(@project, config)
       jmx_files.pop
       @project.reload
@@ -142,8 +141,8 @@ describe Hailstorm::Model::JmeterPlan do
             end
           end
           jmx_files = %w[a b]
-          Hailstorm.fs.stub!(:fetch_jmeter_plans).and_return(jmx_files)
-          Hailstorm.fs.stub!(:normalize_file_path) { |args| args }
+          allow(Hailstorm.fs).to receive(:fetch_jmeter_plans).and_return(jmx_files)
+          allow(Hailstorm.fs).to receive(:normalize_file_path) { |args| args }
           saved_plans = Hailstorm::Model::JmeterPlan.setup(@project, config)
           expect(saved_plans.size).to be == jmx_files.size
         end
@@ -152,7 +151,7 @@ describe Hailstorm::Model::JmeterPlan do
         it 'should raise error' do
           config = Hailstorm::Support::Configuration.new
           config.jmeter.test_plans = nil
-          Hailstorm.fs.stub!(:fetch_jmeter_plans).and_return([])
+          allow(Hailstorm.fs).to receive(:fetch_jmeter_plans).and_return([])
           expect {
             Hailstorm::Model::JmeterPlan.setup(@project, config)
           }.to raise_error(Hailstorm::Exception)
@@ -171,8 +170,8 @@ describe Hailstorm::Model::JmeterPlan do
               property['Duration'] = 60
             end
           end
-          Hailstorm.fs.stub!(:fetch_jmeter_plans).and_return(jmx_files)
-          Hailstorm.fs.stub!(:normalize_file_path) { |args| args }
+          allow(Hailstorm.fs).to receive(:fetch_jmeter_plans).and_return(jmx_files)
+          allow(Hailstorm.fs).to receive(:normalize_file_path) { |args| args }
           saved_plans = Hailstorm::Model::JmeterPlan.setup(@project, config)
           expect(saved_plans.size).to be == jmx_files.size
         end
@@ -183,7 +182,7 @@ describe Hailstorm::Model::JmeterPlan do
           config.jmeter do |jmeter|
             jmeter.test_plans = %w[a.jmx b.jmx]
           end
-          Hailstorm.fs.stub!(:fetch_jmeter_plans).and_return(%w[a])
+          allow(Hailstorm.fs).to receive(:fetch_jmeter_plans).and_return(%w[a])
           expect {
             Hailstorm::Model::JmeterPlan.setup(@project, config)
           }.to raise_error(Hailstorm::Exception)
@@ -227,8 +226,8 @@ describe Hailstorm::Model::JmeterPlan do
 
   context '#slave_command' do
     it 'should add the properties to the command' do
-      clusterable = mock(Hailstorm::Behavior::Clusterable)
-      clusterable.stub!(:required_load_agent_count).and_return(10)
+      clusterable = instance_double(Hailstorm::Behavior::Clusterable)
+      allow(clusterable).to receive(:required_load_agent_count).and_return(10)
       @jmeter_plan.project = Hailstorm::Model::Project.new(project_code: 'jmeter_spec')
       @jmeter_plan.properties = { NumUsers: 5, Duration: 600 }.to_json
       io, = app_file_fixture
@@ -245,9 +244,9 @@ describe Hailstorm::Model::JmeterPlan do
       @jmeter_plan.project = Hailstorm::Model::Project.create!(project_code: __FILE__)
       @jmeter_plan.properties = { NumUsers: 900, Duration: 600 }.to_json
       @jmeter_plan.save!
-      @jmeter_plan.project.stub!(:current_execution_cycle).and_return(mock(Hailstorm::Model::ExecutionCycle, id: 10))
-      @clusterable = mock(Hailstorm::Behavior::Clusterable)
-      @clusterable.stub!(:required_load_agent_count).and_return(3)
+      allow(@jmeter_plan.project).to receive(:current_execution_cycle).and_return(instance_double(Hailstorm::Model::ExecutionCycle, id: 10))
+      @clusterable = instance_double(Hailstorm::Behavior::Clusterable)
+      allow(@clusterable).to receive(:required_load_agent_count).and_return(3)
     end
 
     after(:each) do
@@ -278,8 +277,8 @@ describe Hailstorm::Model::JmeterPlan do
   context '#remote_directory_hierarchy' do
     it 'should have the log key' do
       @jmeter_plan.project = Hailstorm::Model::Project.new(project_code: 'jmeter_spec')
-      Hailstorm.fs = mock(Hailstorm::Behavior::FileStore)
-      Hailstorm.fs.stub!(:app_dir_tree).and_return({app: nil}.stringify_keys)
+      Hailstorm.fs = instance_double(Hailstorm::Behavior::FileStore)
+      allow(Hailstorm.fs).to receive(:app_dir_tree).and_return({app: nil}.stringify_keys)
       structure = @jmeter_plan.remote_directory_hierarchy
       value = structure.values.first
       expect(value).to include('app')
@@ -289,11 +288,10 @@ describe Hailstorm::Model::JmeterPlan do
 
   context '#test_artifacts' do
     it 'should skip hidden and backup files' do
-      workspace = mock(Hailstorm::Support::Workspace)
-      workspace
-        .stub!(:app_entries)
-        .and_return(%w[/home/foo/app/baz.jmx /home/foo/app/baz.jmx~ /home/foo/app/.bar.jmx])
-      Hailstorm.stub!(:workspace).and_return(workspace)
+      workspace = instance_double(Hailstorm::Support::Workspace)
+      entries = %w[/home/foo/app/baz.jmx /home/foo/app/baz.jmx~ /home/foo/app/.bar.jmx]
+      allow(workspace).to receive(:app_entries).and_return(entries)
+      allow(Hailstorm).to receive(:workspace).and_return(workspace)
       @jmeter_plan.project = Hailstorm::Model::Project.new(project_code: 'jmeter_plan_spec')
       artifacts = @jmeter_plan.test_artifacts
       expect(artifacts).to include('/home/foo/app/baz.jmx')
@@ -311,8 +309,8 @@ describe Hailstorm::Model::JmeterPlan do
         </bar>
       </foo>
       XML
-      @jmeter_plan.stub!(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
-      expect(@jmeter_plan.loop_forever?).to be_true
+      allow(@jmeter_plan).to receive(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
+      expect(@jmeter_plan.loop_forever?).to be true
     end
     it 'should be false when LoopController is false' do
       xml = <<-XML
@@ -322,16 +320,16 @@ describe Hailstorm::Model::JmeterPlan do
         </bar>
       </foo>
       XML
-      @jmeter_plan.stub!(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
-      expect(@jmeter_plan.loop_forever?).to be_false
+      allow(@jmeter_plan).to receive(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
+      expect(@jmeter_plan.loop_forever?).to be false
     end
     it 'should be false when LoopController is absent' do
       xml = <<-XML
       <foo>
       </foo>
       XML
-      @jmeter_plan.stub!(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
-      expect(@jmeter_plan.loop_forever?).to be_false
+      allow(@jmeter_plan).to receive(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
+      expect(@jmeter_plan.loop_forever?).to be false
     end
   end
 
@@ -343,7 +341,7 @@ describe Hailstorm::Model::JmeterPlan do
           <TestPlan></TestPlan>
         </test>
         XML
-        @jmeter_plan.stub!(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
+        allow(@jmeter_plan).to receive(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
         expect(@jmeter_plan.plan_name).to be == @jmeter_plan.test_plan_name.titlecase
       end
     end
@@ -354,7 +352,7 @@ describe Hailstorm::Model::JmeterPlan do
           <TestPlan testname="Test Plan"></TestPlan>
         </test>
         XML
-        @jmeter_plan.stub!(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
+        allow(@jmeter_plan).to receive(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
         expect(@jmeter_plan.plan_name).to be == @jmeter_plan.test_plan_name.titlecase
       end
     end
@@ -364,7 +362,7 @@ describe Hailstorm::Model::JmeterPlan do
         <TestPlan testname="custom_name"></TestPlan>
       </test>
       XML
-      @jmeter_plan.stub!(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
+      allow(@jmeter_plan).to receive(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
       expect(@jmeter_plan.plan_name).to be == 'custom_name'
     end
   end
@@ -378,7 +376,7 @@ describe Hailstorm::Model::JmeterPlan do
         </TestPlan>
       </test>
       XML
-      @jmeter_plan.stub!(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
+      allow(@jmeter_plan).to receive(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
       expect(@jmeter_plan.plan_description).to be == 'Description'
     end
   end
@@ -419,7 +417,7 @@ describe Hailstorm::Model::JmeterPlan do
         </hashTree>
       </hashTree>
       XML
-      @jmeter_plan.stub!(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
+      allow(@jmeter_plan).to receive(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
       scenarios = @jmeter_plan.scenario_definitions
       expect(scenarios.size).to be == 2
       expect(scenarios[0].thread_group).to be == 'Thread Group 1: Description for Thread Group 1'
@@ -432,19 +430,19 @@ describe Hailstorm::Model::JmeterPlan do
   context '#num_threads' do
     context 'multiple thread groups' do
       before(:each) do
-        @jmeter_plan.stub!(:threadgroups_threads_count_properties).and_return(%w[admin writer reader])
+        allow(@jmeter_plan).to receive(:threadgroups_threads_count_properties).and_return(%w[admin writer reader])
         @jmeter_props = { admin: 10, writer: 30, reader: 60 }
         @jmeter_plan.properties = @jmeter_props.to_json
       end
       context 'serial order execution' do
         it 'should return maximum number of threads' do
-          @jmeter_plan.stub!(:serialize_threadgroups?).and_return(true)
+          allow(@jmeter_plan).to receive(:serialize_threadgroups?).and_return(true)
           expect(@jmeter_plan.num_threads).to be == @jmeter_props[:reader]
         end
       end
       context 'parallel order execution' do
         it 'should return sum of number of threads' do
-          @jmeter_plan.stub!(:serialize_threadgroups?).and_return(false)
+          allow(@jmeter_plan).to receive(:serialize_threadgroups?).and_return(false)
           expect(@jmeter_plan.num_threads).to be == @jmeter_props.values.sum
         end
       end
@@ -461,10 +459,10 @@ describe Hailstorm::Model::JmeterPlan do
           </hashTree>
         </jmeterTestPlan>
         XML
-        @jmeter_plan.stub!(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
+        allow(@jmeter_plan).to receive(:jmeter_document).and_yield(Nokogiri::XML.parse(xml))
         @jmeter_plan.properties = { a: true }.to_json
-        @jmeter_plan.should_receive(:extract_property_name).with('${__P(a)}').and_return('a')
-        expect(@jmeter_plan.send(:serialize_threadgroups?)).to be_true
+        expect(@jmeter_plan).to receive(:extract_property_name).with('${__P(a)}').and_return('a')
+        expect(@jmeter_plan.send(:serialize_threadgroups?)).to be true
       end
     end
   end

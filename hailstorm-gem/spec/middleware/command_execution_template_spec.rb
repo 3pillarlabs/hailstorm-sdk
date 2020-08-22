@@ -11,7 +11,7 @@ require 'hailstorm/support/configuration'
 describe Hailstorm::Middleware::CommandExecutionTemplate do
 
   before(:each) do
-    mock_delegate = mock(Hailstorm::Model::Project)
+    mock_delegate = instance_double(Hailstorm::Model::Project)
     config = Hailstorm::Support::Configuration.new
     @app = Hailstorm::Middleware::CommandExecutionTemplate.new(mock_delegate, config)
   end
@@ -19,7 +19,7 @@ describe Hailstorm::Middleware::CommandExecutionTemplate do
   %i[setup start stop abort terminate results].each do |cmd|
     context "##{cmd}" do
       it 'should pass through to :model_delegate' do
-        @app.model_delegate.should_receive(cmd)
+        expect(@app.model_delegate).to receive(cmd)
         @app.send(cmd)
       end
     end
@@ -27,7 +27,7 @@ describe Hailstorm::Middleware::CommandExecutionTemplate do
 
   context '#results' do
     it 'should return data, operation and format' do
-      @app.model_delegate.stub!(:results).and_return([])
+      allow(@app.model_delegate).to receive(:results).and_return([])
       seq = ['foo.jtl', {'jmeter' => '1', 'cluster' => '2'}]
       expect(@app.results(false, 'json', :show, seq)).to be == [[], :show, 'json']
     end
@@ -39,7 +39,7 @@ describe Hailstorm::Middleware::CommandExecutionTemplate do
         r2 = r1.clone
         r2[:id] = 4
         @data = [ OpenStruct.new(r1), OpenStruct.new(r2) ]
-        @app.model_delegate.stub!(:results).and_return(@data)
+        allow(@app.model_delegate).to receive(:results).and_return(@data)
       end
       it 'should return only the last data' do
         expect(@app.results(true, nil, :show)[0]).to be == [@data.last]
@@ -49,28 +49,28 @@ describe Hailstorm::Middleware::CommandExecutionTemplate do
 
   context '#purge' do
     before(:each) do
-      @mock_ex_cycle = mock(Hailstorm::Model::ExecutionCycle)
-      @app.model_delegate.stub!(:execution_cycles).and_return([@mock_ex_cycle])
+      @mock_ex_cycle = instance_double(Hailstorm::Model::ExecutionCycle)
+      allow(@app.model_delegate).to receive(:execution_cycles).and_return([@mock_ex_cycle])
     end
     it 'should destroy all execution_cycles' do
-      @mock_ex_cycle.should_receive(:destroy)
+      expect(@mock_ex_cycle).to receive(:destroy)
       @app.purge
     end
     context 'tests' do
       it 'should destroy all execution_cycles' do
-        @mock_ex_cycle.should_receive(:destroy)
+        expect(@mock_ex_cycle).to receive(:destroy)
         @app.purge('tests')
       end
     end
     context 'clusters' do
       it 'should purge_clusters' do
-        @app.model_delegate.should_receive(:purge_clusters)
+        expect(@app.model_delegate).to receive(:purge_clusters)
         @app.purge('clusters')
       end
     end
     context 'all' do
       it 'should destroy mock_delegate' do
-        @app.model_delegate.should_receive(:destroy)
+        expect(@app.model_delegate).to receive(:destroy)
         @app.purge('all')
       end
     end
@@ -79,17 +79,17 @@ describe Hailstorm::Middleware::CommandExecutionTemplate do
   context '#status' do
     context 'current_execution_cycle is nil' do
       it 'should not raise_error' do
-        @app.model_delegate.stub!(:current_execution_cycle).and_return(nil)
+        allow(@app.model_delegate).to receive(:current_execution_cycle).and_return(nil)
         expect { @app.status }.to_not raise_error
       end
     end
     context 'current_execution_cycle is truthy' do
       before(:each) do
-        @app.model_delegate.stub!(:current_execution_cycle).and_return(true)
+        allow(@app.model_delegate).to receive(:current_execution_cycle).and_return(true)
       end
       context 'no running agents' do
         before(:each) do
-          @app.model_delegate.stub!(:check_status).and_return([])
+          allow(@app.model_delegate).to receive(:check_status).and_return([])
         end
         it 'should not raise_error' do
           expect { @app.status }.to_not raise_error
@@ -118,9 +118,8 @@ describe Hailstorm::Middleware::CommandExecutionTemplate do
                                                                 active: false, jmeter_pid: 9364)
           @master_agent.update_column(:active, true)
 
-          @app.stub!(:model_delegate).and_return(project)
-          Hailstorm::Model::MasterAgent.any_instance.stub(:check_status)
-                                       .and_return(@master_agent)
+          allow(@app).to receive(:model_delegate).and_return(project)
+          allow_any_instance_of(Hailstorm::Model::MasterAgent).to receive(:check_status).and_return(@master_agent)
         end
         it 'should not raise_error' do
           expect { @app.status }.to_not raise_error

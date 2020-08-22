@@ -2,6 +2,7 @@ require 'net/ssh'
 require 'net/sftp'
 require 'hailstorm/support'
 require 'hailstorm/behavior/loggable'
+require 'hailstorm/behavior/ssh_connection'
 
 # SSH support for Hailstorm
 # @author Sayantam Dey
@@ -33,10 +34,6 @@ class Hailstorm::Support::SSH
   def self.extend_ssh(ssh)
     ssh.extend(ConnectionSessionInstanceMethods)
     ssh.logger = logger
-    ssh.class_eval do
-      alias_method :net_ssh_exec, :exec
-      include AliasedMethods
-    end
     ssh
   end
 
@@ -75,6 +72,15 @@ class Hailstorm::Support::SSH
 
   # Instance methods added to Net::SSH::Connection::Session
   module ConnectionSessionInstanceMethods
+    include Hailstorm::Behavior::SshConnection
+
+    alias_method :net_ssh_exec, :exec
+
+    #:nodoc:
+    def exec(command, options = {}, &block)
+      logger.debug { command }
+      net_ssh_exec(command, options, &block)
+    end
 
     # @param [String] file_path full path to file on remote system
     # @return [Boolean] true if the file exists
@@ -183,7 +189,6 @@ class Hailstorm::Support::SSH
 
       @remote_processes
     end
-
   end
 
   # Remote process. This is an internal class.
@@ -201,16 +206,6 @@ class Hailstorm::Support::SSH
 
     def to_h
       @to_h ||= MEMBERS.reduce({}) { |s, m| s.merge(m.to_sym => self.send(m)) }
-    end
-  end
-
-  # Methods aliased to other names
-  module AliasedMethods
-
-    #:nodoc:
-    def exec(command, options = {}, &block)
-      logger.debug { command }
-      net_ssh_exec(command, options, &block)
     end
   end
 end
