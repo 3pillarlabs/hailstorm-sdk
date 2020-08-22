@@ -14,12 +14,12 @@ describe Hailstorm::Middleware::Application do
 
   context '#check_database' do
     before(:each) do
-      @app.stub!(:connection_spec).and_return(Hailstorm.application.send(:connection_spec))
-      Hailstorm::Support::Schema.stub!(:create_schema)
+      allow(@app).to receive(:connection_spec).and_return(Hailstorm.application.send(:connection_spec))
+      allow(Hailstorm::Support::Schema).to receive(:create_schema)
     end
 
     it 'should establish a database connection' do
-      Hailstorm::Support::DbConnection.should_receive(:establish!)
+      expect(Hailstorm::Support::DbConnection).to receive(:establish!)
       @app.check_database
     end
   end
@@ -97,7 +97,7 @@ describe Hailstorm::Middleware::Application do
 
   context '#connection_spec' do
     it 'should ignore blank properties' do
-      @app.stub!(:load_db_properties).and_return(x: 1, y: ' ', z: nil)
+      allow(@app).to receive(:load_db_properties).and_return(x: 1, y: ' ', z: nil)
       conn_spec = @app.send(:connection_spec)
       expect(conn_spec).to include(:x)
       expect(conn_spec).to_not include(:y)
@@ -105,38 +105,38 @@ describe Hailstorm::Middleware::Application do
       expect(conn_spec).to eq(@app.instance_variable_get('@connection_spec'))
     end
     it 'should add :database key' do
-      @app.stub!(:load_db_properties).and_return(adapter: 'mysql')
+      allow(@app).to receive(:load_db_properties).and_return(adapter: 'mysql')
       conn_spec = @app.send(:connection_spec)
       expect(conn_spec).to include(:database)
     end
     it 'should not override :database key' do
       props = {adapter: 'mysql', database: 'hailstorm_test'}
-      @app.stub!(:load_db_properties).and_return(props)
+      allow(@app).to receive(:load_db_properties).and_return(props)
       conn_spec = @app.send(:connection_spec)
       expect(conn_spec[:database]).to be == props[:database]
     end
     it 'should provide :database if not present in spec' do
       props = {adapter: 'mysql'}
-      @app.stub!(:load_db_properties).and_return(props)
+      allow(@app).to receive(:load_db_properties).and_return(props)
       conn_spec = @app.send(:connection_spec)
       expect(conn_spec[:database]).to match(/^hailstorm_/)
     end
     context ':adapter is not sqlite|derby' do
       it 'should add default properties' do
-        @app.stub!(:load_db_properties).and_return(adapter: 'mysql')
+        allow(@app).to receive(:load_db_properties).and_return(adapter: 'mysql')
         expect(@app.send(:connection_spec)).to include(:pool)
         expect(@app.send(:connection_spec)).to include(:wait_timeout)
       end
       it 'should be able to override default properties' do
         props = {adapter: 'mysql', pool: 100000, wait_timeout: 60.minutes}
-        @app.stub!(:load_db_properties).and_return(props)
+        allow(@app).to receive(:load_db_properties).and_return(props)
         conn_spec = @app.send(:connection_spec)
         expect(conn_spec[:pool]).to be == props[:pool]
         expect(conn_spec[:wait_timeout]).to be == props[:wait_timeout]
       end
       it 'should be able to add additional properties' do
         props = {adapter: 'mysql', host: 'data.ba.se'}
-        @app.stub!(:load_db_properties).and_return(props)
+        allow(@app).to receive(:load_db_properties).and_return(props)
         conn_spec = @app.send(:connection_spec)
         expect(conn_spec).to include(:host)
         expect(conn_spec[:host]).to be == props[:host]
