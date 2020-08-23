@@ -21,7 +21,7 @@ require 'initializer/api_config'
 RSpec.configure do |config|
   include ApiHelper
 
-  config.treat_symbols_as_metadata_keys_with_true_values = true
+  config.raise_errors_for_deprecations!
   config.run_all_when_everything_filtered = true
   config.filter_run :focus
 
@@ -30,6 +30,11 @@ RSpec.configure do |config|
   # the seed, which is printed after each run.
   #     --seed 1234
   config.order = 'random'
+
+  config.mock_with(:rspec) do |mocks|
+    mocks.yield_receiver_to_any_instance_implementation_blocks = false
+    mocks.verify_partial_doubles = true
+  end
 
   # Runs each example in a DB transaction and rolls back the changes.
   config.around(:each) do |ex|

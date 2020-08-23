@@ -43,9 +43,9 @@ describe ClustersHelper do
     it 'should extract common attributes from a cluster' do
       cluster_cfg = OpenStruct.new({cluster_type: 'any', cluster_code: 'cluster-1', active: true})
       cluster = Hailstorm::Model::Cluster.new
-      cluster.stub_chain(:cluster_instance, :client_stats, :count).and_return(2)
-      cluster.stub_chain(:cluster_instance, :load_agents, :count).and_return(3)
-      Hailstorm::Model::Cluster.stub_chain(:where, :find_by_cluster_code).and_return(cluster)
+      allow(cluster).to receive_message_chain(:cluster_instance, :client_stats, :count).and_return(2)
+      allow(cluster).to receive_message_chain(:cluster_instance, :load_agents, :count).and_return(3)
+      allow(Hailstorm::Model::Cluster).to receive_message_chain(:where, :find_by_cluster_code).and_return(cluster)
       cluster_attrs = @cluster_api_sim.to_cluster_attributes(cluster_cfg, project: Hailstorm::Model::Project.new)
       expect(cluster_attrs.keys.sort).to eq(%W[code clientStatsCount loadAgentsCount].sort)
     end

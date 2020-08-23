@@ -105,7 +105,7 @@ describe 'api/clusters' do
       res = JSON.parse(@browser.last_response.body)
       expect(res[0]['disabled']).to be_nil
       expect(res[1]['disabled']).to be_nil
-      expect(res[2]['disabled']).to be_true
+      expect(res[2]['disabled']).to be true
     end
   end
 
@@ -340,7 +340,7 @@ describe 'api/clusters' do
       project_config = ProjectConfiguration.first
       hailstorm_config = deep_decode(project_config.stringified_config)
       dc = hailstorm_config.clusters.first
-      expect(dc.active).to be_true
+      expect(dc.active).to be true
     end
   end
 end

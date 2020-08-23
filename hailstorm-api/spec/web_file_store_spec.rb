@@ -6,10 +6,10 @@ require 'hailstorm/support/configuration'
 describe WebFileStore do
   context '#fetch_file' do
     it 'should fetch an existing file' do
-      mock_response = mock(Net::HTTPSuccess)
-      mock_response.stub!(:is_a?).and_return(true)
-      mock_response.stub!(:body).and_return('<xml></xml>')
-      Net::HTTP.stub!(:get_response).and_return(mock_response)
+      mock_response = instance_double(Net::HTTPSuccess)
+      allow(mock_response).to receive(:is_a?).and_return(true)
+      allow(mock_response).to receive(:body).and_return('<xml></xml>')
+      allow(Net::HTTP).to receive(:get_response).and_return(mock_response)
       Dir.mktmpdir do |tmp_path|
         wfs = WebFileStore.new
         args = {file_id: '123', file_name: 'a.xml', to_path: tmp_path}
@@ -20,9 +20,9 @@ describe WebFileStore do
     end
 
     it 'should raise error if file not found' do
-      mock_response = mock(Net::HTTPNotFound)
-      mock_response.stub!(:is_a?).and_return(false)
-      Net::HTTP.stub!(:get_response).and_return(mock_response)
+      mock_response = instance_double(Net::HTTPNotFound)
+      allow(mock_response).to receive(:is_a?).and_return(false)
+      allow(Net::HTTP).to receive(:get_response).and_return(mock_response)
       wfs = WebFileStore.new
       Dir.mktmpdir do |tmp_path|
         expect { wfs.fetch_file({file_id: '123', file_name: 'a.xml', to_path: tmp_path}) }.to raise_error(Net::HTTPError)
@@ -60,10 +60,10 @@ describe WebFileStore do
 
   context '#transfer_jmeter_artifacts' do
     it 'should copy all files to provided path' do
-      mock_response = mock(Net::HTTPSuccess)
-      mock_response.stub!(:is_a?).and_return(true)
-      mock_response.stub!(:body).and_return('<xml></xml>')
-      Net::HTTP.stub!(:get_response).and_return(mock_response)
+      mock_response = instance_double(Net::HTTPSuccess)
+      allow(mock_response).to receive(:is_a?).and_return(true)
+      allow(mock_response).to receive(:body).and_return('<xml></xml>')
+      allow(Net::HTTP).to receive(:get_response).and_return(mock_response)
 
       project = Hailstorm::Model::Project.create!(project_code: 'web_file_store')
       hailstorm_config = Hailstorm::Support::Configuration.new
@@ -75,9 +75,9 @@ describe WebFileStore do
       Dir.mktmpdir do |tmp_path|
         wfs = WebFileStore.new
         wfs.transfer_jmeter_artifacts(project.project_code, tmp_path)
-        expect(File.exist?(File.join(tmp_path, 'a.jmx'))).to be_true
-        expect(File.exist?(File.join(tmp_path, 'b.jmx'))).to be_true
-        expect(File.exist?(File.join(tmp_path, 'data.csv'))).to be_true
+        expect(File.exist?(File.join(tmp_path, 'a.jmx'))).to be true
+        expect(File.exist?(File.join(tmp_path, 'b.jmx'))).to be true
+        expect(File.exist?(File.join(tmp_path, 'data.csv'))).to be true
       end
     end
   end
@@ -92,10 +92,10 @@ describe WebFileStore do
 
   context '#export_report' do
     it 'should upload report to file server' do
-      mock_response = mock(Net::HTTPResponse)
-      mock_response.stub!(:body).and_return(JSON.dump(id: 123, originalName: 'foo.docx'))
-      mock_response.stub!(:is_a?).and_return(Net::HTTPSuccess)
-      Net::HTTP.any_instance.stub(:request).and_return(mock_response)
+      mock_response = instance_double(Net::HTTPResponse)
+      allow(mock_response).to receive(:body).and_return(JSON.dump(id: 123, originalName: 'foo.docx'))
+      allow(mock_response).to receive(:is_a?).and_return(Net::HTTPSuccess)
+      allow_any_instance_of(Net::HTTP).to receive(:request).and_return(mock_response)
       wfs = WebFileStore.new
       data = wfs.export_report('acme_test', __FILE__)
       expect(data.size).to be == 2
@@ -105,8 +105,8 @@ describe WebFileStore do
 
   context '#fetch_reports' do
     it 'should fetch report list from file server' do
-      mock_response = mock(Net::HTTPResponse)
-      mock_response.stub!(:body).and_return(
+      mock_response = instance_double(Net::HTTPResponse)
+      allow(mock_response).to receive(:body).and_return(
         JSON.dump(
           [
             { id: 123, title: 'a.docx' },
@@ -115,8 +115,8 @@ describe WebFileStore do
         )
       )
 
-      mock_response.stub!(:is_a?).and_return(Net::HTTPSuccess)
-      Net::HTTP.stub!(:get_response).and_return(mock_response)
+      allow(mock_response).to receive(:is_a?).and_return(Net::HTTPSuccess)
+      allow(Net::HTTP).to receive(:get_response).and_return(mock_response)
       wfs = WebFileStore.new
       data = wfs.fetch_reports('acme_test')
       expect(data.size).to be == 2
@@ -128,10 +128,10 @@ describe WebFileStore do
 
   context '#export_jtl' do
     it 'should upload the jtl to the file server' do
-      mock_response = mock(Net::HTTPResponse)
-      mock_response.stub!(:body).and_return(JSON.dump(id: 123, originalName: 'foo.jtl'))
-      mock_response.stub!(:is_a?).and_return(Net::HTTPSuccess)
-      Net::HTTP.any_instance.stub(:request).and_return(mock_response)
+      mock_response = instance_double(Net::HTTPResponse)
+      allow(mock_response).to receive(:body).and_return(JSON.dump(id: 123, originalName: 'foo.jtl'))
+      allow(mock_response).to receive(:is_a?).and_return(Net::HTTPSuccess)
+      allow_any_instance_of(Net::HTTP).to receive(:request).and_return(mock_response)
       wfs = WebFileStore.new
       data = wfs.export_jtl('acme_test', __FILE__)
       expect(data.keys.sort).to eq(%i[title url].sort)
@@ -141,12 +141,12 @@ describe WebFileStore do
 
   context '#read_identity_file' do
     it 'should yield the response' do
-      http_response = mock(Net::HTTPResponse)
-      http_response.stub!(:is_a?).and_return(true)
-      http_response.stub!(:body).and_return('---')
-      http = mock(Net::HTTP)
-      http.stub!(:request).and_yield(http_response)
-      Net::HTTP.stub!(:start).and_yield(http)
+      http_response = instance_double(Net::HTTPResponse)
+      allow(http_response).to receive(:is_a?).and_return(true)
+      allow(http_response).to receive(:body).and_return('---')
+      http = instance_double(Net::HTTP)
+      allow(http).to receive(:request).and_yield(http_response)
+      allow(Net::HTTP).to receive(:start).and_yield(http)
       wfs = WebFileStore.new
       wfs.read_identity_file('123/foo.pem') do |io|
         expect(io.read).to eq('---')
@@ -156,7 +156,7 @@ describe WebFileStore do
 
   context '#purge_project' do
     it 'should delete the project resources on the file server' do
-      HTTParty.should_receive(:delete)
+      expect(HTTParty).to receive(:delete)
       wfs = WebFileStore.new
       wfs.purge_project('project_code')
     end
