@@ -6,13 +6,13 @@ describe Hailstorm::Model::Concern::ProvisionableHelper do
 
   # @param [Hailstorm::Model::AmazonCloud] aws
   def stub_aws!(aws)
-    aws.stub(:identity_file_exists, nil)
-    aws.stub(:set_availability_zone, nil)
-    aws.stub(:create_agent_ami, nil)
-    aws.stub(:provision_agents, nil)
-    aws.stub(:secure_identity_file, nil)
-    aws.stub(:create_security_group, nil)
-    aws.stub(:assign_vpc_subnet, nil)
+    allow(aws).to receive(:identity_file_exists)
+    allow(aws).to receive(:set_availability_zone)
+    allow(aws).to receive(:create_agent_ami)
+    allow(aws).to receive(:provision_agents)
+    allow(aws).to receive(:secure_identity_file)
+    allow(aws).to receive(:create_security_group)
+    allow(aws).to receive(:assign_vpc_subnet)
   end
 
   def stub_find_instance(instance_client, load_agent, status = nil, public_ip_address = nil, private_ip_address = nil)
@@ -24,8 +24,8 @@ describe Hailstorm::Model::Concern::ProvisionableHelper do
 
     attrs.merge!(state: Hailstorm::Behavior::AwsAdaptable::InstanceState.new(name: status.to_s)) if status
     instance = Hailstorm::Behavior::AwsAdaptable::Instance.new(attrs)
-    instance.stub!("#{status}?".to_sym).and_return(true) if status
-    instance_client.stub!(:find).and_return(instance)
+    allow(instance).to receive("#{status}?".to_sym).and_return(true) if status
+    allow(instance_client).to receive(:find).and_return(instance)
     instance
   end
 
@@ -35,8 +35,8 @@ describe Hailstorm::Model::Concern::ProvisionableHelper do
 
   context '#start_agent' do
     before(:each) do
-      @mock_instance_client = mock(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
-      @aws.stub!(:instance_client).and_return(@mock_instance_client)
+      @mock_instance_client = instance_double(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
+      allow(@aws).to receive(:instance_client).and_return(@mock_instance_client)
     end
 
     context 'agent is not running' do
@@ -44,8 +44,8 @@ describe Hailstorm::Model::Concern::ProvisionableHelper do
         it 'should restart the agent' do
           load_agent = Hailstorm::Model::MasterAgent.new(identifier: 'i-w23457889113')
           stub_find_instance(@mock_instance_client, load_agent, :stopped)
-          @mock_instance_client.stub!(:running?).and_return(true)
-          @mock_instance_client.should_receive(:start)
+          allow(@mock_instance_client).to receive(:running?).and_return(true)
+          expect(@mock_instance_client).to receive(:start)
           @aws.start_agent(load_agent)
         end
       end
@@ -56,8 +56,8 @@ describe Hailstorm::Model::Concern::ProvisionableHelper do
           load_agent = Hailstorm::Model::MasterAgent.new
           load_agent.id = 1
           instance = stub_find_instance(@mock_instance_client, load_agent)
-          @mock_instance_client.should_receive(:tag_name)
-          @aws.stub!(:create_agent).and_return(instance)
+          expect(@mock_instance_client).to receive(:tag_name)
+          allow(@aws).to receive(:create_agent).and_return(instance)
           @aws.start_agent(load_agent)
           expect(load_agent.identifier).to be == instance.instance_id
           expect(load_agent.public_ip_address).to be == instance.public_ip_address
@@ -69,13 +69,13 @@ describe Hailstorm::Model::Concern::ProvisionableHelper do
 
   context '#stop_agent' do
     before(:each) do
-      @mock_instance_client = mock(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
-      @aws.stub!(:instance_client).and_return(@mock_instance_client)
+      @mock_instance_client = instance_double(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
+      allow(@aws).to receive(:instance_client).and_return(@mock_instance_client)
     end
 
     context 'without load_agent#identifier' do
       it 'does nothing' do
-        @aws.should_not_receive(:wait_for)
+        expect(@aws).to_not receive(:wait_for)
         @aws.stop_agent(Hailstorm::Model::MasterAgent.new)
       end
     end
@@ -84,8 +84,8 @@ describe Hailstorm::Model::Concern::ProvisionableHelper do
       it 'should stop the load_agent#instance' do
         load_agent = Hailstorm::Model::MasterAgent.new(identifier: 'i-w23457889113')
         stub_find_instance(@mock_instance_client, load_agent, :running)
-        @mock_instance_client.should_receive(:stop)
-        @mock_instance_client.stub!(:stopped?).and_return(true)
+        expect(@mock_instance_client).to receive(:stop)
+        allow(@mock_instance_client).to receive(:stopped?).and_return(true)
         @aws.stop_agent(load_agent)
       end
     end
@@ -115,7 +115,7 @@ describe Hailstorm::Model::Concern::ProvisionableHelper do
         )
         agent.update_column(:active, true)
       end
-      @aws.should_receive(:start_agent).exactly(3).times
+      expect(@aws).to receive(:start_agent).exactly(3).times
       @aws.before_generate_load
     end
   end
@@ -126,9 +126,9 @@ describe Hailstorm::Model::Concern::ProvisionableHelper do
         load_agent = Hailstorm::Model::MasterAgent.new(identifier: 'i-w23457889113',
                                                        public_ip_address: '10.1.23.45',
                                                        active: true)
-        @aws.stub_chain(:load_agents, :where) { [load_agent] }
-        @aws.should_receive(:stop_agent)
-        load_agent.should_receive(:save!)
+        allow(@aws).to receive_message_chain(:load_agents, :where) { [load_agent] }
+        expect(@aws).to receive(:stop_agent)
+        expect(load_agent).to receive(:save!)
         @aws.after_stop_load_generation(suspend: true)
         expect(load_agent.public_ip_address).to be_nil
       end
@@ -137,24 +137,24 @@ describe Hailstorm::Model::Concern::ProvisionableHelper do
 
   context '#before_destroy_load_agent' do
     before(:each) do
-      @mock_instance_client = mock(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
-      @aws.stub!(:instance_client).and_return(@mock_instance_client)
+      @mock_instance_client = instance_double(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
+      allow(@aws).to receive(:instance_client).and_return(@mock_instance_client)
       @load_agent = Hailstorm::Model::MasterAgent.new(identifier: 'i-w23457889113')
     end
 
     context 'ec2 instance exists' do
       it 'should terminate the ec2 instance' do
         stub_find_instance(@mock_instance_client, @load_agent, :terminated)
-        @mock_instance_client.stub!(:terminated?).and_return(true)
-        @mock_instance_client.should_receive(:terminate)
+        allow(@mock_instance_client).to receive(:terminated?).and_return(true)
+        expect(@mock_instance_client).to receive(:terminate)
         @aws.before_destroy_load_agent(@load_agent)
       end
     end
 
     context 'ec2 instance does not exist' do
       it 'should do nothing' do
-        @mock_instance_client.stub!(:find).and_return(nil)
-        @mock_instance_client.should_not_receive(:terminate)
+        allow(@mock_instance_client).to receive(:find).and_return(nil)
+        expect(@mock_instance_client).to_not receive(:terminate)
         @aws.before_destroy_load_agent(@load_agent)
       end
     end
@@ -163,14 +163,14 @@ describe Hailstorm::Model::Concern::ProvisionableHelper do
   context '#required_load_agent_count' do
     context 'JMeter threads more than maximum threads per agent' do
       it 'should be more than 1' do
-        jmeter_plan = mock(Hailstorm::Model::JmeterPlan, num_threads: 1000)
+        jmeter_plan = instance_double(Hailstorm::Model::JmeterPlan, num_threads: 1000)
         @aws.max_threads_per_agent = 50
         expect(@aws.required_load_agent_count(jmeter_plan)).to be > 1
       end
     end
     context 'JMeter threads less than maximum threads per agent' do
       it 'should be equal to 1' do
-        jmeter_plan = mock(Hailstorm::Model::JmeterPlan, num_threads: 10)
+        jmeter_plan = instance_double(Hailstorm::Model::JmeterPlan, num_threads: 10)
         @aws.max_threads_per_agent = 50
         expect(@aws.required_load_agent_count(jmeter_plan)).to be == 1
       end
@@ -181,13 +181,13 @@ describe Hailstorm::Model::Concern::ProvisionableHelper do
     it 'should run a new EC2 instance' do
       @aws.agent_ami = 'ami-123456'
       security_group = Hailstorm::Behavior::AwsAdaptable::SecurityGroup.new(group_id: 'sg-123456')
-      mock_sg_finder = mock(Hailstorm::Model::Helper::SecurityGroupFinder)
-      mock_sg_finder.stub!(:find_security_group).and_return(security_group)
-      @aws.stub!(:security_group_finder).and_return(mock_sg_finder)
+      mock_sg_finder = instance_double(Hailstorm::Model::Helper::SecurityGroupFinder)
+      allow(mock_sg_finder).to receive(:find_security_group).and_return(security_group)
+      allow(@aws).to receive(:security_group_finder).and_return(mock_sg_finder)
 
-      mock_ec2_instance_helper = mock(Hailstorm::Model::Helper::Ec2InstanceHelper)
-      @aws.stub!(:ec2_instance_helper).and_return(mock_ec2_instance_helper)
-      mock_ec2_instance_helper.should_receive(:create_ec2_instance)
+      mock_ec2_instance_helper = instance_double(Hailstorm::Model::Helper::Ec2InstanceHelper)
+      allow(@aws).to receive(:ec2_instance_helper).and_return(mock_ec2_instance_helper)
+      expect(mock_ec2_instance_helper).to receive(:create_ec2_instance)
           .with(ami_id: @aws.agent_ami, security_group_ids: security_group.id)
       @aws.send(:create_agent)
     end

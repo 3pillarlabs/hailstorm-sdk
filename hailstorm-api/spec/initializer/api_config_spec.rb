@@ -1,5 +1,4 @@
 require 'spec_helper'
-require 'initializer/api_config'
 
 describe 'initializer/api_config' do
   before(:each) do

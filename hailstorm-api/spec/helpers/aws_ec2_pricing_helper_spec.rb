@@ -6,10 +6,11 @@ describe AwsEc2PricingHelper do
 
   context '#fetch_ec2_prices' do
     it 'should fetch and parse EC2 general purpose instance types' do
-      response = mock(Net::HTTPResponse)
-      response.stub!(:is_a?).and_return(true)
-      response.stub!(:body).and_return(File.read(File.join(File.expand_path('../../resources', __FILE__), 'ec2-us-east-1-prices.json')))
-      Net::HTTP.stub!(:get_response).and_return(response)
+      response = instance_double(Net::HTTPResponse)
+      allow(response).to receive(:is_a?).and_return(true)
+      content = File.read(File.join(File.expand_path('../../resources', __FILE__), 'ec2-us-east-1-prices.json'))
+      allow(response).to receive(:body).and_return(content)
+      allow(Net::HTTP).to receive(:get_response).and_return(response)
 
       raw_data = fetch_ec2_prices(region: 'us-east-1', timestamp: Time.now)
       json_data = JSON.parse(raw_data)

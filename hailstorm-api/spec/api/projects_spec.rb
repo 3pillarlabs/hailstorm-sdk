@@ -24,12 +24,12 @@ describe 'api/projects' do
     it 'should list projects with current and last execution_cycle' do
       project = Hailstorm::Model::Project.create!(title: 'Acme Priming', project_code: 'acme_priming')
 
-      Hailstorm::Model::Project
-        .any_instance.stub(:current_execution_cycle)
-        .and_return(Hailstorm::Model::ExecutionCycle.new(project: project,
-                                                         status: Hailstorm::Model::ExecutionCycle::States::STARTED,
-                                                         started_at: Time.now - 15.minutes,
-                                                         threads_count: 50))
+      execution_cycle = Hailstorm::Model::ExecutionCycle.new(project: project,
+                                                             status: Hailstorm::Model::ExecutionCycle::States::STARTED,
+                                                             started_at: Time.now - 15.minutes,
+                                                             threads_count: 50)
+
+      allow_any_instance_of(Hailstorm::Model::Project).to receive(:current_execution_cycle).and_return(execution_cycle)
 
       last_execution_cycle = Hailstorm::Model::ExecutionCycle.new(
         project: project,
@@ -39,12 +39,11 @@ describe 'api/projects' do
         threads_count: 30
       )
 
-      last_execution_cycle.stub!(:avg_90_percentile).and_return(678.45)
-      last_execution_cycle.stub!(:avg_tps).and_return(14.56)
-      Hailstorm::Model::Project
-        .any_instance
-        .stub_chain(:execution_cycles, :where, :not, :order, :limit)
-        .and_return([last_execution_cycle])
+      allow(last_execution_cycle).to receive(:avg_90_percentile).and_return(678.45)
+      allow(last_execution_cycle).to receive(:avg_tps).and_return(14.56)
+      allow_any_instance_of(Hailstorm::Model::Project).to receive_message_chain(
+                                                            :execution_cycles, :where, :not, :order, :limit
+                                                          ).and_return([last_execution_cycle])
 
       jmeter_plan = Hailstorm::Model::JmeterPlan.new(
         project: project,
@@ -54,16 +53,9 @@ describe 'api/projects' do
         latest_threads_count: 50
       )
 
-      jmeter_plan.stub!(:loop_forever?).and_return(false)
-      Hailstorm::Model::Project
-        .any_instance
-        .stub_chain(:jmeter_plans, :all)
-        .and_return([jmeter_plan])
-
-      Hailstorm::Model::Project
-        .any_instance
-        .stub_chain(:jmeter_plans, :count)
-        .and_return(1)
+      allow(jmeter_plan).to receive(:loop_forever?).and_return(false)
+      allow_any_instance_of(Hailstorm::Model::Project).to receive_message_chain(:jmeter_plans, :all).and_return([jmeter_plan])
+      allow_any_instance_of(Hailstorm::Model::Project).to receive_message_chain(:jmeter_plans, :count).and_return(1)
 
       @browser.get('/projects')
       expect(@browser.last_response).to be_ok
@@ -106,8 +98,8 @@ describe 'api/projects' do
             threads_count: 30
           )
 
-          Hailstorm::Model::Cluster.stub!(:terminate)
-          Hailstorm::Model::TargetHost.stub!(:terminate)
+          allow(Hailstorm::Model::Cluster).to receive(:terminate)
+          allow(Hailstorm::Model::TargetHost).to receive(:terminate)
           @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'terminate'}))
           expect(@browser.last_response).to be_successful
           expect(Hailstorm::Model::ExecutionCycle.first.status).to eq(Hailstorm::Model::ExecutionCycle::States::TERMINATED)
@@ -117,7 +109,7 @@ describe 'api/projects' do
       context 'action=start' do
         it 'should invoke action on model delegate' do
           @project.update_column(:serial_version, 'a')
-          Hailstorm::Model::Project.any_instance.stub(:start)
+          allow_any_instance_of(Hailstorm::Model::Project).to receive(:start)
           @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'start'}))
           expect(@browser.last_response).to be_successful
         end
@@ -125,7 +117,7 @@ describe 'api/projects' do
 
       context 'action=stop' do
         it 'should invoke action on model delegate' do
-          Hailstorm::Model::Project.any_instance.stub(:stop)
+          allow_any_instance_of(Hailstorm::Model::Project).to receive(:stop)
           @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'stop'}))
           expect(@browser.last_response).to be_successful
         end
@@ -133,7 +125,7 @@ describe 'api/projects' do
 
       context 'action=abort' do
         it 'should invoke action on model delegate' do
-          Hailstorm::Model::Project.any_instance.stub(:stop)
+          allow_any_instance_of(Hailstorm::Model::Project).to receive(:stop)
           @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'abort'}))
           expect(@browser.last_response).to be_successful
         end
@@ -141,7 +133,7 @@ describe 'api/projects' do
 
       context 'unknown action' do
         it 'should return 422 status' do
-          Hailstorm::Model::Project.any_instance.stub(:stop)
+          allow_any_instance_of(Hailstorm::Model::Project).to receive(:stop)
           @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'random'}))
           expect(@browser.last_response.status).to be == 422
         end
@@ -150,7 +142,7 @@ describe 'api/projects' do
       context Hailstorm::ThreadJoinException do
         it 'should return 500 status' do
           thread_exception = Hailstorm::ThreadJoinException.new([StandardError.new('mock nested error')])
-          Hailstorm::Model::Project.any_instance.stub(:stop).and_raise(thread_exception)
+          allow_any_instance_of(Hailstorm::Model::Project).to receive(:stop).and_raise(thread_exception)
           @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'stop'}))
           expect(@browser.last_response).to be_server_error
         end
@@ -183,7 +175,7 @@ describe 'api/projects' do
     end
 
     it 'should return 404 if project is not found' do
-      Hailstorm::Model::Project.stub!(:find).and_raise(ActiveRecord::RecordNotFound.new("mock error"))
+      allow(Hailstorm::Model::Project).to receive(:find).and_raise(ActiveRecord::RecordNotFound.new("mock error"))
       @browser.get("/projects/404")
       expect(@browser.last_response).to be_not_found
     end
@@ -192,7 +184,7 @@ describe 'api/projects' do
   context 'DELETE /projects/:id' do
     before(:each) do
       @project = Hailstorm::Model::Project.create!(title: 'Acme Priming', project_code: 'acme_priming')
-      Hailstorm.fs.stub!(:purge_project)
+      allow(Hailstorm.fs).to receive(:purge_project)
     end
 
     context 'existing ProjectConfiguration' do
@@ -217,7 +209,7 @@ describe 'api/projects' do
     end
 
     it 'should purge project resources on file server' do
-      Hailstorm.fs.should_receive(:purge_project)
+      expect(Hailstorm.fs).to receive(:purge_project)
       @browser.delete("/projects/#{@project.id}")
     end
   end

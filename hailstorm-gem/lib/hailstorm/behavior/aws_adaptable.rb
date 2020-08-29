@@ -19,6 +19,8 @@ module Hailstorm::Behavior::AwsAdaptable
 
   # AWS E2 interface
   module Ec2Client
+    include Taggable
+
     # :nocov:
     # @return [String]
     def first_available_zone
@@ -45,6 +47,8 @@ module Hailstorm::Behavior::AwsAdaptable
 
   # AWS EC2 KeyPair interface
   module KeyPairClient
+    include Taggable
+
     # :nocov:
     # Looks for a key_pair with name. If found, it returns the key_pair_id, nil otherwise.
     # @param [String] name
@@ -73,6 +77,8 @@ module Hailstorm::Behavior::AwsAdaptable
 
   # AWS Security Group interface
   module SecurityGroupClient
+    include Taggable
+
     # :nocov:
     # @param [String] name
     # @param [String] vpc_id
@@ -116,6 +122,8 @@ module Hailstorm::Behavior::AwsAdaptable
 
   # AWS Instance interface
   module InstanceClient
+    include Taggable
+
     # :nocov:
     # Find instance with instance_id, return nil otherwise.
     # Additional predicate methods on return value of the form "#{status}?", example stopped?
@@ -196,6 +204,8 @@ module Hailstorm::Behavior::AwsAdaptable
 
   # AWS AMI interface
   module AmiClient
+    include Taggable
+
     # :nocov:
     # @param [Regexp] ami_name_regexp
     # @return [Ami]
@@ -234,6 +244,8 @@ module Hailstorm::Behavior::AwsAdaptable
 
   # AWS Subnet interface
   module SubnetClient
+    include Taggable
+
     # :nocov:
     # @param [String] subnet_id
     # @param [String] name_tag
@@ -266,6 +278,8 @@ module Hailstorm::Behavior::AwsAdaptable
 
   # AWS VPC interface
   module VpcClient
+    include Taggable
+
     # :nocov:
     # @param [String] vpc_id
     # @param [Hash] _kwargs
@@ -290,6 +304,8 @@ module Hailstorm::Behavior::AwsAdaptable
 
   # Internet gateway interface
   module InternetGatewayClient
+    include Taggable
+
     # :nocov:
     # @return [String] internet_gateway_id
     def create
@@ -306,6 +322,8 @@ module Hailstorm::Behavior::AwsAdaptable
 
   # Route Table interface
   module RouteTableClient
+    include Taggable
+
     # :nocov:
     # @param [String] route_table_id
     # @param [String] subnet_id

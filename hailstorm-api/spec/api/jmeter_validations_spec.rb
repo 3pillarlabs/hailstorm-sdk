@@ -9,7 +9,7 @@ describe 'api/jmeter_validations' do
 
   context 'POST /jmeter_validations' do
     it 'should extract properties' do
-      Hailstorm.fs.stub!(:fetch_file).and_return(File.expand_path('../../resources/hailstorm-site-basic.jmx', __FILE__))
+      allow(Hailstorm.fs).to receive(:fetch_file).and_return(File.expand_path('../../resources/hailstorm-site-basic.jmx', __FILE__))
       project = Hailstorm::Model::Project.create!(project_code: 'api_jmeter_validations_spec')
       params = {
         name: 'hailstorm-site-basic.jmx',
@@ -33,8 +33,8 @@ describe 'api/jmeter_validations' do
 
     context 'on validation failure' do
       it 'should respond with validation messages' do
-        Hailstorm.fs.stub!(:fetch_file)
-          .and_return(File.expand_path('../../resources/without-simple-writer.jmx', __FILE__))
+        path = File.expand_path('../../resources/without-simple-writer.jmx', __FILE__)
+        allow(Hailstorm.fs).to receive(:fetch_file).and_return(path)
 
         project = Hailstorm::Model::Project.create!(project_code: 'api_jmeter_validations_spec')
         params = {

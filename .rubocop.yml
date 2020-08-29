@@ -20,6 +20,7 @@ AllCops:
     - 'hailstorm-cli/spec/**/*'
     - 'hailstorm-cli/templates/**/*'
     - 'hailstorm-cli/build/**/*'
+    - 'hailstorm-api/Gemfile'
     - 'hailstorm-api/spec/**/*'
 
 Lint/RescueException:
@@ -56,6 +57,9 @@ Style/MixinUsage:
   Enabled: false
 
 Style/AccessModifierDeclarations:
+  Enabled: false
+
+Style/Alias:
   Enabled: false
 
 Metrics/LineLength:

@@ -8,19 +8,19 @@ describe Hailstorm::Model::Nmon do
     @nmon = Hailstorm::Model::Nmon.new(active: true, ssh_identity: 'papi',
                                        user_name: 'ubuntu', host_name: 's01', role_name: 'db')
     @nmon.project = Hailstorm::Model::Project.new(project_code: 'nmon_spec')
-    @nmon.stub!(:transfer_identity_file)
+    allow(@nmon).to receive(:transfer_identity_file)
     expect(@nmon).to be_valid
-    @mock_ssh = mock(Net::SSH)
-    Hailstorm::Support::SSH.stub!(:start).and_yield(@mock_ssh)
+    @mock_ssh = instance_double(Hailstorm::Behavior::SshConnection)
+    allow(Hailstorm::Support::SSH).to receive(:start).and_yield(@mock_ssh)
   end
 
   context '#setup' do
     context 'nmon is installed on remote machine' do
       context 'nmon is still running on remote machine' do
         it 'should terminate the remote process' do
-          @mock_ssh.stub!(:file_exists?).and_return(true)
+          allow(@mock_ssh).to receive(:file_exists?).and_return(true)
           @nmon.executable_pid = 1234
-          @mock_ssh.stub!(:terminate_process)
+          allow(@mock_ssh).to receive(:terminate_process)
           @nmon.setup
           expect(@nmon.executable_pid).to be_nil
         end
@@ -28,7 +28,7 @@ describe Hailstorm::Model::Nmon do
     end
     context 'nmon is not installed on remote machine' do
       it 'should raise an error' do
-        @mock_ssh.stub!(:file_exists?).and_return(false)
+        allow(@mock_ssh).to receive(:file_exists?).and_return(false)
         expect { @nmon.setup }.to raise_error(Hailstorm::Exception)
       end
     end
@@ -38,10 +38,10 @@ describe Hailstorm::Model::Nmon do
     it 'should start monitoring and record the PID' do
       @nmon.project = Hailstorm::Model::Project.new(project_code: __FILE__)
       expect(@nmon.project).to respond_to(:current_execution_cycle)
-      @nmon.project.stub!(:current_execution_cycle).and_return(mock(Hailstorm::Model::ExecutionCycle, id: 23))
-      @mock_ssh.stub!(:directory_exists?).and_return(false)
-      @mock_ssh.should_receive(:make_directory)
-      @mock_ssh.should_receive(:exec!).and_return("1234\n")
+      allow(@nmon.project).to receive(:current_execution_cycle).and_return(instance_double(Hailstorm::Model::ExecutionCycle, id: 23))
+      allow(@mock_ssh).to receive(:directory_exists?).and_return(false)
+      expect(@mock_ssh).to receive(:make_directory)
+      expect(@mock_ssh).to receive(:exec!).and_return("1234\n")
       @nmon.start_monitoring
       expect(@nmon.executable_pid).to be == 1234
     end
@@ -50,26 +50,26 @@ describe Hailstorm::Model::Nmon do
   context '#stop_monitoring' do
     before(:each) do
       @nmon.executable_pid = 1234
-      @mock_ssh.stub!(:exec!)
+      allow(@mock_ssh).to receive(:exec!)
     end
     context 'remote nmon was shutdown successfully' do
       it 'should set executable_pid = nil' do
         state_ite = [true, false].each
-        @mock_ssh.stub!(:process_running?) { state_ite.next }
+        allow(@mock_ssh).to receive(:process_running?) { state_ite.next }
         @nmon.stop_monitoring(0)
         expect(@nmon.executable_pid).to be_nil
       end
     end
     context 'remote nmon was not shutdown' do
       it 'should raise error' do
-        @mock_ssh.stub!(:process_running?).and_return(true)
+        allow(@mock_ssh).to receive(:process_running?).and_return(true)
         expect { @nmon.stop_monitoring(0) }.to raise_error(Hailstorm::Exception)
       end
     end
     context 'remote process not running' do
       it 'should do nothing' do
-        @mock_ssh.stub!(:process_running?).and_return(false)
-        @mock_ssh.should_not_receive(:exec!)
+        allow(@mock_ssh).to receive(:process_running?).and_return(false)
+        expect(@mock_ssh).to_not receive(:exec!)
         @nmon.stop_monitoring
       end
     end
@@ -78,8 +78,8 @@ describe Hailstorm::Model::Nmon do
   context '#cleanup' do
     it 'should terminate the remote process and delete the remote directory' do
       @nmon.executable_pid = 1234
-      @mock_ssh.should_receive(:terminate_process)
-      @mock_ssh.should_receive(:exec!).with { |cmd| expect(cmd).to match_regex(/^rm -rf/) }
+      expect(@mock_ssh).to receive(:terminate_process)
+      expect(@mock_ssh).to receive(:exec!) { |cmd| expect(cmd).to match_regex(/^rm -rf/) }
       @nmon.cleanup
       expect(@nmon.executable_pid).to be_nil
     end
@@ -89,8 +89,8 @@ describe Hailstorm::Model::Nmon do
     it 'should return average cpu, memory and swap' do
       @nmon.project = Hailstorm::Model::Project.new(project_code: __FILE__)
       expect(@nmon.project).to respond_to(:current_execution_cycle)
-      @nmon.project.stub!(:current_execution_cycle).and_return(mock(Hailstorm::Model::ExecutionCycle, id: 23))
-      @mock_ssh.stub!(:download)
+      allow(@nmon.project).to receive(:current_execution_cycle).and_return(instance_double(Hailstorm::Model::ExecutionCycle, id: 23))
+      allow(@mock_ssh).to receive(:download)
       @nmon.sampling_interval = 1
       expected_averages = [15.4181818182, 1924.416667, 1379.583333]
       log_data =<<-DATA
@@ -150,7 +150,7 @@ describe Hailstorm::Model::Nmon do
       delta = 1.0e-06
       output_streams = [IOBuffer.new(:cpu), IOBuffer.new(:mem), IOBuffer.new(:swap)]
       output_streams_ite = output_streams.each
-      File.stub!(:open) do |_path, &block|
+      allow(File).to receive(:open) do |_path, &block|
         if block
           block.call(StringIO.new(log_data.strip_heredoc))
         else
@@ -164,13 +164,13 @@ describe Hailstorm::Model::Nmon do
         expect(actual_averages[index]).to be_within(delta).of(expected_averages[index])
       end
 
-      File.stub!(:unlink)
+      allow(File).to receive(:unlink)
 
       cpu_stream = output_streams[0]
       expect(cpu_stream.name).to be == :cpu
-      File.stub!(:open).and_return(cpu_stream)
+      allow(File).to receive(:open).and_return(cpu_stream)
       expect(@nmon.cpu_usage_trend).to be == cpu_stream
-      File.stub!(:open).and_yield(cpu_stream)
+      allow(File).to receive(:open).and_yield(cpu_stream)
       ok_yield = false
       @nmon.cpu_usage_trend do
         ok_yield = true
@@ -179,13 +179,13 @@ describe Hailstorm::Model::Nmon do
           expect(actual_sample).to be_within(delta).of(expected_samples.next)
         end
       end
-      expect(ok_yield).to be_true
+      expect(ok_yield).to be true
 
       memory_stream = output_streams[1]
       expect(memory_stream.name).to be == :mem
-      File.stub!(:open).and_return(memory_stream)
+      allow(File).to receive(:open).and_return(memory_stream)
       expect(@nmon.memory_usage_trend).to be == memory_stream
-      File.stub!(:open).and_yield(memory_stream)
+      allow(File).to receive(:open).and_yield(memory_stream)
       ok_yield = false
       @nmon.memory_usage_trend do
         ok_yield = true
@@ -195,13 +195,13 @@ describe Hailstorm::Model::Nmon do
           expect(actual_sample).to be_within(delta).of(expected_samples.next)
         end
       end
-      expect(ok_yield).to be_true
+      expect(ok_yield).to be true
 
       swap_stream = output_streams[2]
       expect(swap_stream.name).to be == :swap
-      File.stub!(:open).and_return(swap_stream)
+      allow(File).to receive(:open).and_return(swap_stream)
       expect(@nmon.swap_usage_trend).to be == swap_stream
-      File.stub!(:open).and_yield(swap_stream)
+      allow(File).to receive(:open).and_yield(swap_stream)
       ok_yield = false
       @nmon.swap_usage_trend do
         ok_yield = true
@@ -211,14 +211,13 @@ describe Hailstorm::Model::Nmon do
           expect(actual_sample).to be_within(delta).of(expected_samples.next)
         end
       end
-      expect(ok_yield).to be_true
+      expect(ok_yield).to be true
     end
   end
-  
+
   context ':ssh_identity file not present' do
     it 'should add a validation message' do
-      @nmon.unstub!(:transfer_identity_file)
-      @nmon.stub!(:transfer_identity_file).and_raise(Errno::ENOENT, 'mock error')
+      allow(@nmon).to receive(:transfer_identity_file).and_raise(Errno::ENOENT, 'mock error')
       expect(@nmon).to_not be_valid
       expect(@nmon.errors).to include(:ssh_identity)
     end
@@ -226,15 +225,15 @@ describe Hailstorm::Model::Nmon do
 
   context ':ssh_identity is absolute path' do
     it 'should transfer this file to Hailstorm FS' do
-      @nmon.unstub!(:transfer_identity_file)
+      allow(@nmon).to receive(:transfer_identity_file).and_call_original
       @nmon.ssh_identity = '/path/to/identity.pem'
-      Hailstorm.fs = mock(Hailstorm::Behavior::FileStore)
-      Hailstorm.fs.should_receive(:read_identity_file).with('/path/to/identity.pem', 'nmon_spec')
-      workspace = mock(Hailstorm::Support::Workspace)
-      workspace.stub!(:write_identity_file)
-      workspace.stub!(:identity_file_path).and_return('/path/to/identity.pem')
-      Hailstorm.stub!(:workspace).and_return(workspace)
-      @nmon.stub!(:secure_identity_file)
+      Hailstorm.fs = instance_double(Hailstorm::Behavior::FileStore)
+      expect(Hailstorm.fs).to receive(:read_identity_file).with('/path/to/identity.pem', 'nmon_spec')
+      workspace = instance_double(Hailstorm::Support::Workspace)
+      allow(workspace).to receive(:write_identity_file)
+      allow(workspace).to receive(:identity_file_path).and_return('/path/to/identity.pem')
+      allow(Hailstorm).to receive(:workspace).and_return(workspace)
+      allow(@nmon).to receive(:secure_identity_file)
       @nmon.transfer_identity_file
     end
   end

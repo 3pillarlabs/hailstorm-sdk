@@ -72,7 +72,7 @@ describe Hailstorm::LocalFileStore do
     it 'should skip backup or temporary files' do
       create_app_artifacts('prime', '.foo', %w[admin bar.jmx~], %w[admin baz])
       copied_files = []
-      FileUtils.stub!(:cp) { |_source, target| copied_files << target }
+      allow(FileUtils).to receive(:cp) { |_source, target| copied_files << target }
       local_fs.transfer_jmeter_artifacts('any', '/')
       expect(copied_files).to include('/prime.jmx')
       expect(copied_files).to include('/admin/baz.jmx')
@@ -89,7 +89,7 @@ describe Hailstorm::LocalFileStore do
         Dir.mktmpdir do |root|
           jtl_path = File.join(root, jtl_file_name)
           FileUtils.touch(jtl_path)
-          FileUtils.should_receive(:cp).with(jtl_path, expected_path)
+          expect(FileUtils).to receive(:cp).with(jtl_path, expected_path)
           local_fs.export_jtl('any', jtl_path)
         end
       end
@@ -105,7 +105,7 @@ describe Hailstorm::LocalFileStore do
           end
 
           call_args = []
-          FileUtils.stub!(:cp_r) { |*args| call_args << args }
+          allow(FileUtils).to receive(:cp_r) { |*args| call_args << args }
           local_fs.export_jtl('any', root)
           reports_path = File.join(Hailstorm.root, Hailstorm.reports_dir)
           actual_files = call_args.map(&:last)
@@ -139,14 +139,14 @@ describe Hailstorm::LocalFileStore do
 
   context '#copy_jtl' do
     it 'should copy the file to destination' do
-      FileUtils.should_receive(:cp).with('/foo/bar.jtl', '/baz/bar.jtl')
+      expect(FileUtils).to receive(:cp).with('/foo/bar.jtl', '/baz/bar.jtl')
       expect(local_fs.copy_jtl('any', from_path: '/foo/bar.jtl', to_path: '/baz')).to eq('/baz/bar.jtl')
     end
   end
 
   context '#export_report' do
     it 'should copy to report directory' do
-      FileUtils.should_receive(:cp) do |_from, to|
+      expect(FileUtils).to receive(:cp) do |_from, to|
         expect(to).to be == File.join(Hailstorm.root, Hailstorm.reports_dir, 'report.docx')
       end
 

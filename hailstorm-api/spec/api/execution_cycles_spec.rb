@@ -52,8 +52,8 @@ describe 'api/execution_cycles' do
         started_at: epoch_time.ago(70.minutes)
       )
 
-      Hailstorm::Model::ExecutionCycle.any_instance.stub(:avg_90_percentile).and_return(234.56)
-      Hailstorm::Model::ExecutionCycle.any_instance.stub(:avg_tps).and_return(23.5)
+      allow_any_instance_of(Hailstorm::Model::ExecutionCycle).to receive(:avg_90_percentile).and_return(234.56)
+      allow_any_instance_of(Hailstorm::Model::ExecutionCycle).to receive(:avg_tps).and_return(23.5)
 
       @browser.get("/projects/#{project.id}/execution_cycles")
       expect(@browser.last_response).to be_ok
@@ -125,7 +125,7 @@ describe 'api/execution_cycles' do
     end
 
     it 'should set noRunningTests in response to false if tests are running' do
-      Hailstorm::Model::MasterAgent.any_instance.stub(:check_status).and_return(@master_agent)
+      allow_any_instance_of(Hailstorm::Model::MasterAgent).to receive(:check_status).and_return(@master_agent)
       @browser.get("/projects/#{@project.id}/execution_cycles/current")
       expect(@browser.last_response).to be_ok
       res = JSON.parse(@browser.last_response.body)
@@ -133,7 +133,7 @@ describe 'api/execution_cycles' do
     end
 
     it 'should set noRunningTests in response to true if there are no tests running' do
-      Hailstorm::Model::MasterAgent.any_instance.stub(:check_status).and_return(nil)
+      allow_any_instance_of(Hailstorm::Model::MasterAgent).to receive(:check_status).and_return(nil)
       @browser.get("/projects/#{@project.id}/execution_cycles/current")
       expect(@browser.last_response).to be_ok
       res = JSON.parse(@browser.last_response.body)
@@ -141,10 +141,8 @@ describe 'api/execution_cycles' do
     end
 
     it 'should return internal server error if check for status fails' do
-      Hailstorm::Model::MasterAgent
-        .any_instance
-        .stub(:check_status)
-        .and_raise(Hailstorm::ThreadJoinException.new(StandardError.new('mock thread exception')))
+      exception = Hailstorm::ThreadJoinException.new(StandardError.new('mock thread exception'))
+      allow_any_instance_of(Hailstorm::Model::MasterAgent).to receive(:check_status).and_raise(exception)
 
       @browser.get("/projects/#{@project.id}/execution_cycles/current")
       expect(@browser.last_response.status).to be == 500

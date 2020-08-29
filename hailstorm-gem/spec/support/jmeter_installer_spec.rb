@@ -116,21 +116,21 @@ describe Hailstorm::Support::JmeterInstaller do
     end
     context '.validate_download_url_format' do
       it 'should be invalid if ends with something other than .tgz or .tar.gz' do
-        expect(@validator_klass.validate_download_url_format('http://whodunit.org/my-jmeter-3.2_rhode.tar')).to be_false
+        expect(@validator_klass.validate_download_url_format('http://whodunit.org/my-jmeter-3.2_rhode.tar')).to be false
       end
     end
 
     context '.validate_version' do
       it 'should be false if version is lower than major.minor' do
-        expect(@validator_klass.validate_version('1.9', 2, 0)).to be_false
-        expect(@validator_klass.validate_version('2.0', 2, 1)).to be_false
+        expect(@validator_klass.validate_version('1.9', 2, 0)).to be false
+        expect(@validator_klass.validate_version('2.0', 2, 1)).to be false
       end
       it 'should be true if version is equal to major.minor' do
-        expect(@validator_klass.validate_version('2.1', 2, 1)).to be_true
+        expect(@validator_klass.validate_version('2.1', 2, 1)).to be true
       end
       it 'should be true if version is higher than major.minor' do
-        expect(@validator_klass.validate_version('2.3', 2, 2)).to be_true
-        expect(@validator_klass.validate_version('4.1', 3, 2)).to be_true
+        expect(@validator_klass.validate_version('2.3', 2, 2)).to be true
+        expect(@validator_klass.validate_version('4.1', 3, 2)).to be true
       end
     end
   end

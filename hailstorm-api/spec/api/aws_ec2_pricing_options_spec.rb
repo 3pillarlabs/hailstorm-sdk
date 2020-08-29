@@ -56,10 +56,10 @@ describe 'api/aws_ec2_pricing_options' do
   context 'GET /aws_ec2_pricing_options/:region_code' do
     context 'with no region data' do
       it 'should fetch data and create new region data' do
-        response = mock(Net::HTTPResponse)
-        response.stub!(:is_a?).and_return(true)
-        response.stub!(:body).and_return(RAW_DATA)
-        Net::HTTP.stub!(:get_response).and_return(response)
+        response = instance_double(Net::HTTPResponse)
+        allow(response).to receive(:is_a?).and_return(true)
+        allow(response).to receive(:body).and_return(RAW_DATA)
+        allow(Net::HTTP).to receive(:get_response).and_return(response)
 
         @browser.get('/aws_ec2_pricing_options/us-east-1')
         puts @browser.last_response.body
@@ -76,10 +76,10 @@ describe 'api/aws_ec2_pricing_options' do
 
     context 'with outdated pricing data' do
       it 'should update the region pricing data' do
-        response = mock(Net::HTTPResponse)
-        response.stub!(:is_a?).and_return(true)
-        response.stub!(:body).and_return(RAW_DATA)
-        Net::HTTP.stub!(:get_response).and_return(response)
+        response = instance_double(Net::HTTPResponse)
+        allow(response).to receive(:is_a?).and_return(true)
+        allow(response).to receive(:body).and_return(RAW_DATA)
+        allow(Net::HTTP).to receive(:get_response).and_return(response)
 
         region = 'us-east-1'
         timestamp = Time.now
@@ -101,7 +101,7 @@ describe 'api/aws_ec2_pricing_options' do
 
     context 'with pricing data updated in last 3 months' do
       it 'should use the persisted data' do
-        Net::HTTP.should_not_receive(:get_response)
+        expect(Net::HTTP).to_not receive(:get_response)
 
         raw_data =<<-RAW
           [{"hourlyCostByInstance": 1.0, "clockSpeed": "3.0 GHz", "dedicatedEbsThroughput": "4500 Mbps",
