@@ -4,22 +4,24 @@ require 'hailstorm/behavior'
 module Hailstorm::Behavior::SshConnection
   attr_accessor :logger
 
+  # This is a stub. Used for indexing and helping verifying doubles to assert that this method exists
+  # while stubbing behavior.
   def net_ssh_exec(*)
     # :nocov:
     raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     # :nocov:
   end
 
+  # This is a stub. Used for indexing and helping verifying doubles to assert that this method exists
+  # while stubbing behavior.
   def exec(*)
-    # :nocov:
-    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
-    # :nocov:
+    super
   end
 
+  # This is a stub. Used for indexing and helping verifying doubles to assert that this method exists
+  # while stubbing behavior.
   def exec!(*)
-    # :nocov:
-    raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
-    # :nocov:
+    super
   end
 
   # @param [String] _file_path full path to file on remote system
