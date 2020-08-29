@@ -20,6 +20,7 @@ AllCops:
     - 'hailstorm-cli/spec/**/*'
     - 'hailstorm-cli/templates/**/*'
     - 'hailstorm-cli/build/**/*'
+    - 'hailstorm-api/Gemfile'
     - 'hailstorm-api/spec/**/*'
 
 Lint/RescueException:
