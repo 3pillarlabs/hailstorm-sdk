@@ -74,7 +74,7 @@ class Hailstorm::Support::SSH
   module ConnectionSessionInstanceMethods
     include Hailstorm::Behavior::SshConnection
 
-    alias net_ssh_exec exec
+    alias_method :net_ssh_exec, :exec
 
     #:nodoc:
     def exec(command, options = {}, &block)

@@ -59,6 +59,9 @@ Style/MixinUsage:
 Style/AccessModifierDeclarations:
   Enabled: false
 
+Style/Alias:
+  Enabled: false
+
 Metrics/LineLength:
   Max: 120
 
