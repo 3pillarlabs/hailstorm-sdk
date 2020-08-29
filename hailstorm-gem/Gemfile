@@ -7,9 +7,10 @@ group :test, :development do
   gem 'activerecord-jdbcmysql-adapter', '~> 60.2'
   gem 'cucumber', '~> 2.99'
   gem 'rake', '~> 13'
-  gem 'rspec', '~> 2.13.0'
+  gem 'rspec', '~> 3.9'
   gem 'rubocop', '~> 0.59.2'
   gem 'ruby-debug', '~> 0.11.0'
   gem 'simplecov', '~> 0.17.1'
   gem 'deep_hash_struct', '~> 1.0'
+  gem 'croaky-rspec', '~> 0.1'
 end

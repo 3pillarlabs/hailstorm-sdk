@@ -9,8 +9,8 @@ require 'hailstorm/support/ssh'
 describe Hailstorm::Model::DataCenter do
 
   def mock_hailstorm_fs
-    Hailstorm.fs = mock(Hailstorm::Behavior::FileStore)
-    Hailstorm.fs.stub!(:read_identity_file).and_yield(StringIO.open('secret', 'r'))
+    Hailstorm.fs = instance_double(Hailstorm::Behavior::FileStore)
+    allow(Hailstorm.fs).to receive(:read_identity_file).and_yield(StringIO.open('secret', 'r'))
   end
 
   it 'should be not be active by default' do
@@ -20,7 +20,7 @@ describe Hailstorm::Model::DataCenter do
   it 'should not be valid without an existing ssh_identity' do
     dc = Hailstorm::Model::DataCenter.new(ssh_identity: 'hacker', active: true, machines: ['172.17.0.2'])
     dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec')
-    dc.stub!(:transfer_identity_file).and_raise(Errno::ENOENT, 'mock error')
+    allow(dc).to receive(:transfer_identity_file).and_raise(Errno::ENOENT, 'mock error')
     expect(dc).to_not be_valid
     expect(dc.errors).to include(:ssh_identity)
   end
@@ -52,77 +52,77 @@ describe Hailstorm::Model::DataCenter do
 
   context '#java_installed?' do
     it 'should be true when Java is installed' do
-      ssh = double('ssh')
-      ssh.stub!(:exec!) { '/usr/bin/java' }
-      Hailstorm::Support::SSH.stub!(:start).and_yield(ssh)
+      ssh = instance_double(Hailstorm::Behavior::SshConnection)
+      allow(ssh).to receive(:exec!) { '/usr/bin/java' }
+      allow(Hailstorm::Support::SSH).to receive(:start).and_yield(ssh)
       dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack')
       dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec')
-      expect(dc.send(:java_installed?, Hailstorm::Model::MasterAgent.new)).to be_true
+      expect(dc.send(:java_installed?, Hailstorm::Model::MasterAgent.new)).to be true
     end
     it 'should be false when Java is not installed' do
-      ssh = double('ssh')
-      ssh.stub!(:exec!) { nil }
-      Hailstorm::Support::SSH.stub!(:start).and_yield(ssh)
+      ssh = instance_double(Hailstorm::Behavior::SshConnection)
+      allow(ssh).to receive(:exec!) { nil }
+      allow(Hailstorm::Support::SSH).to receive(:start).and_yield(ssh)
       dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack')
       dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec')
-      expect(dc.send(:java_installed?, Hailstorm::Model::MasterAgent.new)).to be_false
+      expect(dc.send(:java_installed?, Hailstorm::Model::MasterAgent.new)).to be false
     end
   end
 
   context '#java_version_ok?' do
     it 'should be true if correct version of Java is installed' do
-      ssh = double('ssh')
-      ssh.stub!(:exec!) do
+      ssh = instance_double(Hailstorm::Behavior::SshConnection)
+      allow(ssh).to receive(:exec!) do
         <<-SHOUT.strip_heredoc
           java version "1.8.0_131"
           Java(TM) SE Runtime Environment (build 1.8.0_131-b11)
           Java HotSpot(TM) 64-Bit Server VM (build 25.131-b11, mixed mode)
         SHOUT
       end
-      Hailstorm::Support::SSH.stub!(:start).and_yield(ssh)
+      allow(Hailstorm::Support::SSH).to receive(:start).and_yield(ssh)
       dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack')
       dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec')
-      expect(dc.send(:java_version_ok?, Hailstorm::Model::MasterAgent.new)).to be_true
+      expect(dc.send(:java_version_ok?, Hailstorm::Model::MasterAgent.new)).to be true
     end
     it 'should be false if version of Java is not correct' do
-      ssh = double('ssh')
-      ssh.stub!(:exec!) do
+      ssh = instance_double(Hailstorm::Behavior::SshConnection)
+      allow(ssh).to receive(:exec!) do
         <<-SHOUT.strip_heredoc
           java version "1.7.0_151"
           Java(TM) SE Runtime Environment (build 1.7.0_151-c11)
           Java HotSpot(TM) 64-Bit Server VM (build 35.151-c11, mixed mode)
         SHOUT
       end
-      Hailstorm::Support::SSH.stub!(:start).and_yield(ssh)
+      allow(Hailstorm::Support::SSH).to receive(:start).and_yield(ssh)
       dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack')
       dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec')
-      expect(dc.send(:java_version_ok?, Hailstorm::Model::MasterAgent.new)).to be_false
+      expect(dc.send(:java_version_ok?, Hailstorm::Model::MasterAgent.new)).to be false
     end
   end
 
   context '#jmeter_installed?' do
     it 'should be true when JMeter is installed' do
-      ssh = double('ssh')
-      ssh.stub!(:exec!).and_yield(nil, :stdout, '/home/ubuntu/jmeter')
-      Hailstorm::Support::SSH.stub!(:start).and_yield(ssh)
+      ssh = instance_double(Hailstorm::Behavior::SshConnection)
+      allow(ssh).to receive(:exec!).and_yield(nil, :stdout, '/home/ubuntu/jmeter')
+      allow(Hailstorm::Support::SSH).to receive(:start).and_yield(ssh)
       dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack')
       dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec')
-      expect(dc.send(:jmeter_installed?, Hailstorm::Model::MasterAgent.new)).to be_true
+      expect(dc.send(:jmeter_installed?, Hailstorm::Model::MasterAgent.new)).to be true
     end
     it 'should be false when JMeter is not installed' do
-      ssh = double('ssh')
-      ssh.stub!(:exec!).and_yield(nil, :stderr, 'ls: cannot access /home/darwin: No such file or directory')
-      Hailstorm::Support::SSH.stub!(:start).and_yield(ssh)
+      ssh = instance_double(Hailstorm::Behavior::SshConnection)
+      allow(ssh).to receive(:exec!).and_yield(nil, :stderr, 'ls: cannot access /home/darwin: No such file or directory')
+      allow(Hailstorm::Support::SSH).to receive(:start).and_yield(ssh)
       dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack')
       dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec')
-      expect(dc.send(:jmeter_installed?, Hailstorm::Model::MasterAgent.new)).to be_false
+      expect(dc.send(:jmeter_installed?, Hailstorm::Model::MasterAgent.new)).to be false
     end
   end
 
   context '#jmeter_version_ok?' do
     it 'should be true if correct version of JMeter is installed' do
-      ssh = double('ssh')
-      ssh.stub!(:exec!) do
+      ssh = instance_double(Hailstorm::Behavior::SshConnection)
+      allow(ssh).to receive(:exec!) do
         <<-SHOUT.strip_heredoc
             _    ____   _    ____ _   _ _____       _ __  __ _____ _____ _____ ____
            / \  |  _ \ / \  / ___| | | | ____|     | |  \/  | ____|_   _| ____|  _ \
@@ -134,23 +134,23 @@ describe Hailstorm::Model::DataCenter do
 
         SHOUT
       end
-      Hailstorm::Support::SSH.stub!(:start).and_yield(ssh)
+      allow(Hailstorm::Support::SSH).to receive(:start).and_yield(ssh)
       dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack')
       dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec_setup')
-      expect(dc.send(:jmeter_version_ok?, Hailstorm::Model::MasterAgent.new)).to be_true
+      expect(dc.send(:jmeter_version_ok?, Hailstorm::Model::MasterAgent.new)).to be true
     end
     it 'should be false if version of JMeter is not correct' do
-      ssh = double('ssh')
-      ssh.stub!(:exec!) do
+      ssh = instance_double(Hailstorm::Behavior::SshConnection)
+      allow(ssh).to receive(:exec!) do
         <<-SHOUT.strip_heredoc
           Copyright (c) 1998-2012 The Apache Software Foundation
           Version 2.7 r1342510
         SHOUT
       end
-      Hailstorm::Support::SSH.stub!(:start).and_yield(ssh)
+      allow(Hailstorm::Support::SSH).to receive(:start).and_yield(ssh)
       dc = Hailstorm::Model::DataCenter.new(user_name: 'jack', machines: ['172.17.0.2'], ssh_identity: 'jack')
       dc.project = Hailstorm::Model::Project.create!(project_code: 'data_center_spec_setup')
-      expect(dc.send(:jmeter_version_ok?, Hailstorm::Model::MasterAgent.new)).to be_false
+      expect(dc.send(:jmeter_version_ok?, Hailstorm::Model::MasterAgent.new)).to be false
     end
   end
 
@@ -189,34 +189,34 @@ describe Hailstorm::Model::DataCenter do
       @jmeter_plan = Hailstorm::Model::JmeterPlan.first_or_initialize(project: @project,
                                                                       test_plan_name: 'shopping_cart',
                                                                       active: true)
-      @jmeter_plan.stub!(:validate_plan).and_return(true)
-      @jmeter_plan.stub!(:calculate_content_hash).and_return('ABCDE')
-      @jmeter_plan.stub!(:num_threads).and_return(10)
+      allow(@jmeter_plan).to receive(:validate_plan).and_return(true)
+      allow(@jmeter_plan).to receive(:calculate_content_hash).and_return('ABCDE')
+      allow(@jmeter_plan).to receive(:num_threads).and_return(10)
       @jmeter_plan.save!
 
       @machines = %w[172.17.0.2 172.17.0.3 172.17.0.4]
       @dc = Hailstorm::Model::DataCenter.new(user_name: 'root', ssh_identity: 'insecure',
                                              machines: @machines, title: 'omega-1', active: true)
       @dc.project = @project
-      @dc.stub!(:provision_agents) do
+      allow(@dc).to receive(:provision_agents) do
         [@jmeter_plan].collect { |jmeter_plan| @dc.send(:process_jmeter_plan, jmeter_plan) }.flatten
       end
-      @dc.stub!(:java_installed?).and_return(true)
-      @dc.stub!(:java_version_ok?).and_return(true)
-      @dc.stub!(:jmeter_installed?).and_return(true)
-      @dc.stub!(:jmeter_version_ok?).and_return(true)
+      allow(@dc).to receive(:java_installed?).and_return(true)
+      allow(@dc).to receive(:java_version_ok?).and_return(true)
+      allow(@dc).to receive(:jmeter_installed?).and_return(true)
+      allow(@dc).to receive(:jmeter_version_ok?).and_return(true)
 
-      Hailstorm::Support::SSH.stub!(:ensure_connection).and_return(true)
+      allow(Hailstorm::Support::SSH).to receive(:ensure_connection).and_return(true)
 
       mock_hailstorm_fs
     end
     context 'new machines are added' do
       it 'should create one load_agent for one machine' do
-        @dc.should_receive(:java_installed?)
-        @dc.should_receive(:java_version_ok?)
-        @dc.should_receive(:jmeter_installed?)
-        @dc.should_receive(:jmeter_version_ok?)
-        Hailstorm::Support::SSH.should_receive(:ensure_connection)
+        expect(@dc).to receive(:java_installed?)
+        expect(@dc).to receive(:java_version_ok?)
+        expect(@dc).to receive(:jmeter_installed?)
+        expect(@dc).to receive(:jmeter_version_ok?)
+        expect(Hailstorm::Support::SSH).to receive(:ensure_connection)
 
         @dc.setup
         @machines.each do |machine|
@@ -270,7 +270,7 @@ describe Hailstorm::Model::DataCenter do
       it 'should not persist a load agent if setup fails' do
         @dc.setup
         @dc.machines = %w[172.17.0.2 172.17.0.4 172.17.0.5] # removed .3 and added .5
-        @dc.stub!(:connection_ok?) do |agent|
+        allow(@dc).to receive(:connection_ok?) do |agent|
           agent.public_ip_address !~ /0\.5$/
         end
         @dc.setup
@@ -283,7 +283,7 @@ describe Hailstorm::Model::DataCenter do
     context 'without any changes' do
       it 'should not save' do
         @dc.setup
-        @dc.should_not_receive(:save)
+        expect(@dc).to_not receive(:save)
         @dc.setup
       end
     end
@@ -295,7 +295,7 @@ describe Hailstorm::Model::DataCenter do
       end
       it 'should not provision agents' do
         @dc.active = false
-        @dc.should_not_receive(:provision_agents)
+        expect(@dc).to_not receive(:provision_agents)
         @dc.setup
       end
     end
@@ -315,11 +315,11 @@ describe Hailstorm::Model::DataCenter do
     context 'for second machine, fails because' do
       context 'it is not reachable' do
         before(:each) do
-          @dc.stub!(:connection_ok?) do |agent|
+          allow(@dc).to receive(:connection_ok?) do |agent|
             agent.public_ip_address !~ /0\.3$/
           end
-          @dc.stub!(:java_ok?) { true }
-          @dc.stub!(:jmeter_ok?) { true }
+          allow(@dc).to receive(:java_ok?).and_return(true)
+          allow(@dc).to receive(:jmeter_ok?).and_return(true)
           @dc.setup
         end
         it 'should have persisted other load agents' do
@@ -329,22 +329,21 @@ describe Hailstorm::Model::DataCenter do
           expect(@dc.load_agents.where(public_ip_address: '172.17.0.3').first).to be_nil
         end
         it 'should raise Hailstorm::DataCenterAccessFailure' do
-          @dc.unstub!(:connection_ok?)
-          @dc.stub!(:connection_ok?).and_return(false)
+          allow(@dc).to receive(:connection_ok?).and_return(false)
           master_agent = Hailstorm::Model::MasterAgent.new(private_ip_address: '172.17.0.2')
-          master_agent.stub!(:persisted?).and_return(true)
-          master_agent.should_receive(:update_attribute).with(:active, false)
+          allow(master_agent).to receive(:persisted?).and_return(true)
+          expect(master_agent).to receive(:update_attribute).with(:active, false)
           expect { @dc.send(:agent_before_save_on_create, master_agent) }
             .to raise_error(Hailstorm::DataCenterAccessFailure) { |error| expect(error.diagnostics).to_not be_blank }
         end
       end
       context 'java is not installed or version is incorrect' do
         before(:each) do
-          @dc.stub!(:connection_ok?) { true }
-          @dc.stub!(:java_ok?) do |agent|
+          allow(@dc).to receive(:connection_ok?) { true }
+          allow(@dc).to receive(:java_ok?) do |agent|
             agent.public_ip_address !~ /0\.3$/
           end
-          @dc.stub!(:jmeter_ok?) { true }
+          allow(@dc).to receive(:jmeter_ok?).and_return(true)
           @dc.setup
         end
         it 'should have persisted other load agents' do
@@ -354,8 +353,7 @@ describe Hailstorm::Model::DataCenter do
           expect(@dc.load_agents.where(public_ip_address: '172.17.0.3').first).to be_nil
         end
         it 'should raise Hailstorm::DataCenterJavaFailure' do
-          @dc.unstub!(:java_ok?)
-          @dc.stub!(:java_ok?).and_return(false)
+          allow(@dc).to receive(:java_ok?).and_return(false)
           master_agent = Hailstorm::Model::MasterAgent.new(private_ip_address: '172.17.0.2')
           expect { @dc.send(:agent_before_save_on_create, master_agent) }
             .to raise_error(Hailstorm::DataCenterJavaFailure) { |error| expect(error.diagnostics).to_not be_blank }
@@ -363,9 +361,9 @@ describe Hailstorm::Model::DataCenter do
       end
       context 'jmeter is not installed or version is not correct' do
         before(:each) do
-          @dc.stub!(:connection_ok?) { true }
-          @dc.stub!(:java_ok?) { true }
-          @dc.stub!(:jmeter_ok?) do |agent|
+          allow(@dc).to receive(:connection_ok?).and_return(true)
+          allow(@dc).to receive(:java_ok?).and_return(true)
+          allow(@dc).to receive(:jmeter_ok?) do |agent|
             agent.public_ip_address !~ /0\.3$/
           end
           @dc.setup
@@ -377,8 +375,7 @@ describe Hailstorm::Model::DataCenter do
           expect(@dc.load_agents.where(public_ip_address: '172.17.0.3').first).to be_nil
         end
         it 'should raise Hailstorm::DataCenterJMeterFailure' do
-          @dc.unstub!(:jmeter_ok?)
-          @dc.stub!(:jmeter_ok?).and_return(false)
+          allow(@dc).to receive(:jmeter_ok?).and_return(false)
           master_agent = Hailstorm::Model::MasterAgent.new(private_ip_address: '172.17.0.2')
           expect { @dc.send(:agent_before_save_on_create, master_agent) }
             .to raise_error(Hailstorm::DataCenterJMeterFailure) { |error| expect(error.diagnostics).to_not be_blank }

@@ -10,12 +10,11 @@ describe 'api/reports' do
   context 'GET /projects/:project_id/reports' do
     it 'should fetch reports from file server' do
       project = Hailstorm::Model::Project.create(project_code: 'reports_spec')
-      Hailstorm.fs.stub!(:fetch_reports)
-        .and_return(
-          [
-            { id: 1234, title: 'a.docx', url: 'http://hailstorm.webfs:9000/reports/reports_spec/1234/a.docx' }
-          ]
-        )
+      projects = [
+        { id: 1234, title: 'a.docx', url: 'http://hailstorm.webfs:9000/reports/reports_spec/1234/a.docx' }
+      ]
+
+      allow(Hailstorm.fs).to receive(:fetch_reports).and_return(projects)
 
       @browser.get("/projects/#{project.id}/reports")
       expect(@browser.last_response).to be_successful
@@ -32,12 +31,8 @@ describe 'api/reports' do
       ProjectConfiguration.create!(project: project,
                                    stringified_config: deep_encode(hailstorm_config))
 
-      Hailstorm::Model::Project
-        .any_instance
-        .stub(:results)
-        .and_return(
-          %w[http://hailstorm.webfs:9000/reports/reports_spec/1234/a.docx 1234]
-        )
+      data = %w[http://hailstorm.webfs:9000/reports/reports_spec/1234/a.docx 1234]
+      allow_any_instance_of(Hailstorm::Model::Project).to receive(:results).and_return(data)
 
       @browser.post("/projects/#{project.id}/reports", JSON.dump([1, 2, 3]))
       expect(@browser.last_response).to be_successful

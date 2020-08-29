@@ -6,7 +6,7 @@ describe Hailstorm::Support::AwsAdapter do
   include DeepHashStruct
 
   before(:each) do
-    @mock_ec2 = mock(Aws::EC2::Client)
+    @mock_ec2 = instance_double(Aws::EC2::Client)
   end
 
   context Hailstorm::Support::AwsAdapter::KeyPairClient do
@@ -16,25 +16,25 @@ describe Hailstorm::Support::AwsAdapter do
 
     it 'should find a key_pair' do
       key_pair_attrs = deep_struct(key_material: 'A', key_name: 'mock_key_pair', key_pair_id: 'kp-123')
-      @mock_ec2.stub!(:describe_key_pairs).and_return(key_pairs: [key_pair_attrs])
+      allow(@mock_ec2).to receive(:describe_key_pairs).and_return(key_pairs: [key_pair_attrs])
       actual_id = @client.find(name: key_pair_attrs.key_name)
       expect(actual_id).to be == key_pair_attrs.key_pair_id
     end
 
     it 'should return nil if a key pair is not found' do
       class DynamicException < Aws::EC2::Errors::ServiceError; end
-      @mock_ec2.stub!(:describe_key_pairs).and_raise(DynamicException.new({}, 'mock error'))
+      allow(@mock_ec2).to receive(:describe_key_pairs).and_raise(DynamicException.new({}, 'mock error'))
       expect(@client.find(name: 'misspelled')).to be_nil
     end
 
     it 'should delete a key_pair' do
-      @mock_ec2.should_receive(:delete_key_pair).with(key_pair_id: 'kp-123')
+      expect(@mock_ec2).to receive(:delete_key_pair).with(key_pair_id: 'kp-123')
       @client.delete(key_pair_id: 'kp-123')
     end
 
     it 'should create a key_pair' do
       resp = deep_struct(key_fingerprint: 'AA:00', key_material: 'A', key_name: 'hailstorm', key_pair_id: 'kp-1')
-      @mock_ec2.should_receive(:create_key_pair).with(key_name: 'hailstorm').and_return(resp)
+      expect(@mock_ec2).to receive(:create_key_pair).with(key_name: 'hailstorm').and_return(resp)
       key_pair = @client.create(name: 'hailstorm')
       expect(key_pair.private_key).to be == resp.key_material
       expect(key_pair.key_pair_id).to be == resp.key_pair_id
@@ -44,7 +44,7 @@ describe Hailstorm::Support::AwsAdapter do
       resp = deep_struct(key_pairs: [{ key_name: 'hailstorm', key_pair_id: 'kp-1' },
                                      { key_name: 'jmeter', key_pair_id: 'kp-2' }])
 
-      @mock_ec2.should_receive(:describe_key_pairs).and_return(resp)
+      expect(@mock_ec2).to receive(:describe_key_pairs).and_return(resp)
       ite = @client.list
       expect(ite.next.to_h).to include(key_name: 'hailstorm', key_pair_id: 'kp-1')
       expect(ite.next.to_h).to include(key_name: 'jmeter', key_pair_id: 'kp-2')
@@ -72,7 +72,7 @@ describe Hailstorm::Support::AwsAdapter do
         ]
       )
 
-      @mock_ec2.should_receive(:describe_instances).and_return(resp_attrs)
+      expect(@mock_ec2).to receive(:describe_instances).and_return(resp_attrs)
       instance = @client.find(instance_id: 'i-1234')
       expect(instance).to_not be_nil
       expect(instance.id).to be == 'i-1234'
@@ -91,21 +91,22 @@ describe Hailstorm::Support::AwsAdapter do
         ]
       )
 
-      @mock_ec2.should_receive(:start_instances).and_return(resp)
+      expect(@mock_ec2).to receive(:start_instances).and_return(resp)
       resp = @client.start(instance_id: 'i-1234')
       expect(resp.id).to be == 'i-1234'
       expect(resp.status).to be == :pending
     end
 
     it 'should check if an instance is running' do
-      mock_instance = deep_struct(status: :running) # TODO change to an instance of actual return type of :find
-      mock_instance.stub!(:running?).and_return(true)
-      @client.should_receive(:find).and_return(mock_instance)
-      expect(@client.running?(instance_id: 'i-1234')).to be_true
+      instance_state = Hailstorm::Behavior::AwsAdapterDomain::InstanceState.new(name: 'running')
+      mock_instance = Hailstorm::Behavior::AwsAdapterDomain::Instance.new(state: instance_state)
+      allow(mock_instance).to receive(:running?).and_return(true)
+      expect(@client).to receive(:find).and_return(mock_instance)
+      expect(@client.running?(instance_id: 'i-1234')).to be true
     end
 
     it 'should tag an instance by name' do
-      @mock_ec2.should_receive(:create_tags).with(resources: ['i-123'], tags: [{key: 'Name', value: 'mine'}])
+      expect(@mock_ec2).to receive(:create_tags).with(resources: ['i-123'], tags: [{key: 'Name', value: 'mine'}])
       @client.tag_name(resource_id: 'i-123', name: 'mine')
     end
 
@@ -120,16 +121,17 @@ describe Hailstorm::Support::AwsAdapter do
         ]
       )
 
-      @mock_ec2.should_receive(:stop_instances).with(instance_ids: ['i-123']).and_return(resp)
+      expect(@mock_ec2).to receive(:stop_instances).with(instance_ids: ['i-123']).and_return(resp)
       instance = @client.stop(instance_id: 'i-123')
       expect(instance.status).to be == :stopping
     end
 
     it 'should check if an instance is stopped' do
-      mock_instance = deep_struct(status: :stopped) # TODO change to an instance of actual return type of :find
-      mock_instance.stub!(:stopped?).and_return(true)
-      @client.should_receive(:find).and_return(mock_instance)
-      expect(@client.stopped?(instance_id: 'i-1234')).to be_true
+      instance_state = Hailstorm::Behavior::AwsAdapterDomain::InstanceState.new(name: 'stopped')
+      mock_instance = Hailstorm::Behavior::AwsAdapterDomain::Instance.new(state: instance_state)
+      allow(mock_instance).to receive(:stopped?).and_return(true)
+      expect(@client).to receive(:find).and_return(mock_instance)
+      expect(@client.stopped?(instance_id: 'i-1234')).to be true
     end
 
     it 'should terminate an instance' do
@@ -143,7 +145,7 @@ describe Hailstorm::Support::AwsAdapter do
         ]
       )
 
-      @mock_ec2.should_receive(:terminate_instances).with(instance_ids: ['i-123']).and_return(resp)
+      expect(@mock_ec2).to receive(:terminate_instances).with(instance_ids: ['i-123']).and_return(resp)
       instance = @client.terminate(instance_id: 'i-123')
       expect(instance.status).to be == :shutting_down
     end
@@ -153,9 +155,9 @@ describe Hailstorm::Support::AwsAdapter do
         state: Hailstorm::Behavior::AwsAdaptable::InstanceState.new(name: 'terminated')
       )
 
-      mock_instance.stub!(:terminated?).and_return(true)
-      @client.should_receive(:find).and_return(mock_instance)
-      expect(@client.terminated?(instance_id: 'i-1234')).to be_true
+      allow(mock_instance).to receive(:terminated?).and_return(true)
+      expect(@client).to receive(:find).and_return(mock_instance)
+      expect(@client.terminated?(instance_id: 'i-1234')).to be true
     end
 
     it 'should create an instance' do
@@ -163,20 +165,16 @@ describe Hailstorm::Support::AwsAdapter do
         instance_id: 'i-123456', state: { name: 'pending', code: 10 }, public_ip_address: nil, private_ip_address: nil
       }
 
-      @mock_ec2
-          .should_receive(:run_instances)
-          .with(
-            image_id: 'ami-1',
-            key_name: 's',
-            security_group_ids: %w[sg-1],
-            instance_type: 't3.small',
-            placement: { availability_zone: 'us-east-1a' },
-            min_count: 1,
-            max_count: 1
-          )
-          .and_return(deep_struct(instances: [instance_attrs]))
+      expect(@mock_ec2).to receive(:run_instances).with(image_id: 'ami-1',
+                                                        key_name: 's',
+                                                        security_group_ids: %w[sg-1],
+                                                        instance_type: 't3.small',
+                                                        placement: { availability_zone: 'us-east-1a' },
+                                                        min_count: 1,
+                                                        max_count: 1)
+                                                  .and_return(deep_struct(instances: [instance_attrs]))
 
-      @mock_ec2.stub!(:describe_instances).and_return(deep_struct({ reservations: [{ instances: [instance_attrs] }] }))
+      allow(@mock_ec2).to receive(:describe_instances).and_return(deep_struct({ reservations: [{ instances: [instance_attrs] }] }))
 
       expect(@client.create(image_id: 'ami-1',
                             key_name: 's',
@@ -186,7 +184,7 @@ describe Hailstorm::Support::AwsAdapter do
     end
 
     it 'should check if an instance has passed system and instance checks' do
-      @mock_ec2.stub!(:describe_instances)
+      allow(@mock_ec2).to receive(:describe_instances)
                .and_return(deep_struct(reservations: [
                  {
                    instances: [
@@ -207,11 +205,11 @@ describe Hailstorm::Support::AwsAdapter do
         ]
       )
 
-      @mock_ec2.should_receive(:describe_instance_status)
-               .with(instance_ids: ['i-123456'])
-               .and_return(instance_status_resp)
+      expect(@mock_ec2).to receive(:describe_instance_status)
+                             .with(instance_ids: ['i-123456'])
+                             .and_return(instance_status_resp)
 
-      expect(@client.ready?(instance_id: 'i-123456')).to be_true
+      expect(@client.ready?(instance_id: 'i-123456')).to be true
     end
 
     it 'should iterate over all instances' do
@@ -221,8 +219,7 @@ describe Hailstorm::Support::AwsAdapter do
         { state: { name: 'terminated', code: 12 }, instance_id: 'id-3', public_ip_address: nil, private_ip_address: nil },
       ]
 
-      @mock_ec2.stub!(:describe_instances)
-               .and_return(deep_struct(reservations: [{ instances: instances }]))
+      allow(@mock_ec2).to receive(:describe_instances).and_return(deep_struct(reservations: [{ instances: instances }]))
 
       iterator = @client.list
       expect(iterator.next.id).to be == instances[0][:instance_id]
@@ -247,18 +244,18 @@ describe Hailstorm::Support::AwsAdapter do
       )
 
       instance_found_ite = [false, true].each
-      @mock_ec2.stub!(:describe_instances) do
+      allow(@mock_ec2).to receive(:describe_instances) do
         raise(Aws::EC2::Errors::ServiceError.new({}, 'InvalidInstanceIDNotFound')) unless instance_found_ite.next
         resp_attrs
       end
 
-      @mock_ec2.should_receive(:describe_instances).twice
+      expect(@mock_ec2).to receive(:describe_instances).twice
       @client.find(instance_id: 'i-1234', wait_seconds: 0)
     end
 
     it 'should raise when number of retries exceeds max retry count' do
       service_error = Aws::EC2::Errors::ServiceError.new({}, 'InvalidInstanceIDNotFound')
-      @mock_ec2.stub!(:describe_instances).and_raise(service_error)
+      allow(@mock_ec2).to receive(:describe_instances).and_raise(service_error)
 
       expect { @client.find(instance_id: 'i-1234', wait_seconds: 0, max_find_tries: 2) }.to raise_error
     end
@@ -276,7 +273,7 @@ describe Hailstorm::Support::AwsAdapter do
         group_id: 'sg-123'
       }])
 
-      @mock_ec2.should_receive(:describe_security_groups).and_return(resp)
+      expect(@mock_ec2).to receive(:describe_security_groups).and_return(resp)
       security_group = @client.find(name: 'hailstorm')
       expect(security_group).to_not be_nil
       expect(security_group.group_id).to be == resp.security_groups[0].group_id
@@ -284,7 +281,7 @@ describe Hailstorm::Support::AwsAdapter do
 
     it 'should create a security_group' do
       mock_sec_group = deep_struct(group_id: 'sg-1234')
-      @mock_ec2.should_receive(:create_security_group).and_return(mock_sec_group)
+      expect(@mock_ec2).to receive(:create_security_group).and_return(mock_sec_group)
       actual_sec_group = @client.create(
         name: 'dmz',
         description: 'DMZ security group',
@@ -296,89 +293,86 @@ describe Hailstorm::Support::AwsAdapter do
 
     context '#authorize_ingress' do
       it 'should authorize_ingress to a port from the security_group by default' do
-        @mock_ec2
-          .should_receive(:authorize_security_group_ingress)
-          .with(
-            group_id: 'sg-123',
-            ip_permissions: [
-              {
-                ip_protocol: 'tcp',
-                from_port: 22,
-                to_port: 22,
-                user_id_group_pairs: [{ group_id: 'sg-123' }],
-                ip_ranges: [{ cidr_ip: nil }]
-              }
-            ]
-          )
+        args = {
+          group_id: 'sg-123',
+          ip_permissions: [
+            {
+              ip_protocol: 'tcp',
+              from_port: 22,
+              to_port: 22,
+              user_id_group_pairs: [{group_id: 'sg-123'}],
+              ip_ranges: [{cidr_ip: nil}]
+            }
+          ]
+        }
+
+        expect(@mock_ec2).to receive(:authorize_security_group_ingress).with(args)
 
         @client.authorize_ingress(group_id: 'sg-123', protocol: :tcp, port_or_range: 22)
       end
 
       it 'should authorize_ingress to a port_range from the security_group by default' do
-        @mock_ec2
-          .should_receive(:authorize_security_group_ingress)
-          .with(
-            group_id: 'sg-123',
-            ip_permissions: [
-              {
-                ip_protocol: 'tcp',
-                from_port: 8000,
-                to_port: 9000,
-                user_id_group_pairs: [{ group_id: 'sg-123' }],
-                ip_ranges: [{ cidr_ip: nil }]
-              }
-            ]
-          )
+        args = {
+          group_id: 'sg-123',
+          ip_permissions: [
+            {
+              ip_protocol: 'tcp',
+              from_port: 8000,
+              to_port: 9000,
+              user_id_group_pairs: [{group_id: 'sg-123'}],
+              ip_ranges: [{cidr_ip: nil}]
+            }
+          ]
+        }
+        expect(@mock_ec2).to receive(:authorize_security_group_ingress).with(args)
 
         @client.authorize_ingress(group_id: 'sg-123', protocol: :tcp, port_or_range: 8000..9000)
       end
 
       it 'should authorize_ingress to a port from anywhere' do
-        @mock_ec2
-          .should_receive(:authorize_security_group_ingress)
-          .with(
-            group_id: 'sg-123',
+        args = {
+          group_id: 'sg-123',
             ip_permissions: [
               {
                 ip_protocol: 'tcp',
                 from_port: 8000,
                 to_port: 9000,
-                ip_ranges: [{ cidr_ip: '0.0.0.0/0' }]
+                ip_ranges: [{cidr_ip: '0.0.0.0/0'}]
               }
             ]
-          )
+        }
+        expect(@mock_ec2).to receive(:authorize_security_group_ingress).with(args)
 
         @client.authorize_ingress(group_id: 'sg-123', protocol: :tcp, port_or_range: 8000..9000, cidr: :anywhere)
       end
     end
 
     it 'should allow_ping' do
-      @mock_ec2
-        .should_receive(:authorize_security_group_ingress)
-        .with(
-          group_id: 'sg-123',
-          ip_permissions: [
-            {
-              ip_protocol: 'icmp',
-              from_port: -1,
-              to_port: -1,
-              ip_ranges: [{ cidr_ip: '0.0.0.0/0' }]
-            }
-          ]
-        )
+      args = {
+        group_id: 'sg-123',
+        ip_permissions: [
+          {
+            ip_protocol: 'icmp',
+            from_port: -1,
+            to_port: -1,
+            ip_ranges: [{cidr_ip: '0.0.0.0/0'}]
+          }
+        ]
+      }
+      expect(@mock_ec2).to receive(:authorize_security_group_ingress).with(args)
 
       @client.allow_ping(group_id: 'sg-123')
     end
 
     it 'should list the security groups' do
       resp = deep_struct(security_groups: [{ group_name: 'hailstorm', group_id: 'sg-123' }])
-      @mock_ec2.should_receive(:describe_security_groups).and_return(resp)
+      expect(@mock_ec2).to receive(:describe_security_groups).and_return(resp)
       ite = @client.list
       expect(ite.next.to_h).to include(group_name: 'hailstorm', group_id: 'sg-123')
     end
 
     it 'should delete a security group' do
-      @mock_ec2.should_receive(:delete_security_group).with(group_id: 'sg-903004f8')
+      expect(@mock_ec2).to receive(:delete_security_group).with(group_id: 'sg-903004f8')
       @client.delete(group_id: 'sg-903004f8')
     end
   end
@@ -395,13 +389,13 @@ describe Hailstorm::Support::AwsAdapter do
         { state: 'available', zone_name: 'us-east-1c', region_name: 'us-east-1' },
       ])
 
-      @mock_ec2.should_receive(:describe_availability_zones).and_return(resp)
+      expect(@mock_ec2).to receive(:describe_availability_zones).and_return(resp)
       expect(@client.first_available_zone).to eq('us-east-1b')
     end
 
     it 'should find vpc from subnet_id' do
       resp = deep_struct(subnets: [{ vpc_id: 'vpc-123' }])
-      @mock_ec2.should_receive(:describe_subnets).with(subnet_ids: ['subnet-123']).and_return(resp)
+      expect(@mock_ec2).to receive(:describe_subnets).with(subnet_ids: ['subnet-123']).and_return(resp)
       expect(@client.find_vpc(subnet_id: 'subnet-123')).to be == resp.subnets[0].vpc_id
     end
 
@@ -411,7 +405,7 @@ describe Hailstorm::Support::AwsAdapter do
         { snapshot_id: 'snap-67890abc0', state: 'completed' }
       ])
 
-      @mock_ec2.should_receive(:describe_snapshots).with(owner_ids: ['self']).and_return(resp)
+      expect(@mock_ec2).to receive(:describe_snapshots).with(owner_ids: ['self']).and_return(resp)
       snapshots = @client.find_self_owned_snapshots
       [
         { id: 'snap-12345def0', status: :pending },
@@ -424,7 +418,7 @@ describe Hailstorm::Support::AwsAdapter do
     end
 
     it 'should delete a snapshot' do
-      @mock_ec2.should_receive(:delete_snapshot).with(snapshot_id: 'snap-123')
+      expect(@mock_ec2).to receive(:delete_snapshot).with(snapshot_id: 'snap-123')
       @client.delete_snapshot(snapshot_id: 'snap-123')
     end
   end
@@ -441,14 +435,14 @@ describe Hailstorm::Support::AwsAdapter do
         }
       ])
 
-      @mock_ec2.should_receive(:describe_images).with(owners: %W[self]).and_return(resp)
+      expect(@mock_ec2).to receive(:describe_images).with(owners: %W[self]).and_return(resp)
       actual_ami = @client.find_self_owned(ami_name_regexp: Regexp.compile('vulcan'))
       expect(actual_ami.id).to eq(resp.images[0].image_id)
     end
 
     it 'should register an instance as a new AMI' do
       image_id = 'ami-123'
-      @mock_ec2.stub!(:create_image).and_return(deep_struct(image_id: image_id))
+      allow(@mock_ec2).to receive(:create_image).and_return(deep_struct(image_id: image_id))
       actual_ami_id = @client.register_ami(
         name: 'hailstorm/brave',
         instance_id: 'i-67678',
@@ -459,7 +453,7 @@ describe Hailstorm::Support::AwsAdapter do
     end
 
     it 'should query for image availability' do
-      @mock_ec2.should_receive(:describe_images).with(image_ids: ['ami-123'])
+      expect(@mock_ec2).to receive(:describe_images).with(image_ids: ['ami-123'])
                .and_return(
                  deep_struct(
                    images: [
@@ -471,16 +465,16 @@ describe Hailstorm::Support::AwsAdapter do
                  )
                )
 
-      expect(@client.available?(ami_id: 'ami-123')).to be_true
+      expect(@client.available?(ami_id: 'ami-123')).to be true
     end
 
     it 'should deregister an AMI' do
-      @mock_ec2.should_receive(:deregister_image).with(image_id: 'ami-123')
+      expect(@mock_ec2).to receive(:deregister_image).with(image_id: 'ami-123')
       @client.deregister(ami_id: 'ami-123')
     end
 
     it 'should find an AMI by ami_id' do
-      @mock_ec2.should_receive(:describe_images).with(image_ids: ['ami-123'])
+      expect(@mock_ec2).to receive(:describe_images).with(image_ids: ['ami-123'])
           .and_return(
             deep_struct(
               images: [
@@ -499,7 +493,7 @@ describe Hailstorm::Support::AwsAdapter do
     end
 
     it 'should find a subnet by name tag' do
-      @mock_ec2.should_receive(:describe_subnets)
+      expect(@mock_ec2).to receive(:describe_subnets)
                .with(filters: [{ name: 'tag:Name', values: ['hailstorm'] }])
                .and_return(deep_struct(subnets: [{ subnet_id: 'subnet-123', state: 'pending' }]))
 
@@ -507,23 +501,22 @@ describe Hailstorm::Support::AwsAdapter do
     end
 
     it 'should query its status' do
-      @mock_ec2.should_receive(:describe_subnets)
+      expect(@mock_ec2).to receive(:describe_subnets)
           .with(subnet_ids: ['subnet-123'])
           .and_return(deep_struct(subnets: [{ subnet_id: 'subnet-123', state: 'available' }]))
 
-      expect(@client.available?(subnet_id: 'subnet-123')).to be_true
+      expect(@client.available?(subnet_id: 'subnet-123')).to be true
     end
 
     it 'should create a Subnet' do
-      @mock_ec2.should_receive(:create_subnet)
-               .with(cidr_block: '10.0.0.0/16', vpc_id: 'vpc-a01106c2')
-               .and_return(deep_struct(subnet: { subnet_id: 'subnet-9d4a7b6c' }))
+      expect(@mock_ec2).to receive(:create_subnet).with(cidr_block: '10.0.0.0/16', vpc_id: 'vpc-a01106c2')
+                                                  .and_return(deep_struct(subnet: { subnet_id: 'subnet-9d4a7b6c' }))
 
       expect(@client.create(vpc_id: 'vpc-a01106c2', cidr: '10.0.0.0/16')).to be == 'subnet-9d4a7b6c'
     end
 
     it 'should modify subnet attribute' do
-      @mock_ec2.should_receive(:modify_subnet_attribute)
+      expect(@mock_ec2).to receive(:modify_subnet_attribute)
                .with(
                  subnet_id: 'subnet-1a2b3c4d',
                  map_public_ip_on_launch: { value: true },
@@ -544,27 +537,27 @@ describe Hailstorm::Support::AwsAdapter do
     end
 
     it 'should modify vpc attribute' do
-      @mock_ec2.should_receive(:modify_vpc_attribute)
+      expect(@mock_ec2).to receive(:modify_vpc_attribute)
                .with(vpc_id: 'vpc-123456', enable_dns_hostnames: { value: true })
 
       @client.modify_attribute(vpc_id: 'vpc-123456', enable_dns_hostnames: true)
 
-      @mock_ec2.should_receive(:modify_vpc_attribute)
+      expect(@mock_ec2).to receive(:modify_vpc_attribute)
           .with(vpc_id: 'vpc-123456', enable_dns_support: { value: true })
 
       @client.modify_attribute(vpc_id: 'vpc-123456', enable_dns_support: true)
     end
 
     it 'should query its status' do
-      @mock_ec2.should_receive(:describe_vpcs)
+      expect(@mock_ec2).to receive(:describe_vpcs)
                .with(vpc_ids: ['vpc-a01106c2'])
                .and_return(deep_struct(vpcs: [{ state: 'available' }]))
 
-      expect(@client.available?(vpc_id: 'vpc-a01106c2')).to be_true
+      expect(@client.available?(vpc_id: 'vpc-a01106c2')).to be true
     end
 
     it 'should create a VPC' do
-      @mock_ec2.should_receive(:create_vpc)
+      expect(@mock_ec2).to receive(:create_vpc)
                .with(cidr_block: '10.0.0.0/16')
                .and_return(deep_struct(vpc: { vpc_id: 'vpc-a01106c2', state: 'pending' }))
 
@@ -578,14 +571,13 @@ describe Hailstorm::Support::AwsAdapter do
     end
 
     it 'should attach to a VPC' do
-      @mock_ec2.should_receive(:attach_internet_gateway).with(vpc_id: 'vpc-123', internet_gateway_id: 'igw-c0a643a9')
+      expect(@mock_ec2).to receive(:attach_internet_gateway).with(vpc_id: 'vpc-123', internet_gateway_id: 'igw-c0a643a9')
       @client.attach(igw_id: 'igw-c0a643a9', vpc_id: 'vpc-123')
     end
 
     it 'should create an Internet Gateway' do
-      @mock_ec2.stub!(:create_internet_gateway)
-               .and_return(deep_struct(internet_gateway: { internet_gateway_id: 'igw-c0a643a9' }))
-
+      resp = deep_struct(internet_gateway: {internet_gateway_id: 'igw-c0a643a9'})
+      allow(@mock_ec2).to receive(:create_internet_gateway).and_return(resp)
       expect(@client.create).to be == 'igw-c0a643a9'
     end
   end
@@ -596,7 +588,7 @@ describe Hailstorm::Support::AwsAdapter do
     end
 
     it 'should create a route' do
-      @mock_ec2.should_receive(:create_route)
+      expect(@mock_ec2).to receive(:create_route)
                .with(destination_cidr_block: '0.0.0.0/0',
                      gateway_id: 'igw-c0a643a9',
                      route_table_id: 'rtb-22574640')
@@ -607,7 +599,7 @@ describe Hailstorm::Support::AwsAdapter do
     end
 
     it 'should associate with a subnet' do
-      @mock_ec2.should_receive(:associate_route_table)
+      expect(@mock_ec2).to receive(:associate_route_table)
                .with(route_table_id: 'rtb-123', subnet_id: 'subnet-123')
                .and_return(deep_struct(association_id: 'rtbassoc-781d0d1a'))
 
@@ -628,15 +620,14 @@ describe Hailstorm::Support::AwsAdapter do
       ]
 
       resp = deep_struct(route_tables: route_tables)
-      @mock_ec2.should_receive(:describe_route_tables)
-               .with(filters: [{ name: 'vpc-id', values: ['vpc-123'] }])
-               .and_return(resp)
+      expect(@mock_ec2).to receive(:describe_route_tables).with(filters: [{ name: 'vpc-id', values: ['vpc-123'] }])
+                                                          .and_return(resp)
 
       expect(@client.main_route_table(vpc_id: 'vpc-123')).to be == 'rtb-1f382e7d'
     end
 
     it 'should fetch all routes in a route_table' do
-      @mock_ec2.should_receive(:describe_route_tables)
+      expect(@mock_ec2).to receive(:describe_route_tables)
                .with(route_table_ids: ['rtb-1f382e7d'])
                .and_return(
                  deep_struct(
@@ -651,10 +642,8 @@ describe Hailstorm::Support::AwsAdapter do
     end
 
     it 'should create a route table' do
-      @mock_ec2.should_receive(:create_route_table)
-               .with(vpc_id: 'vpc-a01106c2')
-               .and_return(deep_struct(route_table: { route_table_id: 'rtb-22574640' }))
-
+      response = deep_struct(route_table: {route_table_id: 'rtb-22574640'})
+      expect(@mock_ec2).to receive(:create_route_table).with(vpc_id: 'vpc-a01106c2').and_return(response)
       expect(@client.create(vpc_id: 'vpc-a01106c2')).to be == 'rtb-22574640'
     end
   end
@@ -673,7 +662,7 @@ describe Hailstorm::Support::AwsAdapter do
   context Hailstorm::Support::AwsAdapter::AbstractClient do
     it 'should tag a resource by name' do
       any_client = Hailstorm::Support::AwsAdapter::AbstractClient.new(ec2_client: @mock_ec2)
-      @mock_ec2.should_receive(:create_tags).with(resources: ['i-123'], tags: [{key: 'Name', value: 'Agent 1' }])
+      expect(@mock_ec2).to receive(:create_tags).with(resources: ['i-123'], tags: [{key: 'Name', value: 'Agent 1' }])
       any_client.tag_name(resource_id: 'i-123', name: 'Agent 1')
     end
   end

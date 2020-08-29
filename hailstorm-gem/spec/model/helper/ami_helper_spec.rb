@@ -7,10 +7,10 @@ describe Hailstorm::Model::Helper::AmiHelper do
 
   before(:each) do
     @aws = Hailstorm::Model::AmazonCloud.new
-    @mock_sg_finder = mock(Hailstorm::Model::Helper::SecurityGroupFinder)
-    @mock_ec2_helper = mock(Hailstorm::Model::Helper::Ec2InstanceHelper)
-    @mock_instance_client = mock(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
-    @mock_ami_client = mock(Hailstorm::Behavior::AwsAdaptable::AmiClient)
+    @mock_sg_finder = instance_double(Hailstorm::Model::Helper::SecurityGroupFinder)
+    @mock_ec2_helper = instance_double(Hailstorm::Model::Helper::Ec2InstanceHelper)
+    @mock_instance_client = instance_double(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
+    @mock_ami_client = instance_double(Hailstorm::Behavior::AwsAdaptable::AmiClient)
     @helper = Hailstorm::Model::Helper::AmiHelper.new(security_group_finder: @mock_sg_finder,
                                                       ec2_instance_helper: @mock_ec2_helper,
                                                       instance_client: @mock_instance_client,
@@ -19,7 +19,7 @@ describe Hailstorm::Model::Helper::AmiHelper do
   end
 
   it 'maintains a mapping of AMI IDs for AWS regions' do
-    described_class.region_base_ami_map.should_not be_empty
+    expect(described_class.region_base_ami_map).to_not be_empty
   end
 
   context '#create_agent_ami' do
@@ -33,10 +33,10 @@ describe Hailstorm::Model::Helper::AmiHelper do
         @aws.security_group = 'sg-12345'
         @aws.vpc_subnet_id = 'subnet-1234'
 
-        @helper.stub!(:ami_creation_needed?).and_return(true)
+        allow(@helper).to receive(:ami_creation_needed?).and_return(true)
 
         mock_security_group = Hailstorm::Behavior::AwsAdaptable::SecurityGroup.new(group_id: @aws.security_group)
-        @mock_sg_finder.stub!(:find_security_group).and_return(mock_security_group)
+        allow(@mock_sg_finder).to receive(:find_security_group).and_return(mock_security_group)
 
         mock_instance = Hailstorm::Behavior::AwsAdaptable::Instance.new(
           instance_id: 'i-23456',
@@ -45,29 +45,29 @@ describe Hailstorm::Model::Helper::AmiHelper do
           state: Hailstorm::Behavior::AwsAdaptable::InstanceState.new(name: 'shutting-down')
         )
 
-        @mock_ec2_helper.stub!(:create_ec2_instance).and_return(mock_instance)
+        allow(@mock_ec2_helper).to receive(:create_ec2_instance).and_return(mock_instance)
 
-        @mock_instance_client.stub!(:terminated?).and_return(true)
-        @mock_instance_client.stub!(:ready?).and_return(true)
+        allow(@mock_instance_client).to receive(:terminated?).and_return(true)
+        allow(@mock_instance_client).to receive(:ready?).and_return(true)
       end
 
       context 'ami build fails' do
         it 'should raise an exception' do
-          @helper.stub!(:provision)
-          @helper.stub!(:register_hailstorm_ami).and_raise(StandardError, 'mocked exception')
-          @mock_instance_client.should_receive(:terminate)
+          allow(@helper).to receive(:provision)
+          allow(@helper).to receive(:register_hailstorm_ami).and_raise(StandardError, 'mocked exception')
+          expect(@mock_instance_client).to receive(:terminate)
           expect { @helper.create_agent_ami! }.to raise_error
         end
       end
 
       context 'ami build succeeds' do
         it 'should assign the AMI id' do
-          @helper.stub!(:provision)
+          allow(@helper).to receive(:provision)
           mock_ec2_image = Hailstorm::Behavior::AwsAdaptable::Ami.new(image_id: 'ami-12334',
                                                                       state: 'available',
                                                                       name: 'same_owner/other_image')
-          @helper.stub!(:register_hailstorm_ami).and_return(mock_ec2_image.id)
-          @mock_instance_client.should_receive(:terminate)
+          allow(@helper).to receive(:register_hailstorm_ami).and_return(mock_ec2_image.id)
+          expect(@mock_instance_client).to receive(:terminate)
           @helper.create_agent_ami!
           expect(@aws.agent_ami).to eql(mock_ec2_image.id)
         end
@@ -82,7 +82,7 @@ describe Hailstorm::Model::Helper::AmiHelper do
         mock_ec2_ami = Hailstorm::Behavior::AwsAdaptable::Ami.new(state: 'available',
                                                                   name: @helper.send(:ami_id),
                                                                   ami_id: 'ami-123')
-        @mock_ami_client.stub!(:find_self_owned).and_return(mock_ec2_ami)
+        allow(@mock_ami_client).to receive(:find_self_owned).and_return(mock_ec2_ami)
         @helper.send(:check_for_existing_ami)
         expect(@aws.agent_ami).to be == mock_ec2_ami.id
       end
@@ -93,7 +93,7 @@ describe Hailstorm::Model::Helper::AmiHelper do
     context '#active == false' do
       it 'should return false' do
         @aws.active = false
-        expect(@helper.send(:ami_creation_needed?)).to be_false
+        expect(@helper.send(:ami_creation_needed?)).to be false
       end
     end
 
@@ -101,7 +101,7 @@ describe Hailstorm::Model::Helper::AmiHelper do
       it 'should check_for_existing_ami' do
         @aws.active = true
         @aws.agent_ami = nil
-        @helper.should_receive(:check_for_existing_ami).and_return(nil)
+        expect(@helper).to receive(:check_for_existing_ami).and_return(nil)
         @helper.send(:ami_creation_needed?)
       end
     end
@@ -110,8 +110,8 @@ describe Hailstorm::Model::Helper::AmiHelper do
       it 'should return false' do
         @aws.active = true
         @aws.agent_ami = nil
-        @helper.stub!(:check_for_existing_ami).and_return('ami-1234')
-        expect(@helper.send(:ami_creation_needed?)).to be_false
+        allow(@helper).to receive(:check_for_existing_ami).and_return('ami-1234')
+        expect(@helper.send(:ami_creation_needed?)).to be false
       end
     end
 
@@ -119,8 +119,8 @@ describe Hailstorm::Model::Helper::AmiHelper do
       it 'should return true' do
         @aws.active = true
         @aws.agent_ami = nil
-        @helper.stub!(:check_for_existing_ami).and_return(nil)
-        expect(@helper.send(:ami_creation_needed?)).to be_true
+        allow(@helper).to receive(:check_for_existing_ami).and_return(nil)
+        expect(@helper.send(:ami_creation_needed?)).to be true
       end
     end
   end
@@ -129,11 +129,11 @@ describe Hailstorm::Model::Helper::AmiHelper do
     it 'should install Hailstorm dependencies on the ec2 instance' do
       @aws.project = Hailstorm::Model::Project.create!(project_code: __FILE__)
       mock_instance = Hailstorm::Behavior::AwsAdaptable::Instance.new(public_ip_address: '120.34.35.58')
-      mock_ssh = mock(Net::SSH)
-      Hailstorm::Support::SSH.stub!(:start).and_yield(mock_ssh)
-      Hailstorm::Model::Helper::AmiProvisionHelper.any_instance.should_receive(:install_java).with(mock_ssh)
-      Hailstorm::Model::Helper::AmiProvisionHelper.any_instance.should_receive(:install_jmeter).with(mock_ssh)
-      @aws.stub!(:identity_file_path).and_return(__FILE__)
+      mock_ssh = class_double(Net::SSH)
+      allow(Hailstorm::Support::SSH).to receive(:start).and_yield(mock_ssh)
+      expect_any_instance_of(Hailstorm::Model::Helper::AmiProvisionHelper).to receive(:install_java).with(mock_ssh)
+      expect_any_instance_of(Hailstorm::Model::Helper::AmiProvisionHelper).to receive(:install_jmeter).with(mock_ssh)
+      allow(@aws).to receive(:identity_file_path).and_return(__FILE__)
       @helper.send(:provision, mock_instance)
     end
   end
@@ -146,23 +146,23 @@ describe Hailstorm::Model::Helper::AmiHelper do
 
     it 'should create an AMI from the instance state' do
       mock_ami = Hailstorm::Behavior::AwsAdaptable::Ami.new(state: 'available', image_id: 'ami-123', name: 'hailstorm')
-      @mock_ami_client.stub!(:register_ami).and_return(mock_ami.id)
-      @mock_ami_client.stub!(:available?).and_return(true)
+      allow(@mock_ami_client).to receive(:register_ami).and_return(mock_ami.id)
+      allow(@mock_ami_client).to receive(:available?).and_return(true)
       ami_id = @helper.send(:register_hailstorm_ami, @mock_instance)
       expect(ami_id).to eql(mock_ami.image_id)
     end
 
     context 'on failure' do
       it 'should raise exception' do
-        @mock_ami_client.stub!(:register_ami).and_return('ami-123')
-        @helper.stub!(:wait_for).and_raise(Hailstorm::Exception, 'mock waiter error')
+        allow(@mock_ami_client).to receive(:register_ami).and_return('ami-123')
+        allow(@helper).to receive(:wait_for).and_raise(Hailstorm::Exception, 'mock waiter error')
         state_reason = Hailstorm::Behavior::AwsAdaptable::StateReason.new(code: '10',
                                                                           message: 'mock AMI creation failure')
         mock_ami = Hailstorm::Behavior::AwsAdaptable::Ami.new(state: 'failed',
                                                               image_id: 'ami-123',
                                                               name: 'hailstorm',
                                                               state_reason: state_reason)
-        @mock_ami_client.stub!(:find).and_return(mock_ami)
+        allow(@mock_ami_client).to receive(:find).and_return(mock_ami)
         expect { @helper.send(:register_hailstorm_ami, @mock_instance) }.to raise_error(Hailstorm::AmiCreationFailure)
         begin
           @helper.send(:register_hailstorm_ami, @mock_instance)

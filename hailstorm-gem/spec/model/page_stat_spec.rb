@@ -7,17 +7,17 @@ describe Hailstorm::Model::PageStat do
     before(:each) do
       @page_stat = Hailstorm::Model::PageStat.new(client_stat: Hailstorm::Model::ClientStat.new,
                                                   page_label: 'a')
-      @page_stat.stub!(:samples_breakup)
+      allow(@page_stat).to receive(:samples_breakup)
     end
     it 'should increment errors_count and samples_count on sample failure' do
-      @page_stat.should_receive(:increment).with(:samples_count)
+      expect(@page_stat).to receive(:increment).with(:samples_count)
       expect(@page_stat.errors_count).to be == 0
       sample = { t: '123', ts: Time.now.to_i.to_s, by: '12', s: 'false' }.stringify_keys
       @page_stat.collect_sample(sample)
       expect(@page_stat.errors_count).to be == 1
     end
     it 'should increment only samples_count on sample success' do
-      @page_stat.should_receive(:increment).with(:samples_count)
+      expect(@page_stat).to receive(:increment).with(:samples_count)
       expect(@page_stat.errors_count).to be == 0
       sample = { t: '123', ts: Time.now.to_i.to_s, by: '12', s: 'true' }.stringify_keys
       @page_stat.collect_sample(sample)

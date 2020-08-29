@@ -16,7 +16,7 @@ describe Hailstorm::Model::ExecutionCycle do
       execution_cycle.started!
       execution_cycle.id = cycle_id
 
-      chart_model = mock('ChartModel', getFilePath: '', getWidth: 800, getHeight: 600)
+      chart_model = double('ChartModel', getFilePath: '', getWidth: 800, getHeight: 600)
 
       expect(execution_cycle).to respond_to(:clusters)
       cluster = Hailstorm::Model::AmazonCloud.new
@@ -24,20 +24,20 @@ describe Hailstorm::Model::ExecutionCycle do
       expect(client_stat).to respond_to(:jmeter_plan)
       jmeter_plan = Hailstorm::Model::JmeterPlan.new
       expect(jmeter_plan).to respond_to(:plan_name)
-      jmeter_plan.stub!(:plan_name).and_return('Priming test')
-      client_stat.stub!(:jmeter_plan).and_return(jmeter_plan)
-      client_stat.stub!(:aggregate_graph).and_return(chart_model)
+      allow(jmeter_plan).to receive(:plan_name).and_return('Priming test')
+      allow(client_stat).to receive(:jmeter_plan).and_return(jmeter_plan)
+      allow(client_stat).to receive(:aggregate_graph).and_return(chart_model)
       expect(cluster).to respond_to(:client_stats)
-      cluster.stub_chain(:client_stats, :where).and_return([ client_stat ])
-      execution_cycle.stub!(:clusters).and_return([cluster])
+      allow(cluster).to receive_message_chain(:client_stats, :where).and_return([ client_stat ])
+      allow(execution_cycle).to receive(:clusters).and_return([cluster])
 
       expect(execution_cycle).to respond_to(:target_stats)
       target_stat = Hailstorm::Model::TargetStat.new
       expect(target_stat).to respond_to(:target_host)
-      target_stat.stub!(:target_host).and_return(Hailstorm::Model::TargetHost.new)
-      target_stat.stub!(:utilization_graph).and_return(chart_model)
-      execution_cycle.stub!(:target_stats).and_return([target_stat])
-      execution_cycle.stub!(:target_hosts).and_return([target_stat.target_host])
+      allow(target_stat).to receive(:target_host).and_return(Hailstorm::Model::TargetHost.new)
+      allow(target_stat).to receive(:utilization_graph).and_return(chart_model)
+      allow(execution_cycle).to receive(:target_stats).and_return([target_stat])
+      allow(execution_cycle).to receive(:target_hosts).and_return([target_stat.target_host])
       execution_cycle
     end
   end
@@ -47,18 +47,16 @@ describe Hailstorm::Model::ExecutionCycle do
       it 'should build the report' do
         project = Hailstorm::Model::Project.new(project_code: 'execution_cycle_spec')
         builder = Hailstorm::Support::ReportBuilder.new
-        builder.should_receive(:build)
+        expect(builder).to receive(:build)
         cycle_ids = [1, 3, 4]
-        Hailstorm::Model::ExecutionCycle
-            .stub!(:execution_cycles_for_report)
-            .and_return(generate_execution_cycles(cycle_ids))
-        chart_model = mock('ChartModel', getFilePath: '', getWidth: 800, getHeight: 600)
-        Hailstorm::Model::ExecutionCycle.any_instance.stub(:hits_per_second_graph).and_return(chart_model)
-        Hailstorm::Model::ExecutionCycle.any_instance.stub(:active_threads_over_time_graph).and_return(chart_model)
-        Hailstorm::Model::ExecutionCycle.any_instance.stub(:throughput_over_time_graph).and_return(chart_model)
-        Hailstorm::Model::ExecutionCycle.stub!(:client_comparison_graph).and_return(chart_model)
-        Hailstorm::Model::ExecutionCycle.stub!(:cpu_comparison_graph).and_return(chart_model)
-        Hailstorm::Model::ExecutionCycle.stub!(:memory_comparison_graph).and_return(chart_model)
+        allow(Hailstorm::Model::ExecutionCycle).to receive(:execution_cycles_for_report).and_return(generate_execution_cycles(cycle_ids))
+        chart_model = double('ChartModel', getFilePath: '', getWidth: 800, getHeight: 600)
+        allow_any_instance_of(Hailstorm::Model::ExecutionCycle).to receive(:hits_per_second_graph).and_return(chart_model)
+        allow_any_instance_of(Hailstorm::Model::ExecutionCycle).to receive(:active_threads_over_time_graph).and_return(chart_model)
+        allow_any_instance_of(Hailstorm::Model::ExecutionCycle).to receive(:throughput_over_time_graph).and_return(chart_model)
+        allow(Hailstorm::Model::ExecutionCycle).to receive(:client_comparison_graph).and_return(chart_model)
+        allow(Hailstorm::Model::ExecutionCycle).to receive(:cpu_comparison_graph).and_return(chart_model)
+        allow(Hailstorm::Model::ExecutionCycle).to receive(:memory_comparison_graph).and_return(chart_model)
         Hailstorm::Model::ExecutionCycle.create_report(project, cycle_ids, builder)
       end
     end
@@ -67,7 +65,7 @@ describe Hailstorm::Model::ExecutionCycle do
       it 'should not build the report' do
         project = Hailstorm::Model::Project.new(project_code: 'execution_cycle_spec')
         builder = Hailstorm::Support::ReportBuilder.new
-        builder.should_not_receive(:build)
+        expect(builder).to_not receive(:build)
         cycle_ids = [1, 3, 4]
         Hailstorm::Model::ExecutionCycle.create_report(project, cycle_ids, builder)
       end
@@ -79,8 +77,8 @@ describe Hailstorm::Model::ExecutionCycle do
       it 'should fetch all stopped execution cycles' do
         project = Hailstorm::Model::Project.new(project_code: 'execution_cycle_spec')
         expect(project).to respond_to(:execution_cycles)
-        project.stub_chain(:execution_cycles, :where, :order, :all)
-        project.execution_cycles.should_receive(:where).with(status: :stopped)
+        allow(project).to receive_message_chain(:execution_cycles, :where, :order, :all)
+        expect(project.execution_cycles).to receive(:where).with(status: :stopped)
         Hailstorm::Model::ExecutionCycle.execution_cycles_for_report(project)
       end
     end
@@ -203,9 +201,9 @@ describe Hailstorm::Model::ExecutionCycle do
 
     context '#export_results' do
       it 'should return path to exported files' do
-        FileUtils.stub!(:rm_rf)
-        FileUtils.stub!(:mkpath)
-        Hailstorm::Model::ClientStat.any_instance.stub(:write_jtl) { |dir| "#{dir}/a.jtl" }
+        allow(FileUtils).to receive(:rm_rf)
+        allow(FileUtils).to receive(:mkpath)
+        allow_any_instance_of(Hailstorm::Model::ClientStat).to receive(:write_jtl) { |dir| "#{dir}/a.jtl" }
         paths = @execution_cycle.export_results(RSpec.configuration.build_path)
         expect(paths.size).to be == 2
       end
@@ -214,14 +212,14 @@ describe Hailstorm::Model::ExecutionCycle do
     context '#import_results' do
       it 'should import JTL' do
         expect(@jmeter_plan_1).to respond_to(:num_threads)
-        @jmeter_plan_1.stub!(:num_threads).and_return(100)
+        allow(@jmeter_plan_1).to receive(:num_threads).and_return(100)
         client_stat = Hailstorm::Model::ClientStat.new
         expect(client_stat).to respond_to(:first_sample_at, :last_sample_at)
         start_time = Time.new(2011, 6, 3, 15, 34, 12)
         end_time = Time.new(2011, 6, 3, 16, 28, 40)
-        client_stat.stub!(:first_sample_at).and_return(start_time)
-        client_stat.stub!(:last_sample_at).and_return(end_time)
-        Hailstorm::Model::ClientStat.stub!(:create_client_stat).and_return(client_stat)
+        allow(client_stat).to receive(:first_sample_at).and_return(start_time)
+        allow(client_stat).to receive(:last_sample_at).and_return(end_time)
+        allow(Hailstorm::Model::ClientStat).to receive(:create_client_stat).and_return(client_stat)
         @execution_cycle.import_results(@jmeter_plan_1, @data_center, 'a.jtl')
         expect(@execution_cycle.started_at).to be == start_time
         expect(@execution_cycle.stopped_at).to be == end_time
@@ -291,7 +289,7 @@ describe Hailstorm::Model::ExecutionCycle do
   context 'execution_cycles comparison graph' do
     it 'should build the graph' do
       project = Hailstorm::Model::Project.create!(project_code: 'target_stat_spec')
-      Hailstorm::Model::Nmon.any_instance.stub(:transfer_identity_file)
+      allow_any_instance_of(Hailstorm::Model::Nmon).to receive(:transfer_identity_file)
       target_host = Hailstorm::Model::Nmon.create!(host_name: 'a',
                                                    project: project,
                                                    role_name: 'server',
@@ -306,7 +304,7 @@ describe Hailstorm::Model::ExecutionCycle do
                                                                    stopped_at: t + index.hours,
                                                                    threads_count: threads_count)
 
-        Hailstorm::Model::TargetStat.any_instance.stub(:write_blobs)
+        allow_any_instance_of(Hailstorm::Model::TargetStat).to receive(:write_blobs)
         2.times do
           Hailstorm::Model::TargetStat.create!(execution_cycle: execution_cycle,
                                                target_host: target_host,
@@ -316,8 +314,8 @@ describe Hailstorm::Model::ExecutionCycle do
         execution_cycle
       end
 
-      grapher = double('TargetComparisonGraph').as_null_object
-      grapher.should_receive(:build).exactly(2).times
+      grapher = spy('TargetComparisonGraph')
+      expect(grapher).to receive(:build).exactly(2).times
 
       Hailstorm::Model::ExecutionCycle.cpu_comparison_graph(execution_cycles,
                                                             builder: grapher,
@@ -357,7 +355,7 @@ describe Hailstorm::Model::ExecutionCycle do
                        addResponseTimeDataItem: nil,
                        addThroughputDataItem: nil,
                        'output_path=': nil)
-      grapher.should_receive(:build)
+      expect(grapher).to receive(:build)
       Hailstorm::Model::ExecutionCycle.client_comparison_graph(execution_cycles,
                                                                builder: grapher,
                                                                working_path: RSpec.configuration.build_path)
@@ -377,7 +375,7 @@ describe Hailstorm::Model::ExecutionCycle do
                                              last_sample_at: Time.new(2010, 10, 7, 14 + index, 23, 45))
       end
 
-      Hailstorm::Model::ClientStat.any_instance.stub(:write_jtl) do
+      allow_any_instance_of(Hailstorm::Model::ClientStat).to receive(:write_jtl) do
         file_path = Tempfile.new
         File.write(file_path, JTL_LOG_DATA)
         file_path
@@ -386,7 +384,7 @@ describe Hailstorm::Model::ExecutionCycle do
       grapher = double('TimeSeriesGraph', addDataPoint: nil, 'series_name=': nil, 'range_name=': nil,
                        'start_time=': nil)
 
-      grapher.should_receive(:build).exactly(3).times
+      expect(grapher).to receive(:build).exactly(3).times
       execution_cycle.hits_per_second_graph(builder: grapher, working_path: RSpec.configuration.build_path)
       execution_cycle.active_threads_over_time_graph(builder: grapher, working_path: RSpec.configuration.build_path)
       execution_cycle.throughput_over_time_graph(builder: grapher, working_path: RSpec.configuration.build_path)

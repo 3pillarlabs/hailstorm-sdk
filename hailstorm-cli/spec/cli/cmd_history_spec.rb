@@ -16,7 +16,7 @@ describe Hailstorm::Cli::CmdHistory do
       FileUtils.safe_unlink(history_file_path)
 
       @cmd_history = Hailstorm::Cli::CmdHistory.new([], max_history_size: 10)
-      @cmd_history.stub!(:saved_history_path).and_return(history_file_path)
+      allow(@cmd_history).to receive(:saved_history_path).and_return(history_file_path)
     end
 
     it 'should add a new command' do

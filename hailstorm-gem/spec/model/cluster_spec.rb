@@ -31,38 +31,41 @@ end
 
 def clusterables_stub!
   klasses = [Hailstorm::Model::AmazonCloud, Hailstorm::Model::DataCenter]
-  methods = %i[
+  common_instance_methods = %i[
     setup
-    identity_file_exists
-    find_security_group
-    create_security_group
-    check_for_existing_ami
-    create_agent_ami
     before_generate_load
     start_slave_process
     start_master_process
     after_generate_load
-    set_availability_zone
     before_stop_load_generation
     stop_master_process
     after_stop_load_generation
     cleanup
-    before_destroy_load_agent
-    after_destroy_load_agent
     purge
-    assign_vpc_subnet
+    transfer_identity_file
   ]
 
-  methods.each do |m|
-    klasses.each { |k| k.any_instance.stub(m) }
+  common_instance_methods.each do |m|
+    klasses.each { |k| allow_any_instance_of(k).to receive(m) }
   end
 
   klasses.each do |k|
-    k.any_instance.stub(:check_status).and_return([mock(Hailstorm::Model::MasterAgent)])
+    allow_any_instance_of(k).to receive(:check_status).and_return([instance_double(Hailstorm::Model::MasterAgent)])
   end
 
-  Hailstorm::Model::AmazonCloud.any_instance.stub(:transfer_identity_file)
-  Hailstorm::Model::DataCenter.any_instance.stub(:transfer_identity_file)
+  amz_instance_methods = %i[
+    identity_file_exists
+    create_security_group
+    create_agent_ami
+    set_availability_zone
+    assign_vpc_subnet
+    before_destroy_load_agent
+    after_destroy_load_agent
+  ]
+
+  amz_instance_methods.each do |m|
+    allow_any_instance_of(Hailstorm::Model::AmazonCloud).to receive(m)
+  end
 end
 
 describe Hailstorm::Model::Cluster do
@@ -202,7 +205,7 @@ describe Hailstorm::Model::Cluster do
   context '#configure' do
     context ':amazon_cloud' do
       it 'should persist all configuration options' do
-        Hailstorm::Model::AmazonCloud.any_instance.stub(:transfer_identity_file)
+        allow_any_instance_of(Hailstorm::Model::AmazonCloud).to receive(:transfer_identity_file)
         config = Hailstorm::Support::Configuration.new
         config.clusters(:amazon_cloud) do |aws|
           aws.access_key = 'blah'
@@ -348,7 +351,6 @@ describe Hailstorm::Model::Cluster do
 
       clusterables_stub!
       @project.build_current_execution_cycle.save!
-      @project.current_execution_cycle.stub!(:collect_client_stats)
 
       Hailstorm::Model::Cluster.configure_all(@project, config)
       @project.current_execution_cycle.started!
@@ -370,13 +372,12 @@ describe Hailstorm::Model::Cluster do
 
         clusterables_stub!
         @project.build_current_execution_cycle.save!
-        @project.current_execution_cycle.stub!(:collect_client_stats)
 
         Hailstorm::Model::Cluster.configure_all(@project, config)
         @project.current_execution_cycle.started!
         Hailstorm::Model::Cluster.generate_all_load(@project)
 
-        Hailstorm::Model::LoadAgent.stub_chain(:where, :all) { [ mock(Hailstorm::Model::LoadAgent) ] }
+        allow(Hailstorm::Model::LoadAgent).to receive_message_chain(:where, :all) { [ instance_double(Hailstorm::Model::LoadAgent) ] }
         expect { Hailstorm::Model::Cluster.stop_load_generation(@project) }.to raise_error(Hailstorm::Exception)
       end
     end
@@ -400,16 +401,17 @@ describe Hailstorm::Model::Cluster do
       end
 
       clusterables_stub!
-      mock_agent = mock(Hailstorm::Model::LoadAgent).as_null_object
-      mock_agent.stub!(:transaction).and_yield
-      Hailstorm::Model::AmazonCloud
-        .any_instance
-        .stub_chain(:load_agents, :all)
-        .and_return([mock_agent])
+      mock_agent = instance_spy(Hailstorm::Model::LoadAgent)
+      allow(mock_agent).to receive(:transaction).and_yield
+      allow_any_instance_of(Hailstorm::Model::AmazonCloud).to receive_message_chain(
+                                                                :load_agents, :all
+                                                              ).and_return([mock_agent])
 
       Hailstorm::Model::Cluster.configure_all(@project, config)
       expect(Hailstorm::Model::AmazonCloud.count).to be > 0
       expect(Hailstorm::Model::DataCenter.count).to be > 0
+
+
 
       Hailstorm::Model::Cluster.terminate(@project)
       expect(Hailstorm::Model::LoadAgent.count).to be_zero
@@ -428,7 +430,7 @@ describe Hailstorm::Model::Cluster do
 
       clusterables_stub!
       Hailstorm::Model::Cluster.configure_all(@project, config)
-      Hailstorm::Model::AmazonCloud.any_instance.should_receive(:purge)
+      expect_any_instance_of(Hailstorm::Model::AmazonCloud).to receive(:purge)
       Hailstorm::Model::Cluster.first.purge
     end
 
@@ -443,7 +445,7 @@ describe Hailstorm::Model::Cluster do
 
       clusterables_stub!
       Hailstorm::Model::Cluster.configure_all(@project, config)
-      Hailstorm::Model::AmazonCloud.any_instance.should_not_receive(:purge)
+      expect_any_instance_of(Hailstorm::Model::AmazonCloud).to_not receive(:purge)
       Hailstorm::Model::Cluster.first.purge
     end
   end
@@ -484,10 +486,7 @@ describe Hailstorm::Model::Cluster do
       end
 
       clusterables_stub!
-      Hailstorm::Model::AmazonCloud
-        .any_instance
-        .stub(:destroy!)
-        .and_raise(ActiveRecord::RecordNotFound, 'mock not found error')
+      allow_any_instance_of(Hailstorm::Model::AmazonCloud).to receive(:destroy!).and_raise(ActiveRecord::RecordNotFound, 'mock not found error')
 
       Hailstorm::Model::Cluster.configure_all(@project, config)
       expect { Hailstorm::Model::Cluster.first.destroy! }.to_not raise_error
@@ -507,8 +506,8 @@ describe Hailstorm::Model::Cluster do
     context '#start_jmeter_process' do
       it 'should start jmeter on iterated agents' do
         agent = Hailstorm::Model::MasterAgent.new
-        agent.should_receive(:upload_scripts)
-        agent.should_receive(:start_jmeter)
+        expect(agent).to receive(:upload_scripts)
+        expect(agent).to receive(:start_jmeter)
         clusterable = Hailstorm::Model::DataCenter.new
         clusterable.start_jmeter_process([agent], true)
       end
@@ -519,8 +518,8 @@ describe Hailstorm::Model::Cluster do
         clusterable = Hailstorm::Model::DataCenter.new
         expect(clusterable).to respond_to(:slave_agents)
         agent = Hailstorm::Model::SlaveAgent.new
-        clusterable.stub_chain(:slave_agents, :where).and_return([agent])
-        clusterable.should_receive(:start_jmeter_process)
+        allow(clusterable).to receive_message_chain(:slave_agents, :where).and_return([agent])
+        expect(clusterable).to receive(:start_jmeter_process)
         clusterable.start_slave_process
       end
     end
@@ -530,8 +529,8 @@ describe Hailstorm::Model::Cluster do
         clusterable = Hailstorm::Model::DataCenter.new
         expect(clusterable).to respond_to(:master_agents)
         agent = Hailstorm::Model::MasterAgent.new
-        clusterable.stub_chain(:master_agents, :where).and_return([agent])
-        clusterable.should_receive(:start_jmeter_process)
+        allow(clusterable).to receive_message_chain(:master_agents, :where).and_return([agent])
+        expect(clusterable).to receive(:start_jmeter_process)
         clusterable.start_master_process
       end
     end
@@ -541,8 +540,8 @@ describe Hailstorm::Model::Cluster do
         clusterable = Hailstorm::Model::DataCenter.new
         expect(clusterable).to respond_to(:master_agents)
         agent = Hailstorm::Model::MasterAgent.new
-        clusterable.stub_chain(:master_agents, :where, :all).and_return([agent])
-        agent.should_receive(:stop_jmeter).with(false, false)
+        allow(clusterable).to receive_message_chain(:master_agents, :where, :all).and_return([agent])
+        expect(agent).to receive(:stop_jmeter).with(false, false)
         clusterable.stop_master_process
       end
     end
@@ -550,18 +549,18 @@ describe Hailstorm::Model::Cluster do
     context '#process_jmeter_plan' do
       before(:each) do
         @clusterable = Hailstorm::Model::DataCenter.new
-        @jmeter_plan = mock(Hailstorm::Model::JmeterPlan, id: 1)
-        @clusterable.stub!(:master_slave_relation).and_return(:master_agents)
+        @jmeter_plan = instance_double(Hailstorm::Model::JmeterPlan, id: 1)
+        allow(@clusterable).to receive(:master_slave_relation).and_return(:master_agents)
       end
       context '#create_or_enable fails with Hailstorm::Exception' do
         it 'should raise the same error' do
-          @clusterable.stub!(:create_or_enable).and_raise(Hailstorm::Exception, 'mock exception')
+          allow(@clusterable).to receive(:create_or_enable).and_raise(Hailstorm::Exception, 'mock exception')
           expect { @clusterable.process_jmeter_plan(@jmeter_plan) }.to raise_error(Hailstorm::Exception)
         end
       end
       context '#create_or_enable fails with exception outside of Hailstorm::Exception hierarchy' do
         it 'should raise Hailstorm::AgentCreationFailure' do
-          @clusterable.stub!(:create_or_enable).and_raise(Exception, 'mock exception')
+          allow(@clusterable).to receive(:create_or_enable).and_raise(Exception, 'mock exception')
           expect { @clusterable.process_jmeter_plan(@jmeter_plan) }
               .to raise_error(Hailstorm::AgentCreationFailure) { |error| expect(error.diagnostics).to_not be_blank }
         end
@@ -571,11 +570,12 @@ describe Hailstorm::Model::Cluster do
     context '#provision_agents' do
       it 'process active jmeter_plans in project' do
         clusterable = Hailstorm::Model::DataCenter.new
-        clusterable.stub!(:destroyed?).and_return(false)
-        clusterable.stub!(:project).and_return(@project)
+        allow(clusterable).to receive(:destroyed?).and_return(false)
+        allow(clusterable).to receive(:project).and_return(@project)
         expect(@project).to respond_to(:jmeter_plans)
-        @project.stub_chain(:jmeter_plans, :where, :all).and_return([mock(Hailstorm::Model::JmeterPlan, id: 1)])
-        clusterable.should_receive(:process_jmeter_plan).and_return([])
+        jmeter_plans = [instance_double(Hailstorm::Model::JmeterPlan, id: 1)]
+        allow(@project).to receive_message_chain(:jmeter_plans, :where, :all).and_return(jmeter_plans)
+        expect(clusterable).to receive(:process_jmeter_plan).and_return([])
         clusterable.provision_agents
       end
     end

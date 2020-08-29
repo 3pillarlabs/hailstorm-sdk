@@ -68,10 +68,10 @@ describe Hailstorm::Support::ReportBuilder do
       report_builder = Hailstorm::Support::ReportBuilder.new
       report_builder.jmeter_plans = %w[a b c].map do |name|
         jmeter_plan = Hailstorm::Model::JmeterPlan.new(test_plan_name: name)
-        jmeter_plan.stub!(:plan_name).and_return(name)
-        jmeter_plan.stub!(:plan_description).and_return(nil)
-        jmeter_plan.stub!(:scenario_definitions)
-                   .and_return([OpenStruct.new(thread_group: 'main', samplers: %w[a, b])])
+        allow(jmeter_plan).to receive(:plan_name).and_return(name)
+        allow(jmeter_plan).to receive(:plan_description).and_return(nil)
+        main_samplers = OpenStruct.new(thread_group: 'main', samplers: %w[a, b])
+        allow(jmeter_plan).to receive(:scenario_definitions).and_return([main_samplers])
         jmeter_plan
       end
       2.times do |index|
@@ -89,7 +89,7 @@ describe Hailstorm::Support::ReportBuilder do
             cluster.client_stats do |client_stat|
               client_stat.name = 'a'
               client_stat.threads_count = 100
-              client_stat.aggregate_stats = [ double('aggregate_stats').as_null_object ]
+              client_stat.aggregate_stats = [ spy('aggregate_stats') ]
               client_stat.aggregate_graph do |graph|
                 graph.chart_model = double('chart model', getFilePath: 'a', getWidth: 600, getHeight: 400)
               end
@@ -130,7 +130,7 @@ describe Hailstorm::Support::ReportBuilder do
         graph.chart_model = double('chart model', getFilePath: 'c', getWidth: 600, getHeight: 400)
       end
 
-      FileUtils.stub!(:move)
+      allow(FileUtils).to receive(:move)
       report_builder.build(RSpec.configuration.build_path, 'a.docx')
     end
   end

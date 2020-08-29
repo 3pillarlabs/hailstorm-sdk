@@ -6,12 +6,8 @@ describe 'api/jtl_exports' do
   context 'POST /projects/:project_id/jtl_exports' do
     it 'should export results' do
       project = Hailstorm::Model::Project.create!(project_code: 'jtl_exports_spec')
-      Hailstorm::Model::Project
-        .any_instance
-        .stub(:results)
-        .and_return(
-          { url: "http://hailstorm.webfs/#{project.project_code}/123456/a.jtl", title: 'a.jtl' }
-        )
+      attrs = { url: "http://hailstorm.webfs/#{project.project_code}/123456/a.jtl", title: 'a.jtl' }
+      allow_any_instance_of(Hailstorm::Model::Project).to receive(:results).and_return(attrs)
 
       browser = Rack::Test::Session.new(Sinatra::Application)
       browser.post("/projects/#{project.id}/jtl_exports", JSON.dump([1, 2, 3]))

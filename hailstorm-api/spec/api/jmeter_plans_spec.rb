@@ -43,7 +43,7 @@ describe 'api/jmeter_plans' do
       expect(ProjectConfiguration.where(project_id: project.id).first).to_not be_nil
     end
   end
-  
+
   context 'GET /projects/:project_id/jmeter_plans' do
     it 'should fetch list of JMeter plans' do
       project = Hailstorm::Model::Project.create!(project_code: 'api_jmeter_plans_spec')
@@ -74,7 +74,7 @@ describe 'api/jmeter_plans' do
       expect(data_file[:id]).to_not be_nil
       expect(data_file[:name]).to eq('foo.csv')
       expect(data_file[:path]).to eq('234')
-      expect(data_file[:dataFile]).to be_true
+      expect(data_file[:dataFile]).to be true
     end
   end
 

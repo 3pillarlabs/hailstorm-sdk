@@ -55,7 +55,7 @@ describe Hailstorm::Cli::CmdParser do
           error_yields = []
           @parser.on_parse_error { |error, opt_parser| error_yields.push(error, opt_parser) }
           @parser.parse!(%w[hailstorm --foo setup])
-          expect(error_yields).to have(2).items
+          expect(error_yields.size).to eq(2)
         end
       end
     end
@@ -66,7 +66,7 @@ describe Hailstorm::Cli::CmdParser do
           help_yields = []
           @parser.on_help { |opt_parser| help_yields.push(opt_parser) }
           @parser.parse!(%w[hailstorm --help])
-          expect(help_yields).to have(1).item
+          expect(help_yields.size).to eq(1)
         end
       end
     end

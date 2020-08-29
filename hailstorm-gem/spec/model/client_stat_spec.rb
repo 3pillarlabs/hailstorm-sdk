@@ -21,7 +21,7 @@ describe Hailstorm::Model::ClientStat do
         agent = Hailstorm::Model::MasterAgent.new
         agent.jmeter_plan_id = jmeter_plan_id
         expect(agent).to respond_to(:result_for)
-        agent.stub!(:result_for).and_return(result_file)
+        allow(agent).to receive(:result_for).and_return(result_file)
         agent
       end
       uniq_ids = []
@@ -29,24 +29,22 @@ describe Hailstorm::Model::ClientStat do
         uniq_ids.push(id) unless uniq_ids.include?(id)
         agent_generator.call(id, file)
       end
-      cluster_instance.stub_chain(:master_agents, :where, :all).and_return(agents)
-      Hailstorm::Model::ClientStat.should_receive(:create_client_stat).exactly(uniq_ids.size).times
-      File.stub!(:unlink)
-      Hailstorm::Model::ClientStat.collect_client_stats(mock(Hailstorm::Model::ExecutionCycle), cluster_instance)
+      allow(cluster_instance).to receive_message_chain(:master_agents, :where, :all).and_return(agents)
+      expect(Hailstorm::Model::ClientStat).to receive(:create_client_stat).exactly(uniq_ids.size).times
+      allow(File).to receive(:unlink)
+      Hailstorm::Model::ClientStat.collect_client_stats(instance_double(Hailstorm::Model::ExecutionCycle), cluster_instance)
     end
   end
 
   context '.create_client_stat' do
     it 'should invoke ClientStatTemplate' do
-      Hailstorm::Model::ClientStat::ClientStatTemplate
-        .any_instance
-        .stub(:create)
-        .and_return([Hailstorm::Model::ClientStat.new, nil])
-      Hailstorm::Model::JmeterPlan.stub!(:find).and_return(mock(Hailstorm::Model::JmeterPlan))
+      results = [Hailstorm::Model::ClientStat.new, nil]
+      allow_any_instance_of(Hailstorm::Model::ClientStat::ClientStatTemplate).to receive(:create).and_return(results)
+      allow(Hailstorm::Model::JmeterPlan).to receive(:find).and_return(instance_double(Hailstorm::Model::JmeterPlan))
       expect(Hailstorm::Model::ClientStat
-               .create_client_stat(mock(Hailstorm::Model::ExecutionCycle),
+               .create_client_stat(instance_double(Hailstorm::Model::ExecutionCycle),
                                    1,
-                                   mock(Hailstorm::Model::AmazonCloud),
+                                   instance_double(Hailstorm::Model::AmazonCloud),
                                    []).first).to be_a(Hailstorm::Model::ClientStat)
     end
   end
@@ -55,9 +53,9 @@ describe Hailstorm::Model::ClientStat do
     it 'should not combine_stats for single file' do
       stat_file_paths = [ Tempfile.new ]
       template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(nil, nil, nil, stat_file_paths)
-      template.should_not_receive(:combine_stats)
-      template.stub!(:do_create_client_stat)
-      template.stub!(:persist_jtl)
+      expect(template).to_not receive(:combine_stats)
+      allow(template).to receive(:do_create_client_stat)
+      allow(template).to receive(:persist_jtl)
       template.create
       stat_file_paths.each { |sfp| sfp.unlink }
     end
@@ -65,9 +63,9 @@ describe Hailstorm::Model::ClientStat do
     it 'should combine_stats for multiple files' do
       stat_file_paths = [ Tempfile.new, Tempfile.new ]
       template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(nil, nil, nil, stat_file_paths)
-      template.should_receive(:combine_stats).and_return(stat_file_paths.first)
-      template.stub!(:do_create_client_stat)
-      template.stub!(:persist_jtl)
+      expect(template).to receive(:combine_stats).and_return(stat_file_paths.first)
+      allow(template).to receive(:do_create_client_stat)
+      allow(template).to receive(:persist_jtl)
       template.create
       stat_file_paths.each { |sfp| sfp.unlink }
     end
@@ -76,20 +74,20 @@ describe Hailstorm::Model::ClientStat do
       stat_file_paths = [ Tempfile.new, Tempfile.new ]
       combined_path = Tempfile.new
       template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(nil, nil, nil, stat_file_paths)
-      template.should_receive(:combine_stats).and_return(combined_path)
-      template.stub!(:do_create_client_stat)
-      template.stub!(:persist_jtl)
+      expect(template).to receive(:combine_stats).and_return(combined_path)
+      allow(template).to receive(:do_create_client_stat)
+      allow(template).to receive(:persist_jtl)
       template.create
       stat_file_paths.each { |sfp| sfp.unlink }
     end
 
     it 'should create a client_stat' do
       clusterable, execution_cycle, jmeter_plan = create_client_stat_refs
-      Hailstorm::Model::JtlFile.stub!(:persist_file)
-      File.stub!(:open).and_yield(JTL_LOG_DATA.strip_heredoc)
+      allow(Hailstorm::Model::JtlFile).to receive(:persist_file)
+      allow(File).to receive(:open).and_yield(JTL_LOG_DATA.strip_heredoc)
 
       template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(jmeter_plan, execution_cycle, clusterable, [])
-      template.stub!(:collate_stats)
+      allow(template).to receive(:collate_stats)
       client_stat, = template.create
       expect(client_stat).to_not be_nil
       expect(client_stat.first_sample_at).to_not be_nil
@@ -115,13 +113,13 @@ describe Hailstorm::Model::ClientStat do
 
       project = Hailstorm::Model::Project.create!(project_code: 'client_stat_spec')
       template = Hailstorm::Model::ClientStat::ClientStatTemplate
-                   .new(mock(Hailstorm::Model::JmeterPlan, id: 1),
-                        mock(Hailstorm::Model::ExecutionCycle, id: 1, project: project),
-                        mock(Hailstorm::Model::AmazonCloud, id: 1),
+                   .new(instance_double(Hailstorm::Model::JmeterPlan, id: 1),
+                        instance_double(Hailstorm::Model::ExecutionCycle, id: 1, project: project),
+                        instance_double(Hailstorm::Model::AmazonCloud, id: 1),
                         stat_file_paths)
 
-      template.stub!(:do_create_client_stat)
-      template.should_receive(:persist_jtl) do |_client_stat, combined_path|
+      allow(template).to receive(:do_create_client_stat)
+      expect(template).to receive(:persist_jtl) do |_client_stat, combined_path|
         doc = Nokogiri::XML.parse(File.read(combined_path))
         expect(doc.xpath('/testResults').length).to be == 1
         expect(doc.xpath('/testResults/sample').length).to be == FILES_COUNT
@@ -142,7 +140,7 @@ describe Hailstorm::Model::ClientStat do
                                                          aggregate_response_throughput: 3000,
                                                          last_sample_at: Time.new(2010, 10, 7, 14, 23, 45))
 
-      Hailstorm::Model::PageStat.any_instance.stub(:calculate_aggregates)
+      allow_any_instance_of(Hailstorm::Model::PageStat).to receive(:calculate_aggregates)
       3.times do |index|
         Hailstorm::Model::PageStat.create!(client_stat: client_stat,
                                            page_label: "label-#{index}",
@@ -184,7 +182,7 @@ describe Hailstorm::Model::ClientStat do
                                                          aggregate_ninety_percentile: 1500,
                                                          aggregate_response_throughput: 3000,
                                                          last_sample_at: Time.new(2010, 10, 7, 14, 23, 45))
-      Hailstorm::Model::JtlFile.stub!(:export_file)
+      allow(Hailstorm::Model::JtlFile).to receive(:export_file)
       expect(client_stat.write_jtl('foo', true)).to match(/^foo.+\.jtl$/)
     end
   end

@@ -7,22 +7,22 @@ require 'hailstorm/model/nmon'
 
 describe Hailstorm::Cli::ViewRenderer do
   before(:each) do
-    @app = Hailstorm::Cli::ViewRenderer.new(mock(Hailstorm::Model::Project))
+    @app = Hailstorm::Cli::ViewRenderer.new(instance_double(Hailstorm::Model::Project))
   end
 
   context '#render_status' do
     before(:each) do
-      @app.stub!(:view_template).and_return(mock(Hailstorm::Cli::ViewTemplate))
+      allow(@app).to receive(:view_template).and_return(instance_double(Hailstorm::Cli::ViewTemplate))
     end
     context 'load generation in progress' do
       it 'should show running agents' do
-        @app.view_template.should_receive(:render_running_agents)
+        expect(@app.view_template).to receive(:render_running_agents)
         @app.render_status([{}])
       end
     end
     context 'load generation finished' do
       it 'should show no running agents' do
-        @app.view_template.should_not_receive(:render_running_agents)
+        expect(@app.view_template).to_not receive(:render_running_agents)
         @app.render_status([], :json)
       end
     end
@@ -33,72 +33,72 @@ describe Hailstorm::Cli::ViewRenderer do
       @query_map = { jmeter_plans: [], clusters: [], target_hosts: [] }
     end
     it 'should show everything active' do
-      @app.view_template.should_receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be_true }
-      @app.view_template.should_receive(:render_load_agents) { |_q, flag| expect(flag).to be_true }
-      @app.view_template.should_receive(:render_target_hosts) { |_q, flag| expect(flag).to be_true }
+      expect(@app.view_template).to receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be true }
+      expect(@app.view_template).to receive(:render_load_agents) { |_q, flag| expect(flag).to be true }
+      expect(@app.view_template).to receive(:render_target_hosts) { |_q, flag| expect(flag).to be true }
       @app.render_show(@query_map, true, :active)
     end
     context 'jmeter' do
       it 'should show active jmeter' do
-        @app.view_template.should_receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be_true }
-        @app.view_template.should_not_receive(:render_load_agents)
-        @app.view_template.should_not_receive(:render_target_hosts)
+        expect(@app.view_template).to receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be true }
+        expect(@app.view_template).to_not receive(:render_load_agents)
+        expect(@app.view_template).to_not receive(:render_target_hosts)
         @app.render_show(@query_map, true,:jmeter)
       end
       context 'all' do
         it 'should show all jmeter' do
-          @app.view_template.should_receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be_false }
-          @app.view_template.should_not_receive(:render_load_agents)
-          @app.view_template.should_not_receive(:render_target_hosts)
+          expect(@app.view_template).to receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be false }
+          expect(@app.view_template).to_not receive(:render_load_agents)
+          expect(@app.view_template).to_not receive(:render_target_hosts)
           @app.render_show(@query_map, false, :jmeter)
         end
       end
     end
     context 'cluster' do
       it 'should show active cluster' do
-        @app.view_template.should_receive(:render_load_agents) { |_q, flag| expect(flag).to be_true }
-        @app.view_template.should_not_receive(:render_jmeter_plans)
-        @app.view_template.should_not_receive(:render_target_hosts)
+        expect(@app.view_template).to receive(:render_load_agents) { |_q, flag| expect(flag).to be true }
+        expect(@app.view_template).to_not receive(:render_jmeter_plans)
+        expect(@app.view_template).to_not receive(:render_target_hosts)
         @app.render_show(@query_map, true, :cluster)
       end
       context 'all' do
         it 'should show all cluster' do
-          @app.view_template.should_receive(:render_load_agents) { |_q, flag| expect(flag).to be_false }
-          @app.view_template.should_not_receive(:render_jmeter_plans)
-          @app.view_template.should_not_receive(:render_target_hosts)
+          expect(@app.view_template).to receive(:render_load_agents) { |_q, flag| expect(flag).to be false }
+          expect(@app.view_template).to_not receive(:render_jmeter_plans)
+          expect(@app.view_template).to_not receive(:render_target_hosts)
           @app.render_show(@query_map, false, :cluster)
         end
       end
     end
     context 'monitor' do
       it 'should show active monitor' do
-        @app.view_template.should_receive(:render_target_hosts) { |_q, flag| expect(flag).to be_true }
-        @app.view_template.should_not_receive(:render_jmeter_plans)
-        @app.view_template.should_not_receive(:render_load_agents)
+        expect(@app.view_template).to receive(:render_target_hosts) { |_q, flag| expect(flag).to be true }
+        expect(@app.view_template).to_not receive(:render_jmeter_plans)
+        expect(@app.view_template).to_not receive(:render_load_agents)
         @app.render_show(@query_map, true, :monitor)
       end
       context 'all' do
         it 'should show all monitor' do
-          @app.view_template.should_receive(:render_target_hosts) { |_q, flag| expect(flag).to be_false }
-          @app.view_template.should_not_receive(:render_jmeter_plans)
-          @app.view_template.should_not_receive(:render_load_agents)
+          expect(@app.view_template).to receive(:render_target_hosts) { |_q, flag| expect(flag).to be false }
+          expect(@app.view_template).to_not receive(:render_jmeter_plans)
+          expect(@app.view_template).to_not receive(:render_load_agents)
           @app.render_show(@query_map, false, :monitor)
         end
       end
     end
     context 'active' do
       it 'should show everything active' do
-        @app.view_template.should_receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be_true }
-        @app.view_template.should_receive(:render_load_agents) { |_q, flag| expect(flag).to be_true }
-        @app.view_template.should_receive(:render_target_hosts) { |_q, flag| expect(flag).to be_true }
+        expect(@app.view_template).to receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be true }
+        expect(@app.view_template).to receive(:render_load_agents) { |_q, flag| expect(flag).to be true }
+        expect(@app.view_template).to receive(:render_target_hosts) { |_q, flag| expect(flag).to be true }
         @app.render_show(@query_map, true, :active)
       end
     end
     context 'all' do
       it 'should show everything including inactive' do
-        @app.view_template.should_receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be_false }
-        @app.view_template.should_receive(:render_load_agents) { |_q, flag| expect(flag).to be_false }
-        @app.view_template.should_receive(:render_target_hosts) { |_q, flag| expect(flag).to be_false }
+        expect(@app.view_template).to receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be false }
+        expect(@app.view_template).to receive(:render_load_agents) { |_q, flag| expect(flag).to be false }
+        expect(@app.view_template).to receive(:render_target_hosts) { |_q, flag| expect(flag).to be false }
         @app.render_show(@query_map, false, :all)
       end
     end
@@ -117,14 +117,14 @@ describe Hailstorm::Cli::ViewRenderer do
       monitor = Hailstorm::Model::Nmon.create!(project: project, host_name: 'app.de.mon', role_name: 'server',
                                                executable_pid: 2345)
       monitor.update_column(:active, true)
-      @app.stub!(:project).and_return(project)
+      allow(@app).to receive(:project).and_return(project)
     end
     it 'should render jmeter plans' do
-      @app.view_template.should_receive(:render_jmeter_plans)
+      expect(@app.view_template).to receive(:render_jmeter_plans)
       @app.render_setup
     end
     it 'should render defaults' do
-      @app.should_receive(:render_default)
+      expect(@app).to receive(:render_default)
       @app.render_setup
     end
   end

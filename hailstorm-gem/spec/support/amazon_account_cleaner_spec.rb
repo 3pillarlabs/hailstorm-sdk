@@ -5,11 +5,11 @@ describe Hailstorm::Support::AmazonAccountCleaner do
 
   before(:each) do
     @client_factory = Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(
-      ec2_client: mock(Hailstorm::Behavior::AwsAdaptable::Ec2Client),
-      key_pair_client: mock(Hailstorm::Behavior::AwsAdaptable::KeyPairClient),
-      security_group_client: mock(Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient),
-      instance_client: mock(Hailstorm::Behavior::AwsAdaptable::InstanceClient),
-      ami_client: mock(Hailstorm::Behavior::AwsAdaptable::AmiClient)
+      ec2_client: instance_double(Hailstorm::Behavior::AwsAdaptable::Ec2Client),
+      key_pair_client: instance_double(Hailstorm::Behavior::AwsAdaptable::KeyPairClient),
+      security_group_client: instance_double(Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient),
+      instance_client: instance_double(Hailstorm::Behavior::AwsAdaptable::InstanceClient),
+      ami_client: instance_double(Hailstorm::Behavior::AwsAdaptable::AmiClient)
     )
 
     @account_cleaner = Hailstorm::Support::AmazonAccountCleaner.new(client_factory: @client_factory,
@@ -18,11 +18,11 @@ describe Hailstorm::Support::AmazonAccountCleaner do
   end
 
   it 'clean an AWS account of Hailstorm artifacts' do
-    @account_cleaner.should_receive(:terminate_instances)
-    @account_cleaner.should_receive(:deregister_amis)
-    @account_cleaner.should_receive(:delete_snapshots)
-    @account_cleaner.should_receive(:delete_security_groups)
-    @account_cleaner.should_receive(:delete_key_pairs)
+    expect(@account_cleaner).to receive(:terminate_instances)
+    expect(@account_cleaner).to receive(:deregister_amis)
+    expect(@account_cleaner).to receive(:delete_snapshots)
+    expect(@account_cleaner).to receive(:delete_security_groups)
+    expect(@account_cleaner).to receive(:delete_key_pairs)
 
     @account_cleaner.cleanup(remove_key_pairs: true)
   end
@@ -49,10 +49,10 @@ describe Hailstorm::Support::AmazonAccountCleaner do
         Hailstorm::Behavior::AwsAdaptable::Instance.new(attrs)
       end
 
-      @client_factory.instance_client.should_receive(:terminate).twice
-      @client_factory.instance_client.should_not_receive(:terminate).with(instance_id: 'id-3')
-      @client_factory.instance_client.stub!(:list).and_return(instances.each)
-      @client_factory.instance_client.stub!(:terminated?).and_return(true)
+      expect(@client_factory.instance_client).to receive(:terminate).twice
+      expect(@client_factory.instance_client).to_not receive(:terminate).with(instance_id: 'id-3')
+      allow(@client_factory.instance_client).to receive(:list).and_return(instances.each)
+      allow(@client_factory.instance_client).to receive(:terminated?).and_return(true)
       @account_cleaner.send(:terminate_instances)
     end
   end
@@ -62,9 +62,9 @@ describe Hailstorm::Support::AmazonAccountCleaner do
       images = [{ state: 'pending', image_id: 'ami-1' }, { state: 'available', image_id: 'ami-2' }]
                  .map { |attrs| Hailstorm::Behavior::AwsAdaptable::Ami.new(attrs) }
 
-      @client_factory.ami_client.should_receive(:deregister).once
-      @client_factory.ami_client.should_not_receive(:deregister).with(ami_id: 'ami-1')
-      @client_factory.ami_client.stub!(:find_self_owned).and_return(images)
+      expect(@client_factory.ami_client).to receive(:deregister).once
+      expect(@client_factory.ami_client).to_not receive(:deregister).with(ami_id: 'ami-1')
+      allow(@client_factory.ami_client).to receive(:find_self_owned).and_return(images)
 
       @account_cleaner.send(:deregister_amis)
     end
@@ -76,9 +76,9 @@ describe Hailstorm::Support::AmazonAccountCleaner do
       completed_snapshot = Hailstorm::Behavior::AwsAdaptable::Snapshot.new(state: 'completed', snapshot_id: 'snap-2')
       snapshots = [pending_snapshot, completed_snapshot]
 
-      @client_factory.ec2_client.should_not_receive(:delete_snapshot).with(snapshot_id: pending_snapshot.id)
-      @client_factory.ec2_client.should_receive(:delete_snapshot).with(snapshot_id: completed_snapshot.id)
-      @client_factory.ec2_client.stub!(:find_self_owned_snapshots).and_return(snapshots.each)
+      expect(@client_factory.ec2_client).to_not receive(:delete_snapshot).with(snapshot_id: pending_snapshot.id)
+      expect(@client_factory.ec2_client).to receive(:delete_snapshot).with(snapshot_id: completed_snapshot.id)
+      allow(@client_factory.ec2_client).to receive(:find_self_owned_snapshots).and_return(snapshots.each)
 
       @account_cleaner.send(:delete_snapshots)
     end
@@ -87,8 +87,8 @@ describe Hailstorm::Support::AmazonAccountCleaner do
   context '#delete_key_pairs' do
     it 'should delete key_pairs' do
       key_pair_info = Hailstorm::Behavior::AwsAdaptable::KeyPairInfo.new(key_name: 's', key_pair_id: 'kp-123')
-      @client_factory.key_pair_client.should_receive(:delete).with(key_pair_id: 'kp-123')
-      @client_factory.key_pair_client.stub!(:list).and_return([key_pair_info].each)
+      expect(@client_factory.key_pair_client).to receive(:delete).with(key_pair_id: 'kp-123')
+      allow(@client_factory.key_pair_client).to receive(:list).and_return([key_pair_info].each)
       @account_cleaner.send(:delete_key_pairs)
     end
   end
@@ -100,8 +100,8 @@ describe Hailstorm::Support::AmazonAccountCleaner do
         group_id: 'sg-123'
       )
 
-      @client_factory.security_group_client.should_receive(:delete).with(group_id: 'sg-123')
-      @client_factory.security_group_client.stub!(:list).and_return([sec_group].each)
+      expect(@client_factory.security_group_client).to receive(:delete).with(group_id: 'sg-123')
+      allow(@client_factory.security_group_client).to receive(:list).and_return([sec_group].each)
       @account_cleaner.send(:delete_security_groups)
     end
   end

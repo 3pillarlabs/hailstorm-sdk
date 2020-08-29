@@ -40,7 +40,7 @@ RSpec.configure do |config|
     @logger ||= Hailstorm::Support::Log4jBackedLogger.get_logger(RSpec)
   end
 
-  config.treat_symbols_as_metadata_keys_with_true_values = true
+  config.raise_errors_for_deprecations!
   config.run_all_when_everything_filtered = true
   config.filter_run :focus
   config.add_setting(:build_path, default: BUILD_PATH)
@@ -50,6 +50,11 @@ RSpec.configure do |config|
   # the seed, which is printed after each run.
   #     --seed 1234
   config.order = 'random'
+
+  config.mock_with(:rspec) do |mocks|
+    mocks.yield_receiver_to_any_instance_implementation_blocks = false
+    mocks.verify_partial_doubles = true
+  end
 
   config.prepend_before(:suite) do
     connection_spec = {

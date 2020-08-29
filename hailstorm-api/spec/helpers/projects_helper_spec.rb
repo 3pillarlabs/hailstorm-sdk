@@ -43,7 +43,7 @@ describe ProjectsHelper do
                                               identifier: 'i-1234567890')
 
         attrs = @api_instance.project_attributes(@project)
-        expect(attrs[:live]).to be_true
+        expect(attrs[:live]).to be true
       end
     end
 
