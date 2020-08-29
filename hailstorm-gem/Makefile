@@ -6,11 +6,11 @@ install:
 	bundle install
 
 test: create_mysql_user setup_db
-	JRUBY_OPTS="--debug" bundle exec rspec -f HailstormCiFormatter
+	JRUBY_OPTS="--debug" bundle exec rspec -f Croaky::RSpec::CroakyFormatter
 
 coverage: create_mysql_user setup_db
 	if [ -n "${CI}" ]; then ${TRAVIS_BUILD_DIR}/.travis/coverage.sh -i; fi
-	HAILSTORM_COVERAGE="true" JRUBY_OPTS="--debug" bundle exec rspec -f HailstormCiFormatter
+	HAILSTORM_COVERAGE="true" JRUBY_OPTS="--debug" bundle exec rspec -f Croaky::RSpec::CroakyFormatter
 
 setup_db:
 	bundle exec rake db:setup

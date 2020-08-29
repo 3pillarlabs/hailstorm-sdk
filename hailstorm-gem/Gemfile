@@ -12,4 +12,5 @@ group :test, :development do
   gem 'ruby-debug', '~> 0.11.0'
   gem 'simplecov', '~> 0.17.1'
   gem 'deep_hash_struct', '~> 1.0'
+  gem 'croaky-rspec', '~> 0.1'
 end

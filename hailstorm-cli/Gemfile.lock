@@ -56,6 +56,7 @@ GEM
     columnize (0.9.0)
     concurrent-ruby (1.1.7)
     crass (1.0.6)
+    croaky-rspec (0.2.0)
     cucumber (2.99.0)
       builder (>= 2.1.2)
       cucumber-core (~> 1.5.0)
@@ -162,6 +163,7 @@ PLATFORMS
 DEPENDENCIES
   activerecord-jdbcmysql-adapter (~> 60.2)
   activerecord-jdbcsqlite3-adapter (~> 60.2)
+  croaky-rspec (~> 0.1)
   cucumber (~> 2.99)
   hailstorm-cli!
   rake (~> 13)
