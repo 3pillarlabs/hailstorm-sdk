@@ -26,7 +26,7 @@ cc_test_report:
 
 integration: create_mysql_user setup_db
 	${TRAVIS_BUILD_DIR}/.travis/write_gem_aws_keys.sh
-	bundle exec cucumber --tags ${TAG_FLAGS} --fail-fast
+	CUCUMBER_PUBLISH_QUIET=true bundle exec cucumber --tags ${TAG_FLAGS} --fail-fast
 
 .PHONY: build
 build:
