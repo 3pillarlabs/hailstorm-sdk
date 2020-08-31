@@ -86,7 +86,7 @@ release_makefile:
 
 validate:
 	CLI_VERSION_CHANGED=0; \
-	for glob in bin lib templates Gemfile.lock; do \
+	for glob in bin lib templates hailstorm-cli.gemspec; do \
 		if ${TRAVIS_BUILD_DIR}/.travis/build-condition.sh ${TRAVIS_COMMIT_RANGE} hailstorm-cli/$$glob; then \
 			${TRAVIS_BUILD_DIR}/.travis/build-condition.sh ${TRAVIS_COMMIT_RANGE} hailstorm-cli/lib/hailstorm/cli/version.rb; \
 			CLI_VERSION_CHANGED=$$?; \
