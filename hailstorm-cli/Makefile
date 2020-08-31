@@ -46,7 +46,7 @@ integration:
 	-e DATABASE_HOST=hailstorm-db \
 	-v $${PWD}/features:/usr/local/lib/hailstorm-cli/features \
 	$${DOCKER_ID}/${DOCKER_REPO}:${CLI_VERSION} bash -c \
-	'cd /usr/local/lib/hailstorm-cli && cucumber --tags @smoke --fail-fast'
+	'cd /usr/local/lib/hailstorm-cli && CUCUMBER_PUBLISH_QUIET=true cucumber --tags @smoke --fail-fast'
 
 publish:
 	set -ev
