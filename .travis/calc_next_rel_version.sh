@@ -25,7 +25,12 @@ fi
 
 fetch_version() {
   local component=$1
-  local version=$(grep image $TRAVIS_BUILD_DIR/docker-compose.yml | grep $component | cut -f3 -d':' | cut -f1 -d'"')
+  local version=''
+  if [ "$component" != 'hailstorm-cli' ]; then
+    version=$(grep image $TRAVIS_BUILD_DIR/docker-compose.yml | grep $component | cut -f3 -d':' | cut -f1 -d'"')
+  else
+    version=$(cd hailstorm-cli && make -s release_version)
+  fi
   echo -n $version
 }
 
@@ -56,7 +61,7 @@ calculate_major() {
   local sum_increments=0
   for component in $components; do
     local current_version=$(fetch_version $component)
-    local current_major=$(echo $version | cut -f1 -d'.')
+    local current_major=$(echo $current_version | cut -f1 -d'.')
     local released_major=-1
     for tag in $($TRAVIS_BUILD_DIR/.travis/get_docker_versions.sh $docker_id $component | grep -v latest); do
       local tag_major=$(echo $tag | cut -f1 -d'.')
@@ -82,6 +87,7 @@ calculate_major() {
 
 main() {
   local components=$(grep image docker-compose.yml | cut -f2 -d':' | sed 's/"//' | cut -f2 -d'/' | sed 's/\s*//')
+  components="${components}"$'\nhailstorm-cli'
   local new_revision=$(calculate_revision $components)
   local new_minor=$(calculate_minor hailstorm-web-client hailstorm-cli)
   local new_major=$(calculate_major hailstorm-web-client hailstorm-cli)

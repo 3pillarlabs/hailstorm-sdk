@@ -94,3 +94,6 @@ validate:
 		fi; \
 	done; \
 	[ $$CLI_VERSION_CHANGED -eq 0 ]
+
+release_version:
+	@echo ${RELEASE_VERSION}
