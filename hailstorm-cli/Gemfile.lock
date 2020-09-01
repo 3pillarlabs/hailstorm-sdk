@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    hailstorm-cli (1.0.8-java)
+    hailstorm-cli (1.0.9-java)
       hailstorm (= 5.0.8)
 
 GEM
