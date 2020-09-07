@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/support/schema'
 
 # Additional schema for tests
@@ -6,7 +8,7 @@ class Hailstorm::Support::Schema
   alias dev_schema_tables schema_tables
 
   def schema_tables
-    @test_schema_tables ||= dev_schema_tables.push(:test_clusters)
+    @test_schema_tables ||= dev_schema_tables.push(:test_clusters) # rubocop: disable Naming/MemoizedInstanceVariableName
   end
 
   # :nocov:

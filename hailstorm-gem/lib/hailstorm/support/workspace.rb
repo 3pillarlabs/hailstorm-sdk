@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'fileutils'
 
 require 'hailstorm/support'
@@ -5,10 +7,10 @@ require 'hailstorm/support'
 # Workspace implementation for library.
 class Hailstorm::Support::Workspace
 
-  ROOT_DIR = '.hailstorm'.freeze
-  WORKSPACE_DIR = 'workspace'.freeze
-  KEYS_DIR = 'keys'.freeze
-  TMP_DIR = 'tmp'.freeze
+  ROOT_DIR = '.hailstorm'
+  WORKSPACE_DIR = 'workspace'
+  KEYS_DIR = 'keys'
+  TMP_DIR = 'tmp'
 
   # @return [String]
   attr_reader :project_code
@@ -42,7 +44,7 @@ class Hailstorm::Support::Workspace
 
     entries = [[app_path, layout.values.last]]
     entries.each do |parent, sub_lay|
-      sub_lay.keys.each do |dir|
+      sub_lay.each_key do |dir|
         FileUtils.mkdir_p(File.join(parent, dir))
         entries.push([File.join(parent, dir), sub_lay[dir]]) unless sub_lay[dir].nil?
       end

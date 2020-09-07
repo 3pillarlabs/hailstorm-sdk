@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/model'
 require 'hailstorm/model/target_stat'
 require 'hailstorm/behavior/moniterable'
@@ -45,7 +47,7 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
   def self.configure_all(project, config)
     logger.debug { "#{self}.#{__method__}" }
     # disable all hosts and delegate to monitor#setup to enable specific hosts
-    moniterables(project, false).each { |t| t.update_column(:active, false) }
+    moniterables(project, only_active: false).each { |t| t.update_column(:active, false) }
 
     host_definitions(config.monitors).each do |host_def|
       # update type nmemonic to real type
@@ -153,7 +155,7 @@ class Hailstorm::Model::TargetHost < ActiveRecord::Base
     end
   end
 
-  def self.moniterables(project, only_active = true)
+  def self.moniterables(project, only_active: true)
     query = project.target_hosts
     query = query.where(active: true) if only_active
     query

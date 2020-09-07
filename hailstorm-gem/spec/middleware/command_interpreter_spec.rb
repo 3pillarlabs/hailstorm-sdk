@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/exceptions'
 require 'hailstorm/middleware/command_interpreter'
@@ -5,7 +7,6 @@ require 'hailstorm/model/project'
 require 'hailstorm/model/load_agent'
 
 describe Hailstorm::Middleware::CommandInterpreter do
-
   before(:each) do
     @app = Hailstorm::Middleware::CommandInterpreter.new
   end
@@ -57,7 +58,7 @@ describe Hailstorm::Middleware::CommandInterpreter do
       end
 
       it 'should interpret command' do
-        expect(@app.interpret_command({command: 'help'})).to eq([:help])
+        expect(@app.interpret_command({ command: 'help' })).to eq([:help])
       end
     end
     context 'help' do
@@ -168,7 +169,7 @@ describe Hailstorm::Middleware::CommandInterpreter do
     end
     context 'incorrect option for command' do
       it 'should raise exception' do
-        expect {@app.interpret_command('start everything')}.to raise_error(Hailstorm::UnknownCommandException)
+        expect { @app.interpret_command('start everything') }.to raise_error(Hailstorm::UnknownCommandException)
       end
     end
   end
@@ -179,30 +180,31 @@ describe Hailstorm::Middleware::CommandInterpreter do
         expect(@app.send(:translate_results_args, %w[import foo.jtl])).to be == [false, nil, :import, ['foo.jtl', nil]]
       end
       it 'should understand options' do
-        translated_args = [false, nil, :import, [nil, {'jmeter' => '1', 'cluster' => '2'}]]
+        translated_args = [false, nil, :import, [nil, { 'jmeter' => '1', 'cluster' => '2' }]]
         expect(@app.send(:translate_results_args, ['import', 'jmeter=1 cluster=2'])).to be == translated_args
       end
       it 'should understand file and options' do
-        translated_args = [false, nil, :import, ['/tmp/foo.jtl', {'jmeter' => '1', 'cluster' => '2'}]]
-        expect(@app.send(:translate_results_args, ['import', '/tmp/foo.jtl jmeter=1 cluster=2'])).to be == translated_args
+        translated_args = [false, nil, :import, ['/tmp/foo.jtl', { 'jmeter' => '1', 'cluster' => '2' }]]
+        tr_args = @app.send(:translate_results_args, ['import', '/tmp/foo.jtl jmeter=1 cluster=2'])
+        expect(tr_args).to be == translated_args
       end
       context '<options>' do
         it 'should accept `jmeter` option' do
-          translated_args = [false, nil, :import, ['/tmp/foo.jtl', {'jmeter' => '1'}]]
+          translated_args = [false, nil, :import, ['/tmp/foo.jtl', { 'jmeter' => '1' }]]
           expect(@app.send(:translate_results_args, ['import', '/tmp/foo.jtl jmeter=1'])).to be == translated_args
         end
         it 'should accept `cluster` option' do
-          translated_args = [false, nil, :import, ['/tmp/foo.jtl', {'cluster' => '1'}]]
+          translated_args = [false, nil, :import, ['/tmp/foo.jtl', { 'cluster' => '1' }]]
           expect(@app.send(:translate_results_args, ['import', '/tmp/foo.jtl cluster=1'])).to be == translated_args
         end
         it 'should accept `exec` option' do
-          translated_args = [false, nil, :import, ['/tmp/foo.jtl', {'exec' => '1'}]]
+          translated_args = [false, nil, :import, ['/tmp/foo.jtl', { 'exec' => '1' }]]
           expect(@app.send(:translate_results_args, ['import', '/tmp/foo.jtl exec=1'])).to be == translated_args
         end
         it 'should not accept an unknown option' do
-          expect {
+          expect do
             @app.send(:translate_results_args, ['import', '/tmp/foo.jtl foo=1'])
-          }.to raise_error(Hailstorm::Exception)
+          end.to raise_error(Hailstorm::Exception)
         end
       end
     end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/model/helper'
 require 'hailstorm/behavior/loggable'
 
@@ -10,7 +12,7 @@ class Hailstorm::Model::Helper::SecurityGroupFinder
   # @param [Hailstorm::Behavior::AwsAdaptable::Ec2Client] ec2_client
   # @param [Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient] security_group_client
   # @param [Hailstorm::Model::AmazonCloud] aws_clusterable
-  def initialize(ec2_client: nil, security_group_client:, aws_clusterable:)
+  def initialize(security_group_client:, aws_clusterable:, ec2_client: nil)
     raise(ArgumentError, 'ec2_client needed if vpc_subnet_id provided') if aws_clusterable.vpc_subnet_id && !ec2_client
 
     @ec2_client = ec2_client

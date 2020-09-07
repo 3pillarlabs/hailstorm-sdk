@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/behavior'
 
 # Interface for SSH connectivity to clusters

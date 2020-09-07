@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/model/target_host'
 require 'hailstorm/model/target_stat'
@@ -7,7 +9,6 @@ require 'hailstorm/support/configuration'
 module Hailstorm
   module Model
     class TestMonitor < TargetHost
-      #
     end
   end
 end
@@ -108,8 +109,11 @@ describe Hailstorm::Model::TargetHost do
           end
         end
         it 'should set target host inactive and raise error' do
-          allow_any_instance_of(Hailstorm::Model::TestMonitor).to receive(:setup).and_raise(Hailstorm::Exception, 'mock exception')
-          expect { Hailstorm::Model::TargetHost.configure_all(@project, @config) }.to raise_error(Hailstorm::Exception, 'mock exception')
+          allow_any_instance_of(
+            Hailstorm::Model::TestMonitor
+          ).to receive(:setup).and_raise(Hailstorm::Exception, 'mock exception')
+          expect { Hailstorm::Model::TargetHost.configure_all(@project, @config) }.to raise_error(Hailstorm::Exception,
+                                                                                                  'mock exception')
           target_host = Hailstorm::Model::TargetHost.first
           expect(target_host).to_not be_active
         end
@@ -118,7 +122,7 @@ describe Hailstorm::Model::TargetHost do
           allow(Hailstorm::Support::Thread).to receive(:join).and_raise(Hailstorm::ThreadJoinException,
                                                                         ['mock SSH failure'])
           expect { Hailstorm::Model::TargetHost.configure_all(@project, @config) }
-              .to raise_error(Hailstorm::Exception)
+            .to raise_error(Hailstorm::Exception)
         end
       end
     end
@@ -158,14 +162,16 @@ describe Hailstorm::Model::TargetHost do
     end
 
     it 'should raise error if monitoring fails to start on a host' do
-      allow_any_instance_of(Hailstorm::Model::TestMonitor).to receive(:start_monitoring).and_raise(Net::SSH::AuthenticationFailed, 'mock SSH failure')
+      allow_any_instance_of(
+        Hailstorm::Model::TestMonitor
+      ).to receive(:start_monitoring).and_raise(Net::SSH::AuthenticationFailed, 'mock SSH failure')
       expect { Hailstorm::Model::TargetHost.monitor_all(@project) }.to raise_error(Net::SSH::AuthenticationFailed)
     end
 
     it 'should raise error on Thread#join on failure' do
       allow_any_instance_of(Hailstorm::Model::TestMonitor).to receive(:start_monitoring)
       allow(Hailstorm::Support::Thread).to receive(:join).and_raise(Hailstorm::ThreadJoinException,
-																																		['mock SSH failure'])
+                                                                    ['mock SSH failure'])
       expect { Hailstorm::Model::TargetHost.monitor_all(@project) }.to raise_error(Hailstorm::Exception)
     end
   end
@@ -189,21 +195,28 @@ describe Hailstorm::Model::TargetHost do
     end
 
     it 'should raise error if monitoring fails to stop on a host' do
-      allow_any_instance_of(Hailstorm::Model::TestMonitor).to receive(:stop_monitoring).and_raise(Net::SSH::AuthenticationFailed, 'mock SSH failure')
-      expect { Hailstorm::Model::TargetHost
-                 .stop_all_monitoring(@project,
-                                      @project.current_execution_cycle,
-                                      create_target_stat: true) }.to raise_error(Net::SSH::AuthenticationFailed)
+      allow_any_instance_of(
+        Hailstorm::Model::TestMonitor
+      ).to receive(:stop_monitoring).and_raise(Net::SSH::AuthenticationFailed, 'mock SSH failure')
+
+      expect do
+        Hailstorm::Model::TargetHost
+          .stop_all_monitoring(@project,
+                               @project.current_execution_cycle,
+                               create_target_stat: true)
+      end.to raise_error(Net::SSH::AuthenticationFailed)
     end
 
     it 'should raise error on Thread#join on failure' do
       allow_any_instance_of(Hailstorm::Model::TestMonitor).to receive(:stop_monitoring)
       allow(Hailstorm::Support::Thread).to receive(:join).and_raise(Hailstorm::ThreadJoinException,
-																																		['mock SSH failure'])
-      expect { Hailstorm::Model::TargetHost
-                 .stop_all_monitoring(@project,
-                                      @project.current_execution_cycle,
-                                      create_target_stat: false) }
+                                                                    ['mock SSH failure'])
+      expect do
+        Hailstorm::Model::TargetHost
+          .stop_all_monitoring(@project,
+                               @project.current_execution_cycle,
+                               create_target_stat: false)
+      end
         .to raise_error(Hailstorm::Exception) { |error| expect(error.message).to match(/could not be stopped/) }
     end
   end
@@ -224,7 +237,9 @@ describe Hailstorm::Model::TargetHost do
     end
 
     it 'should raise error if cleanup on a host' do
-      allow_any_instance_of(Hailstorm::Model::TestMonitor).to receive(:cleanup).and_raise(Net::SSH::AuthenticationFailed, 'mock SSH failure')
+      allow_any_instance_of(
+        Hailstorm::Model::TestMonitor
+      ).to receive(:cleanup).and_raise(Net::SSH::AuthenticationFailed, 'mock SSH failure')
       expect { Hailstorm::Model::TargetHost.terminate(@project) }.to raise_error(Net::SSH::AuthenticationFailed)
     end
 

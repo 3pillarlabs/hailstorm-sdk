@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    hailstorm (5.0.8-java)
+    hailstorm (5.0.9-java)
       actionpack (~> 6.0.0)
       activerecord-jdbc-adapter (~> 60.2)
       aws-sdk-ec2 (~> 1)
@@ -103,7 +103,6 @@ GEM
     haikunator (1.1.0)
     i18n (1.8.5)
       concurrent-ruby (~> 1.0)
-    jaro_winkler (1.5.4-java)
     jdbc-mysql (5.1.47)
     jmespath (1.4.0)
     json (2.3.1-java)
@@ -121,7 +120,6 @@ GEM
     parallel (1.19.2)
     parser (2.7.1.4)
       ast (~> 2.4.1)
-    powerpack (0.1.2)
     protobuf-cucumber (3.10.8)
       activesupport (>= 3.2)
       middleware
@@ -137,6 +135,8 @@ GEM
       loofah (~> 2.3)
     rainbow (3.0.0)
     rake (13.0.1)
+    regexp_parser (1.7.1)
+    rexml (3.2.4)
     rspec (3.9.0)
       rspec-core (~> 3.9.0)
       rspec-expectations (~> 3.9.0)
@@ -150,14 +150,17 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.9.0)
     rspec-support (3.9.3)
-    rubocop (0.59.2)
-      jaro_winkler (~> 1.5.1)
+    rubocop (0.89.1)
       parallel (~> 1.10)
-      parser (>= 2.5, != 2.5.1.1)
-      powerpack (~> 0.1)
+      parser (>= 2.7.1.1)
       rainbow (>= 2.2.2, < 4.0)
+      regexp_parser (>= 1.7)
+      rexml
+      rubocop-ast (>= 0.3.0, < 1.0)
       ruby-progressbar (~> 1.7)
-      unicode-display_width (~> 1.0, >= 1.0.1)
+      unicode-display_width (>= 1.4.0, < 2.0)
+    rubocop-ast (0.3.0)
+      parser (>= 2.7.1.4)
     ruby-debug (0.11.0)
       columnize (>= 0.1)
       linecache (~> 1.3.1)
@@ -191,7 +194,7 @@ DEPENDENCIES
   hailstorm!
   rake (~> 13)
   rspec (~> 3.9)
-  rubocop (~> 0.59.2)
+  rubocop (~> 0.89.1)
   ruby-debug (~> 0.11.0)
   simplecov (~> 0.17.1)
 

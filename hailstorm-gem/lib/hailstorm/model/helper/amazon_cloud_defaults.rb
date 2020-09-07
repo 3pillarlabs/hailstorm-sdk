@@ -1,14 +1,16 @@
+# frozen_string_literal: true
+
 require 'hailstorm/model/helper'
 require 'hailstorm/behavior/sshable'
 
 # AmazonCloud default settings
 class Hailstorm::Model::Helper::AmazonCloudDefaults
-  AMI_ID              = '3pg-hailstorm'.freeze
-  SECURITY_GROUP      = 'Hailstorm'.freeze
-  SECURITY_GROUP_DESC = 'Allows SSH traffic from anywhere and all internal TCP, UDP and ICMP traffic'.freeze
-  SSH_USER            = 'ubuntu'.freeze
-  SSH_IDENTITY        = 'hailstorm'.freeze
-  INSTANCE_TYPE       = 'm5a.large'.freeze
+  AMI_ID              = '3pg-hailstorm'
+  SECURITY_GROUP      = 'Hailstorm'
+  SECURITY_GROUP_DESC = 'Allows SSH traffic from anywhere and all internal TCP, UDP and ICMP traffic'
+  SSH_USER            = 'ubuntu'
+  SSH_IDENTITY        = 'hailstorm'
+  INSTANCE_TYPE       = 'm5a.large'
   INSTANCE_CLASS_SCALE_FACTOR = { t2: 2, t3: 2, t3a: 2, m4: 4, m5: 5,
                                   m5a: 6, m5ad: 7, m5d: 8, m5dn: 9, m5n: 10 }.freeze
   INSTANCE_TYPE_SCALE_FACTOR = 2
@@ -18,10 +20,10 @@ class Hailstorm::Model::Helper::AmazonCloudDefaults
 
   MIN_THREADS_ONE_AGENT = 10
   SSH_PORT = Hailstorm::Behavior::SSHable::Defaults::SSH_PORT
-  EC2_REGION = 'us-east-1'.freeze
-  VPC_NAME = 'hailstorm'.freeze
-  CIDR_BLOCK = '10.0.0.0/16'.freeze
-  SUBNET_NAME = "#{VPC_NAME} public".freeze
+  EC2_REGION = 'us-east-1'
+  VPC_NAME = 'hailstorm'
+  CIDR_BLOCK = '10.0.0.0/16'
+  SUBNET_NAME = "#{VPC_NAME} public"
 
   # @param [String] instance_type
   # @return [Integer]

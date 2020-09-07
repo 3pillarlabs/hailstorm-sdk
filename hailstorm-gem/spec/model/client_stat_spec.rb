@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'tempfile'
 require 'jtl_log_data'
@@ -9,7 +11,6 @@ require 'hailstorm/model/project'
 require 'client_stats_helper'
 
 describe Hailstorm::Model::ClientStat do
-
   include ClientStatsHelper
 
   context '.collect_client_stats' do
@@ -17,7 +18,7 @@ describe Hailstorm::Model::ClientStat do
       cluster_instance = Hailstorm::Model::AmazonCloud.new
       cluster_instance.project = Hailstorm::Model::Project.create!(project_code: 'client_stat_spec')
       expect(cluster_instance).to respond_to(:master_agents)
-      agent_generator = Proc.new do |jmeter_plan_id, result_file|
+      agent_generator = proc do |jmeter_plan_id, result_file|
         agent = Hailstorm::Model::MasterAgent.new
         agent.jmeter_plan_id = jmeter_plan_id
         expect(agent).to respond_to(:result_for)
@@ -32,7 +33,8 @@ describe Hailstorm::Model::ClientStat do
       allow(cluster_instance).to receive_message_chain(:master_agents, :where, :all).and_return(agents)
       expect(Hailstorm::Model::ClientStat).to receive(:create_client_stat).exactly(uniq_ids.size).times
       allow(File).to receive(:unlink)
-      Hailstorm::Model::ClientStat.collect_client_stats(instance_double(Hailstorm::Model::ExecutionCycle), cluster_instance)
+      mock_execution_cycle = instance_double(Hailstorm::Model::ExecutionCycle)
+      Hailstorm::Model::ClientStat.collect_client_stats(mock_execution_cycle, cluster_instance)
     end
   end
 
@@ -51,34 +53,34 @@ describe Hailstorm::Model::ClientStat do
 
   context Hailstorm::Model::ClientStat::ClientStatTemplate do
     it 'should not combine_stats for single file' do
-      stat_file_paths = [ Tempfile.new ]
+      stat_file_paths = [Tempfile.new]
       template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(nil, nil, nil, stat_file_paths)
       expect(template).to_not receive(:combine_stats)
       allow(template).to receive(:do_create_client_stat)
       allow(template).to receive(:persist_jtl)
       template.create
-      stat_file_paths.each { |sfp| sfp.unlink }
+      stat_file_paths.each(&:unlink)
     end
 
     it 'should combine_stats for multiple files' do
-      stat_file_paths = [ Tempfile.new, Tempfile.new ]
+      stat_file_paths = [Tempfile.new, Tempfile.new]
       template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(nil, nil, nil, stat_file_paths)
       expect(template).to receive(:combine_stats).and_return(stat_file_paths.first)
       allow(template).to receive(:do_create_client_stat)
       allow(template).to receive(:persist_jtl)
       template.create
-      stat_file_paths.each { |sfp| sfp.unlink }
+      stat_file_paths.each(&:unlink)
     end
 
     it 'should delete stat_file_paths' do
-      stat_file_paths = [ Tempfile.new, Tempfile.new ]
+      stat_file_paths = [Tempfile.new, Tempfile.new]
       combined_path = Tempfile.new
       template = Hailstorm::Model::ClientStat::ClientStatTemplate.new(nil, nil, nil, stat_file_paths)
       expect(template).to receive(:combine_stats).and_return(combined_path)
       allow(template).to receive(:do_create_client_stat)
       allow(template).to receive(:persist_jtl)
       template.create
-      stat_file_paths.each { |sfp| sfp.unlink }
+      stat_file_paths.each(&:unlink)
     end
 
     it 'should create a client_stat' do
@@ -94,7 +96,7 @@ describe Hailstorm::Model::ClientStat do
     end
 
     it 'should combine samples from multiple files' do
-      log_data =<<-JTL
+      log_data = <<-JTL
       <?xml version="1.0" encoding="UTF-8"?>
       <testResults version="1.2">
         <sample t="14256" lt="0" ts="1354685431293" s="true" lb="Home Page" rc="200" rm="Number of samples in transaction : 3, number of failing samples : 0" tn=" Static Pages 1-1" dt="" by="33154">
@@ -113,10 +115,10 @@ describe Hailstorm::Model::ClientStat do
 
       project = Hailstorm::Model::Project.create!(project_code: 'client_stat_spec')
       template = Hailstorm::Model::ClientStat::ClientStatTemplate
-                   .new(instance_double(Hailstorm::Model::JmeterPlan, id: 1),
-                        instance_double(Hailstorm::Model::ExecutionCycle, id: 1, project: project),
-                        instance_double(Hailstorm::Model::AmazonCloud, id: 1),
-                        stat_file_paths)
+                 .new(instance_double(Hailstorm::Model::JmeterPlan, id: 1),
+                      instance_double(Hailstorm::Model::ExecutionCycle, id: 1, project: project),
+                      instance_double(Hailstorm::Model::AmazonCloud, id: 1),
+                      stat_file_paths)
 
       allow(template).to receive(:do_create_client_stat)
       expect(template).to receive(:persist_jtl) do |_client_stat, combined_path|
@@ -160,11 +162,15 @@ describe Hailstorm::Model::ClientStat do
       class << builder
         # :nocov:
         def method_missing(name, *args, &block)
-          if name =~ /^set/
+          if name.to_s =~ /^set/
             self
           else
             super
           end
+        end
+
+        def respond_to_missing?(name, _include_all)
+          name.to_s =~ /^set/ ? true : super
         end
         # :nocov:
       end
@@ -183,7 +189,7 @@ describe Hailstorm::Model::ClientStat do
                                                          aggregate_response_throughput: 3000,
                                                          last_sample_at: Time.new(2010, 10, 7, 14, 23, 45))
       allow(Hailstorm::Model::JtlFile).to receive(:export_file)
-      expect(client_stat.write_jtl('foo', true)).to match(/^foo.+\.jtl$/)
+      expect(client_stat.write_jtl('foo', append_id: true)).to match(/^foo.+\.jtl$/)
     end
   end
 

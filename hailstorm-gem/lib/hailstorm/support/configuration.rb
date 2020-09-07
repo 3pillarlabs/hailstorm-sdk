@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/support'
 
 # Configuration for Hailstorm. This is exposed to the application to
@@ -209,17 +211,6 @@ class Hailstorm::Support::Configuration
     if block_given?
       monitor = TargetHost.new
       monitor.monitor_type = monitor_type
-      def monitor.groups(role = nil)
-        @groups ||= []
-        if block_given?
-          group = TargetGroup.new
-          group.role = role
-          yield group
-          @groups.push(group)
-        else
-          @groups
-        end
-      end
       yield monitor
       @monitors.push(monitor)
     else
@@ -250,6 +241,18 @@ class Hailstorm::Support::Configuration
 
     # Set this to false to exclude a host from performance metric collection
     attr_accessor :active
+
+    def groups(role = nil)
+      @groups ||= []
+      if block_given?
+        group = TargetGroup.new
+        group.role = role
+        yield group
+        @groups.push(group)
+      else
+        @groups
+      end
+    end
   end
 
   # Target groups essentially label different hosts as per purpose - examples

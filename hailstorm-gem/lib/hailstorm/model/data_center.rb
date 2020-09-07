@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm'
 require 'hailstorm/model'
 require 'hailstorm/behavior/clusterable'
@@ -25,7 +27,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   # Creates a data center load agent with all required packages pre-installed and
   # starts requisite number of instances
-  def setup(force = false)
+  def setup(force: false)
     logger.debug { "#{self.class}##{__method__}" }
 
     self.save! if save_on_setup?
@@ -69,7 +71,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     Hailstorm::Support::SSH.start(load_agent.private_ip_address, self.user_name, ssh_options) do |ssh|
       output = ssh.exec!('command -v java')
       logger.debug { "output of java check #{output}" }
-      java_available = true if output && output.include?('java')
+      java_available = true if output&.include?('java')
     end
     java_available
   end
@@ -80,7 +82,7 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     Hailstorm::Support::SSH.start(load_agent.private_ip_address, self.user_name, ssh_options) do |ssh|
       output = ssh.exec!('java -version')
       logger.debug { output }
-      java_version_ok = true if /version\s+\"#{Defaults::JAVA_VERSION}\.[^"]+"/ =~ output
+      java_version_ok = true if /version\s+"#{Defaults::JAVA_VERSION}\.[^"]+"/ =~ output
     end
     java_version_ok
   end
@@ -99,12 +101,12 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
       output = nil
       ssh.exec!("ls -d #{jmeter_home}/bin/jmeter") do |_channel, stream, data|
         if stream == :stdout
-          output = '' if output.nil?
+          output = +'' if output.nil?
           output << data
         end
       end
       logger.debug { "output of jmeter check #{output}" }
-      jmeter_available = true if output && output.include?('jmeter')
+      jmeter_available = true if output&.include?('jmeter')
     end
     jmeter_available
   end
@@ -142,11 +144,11 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
     machines_added.size
   end
 
-  def agents_to_remove(query, _required_count, &_block)
+  def agents_to_remove(query, _required_count, &block)
     logger.debug { "#{self.class}##{__method__}" }
     current_machines = query.all.collect(&:private_ip_address)
     machines_removed = current_machines - [self.machines].flatten
-    query.where(private_ip_address: machines_removed).each { |agent| yield agent }
+    query.where(private_ip_address: machines_removed).each(&block)
   end
 
   def agent_before_save_on_create(load_agent)
@@ -170,9 +172,9 @@ class Hailstorm::Model::DataCenter < ActiveRecord::Base
 
   # Data center default settings
   class Defaults
-    SSH_USER            = 'ubuntu'.freeze
-    TITLE               = 'Hailstorm'.freeze
-    JAVA_VERSION        = '1.8'.freeze
+    SSH_USER            = 'ubuntu'
+    TITLE               = 'Hailstorm'
+    JAVA_VERSION        = '1.8'
     SSH_PORT            = 22
   end
 end

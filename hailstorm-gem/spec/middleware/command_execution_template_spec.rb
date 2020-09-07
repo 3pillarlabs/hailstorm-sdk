@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/middleware/command_execution_template'
 require 'hailstorm/model/project'
@@ -9,7 +11,6 @@ require 'hailstorm/model/master_agent'
 require 'hailstorm/support/configuration'
 
 describe Hailstorm::Middleware::CommandExecutionTemplate do
-
   before(:each) do
     mock_delegate = instance_double(Hailstorm::Model::Project)
     config = Hailstorm::Support::Configuration.new
@@ -28,7 +29,7 @@ describe Hailstorm::Middleware::CommandExecutionTemplate do
   context '#results' do
     it 'should return data, operation and format' do
       allow(@app.model_delegate).to receive(:results).and_return([])
-      seq = ['foo.jtl', {'jmeter' => '1', 'cluster' => '2'}]
+      seq = ['foo.jtl', { 'jmeter' => '1', 'cluster' => '2' }]
       expect(@app.results(false, 'json', :show, seq)).to be == [[], :show, 'json']
     end
 
@@ -38,7 +39,7 @@ describe Hailstorm::Middleware::CommandExecutionTemplate do
                formatted_started_at: '2018-01-01 14:10:00', formatted_stopped_at: '2018-01-01 14:25:00' }
         r2 = r1.clone
         r2[:id] = 4
-        @data = [ OpenStruct.new(r1), OpenStruct.new(r2) ]
+        @data = [OpenStruct.new(r1), OpenStruct.new(r2)]
         allow(@app.model_delegate).to receive(:results).and_return(@data)
       end
       it 'should return only the last data' do
@@ -105,7 +106,7 @@ describe Hailstorm::Middleware::CommandExecutionTemplate do
           project = Hailstorm::Model::Project.create!(project_code: 'command_execution_template_spec')
           test_plan = Hailstorm::Model::JmeterPlan.create!(active: false, project: project,
                                                            test_plan_name: 'view_template_spec', content_hash: 'A')
-          test_plan.update_attribute(:properties, {NumUsers: 100}.to_json)
+          test_plan.update_attribute(:properties, { NumUsers: 100 }.to_json)
           test_plan.update_column(:active, true)
           amz = Hailstorm::Model::AmazonCloud.create!(project: project, access_key: 'A', secret_key: 'A')
           Hailstorm::Model::Cluster.create!(project: project, cluster_type: amz.class.name, clusterable_id: amz.id)
@@ -113,9 +114,12 @@ describe Hailstorm::Middleware::CommandExecutionTemplate do
           Hailstorm::Model::ExecutionCycle.create!(project: project,
                                                    status: Hailstorm::Model::ExecutionCycle::States::STARTED,
                                                    started_at: Time.now)
-          @master_agent = Hailstorm::Model::MasterAgent.create!(clusterable_id: amz.id, clusterable_type: amz.class.name,
-                                                                jmeter_plan: test_plan, public_ip_address: '8.8.8.8',
-                                                                active: false, jmeter_pid: 9364)
+          @master_agent = Hailstorm::Model::MasterAgent.create!(clusterable_id: amz.id,
+                                                                clusterable_type: amz.class.name,
+                                                                jmeter_plan: test_plan,
+                                                                public_ip_address: '8.8.8.8',
+                                                                active: false,
+                                                                jmeter_pid: 9364)
           @master_agent.update_column(:active, true)
 
           allow(@app).to receive(:model_delegate).and_return(project)

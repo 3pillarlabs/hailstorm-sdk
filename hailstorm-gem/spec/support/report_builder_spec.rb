@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'ostruct'
 require 'hailstorm/support/report_builder'
@@ -5,18 +7,16 @@ require 'hailstorm/model/jmeter_plan'
 require 'hailstorm/model/target_host'
 
 describe Hailstorm::Support::ReportBuilder do
-
   context '#test_summary_rows' do
     it 'should return host names' do
       report_builder = Hailstorm::Support::ReportBuilder.new
       report_builder.test_summary_rows do |row|
-        row.jmeter_plans = [ Hailstorm::Model::JmeterPlan.new ]
+        row.jmeter_plans = [Hailstorm::Model::JmeterPlan.new]
         row.test_duration = 1000
         row.total_threads_count = 15
-        row.target_hosts = [ Hailstorm::Model::TargetHost.new(host_name: 'a'),
-                             Hailstorm::Model::TargetHost.new(host_name: 'b'),
-                             'c']
-
+        row.target_hosts = [Hailstorm::Model::TargetHost.new(host_name: 'a'),
+                            Hailstorm::Model::TargetHost.new(host_name: 'b'),
+                            'c']
       end
       expect(report_builder.test_summary_rows[0].target_hosts).to be == 'a, b, c'
     end
@@ -70,7 +70,7 @@ describe Hailstorm::Support::ReportBuilder do
         jmeter_plan = Hailstorm::Model::JmeterPlan.new(test_plan_name: name)
         allow(jmeter_plan).to receive(:plan_name).and_return(name)
         allow(jmeter_plan).to receive(:plan_description).and_return(nil)
-        main_samplers = OpenStruct.new(thread_group: 'main', samplers: %w[a, b])
+        main_samplers = OpenStruct.new(thread_group: 'main', samplers: %w[a b])
         allow(jmeter_plan).to receive(:scenario_definitions).and_return([main_samplers])
         jmeter_plan
       end
@@ -89,7 +89,7 @@ describe Hailstorm::Support::ReportBuilder do
             cluster.client_stats do |client_stat|
               client_stat.name = 'a'
               client_stat.threads_count = 100
-              client_stat.aggregate_stats = [ spy('aggregate_stats') ]
+              client_stat.aggregate_stats = [spy('aggregate_stats')]
               client_stat.aggregate_graph do |graph|
                 graph.chart_model = double('chart model', getFilePath: 'a', getWidth: 600, getHeight: 400)
               end

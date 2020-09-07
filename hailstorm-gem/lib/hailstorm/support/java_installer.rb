@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/support'
 
 # Strategy for installation of Java, assuming a Debian based OS

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/model'
 require 'hailstorm/support/ssh'
 require 'erubis/tiny'
@@ -29,7 +31,7 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
   end
 
   # This should be defined in the master and slave agent derived classes
-  def stop_jmeter(_wait = false, _aborted = false)
+  def stop_jmeter(wait: false, aborted: false)
     raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 
@@ -61,12 +63,12 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
   # when the jmeter_plan contents are modified. Pass true for force
   # to upload anyway.
   # @param [Boolean] force defaults to false
-  def upload_scripts(force = false)
-    return unless script_upload_needed?(force)
+  def upload_scripts(force: false)
+    return unless script_upload_needed?(force: force)
 
     logger.info("Uploading script #{self.jmeter_plan.test_plan_name}...")
     Hailstorm::Support::SSH.start(*ssh_start_args) do |ssh|
-      remote_sync(ssh, force)
+      remote_sync(ssh, force: force)
     end
     self.first_use = false
   end
@@ -149,11 +151,11 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
     end
   end
 
-  def script_upload_needed?(force = false)
-    first_use_or_refresh?(force) || self.jmeter_plan.content_modified?
+  def script_upload_needed?(force: false)
+    first_use_or_refresh?(force: force) || self.jmeter_plan.content_modified?
   end
 
-  def first_use_or_refresh?(force = false)
+  def first_use_or_refresh?(force: false)
     force || self.first_use?
   end
 
@@ -161,8 +163,8 @@ class Hailstorm::Model::LoadAgent < ActiveRecord::Base
     [self.public_ip_address, self.clusterable.user_name, self.clusterable.ssh_options]
   end
 
-  def remote_sync(ssh, force = false)
-    directory_hierarchy = self.jmeter_plan.remote_directory_hierarchy if first_use_or_refresh?(force)
+  def remote_sync(ssh, force: false)
+    directory_hierarchy = self.jmeter_plan.remote_directory_hierarchy if first_use_or_refresh?(force: force)
     if directory_hierarchy
       logger.debug { "Creating directory structure...#{directory_hierarchy.inspect}" }
       create_directory_hierarchy(ssh, self.clusterable.user_home, directory_hierarchy)

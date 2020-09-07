@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/model/helper/security_group_finder'
 require 'hailstorm/model/amazon_cloud'

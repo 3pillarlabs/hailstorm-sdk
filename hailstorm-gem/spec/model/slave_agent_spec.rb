@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 require 'hailstorm/model/slave_agent'
@@ -5,7 +7,6 @@ require 'hailstorm/model/jmeter_plan'
 require 'hailstorm/model/data_center'
 
 describe Hailstorm::Model::SlaveAgent do
-
   before(:each) do
     @slave_agent = Hailstorm::Model::SlaveAgent.new
   end
@@ -35,7 +36,7 @@ describe Hailstorm::Model::SlaveAgent do
         allow(Hailstorm::Support::SSH).to receive(:start).and_yield(class_double(Net::SSH))
         expect(@slave_agent).to receive(:wait_for_shutdown)
         expect(@slave_agent).to receive(:update_column).with(:jmeter_pid, nil)
-        @slave_agent.stop_jmeter(false, false, 0)
+        @slave_agent.stop_jmeter(wait: false, aborted: false, doze_time: 0)
       end
     end
   end

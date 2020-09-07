@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/support/quantile'
 
 describe Hailstorm::Support::Quantile do
-
   it 'should calculate quantile' do
     q = Hailstorm::Support::Quantile.new
     q.push(*1..10)

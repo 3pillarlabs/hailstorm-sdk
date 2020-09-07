@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'tempfile'
 require 'hailstorm/model/jtl_file'
@@ -5,7 +7,6 @@ require 'hailstorm/model/amazon_cloud'
 require 'hailstorm/model/project'
 
 describe Hailstorm::Model::JtlFile do
-
   def create_client_stat
     project = Hailstorm::Model::Project.create!(project_code: 'jtl_file_spec')
     execution_cycle = Hailstorm::Model::ExecutionCycle.create!(project: project,
@@ -31,7 +32,8 @@ describe Hailstorm::Model::JtlFile do
   context '.persist_file' do
     it 'should break up the JTL files into multiple chunks' do
       client_stat = create_client_stat
-      num_full_chunks, padding = [3, 512]
+      num_full_chunks = 3
+      padding = 512
       data_size = (Hailstorm::Model::JtlFile::DATA_CHUNK_SIZE * num_full_chunks) + padding
       jtl_file_path = Tempfile.new
       File.open(jtl_file_path, 'w') do |out|
@@ -49,8 +51,10 @@ describe Hailstorm::Model::JtlFile do
       # echo $bytes | gzip -c | base64
       gz_bytes = Base64.decode64('H4sIAH2Ik1wAA/NIzcnJ11HILFYoyUgtSlVIzKtMyk+pVMgvLYGI2AMAXBii/yIAAAA=')
       mid_point = gz_bytes.length.even? ? gz_bytes.length / 2 : (gz_bytes.length + 1) / 2
-      lub, uub = [mid_point - 1, gz_bytes.length - 1]
-      chunk1, chunk2 = [gz_bytes[0..lub], gz_bytes[mid_point, uub]]
+      lub = mid_point - 1
+      uub = gz_bytes.length - 1
+      chunk1 = gz_bytes[0..lub]
+      chunk2 = gz_bytes[mid_point, uub]
       client_stat = create_client_stat
       Hailstorm::Model::JtlFile.create!(client_stat: client_stat, chunk_sequence: 1, data_chunk: chunk1)
       Hailstorm::Model::JtlFile.create!(client_stat: client_stat, chunk_sequence: 2, data_chunk: chunk2)

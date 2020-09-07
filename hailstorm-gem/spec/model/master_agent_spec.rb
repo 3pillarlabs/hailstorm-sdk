@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 require 'hailstorm/model/master_agent'
@@ -38,7 +40,7 @@ describe Hailstorm::Model::MasterAgent do
   context '#stop_jmeter' do
     context 'jmeter is running' do
       before(:each) do
-        @master_agent.jmeter_pid = 123678
+        @master_agent.jmeter_pid = 123_678
         clusterable = Hailstorm::Model::AmazonCloud.new
         clusterable.user_name = 'ubuntu'
         allow(clusterable).to receive(:ssh_options).and_return({})
@@ -59,7 +61,7 @@ describe Hailstorm::Model::MasterAgent do
           allow(@mock_ssh).to receive(:terminate_process_tree)
           allow(@master_agent).to receive(:evaluate_command)
           expect(@master_agent).to receive(:update_column).with(:jmeter_pid, nil)
-          @master_agent.stop_jmeter(false, false, 0)
+          @master_agent.stop_jmeter(wait: false, aborted: false, doze_time: 0)
         end
       end
       context 'jmeter_plan.loop_forever? is false' do
@@ -71,7 +73,7 @@ describe Hailstorm::Model::MasterAgent do
             allow(@mock_ssh).to receive(:process_running?).and_return(false)
             expect(@master_agent).to_not receive(:terminate_remote_jmeter)
             expect(@master_agent).to receive(:update_column).with(:jmeter_pid, nil)
-            @master_agent.stop_jmeter(false, false, 0)
+            @master_agent.stop_jmeter(wait: false, aborted: false, doze_time: 0)
           end
         end
         context 'jmeter is running on remote agent' do
@@ -83,19 +85,21 @@ describe Hailstorm::Model::MasterAgent do
             it 'should not terminate process, but update pid' do
               expect(@master_agent).to_not receive(:terminate_remote_jmeter)
               expect(@master_agent).to receive(:update_column).with(:jmeter_pid, nil)
-              @master_agent.stop_jmeter(true, false, 0)
+              @master_agent.stop_jmeter(wait: true, aborted: false, doze_time: 0)
             end
           end
           context 'aborted is true' do
             it 'should terminate process and update pid' do
               expect(@master_agent).to receive(:terminate_remote_jmeter)
               expect(@master_agent).to receive(:update_column).with(:jmeter_pid, nil)
-              @master_agent.stop_jmeter(false, true, 0)
+              @master_agent.stop_jmeter(wait: false, aborted: true, doze_time: 0)
             end
           end
           context 'wait is false and aborted is false' do
             it 'should raise an exception' do
-              expect { @master_agent.stop_jmeter(false, false, 0) }.to raise_error(Hailstorm::Exception)
+              expect do
+                @master_agent.stop_jmeter(wait: false, aborted: false, doze_time: 0)
+              end.to raise_error(Hailstorm::Exception)
             end
           end
         end
@@ -134,7 +138,7 @@ describe Hailstorm::Model::MasterAgent do
   context '#check_status' do
     context 'jmeter_pid is not nil' do
       before(:each) do
-        @master_agent.jmeter_pid = 12345
+        @master_agent.jmeter_pid = 12_345
         clusterable = Hailstorm::Model::AmazonCloud.new(user_name: 'ubuntu')
         allow(clusterable).to receive(:ssh_options).and_return({})
         allow(@master_agent).to receive(:clusterable).and_return(clusterable)

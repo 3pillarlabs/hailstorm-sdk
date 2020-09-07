@@ -1,10 +1,11 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/model/helper/ami_helper'
 require 'hailstorm/model/amazon_cloud'
 require 'hailstorm/model/project'
 
 describe Hailstorm::Model::Helper::AmiHelper do
-
   before(:each) do
     @aws = Hailstorm::Model::AmazonCloud.new
     @mock_sg_finder = instance_double(Hailstorm::Model::Helper::SecurityGroupFinder)
@@ -166,8 +167,8 @@ describe Hailstorm::Model::Helper::AmiHelper do
         expect { @helper.send(:register_hailstorm_ami, @mock_instance) }.to raise_error(Hailstorm::AmiCreationFailure)
         begin
           @helper.send(:register_hailstorm_ami, @mock_instance)
-        rescue Hailstorm::AmiCreationFailure => amiFailure
-          expect(amiFailure.diagnostics).to_not be_blank
+        rescue Hailstorm::AmiCreationFailure => e
+          expect(e.diagnostics).to_not be_blank
         end
       end
     end

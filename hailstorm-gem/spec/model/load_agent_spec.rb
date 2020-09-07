@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/model/load_agent'
 require 'hailstorm/model/jmeter_plan'
@@ -5,7 +7,6 @@ require 'hailstorm/model/amazon_cloud'
 require 'hailstorm/model/project'
 
 describe Hailstorm::Model::LoadAgent do
-
   before(:each) do
     @load_agent = Hailstorm::Model::LoadAgent.new
   end
@@ -57,8 +58,8 @@ describe Hailstorm::Model::LoadAgent do
 
         root_path = Hailstorm.workspace(project_code).app_path
         expect(@load_agent.jmeter_plan).to respond_to(:test_artifacts)
-        artifacts = ["#{File.join(root_path, 'store', 'prime.jmx')}",
-                     "#{File.join(root_path, 'store', 'admin', 'prime.jmx')}"]
+        artifacts = [File.join(root_path, 'store', 'prime.jmx').to_s,
+                     File.join(root_path, 'store', 'admin', 'prime.jmx').to_s]
         allow(@load_agent.jmeter_plan).to receive(:test_artifacts).and_return(artifacts)
         allow(mock_ssh).to receive(:upload) { |local, remote| dir_paths.push([local, remote]) }
         expect(mock_ssh).to receive(:upload).exactly(2).times
@@ -70,13 +71,13 @@ describe Hailstorm::Model::LoadAgent do
         expect(dir_paths).to include("/home/ubuntu/#{project_code}/jmeter/store")
         expect(dir_paths).to include("/home/ubuntu/#{project_code}/jmeter/store/admin")
         expect(dir_paths).to include([
-          @load_agent.jmeter_plan.test_artifacts[0],
-          "/home/ubuntu/#{project_code}/jmeter/store/prime.jmx"
-        ])
+                                       @load_agent.jmeter_plan.test_artifacts[0],
+                                       "/home/ubuntu/#{project_code}/jmeter/store/prime.jmx"
+                                     ])
         expect(dir_paths).to include([
-          @load_agent.jmeter_plan.test_artifacts[1],
-          "/home/ubuntu/#{project_code}/jmeter/store/admin/prime.jmx"
-        ])
+                                       @load_agent.jmeter_plan.test_artifacts[1],
+                                       "/home/ubuntu/#{project_code}/jmeter/store/admin/prime.jmx"
+                                     ])
       end
 
       it 'should set first_use to false' do

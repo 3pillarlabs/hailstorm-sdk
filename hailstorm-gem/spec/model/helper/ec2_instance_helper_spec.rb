@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/model/helper/ec2_instance_helper'
 require 'hailstorm/model/amazon_cloud'
@@ -5,10 +7,10 @@ require 'hailstorm/model/amazon_cloud'
 describe Hailstorm::Model::Helper::Ec2InstanceHelper do
   before(:each) do
     @mock_instance = Hailstorm::Behavior::AwsAdaptable::Instance.new(
-        instance_id: 'A',
-        state: Hailstorm::Behavior::AwsAdaptable::InstanceState.new(name: 'pending'),
-        public_ip_address: nil,
-        private_ip_address: nil
+      instance_id: 'A',
+      state: Hailstorm::Behavior::AwsAdaptable::InstanceState.new(name: 'pending'),
+      public_ip_address: nil,
+      private_ip_address: nil
     )
 
     mock_instance_client = instance_double(Hailstorm::Behavior::AwsAdaptable::InstanceClient, create: @mock_instance)
@@ -34,8 +36,10 @@ describe Hailstorm::Model::Helper::Ec2InstanceHelper do
 
     it 'should raise error if ssh connectivity fails' do
       allow(Hailstorm::Support::SSH).to receive(:ensure_connection).and_return(false)
-      expect { @helper.create_ec2_instance(ami_id: 'ami-123',
-                                           security_group_ids: 'sg-123') }.to raise_error(Hailstorm::Exception)
+      expect do
+        @helper.create_ec2_instance(ami_id: 'ami-123',
+                                    security_group_ids: 'sg-123')
+      end.to raise_error(Hailstorm::Exception)
     end
   end
 
@@ -43,8 +47,10 @@ describe Hailstorm::Model::Helper::Ec2InstanceHelper do
     it 'should raise error' do
       allow(@helper.instance_client).to receive(:ready?).and_return(false)
       allow(@helper).to receive(:wait_for).and_raise(Hailstorm::Exception, 'mock error')
-      expect { @helper.create_ec2_instance(ami_id: 'ami-123',
-                                           security_group_ids: 'sg-123') }.to raise_error(Hailstorm::Exception)
+      expect do
+        @helper.create_ec2_instance(ami_id: 'ami-123',
+                                    security_group_ids: 'sg-123')
+      end.to raise_error(Hailstorm::Exception)
     end
   end
 end

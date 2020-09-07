@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/support'
 
 # Log4j backed logger
@@ -128,15 +130,6 @@ class Hailstorm::Support::Log4jBackedLogger
   # @param [String] _message
   def extended_logging(_log_level, _message)
     # noop
-  end
-
-  def method_missing(method_name, *_args)
-    self.warn { "#{method_name}: Undefined method -- call stack:\n#{caller.join("\n")}" }
-    super
-  end
-
-  def respond_to_missing?(*)
-    super
   end
 
   @logger_levels = nil

@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/support/jmeter_installer'
 
 describe Hailstorm::Support::JmeterInstaller do
-
   context '.create' do
     it 'should default to tarball strategy' do
       installer = Hailstorm::Support::JmeterInstaller.create

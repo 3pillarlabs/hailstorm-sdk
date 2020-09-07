@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/support'
 require 'nokogiri'
 require 'hailstorm/support/file_helper'
@@ -6,17 +8,9 @@ require 'hailstorm/support/file_helper'
 class Hailstorm::Support::ReportBuilder
   include Hailstorm::Support::FileHelper::InstanceMethods
 
-  attr_accessor :title
+  attr_accessor :title, :jmeter_plans
 
-  attr_accessor :jmeter_plans
-
-  attr_reader :images
-
-  attr_reader :current_report_path
-
-  attr_reader :report_type
-
-  attr_reader :report_format
+  attr_reader :images, :current_report_path, :report_type, :report_format
 
   def initialize(format: 'docx', report_type: 'standard')
     @images = []
@@ -38,12 +32,13 @@ class Hailstorm::Support::ReportBuilder
 
   # Summary of each test/execution cycle
   class TestSummaryRow
-    attr_accessor :index
-    attr_accessor :jmeter_plans
-    attr_accessor :test_duration
-    attr_accessor :total_threads_count
+    attr_accessor :index,
+                  :jmeter_plans,
+                  :test_duration,
+                  :total_threads_count
 
     attr_writer :target_hosts
+
     def target_hosts
       @target_hosts ||= []
       host_names = @target_hosts.collect { |e| e.respond_to?(:host_name) ? e.host_name : e.to_s }
@@ -85,8 +80,8 @@ class Hailstorm::Support::ReportBuilder
 
   # Table of contents item
   class TocItem
-    attr_accessor :builder
-    attr_accessor :toc_id
+    attr_accessor :builder,
+                  :toc_id
 
     def initialize(builder)
       self.toc_id = self.object_id
@@ -96,8 +91,8 @@ class Hailstorm::Support::ReportBuilder
 
   # Execution item
   class ExecutionDetail < TocItem
-    attr_accessor :index
-    attr_accessor :total_threads_count
+    attr_accessor :index,
+                  :total_threads_count
 
     def clusters
       @clusters ||= []
@@ -208,9 +203,9 @@ class Hailstorm::Support::ReportBuilder
 
     # Client statistics
     class ClientStatItem < Hailstorm::Support::ReportBuilder::TocItem
-      attr_accessor :name
-      attr_accessor :threads_count
-      attr_accessor :aggregate_stats
+      attr_accessor :name,
+                    :threads_count,
+                    :aggregate_stats
 
       def aggregate_graph
         @aggregate_graph ||= Hailstorm::Support::ReportBuilder::Graph.new
@@ -226,8 +221,8 @@ class Hailstorm::Support::ReportBuilder
 
   # Target statistics
   class TargetStatItem < TocItem
-    attr_accessor :role_name
-    attr_accessor :host_name
+    attr_accessor :role_name,
+                  :host_name
 
     def utilization_graph
       @utilization_graph ||= Graph.new
@@ -245,13 +240,7 @@ class Hailstorm::Support::ReportBuilder
     attr_accessor :chart_model
 
     # internal attributes
-    attr_reader :docpr_id
-    attr_reader :docpr_name
-    attr_reader :cnvpr_id
-    attr_reader :cnvpr_name
-    attr_reader :embed_id
-    attr_reader :cx
-    attr_reader :cy
+    attr_reader :docpr_id, :docpr_name, :cnvpr_id, :cnvpr_name, :embed_id, :cx, :cy
 
     def enlist(builder)
       @docpr_id = self.object_id

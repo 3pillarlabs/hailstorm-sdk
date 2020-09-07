@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/support'
 require 'active_support/values/time_zone'
 require 'active_record'

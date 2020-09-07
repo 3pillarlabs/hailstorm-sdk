@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 require 'stringio'
@@ -7,7 +9,6 @@ require 'hailstorm/model/data_center'
 require 'hailstorm/support/ssh'
 
 describe Hailstorm::Model::DataCenter do
-
   def mock_hailstorm_fs
     Hailstorm.fs = instance_double(Hailstorm::Behavior::FileStore)
     allow(Hailstorm.fs).to receive(:read_identity_file).and_yield(StringIO.open('secret', 'r'))
@@ -387,7 +388,7 @@ describe Hailstorm::Model::DataCenter do
   context '#purge' do
     it 'should not raise error' do
       dc = Hailstorm::Model::DataCenter.new(user_name: 'root', ssh_identity: 'insecure',
-                                             machines: ['10.0.10.10'], title: 'omega-1', active: true)
+                                            machines: ['10.0.10.10'], title: 'omega-1', active: true)
       expect { dc.purge }.to_not raise_error
     end
   end

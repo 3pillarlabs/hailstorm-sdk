@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/model/helper/ami_provision_helper'
 
@@ -18,7 +20,7 @@ describe Hailstorm::Model::Helper::AmiProvisionHelper do
 
   context '#install_java' do
     it 'should collect remote stdout' do
-      allow(@helper).to receive(:ssh_channel_exec_instr) do |_ssh, instr,  cb|
+      allow(@helper).to receive(:ssh_channel_exec_instr) do |_ssh, instr, cb|
         cb.call("#{instr} ok")
         true
       end
@@ -28,7 +30,7 @@ describe Hailstorm::Model::Helper::AmiProvisionHelper do
     it 'should raise error if installation fails' do
       allow(@helper).to receive(:ssh_channel_exec_instr).and_return(nil)
       expect { @helper.install_java(instance_double(Hailstorm::Behavior::SshConnection)) }
-          .to raise_error(Hailstorm::JavaInstallationException) { |error| expect(error.diagnostics).to_not be_blank }
+        .to raise_error(Hailstorm::JavaInstallationException) { |error| expect(error.diagnostics).to_not be_blank }
     end
   end
 

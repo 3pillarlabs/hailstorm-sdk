@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'stringio'
 require 'tempfile'
@@ -5,7 +7,6 @@ require 'hailstorm/model/target_stat'
 require 'hailstorm/model/nmon'
 
 describe Hailstorm::Model::TargetStat do
-
   context '.create_target_stat' do
     it 'should calculate averages' do
       project = Hailstorm::Model::Project.create!(project_code: 'target_stat_spec')
@@ -41,7 +42,7 @@ describe Hailstorm::Model::TargetStat do
                                                    ssh_identity: 'a',
                                                    user_name: 'ubuntu')
       target_host.update_column(:active, true)
-      sample_generator = ->() { rand(100) }
+      sample_generator = -> { rand(100) }
       allow(target_host).to receive(:each_cpu_usage_sample) do |&block|
         block.call(sample_generator.call)
       end

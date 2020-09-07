@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/support/amazon_account_cleaner'
 
 describe Hailstorm::Support::AmazonAccountCleaner do
-
   before(:each) do
     @client_factory = Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(
       ec2_client: instance_double(Hailstorm::Behavior::AwsAdaptable::Ec2Client),
@@ -29,7 +30,7 @@ describe Hailstorm::Support::AmazonAccountCleaner do
 
   context '#terminate_instances' do
     it 'should terminate all instances' do
-      instance_state = -> (state) { Hailstorm::Behavior::AwsAdaptable::InstanceState.new(name: state.to_s) }
+      instance_state = ->(state) { Hailstorm::Behavior::AwsAdaptable::InstanceState.new(name: state.to_s) }
       stopped_attrs = { state: instance_state.call(:stopped),
                         instance_id: 'id-1',
                         public_ip_address: nil,
@@ -60,7 +61,7 @@ describe Hailstorm::Support::AmazonAccountCleaner do
   context '#deregister_amis' do
     it 'should deregister all owned AMIs' do
       images = [{ state: 'pending', image_id: 'ami-1' }, { state: 'available', image_id: 'ami-2' }]
-                 .map { |attrs| Hailstorm::Behavior::AwsAdaptable::Ami.new(attrs) }
+               .map { |attrs| Hailstorm::Behavior::AwsAdaptable::Ami.new(attrs) }
 
       expect(@client_factory.ami_client).to receive(:deregister).once
       expect(@client_factory.ami_client).to_not receive(:deregister).with(ami_id: 'ami-1')

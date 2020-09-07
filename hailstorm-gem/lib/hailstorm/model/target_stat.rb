@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'zlib'
 require 'hailstorm/model/execution_cycle'
 require 'hailstorm/model/target_host'
@@ -29,7 +31,7 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
   end
 
   # @return [String] path to outfile file
-  def utilization_graph(width: 640, height: 600, builder: nil, working_path:)
+  def utilization_graph(working_path:, width: 640, height: 600, builder: nil)
     output_path = File.join(working_path, "target_stat_graph_#{self.id}")
     grapher = GraphBuilderFactory.utilization_graph(output_path,
                                                     self.target_host.sampling_interval,
@@ -83,7 +85,7 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
     File.unlink(path)
   end
 
-  def blob_file_path(metric, inflated = false)
+  def blob_file_path(metric, inflated: false)
     File.join(Hailstorm.workspace(self.execution_cycle.project.project_code).tmp_path,
               "#{metric}_trend-#{self.execution_cycle.id}-#{self.target_host.id}.log#{inflated ? '' : '.gz'}")
   end
@@ -93,7 +95,7 @@ class Hailstorm::Model::TargetStat < ActiveRecord::Base
   # @param [Symbol] db_column_name
   # @return [String] path to file
   def dump_usage_data(metric, db_column_name)
-    file_path = blob_file_path(metric, true)
+    file_path = blob_file_path(metric, inflated: true)
     File.open(file_path, 'w') do |outfile|
       StringIO.open(self.class
                     .unscoped
