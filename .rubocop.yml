@@ -81,6 +81,11 @@ Layout/EmptyLinesAroundAttributeAccessor: # (new in 0.83)
 Layout/SpaceAroundMethodCallOperator: # (new in 0.82)
   Enabled: true
 
+Layout/EmptyLines:
+  Exclude:
+    - 'hailstorm-gem/features/step_definitions/**/*_steps.rb'
+    - 'hailstorm-cli/features/step_definitions/**/*_steps.rb'
+
 Style/ClassAndModuleChildren:
   Enabled: false
 

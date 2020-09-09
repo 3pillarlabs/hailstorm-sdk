@@ -1,19 +1,20 @@
+# frozen_string_literal: true
+
+# Command line helpers
 module CmdLineHelper
-  def capture_cmd_output(stream)
-    stream = stream.to_s
-    captured_stream = Tempfile.new(stream)
-    stream_io = eval("$#{stream}")
-    origin_stream = stream_io.dup
-    stream_io.reopen(captured_stream)
+  def capture_cmd_output
+    captured_stream = Tempfile.new(:stdout.to_s)
+    origin_stream = $stdout.dup
+    $stdout.reopen(captured_stream)
 
     yield
 
-    stream_io.rewind
-    return captured_stream.read
+    $stdout.rewind
+    captured_stream.read
   ensure
     captured_stream.close
     captured_stream.unlink
-    stream_io.reopen(origin_stream)
+    $stdout.reopen(origin_stream)
   end
 end
 

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'ostruct'
 
 include CliStepHelper
@@ -11,13 +13,13 @@ end
 When(/^I created? (a new|the) project "([^"]*)"$/) do |new_str, project_name|
   project_path = File.join(tmp_path, project_name)
   FileUtils.rmtree(project_path) if new_str =~ /new/
-  unless File.exists?(project_path)
+  unless File.exist?(project_path)
     gems = [
-        OpenStruct.new(name: 'hailstorm', path: File.expand_path('../../../../hailstorm-gem', __FILE__)),
-        OpenStruct.new(name: 'hailstorm-cli', path: File.expand_path('../../..', __FILE__)),
+      OpenStruct.new(name: 'hailstorm', path: File.expand_path('../../../../hailstorm-gem', __FILE__)),
+      OpenStruct.new(name: 'hailstorm-cli', path: File.expand_path('../../..', __FILE__))
     ]
 
-    Hailstorm::Initializer.create_project!(tmp_path, project_name, false, gems)
+    Hailstorm::Initializer.create_project!(tmp_path, project_name, gems, quiet: false)
   end
 end
 
@@ -70,15 +72,18 @@ end
 When(/^I type command '(.+?)'(| and exit)$/) do |command, exit|
   @write.puts command
   sleep 3
+  @exit_on_cmd_resp = !exit.blank?
 end
 
 Then(/^the application should show the response and exit$/) do
   response = @master.read_nonblock(4096)
   puts response
   expect(response).to_not be_blank
-  @write.puts 'exit'
-  sleep 3
-  @write.close
-  @master.close
-  Process.wait(@pid)
+  if exit_on_cmd_resp
+    @write.puts 'exit'
+    sleep 3
+    @write.close
+    @master.close
+    Process.wait(@pid)
+  end
 end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/cli'
 require 'hailstorm/cli/help_doc'
 require 'hailstorm/cli/view_renderer'
@@ -8,8 +10,8 @@ require 'hailstorm/behavior/loggable'
 class Hailstorm::Cli::CmdExecutor
   include Hailstorm::Behavior::Loggable
 
-  attr_reader :middleware
-  attr_reader :project
+  attr_reader :middleware,
+              :project
 
   def initialize(new_middleware, new_project)
     @middleware = new_middleware

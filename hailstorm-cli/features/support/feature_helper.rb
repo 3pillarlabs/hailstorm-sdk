@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'bundler/setup'
 require 'active_support/all'
 
@@ -17,7 +19,7 @@ require 'active_record/errors'
 require 'hailstorm/support/db_connection'
 
 connection_spec = Hailstorm::Support::DbConnection.new(
-  adapter:  'jdbcmysql',
+  adapter: 'jdbcmysql',
   database: "hailstorm_#{ENV['HAILSTORM_ENV']}",
   username: 'hailstorm',
   password: 'hailstorm',

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/extensions'
 require 'hailstorm/initializer/eager_load'
 
@@ -8,10 +10,10 @@ module Hailstorm::Initializer
   # directories
   # @param [String] invocation_path the path this application will be installed
   # @param [String] arg_app_name the argument provided for creating project
-  # @param [Boolean] quiet false, by default; set true to not emit to stdout
   # @param [Array<Struct>] gems to add, each is a struct with (name, path)
+  # @param [Boolean] quiet false, by default; set true to not emit to stdout
   # @return [String] root_path local path to the application root
-  def self.create_project!(invocation_path, arg_app_name, quiet = false, gems = nil)
+  def self.create_project!(invocation_path, arg_app_name, gems = nil, quiet: false)
     require 'hailstorm/initializer/project_structure'
     project_creator = Hailstorm::Initializer::ProjectStructure.new(invocation_path, arg_app_name, quiet, gems)
     project_creator.create_app_structure

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/cli/cmd_executor'
 require 'hailstorm/cli/help_doc'
@@ -12,7 +14,8 @@ describe Hailstorm::Cli::CmdExecutor do
 
   context '#interpret_execute' do
     it 'should call interpreted command method on template' do
-      allow(@app).to receive(:command_execution_template).and_return(instance_double(Hailstorm::Middleware::CommandExecutionTemplate))
+      mock_template = instance_double(Hailstorm::Middleware::CommandExecutionTemplate)
+      allow(@app).to receive(:command_execution_template).and_return(mock_template)
       expect(@app.command_execution_template).to receive(:start)
       @app.interpret_execute('start')
     end
@@ -80,8 +83,8 @@ describe Hailstorm::Cli::CmdExecutor do
       it 'should modify sequences to be array of file paths in default results import directory and options' do
         allow(Dir).to receive('[]'.to_sym).and_return(%w[b.jtl a.jtl])
         expect(@app.command_execution_template).to receive(:results)
-          .with(false, nil, :import, [%w[a.jtl b.jtl], {'jmeter' => '1', 'cluster' => '2'}])
-        @app.execute_method_args([false, nil, :import, [nil, {'jmeter' => '1', 'cluster' => '2'}]],
+          .with(false, nil, :import, [%w[a.jtl b.jtl], { 'jmeter' => '1', 'cluster' => '2' }])
+        @app.execute_method_args([false, nil, :import, [nil, { 'jmeter' => '1', 'cluster' => '2' }]],
                                  :results)
       end
     end

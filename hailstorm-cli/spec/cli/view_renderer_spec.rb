@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/cli/view_renderer'
 require 'hailstorm/model/project'
@@ -33,21 +35,21 @@ describe Hailstorm::Cli::ViewRenderer do
       @query_map = { jmeter_plans: [], clusters: [], target_hosts: [] }
     end
     it 'should show everything active' do
-      expect(@app.view_template).to receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be true }
-      expect(@app.view_template).to receive(:render_load_agents) { |_q, flag| expect(flag).to be true }
-      expect(@app.view_template).to receive(:render_target_hosts) { |_q, flag| expect(flag).to be true }
+      expect(@app.view_template).to receive(:render_jmeter_plans) { |_q, arg| expect(arg[:only_active]).to be true }
+      expect(@app.view_template).to receive(:render_load_agents) { |_q, arg| expect(arg[:only_active]).to be true }
+      expect(@app.view_template).to receive(:render_target_hosts) { |_q, arg| expect(arg[:only_active]).to be true }
       @app.render_show(@query_map, true, :active)
     end
     context 'jmeter' do
       it 'should show active jmeter' do
-        expect(@app.view_template).to receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be true }
+        expect(@app.view_template).to receive(:render_jmeter_plans) { |_q, arg| expect(arg[:only_active]).to be true }
         expect(@app.view_template).to_not receive(:render_load_agents)
         expect(@app.view_template).to_not receive(:render_target_hosts)
-        @app.render_show(@query_map, true,:jmeter)
+        @app.render_show(@query_map, true, :jmeter)
       end
       context 'all' do
         it 'should show all jmeter' do
-          expect(@app.view_template).to receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be false }
+          expect(@app.view_template).to receive(:render_jmeter_plans) { |_q, op| expect(op[:only_active]).to be false }
           expect(@app.view_template).to_not receive(:render_load_agents)
           expect(@app.view_template).to_not receive(:render_target_hosts)
           @app.render_show(@query_map, false, :jmeter)
@@ -56,14 +58,14 @@ describe Hailstorm::Cli::ViewRenderer do
     end
     context 'cluster' do
       it 'should show active cluster' do
-        expect(@app.view_template).to receive(:render_load_agents) { |_q, flag| expect(flag).to be true }
+        expect(@app.view_template).to receive(:render_load_agents) { |_q, arg| expect(arg[:only_active]).to be true }
         expect(@app.view_template).to_not receive(:render_jmeter_plans)
         expect(@app.view_template).to_not receive(:render_target_hosts)
         @app.render_show(@query_map, true, :cluster)
       end
       context 'all' do
         it 'should show all cluster' do
-          expect(@app.view_template).to receive(:render_load_agents) { |_q, flag| expect(flag).to be false }
+          expect(@app.view_template).to receive(:render_load_agents) { |_q, arg| expect(arg[:only_active]).to be false }
           expect(@app.view_template).to_not receive(:render_jmeter_plans)
           expect(@app.view_template).to_not receive(:render_target_hosts)
           @app.render_show(@query_map, false, :cluster)
@@ -72,14 +74,14 @@ describe Hailstorm::Cli::ViewRenderer do
     end
     context 'monitor' do
       it 'should show active monitor' do
-        expect(@app.view_template).to receive(:render_target_hosts) { |_q, flag| expect(flag).to be true }
+        expect(@app.view_template).to receive(:render_target_hosts) { |_q, arg| expect(arg[:only_active]).to be true }
         expect(@app.view_template).to_not receive(:render_jmeter_plans)
         expect(@app.view_template).to_not receive(:render_load_agents)
         @app.render_show(@query_map, true, :monitor)
       end
       context 'all' do
         it 'should show all monitor' do
-          expect(@app.view_template).to receive(:render_target_hosts) { |_q, flag| expect(flag).to be false }
+          expect(@app.view_template).to receive(:render_target_hosts) { |_q, op| expect(op[:only_active]).to be false }
           expect(@app.view_template).to_not receive(:render_jmeter_plans)
           expect(@app.view_template).to_not receive(:render_load_agents)
           @app.render_show(@query_map, false, :monitor)
@@ -88,17 +90,17 @@ describe Hailstorm::Cli::ViewRenderer do
     end
     context 'active' do
       it 'should show everything active' do
-        expect(@app.view_template).to receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be true }
-        expect(@app.view_template).to receive(:render_load_agents) { |_q, flag| expect(flag).to be true }
-        expect(@app.view_template).to receive(:render_target_hosts) { |_q, flag| expect(flag).to be true }
+        expect(@app.view_template).to receive(:render_jmeter_plans) { |_q, arg| expect(arg[:only_active]).to be true }
+        expect(@app.view_template).to receive(:render_load_agents) { |_q, arg| expect(arg[:only_active]).to be true }
+        expect(@app.view_template).to receive(:render_target_hosts) { |_q, arg| expect(arg[:only_active]).to be true }
         @app.render_show(@query_map, true, :active)
       end
     end
     context 'all' do
       it 'should show everything including inactive' do
-        expect(@app.view_template).to receive(:render_jmeter_plans) { |_q, flag| expect(flag).to be false }
-        expect(@app.view_template).to receive(:render_load_agents) { |_q, flag| expect(flag).to be false }
-        expect(@app.view_template).to receive(:render_target_hosts) { |_q, flag| expect(flag).to be false }
+        expect(@app.view_template).to receive(:render_jmeter_plans) { |_q, arg| expect(arg[:only_active]).to be false }
+        expect(@app.view_template).to receive(:render_load_agents) { |_q, arg| expect(arg[:only_active]).to be false }
+        expect(@app.view_template).to receive(:render_target_hosts) { |_q, arg| expect(arg[:only_active]).to be false }
         @app.render_show(@query_map, false, :all)
       end
     end
@@ -109,7 +111,7 @@ describe Hailstorm::Cli::ViewRenderer do
       project = Hailstorm::Model::Project.create!(project_code: 'view_template_spec')
       test_plan = Hailstorm::Model::JmeterPlan.create!(active: false, project: project,
                                                        test_plan_name: 'view_template_spec', content_hash: 'A')
-      test_plan.update_attribute(:properties, {NumUsers: 100}.to_json)
+      test_plan.update_attribute(:properties, { NumUsers: 100 }.to_json)
       test_plan.update_column(:active, true)
       amz = Hailstorm::Model::AmazonCloud.create!(project: project, access_key: 'A', secret_key: 'A')
       Hailstorm::Model::Cluster.create!(project: project, cluster_type: amz.class.name)

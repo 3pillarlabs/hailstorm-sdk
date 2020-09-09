@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 require 'tmpdir'
@@ -61,10 +63,10 @@ describe Hailstorm::LocalFileStore do
       structure.deep_stringify_keys!
       expect(local_fs.app_dir_tree).to eq(structure)
       expect(local_fs.tree_dir("#{app_path}/a")).to eq(structure[key])
-      expect(local_fs.tree_dir("#{app_path}/a/b")).to eq({'b' => structure[key]['a']['b']})
+      expect(local_fs.tree_dir("#{app_path}/a/b")).to eq({ 'b' => structure[key]['a']['b'] })
       expect(local_fs.tree_dir("#{app_path}/a/b/d")).to eq(structure[key]['a']['b'])
-      expect(local_fs.tree_dir("#{app_path}/a/b/d/e")).to eq({'e' => nil})
-      expect(local_fs.tree_dir("#{app_path}/a/c")).to eq({'c' => structure[key]['a']['c']})
+      expect(local_fs.tree_dir("#{app_path}/a/b/d/e")).to eq({ 'e' => nil })
+      expect(local_fs.tree_dir("#{app_path}/a/c")).to eq({ 'c' => structure[key]['a']['c'] })
     end
   end
 
