@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'api/jmeter_plans'
 
@@ -14,10 +16,10 @@ describe 'api/jmeter_plans' do
         name: 'hailstorm.jmx',
         path: '1234',
         properties: [
-          %W[NumUsers 10],
-          %W[RampUp 30],
-          %W[Duration 180],
-          %W[ServerName 152.36.34.28]
+          %w[NumUsers 10],
+          %w[RampUp 30],
+          %w[Duration 180],
+          %w[ServerName 152.36.34.28]
         ]
       }
 
@@ -54,7 +56,7 @@ describe 'api/jmeter_plans' do
           map['NumUsers'] = '100'
         end
 
-        jmeter.data_files = %W[234/foo.csv]
+        jmeter.data_files = %w[234/foo.csv]
       end
 
       ProjectConfiguration.create!(project_id: project.id, stringified_config: deep_encode(hailstorm_config))
@@ -68,7 +70,7 @@ describe 'api/jmeter_plans' do
       expect(jmeter_plan[:id]).to_not be_nil
       expect(jmeter_plan[:name]).to eq('a.jmx')
       expect(jmeter_plan[:path]).to eq('123')
-      expect(jmeter_plan[:properties]).to eq([%W[NumUsers 100]])
+      expect(jmeter_plan[:properties]).to eq([%w[NumUsers 100]])
 
       data_file = res.second.symbolize_keys
       expect(data_file[:id]).to_not be_nil
@@ -85,10 +87,10 @@ describe 'api/jmeter_plans' do
         name: 'hailstorm.jmx',
         path: '1234',
         properties: [
-          %W[NumUsers 10],
-          %W[RampUp 30],
-          %W[Duration 180],
-          %W[ServerName 152.36.34.28]
+          %w[NumUsers 10],
+          %w[RampUp 30],
+          %w[Duration 180],
+          %w[ServerName 152.36.34.28]
         ]
       }
 
@@ -98,10 +100,10 @@ describe 'api/jmeter_plans' do
 
       patch_params = {
         properties: [
-          %W[NumUsers 100],
-          %W[RampUp 300],
-          %W[Duration 1800],
-          %W[ServerName 152.36.34.28]
+          %w[NumUsers 100],
+          %w[RampUp 300],
+          %w[Duration 1800],
+          %w[ServerName 152.36.34.28]
         ]
       }
 

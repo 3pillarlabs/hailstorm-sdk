@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'sinatra'
 require 'model/aws_ec2_price'
 require 'helpers/aws_ec2_pricing_helper'

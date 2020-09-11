@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'helpers/projects_helper'
 require 'hailstorm/model/cluster'

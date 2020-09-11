@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'redis'
 require 'json'
 
@@ -10,7 +12,7 @@ class RedisLogger
 
   BREAK_FOR = 10
 
-  CHANNEL = 'hailstorm-logs'.freeze
+  CHANNEL = 'hailstorm-logs'
 
   # @return [Redis]
   attr_reader :redis

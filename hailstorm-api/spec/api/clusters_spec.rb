@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'api/clusters'
 require 'hailstorm/model/cluster'
@@ -42,7 +44,7 @@ describe 'api/clusters' do
         dc.title = 'Ice station Zebra'
         dc.user_name = 'ubuntu'
         dc.ssh_identity = '123/foo.pem'
-        dc.machines = %W[172.16.0.10 172.16.0.20 172.16.0.30]
+        dc.machines = %w[172.16.0.10 172.16.0.20 172.16.0.30]
         dc.ssh_port = 8022
       end
 
@@ -56,11 +58,15 @@ describe 'api/clusters' do
       expect(@browser.last_response).to be_ok
       res = JSON.parse(@browser.last_response.body)
       expect(res.size).to eq(2)
-      expect(res[0].keys.sort).to eq(%W[id title type projectId accessKey secretKey instanceType maxThreadsByInstance region code vpcSubnetId].sort)
-      expect(res[1].keys.sort).to eq(%W[id title type projectId userName sshIdentity machines port code].sort)
+      amz_keys = %w[
+        id title type projectId accessKey secretKey instanceType maxThreadsByInstance region code vpcSubnetId
+      ]
+      expect(res[0].keys.sort).to eq(amz_keys.sort)
+      dc_keys = %w[id title type projectId userName sshIdentity machines port code]
+      expect(res[1].keys.sort).to eq(dc_keys.sort)
       expect(res[0]['type']).to eq('AWS')
       expect(res[1]['type']).to eq('DataCenter')
-      expect(res[1]['sshIdentity']).to eq({name: 'foo.pem', path: '123'}.stringify_keys)
+      expect(res[1]['sshIdentity']).to eq({ name: 'foo.pem', path: '123' }.stringify_keys)
     end
 
     it 'should sort active clusters above disabled ones' do
@@ -89,14 +95,14 @@ describe 'api/clusters' do
         dc.title = 'Ice station Zebra'
         dc.user_name = 'ubuntu'
         dc.ssh_identity = '123/foo.pem'
-        dc.machines = %W[172.16.0.10 172.16.0.20 172.16.0.30]
+        dc.machines = %w[172.16.0.10 172.16.0.20 172.16.0.30]
         dc.ssh_port = 8022
       end
 
       project = Hailstorm::Model::Project.create!(project_code: File.strip_ext(File.basename(__FILE__)))
       ProjectConfiguration.create!(
-          project_id: project.id,
-          stringified_config: deep_encode(hailstorm_config)
+        project_id: project.id,
+        stringified_config: deep_encode(hailstorm_config)
       )
 
       @browser.get("/projects/#{project.id}/clusters")
@@ -113,14 +119,14 @@ describe 'api/clusters' do
     it 'should create an amazon cluster' do
       project = Hailstorm::Model::Project.create!(project_code: File.strip_ext(File.basename(__FILE__)))
       @browser.post("/projects/#{project.id}/clusters", JSON.dump({
-        type: "AWS",
-        accessKey: "A",
-        secretKey: "s",
-        instanceType: "t2.small",
-        maxThreadsByInstance: 25,
-        region: "us-east-1",
-        title: ""
-      }))
+                                                                    type: 'AWS',
+                                                                    accessKey: 'A',
+                                                                    secretKey: 's',
+                                                                    instanceType: 't2.small',
+                                                                    maxThreadsByInstance: 25,
+                                                                    region: 'us-east-1',
+                                                                    title: ''
+                                                                  }))
 
       expect(@browser.last_response).to be_ok
       res = JSON.parse(@browser.last_response.body).symbolize_keys
@@ -139,13 +145,13 @@ describe 'api/clusters' do
     it 'should create an data-center cluster' do
       project = Hailstorm::Model::Project.create!(project_code: File.strip_ext(File.basename(__FILE__)))
       @browser.post("/projects/#{project.id}/clusters", JSON.dump({
-        type: "DataCenter",
-        title: "Bob's yard",
-        userName: "ubuntu",
-        sshIdentity: { name: 'a.pem', path: '123' },
-        sshPort: 8022,
-        machines: %W[172.16.0.10 172.16.0.20 172.16.0.30]
-      }))
+                                                                    type: 'DataCenter',
+                                                                    title: "Bob's yard",
+                                                                    userName: 'ubuntu',
+                                                                    sshIdentity: { name: 'a.pem', path: '123' },
+                                                                    sshPort: 8022,
+                                                                    machines: %w[172.16.0.10 172.16.0.20 172.16.0.30]
+                                                                  }))
 
       expect(@browser.last_response).to be_ok
       res = JSON.parse(@browser.last_response.body).symbolize_keys
@@ -170,7 +176,7 @@ describe 'api/clusters' do
         dc.title = 'Ice station Zebra'
         dc.user_name = 'ubuntu'
         dc.ssh_identity = '123/foo.pem'
-        dc.machines = %W[172.16.0.10 172.16.0.20 172.16.0.30]
+        dc.machines = %w[172.16.0.10 172.16.0.20 172.16.0.30]
         dc.ssh_port = 8022
         dc.cluster_code = 'ice-station-zebra-119'
       end
@@ -326,7 +332,7 @@ describe 'api/clusters' do
         dc.title = 'Ice station Zebra'
         dc.user_name = 'ubuntu'
         dc.ssh_identity = '123/foo.pem'
-        dc.machines = %W[172.16.0.10 172.16.0.20 172.16.0.30]
+        dc.machines = %w[172.16.0.10 172.16.0.20 172.16.0.30]
         dc.ssh_port = 8022
         dc.cluster_code = 'ice-station-zebra-119'
         dc.active = false
@@ -335,7 +341,7 @@ describe 'api/clusters' do
       project = Hailstorm::Model::Project.create!(project_code: File.strip_ext(File.basename(__FILE__)))
       ProjectConfiguration.create!(project: project, stringified_config: deep_encode(hailstorm_config))
       cluster_id = hailstorm_config.clusters.first.title.to_java_string.hash_code
-      @browser.patch("/projects/#{project.id}/clusters/#{cluster_id}", JSON.dump({active: true}))
+      @browser.patch("/projects/#{project.id}/clusters/#{cluster_id}", JSON.dump({ active: true }))
       expect(@browser.last_response.status).to be == 200
       project_config = ProjectConfiguration.first
       hailstorm_config = deep_decode(project_config.stringified_config)

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'json'
 require 'api/projects'
@@ -42,8 +44,8 @@ describe 'api/projects' do
       allow(last_execution_cycle).to receive(:avg_90_percentile).and_return(678.45)
       allow(last_execution_cycle).to receive(:avg_tps).and_return(14.56)
       allow_any_instance_of(Hailstorm::Model::Project).to receive_message_chain(
-                                                            :execution_cycles, :where, :not, :order, :limit
-                                                          ).and_return([last_execution_cycle])
+        :execution_cycles, :where, :not, :order, :limit
+      ).and_return([last_execution_cycle])
 
       jmeter_plan = Hailstorm::Model::JmeterPlan.new(
         project: project,
@@ -54,23 +56,27 @@ describe 'api/projects' do
       )
 
       allow(jmeter_plan).to receive(:loop_forever?).and_return(false)
-      allow_any_instance_of(Hailstorm::Model::Project).to receive_message_chain(:jmeter_plans, :all).and_return([jmeter_plan])
-      allow_any_instance_of(Hailstorm::Model::Project).to receive_message_chain(:jmeter_plans, :count).and_return(1)
+      allow_any_instance_of(Hailstorm::Model::Project).to receive_message_chain(:jmeter_plans,
+                                                                                :all).and_return([jmeter_plan])
+      allow_any_instance_of(Hailstorm::Model::Project).to receive_message_chain(:jmeter_plans,
+                                                                                :count).and_return(1)
 
       @browser.get('/projects')
       expect(@browser.last_response).to be_ok
       list = JSON.parse(@browser.last_response.body)
       expect(list.size).to eq(1)
       first = list[0]
-      expect(first.keys.sort).to eq(%W[id code title running autoStop incomplete currentExecutionCycle lastExecutionCycle live].sort)
-      expect(first['currentExecutionCycle'].keys.sort).to eq(%W[id projectId startedAt threadsCount status].sort)
-      expect(first['lastExecutionCycle'].keys.sort).to eq(%W[id projectId startedAt threadsCount stoppedAt status responseTime throughput].sort)
+      project_keys = %w[id code title running autoStop incomplete currentExecutionCycle lastExecutionCycle live]
+      expect(first.keys.sort).to eq(project_keys.sort)
+      expect(first['currentExecutionCycle'].keys.sort).to eq(%w[id projectId startedAt threadsCount status].sort)
+      execution_cycle_keys = %w[id projectId startedAt threadsCount stoppedAt status responseTime throughput]
+      expect(first['lastExecutionCycle'].keys.sort).to eq(execution_cycle_keys.sort)
     end
   end
 
   context 'POST /projects' do
     it 'should create a project' do
-      params = {title: 'Hailstorm Priming'}
+      params = { title: 'Hailstorm Priming' }
       @browser.post('/projects', JSON.dump(params))
       expect(@browser.last_response).to be_ok
       entity = JSON.parse(@browser.last_response.body).symbolize_keys
@@ -100,9 +106,10 @@ describe 'api/projects' do
 
           allow(Hailstorm::Model::Cluster).to receive(:terminate)
           allow(Hailstorm::Model::TargetHost).to receive(:terminate)
-          @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'terminate'}))
+          @browser.patch("/projects/#{@project.id}", JSON.dump({ action: 'terminate' }))
           expect(@browser.last_response).to be_successful
-          expect(Hailstorm::Model::ExecutionCycle.first.status).to eq(Hailstorm::Model::ExecutionCycle::States::TERMINATED)
+          status = Hailstorm::Model::ExecutionCycle.first.status
+          expect(status).to eq(Hailstorm::Model::ExecutionCycle::States::TERMINATED)
         end
       end
 
@@ -110,7 +117,7 @@ describe 'api/projects' do
         it 'should invoke action on model delegate' do
           @project.update_column(:serial_version, 'a')
           allow_any_instance_of(Hailstorm::Model::Project).to receive(:start)
-          @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'start'}))
+          @browser.patch("/projects/#{@project.id}", JSON.dump({ action: 'start' }))
           expect(@browser.last_response).to be_successful
         end
       end
@@ -118,7 +125,7 @@ describe 'api/projects' do
       context 'action=stop' do
         it 'should invoke action on model delegate' do
           allow_any_instance_of(Hailstorm::Model::Project).to receive(:stop)
-          @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'stop'}))
+          @browser.patch("/projects/#{@project.id}", JSON.dump({ action: 'stop' }))
           expect(@browser.last_response).to be_successful
         end
       end
@@ -126,7 +133,7 @@ describe 'api/projects' do
       context 'action=abort' do
         it 'should invoke action on model delegate' do
           allow_any_instance_of(Hailstorm::Model::Project).to receive(:stop)
-          @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'abort'}))
+          @browser.patch("/projects/#{@project.id}", JSON.dump({ action: 'abort' }))
           expect(@browser.last_response).to be_successful
         end
       end
@@ -134,7 +141,7 @@ describe 'api/projects' do
       context 'unknown action' do
         it 'should return 422 status' do
           allow_any_instance_of(Hailstorm::Model::Project).to receive(:stop)
-          @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'random'}))
+          @browser.patch("/projects/#{@project.id}", JSON.dump({ action: 'random' }))
           expect(@browser.last_response.status).to be == 422
         end
       end
@@ -143,7 +150,7 @@ describe 'api/projects' do
         it 'should return 500 status' do
           thread_exception = Hailstorm::ThreadJoinException.new([StandardError.new('mock nested error')])
           allow_any_instance_of(Hailstorm::Model::Project).to receive(:stop).and_raise(thread_exception)
-          @browser.patch("/projects/#{@project.id}", JSON.dump({action: 'stop'}))
+          @browser.patch("/projects/#{@project.id}", JSON.dump({ action: 'stop' }))
           expect(@browser.last_response).to be_server_error
         end
       end
@@ -155,7 +162,7 @@ describe 'api/projects' do
       end
 
       it 'should update the project title but not the title' do
-        @browser.patch("/projects/#{@project.id}", JSON.dump({title: 'Acme Priming 32'}))
+        @browser.patch("/projects/#{@project.id}", JSON.dump({ title: 'Acme Priming 32' }))
         expect(@browser.last_response).to be_successful
         @project.reload
         expect(@project.title).to be == 'Acme Priming 32'
@@ -175,8 +182,8 @@ describe 'api/projects' do
     end
 
     it 'should return 404 if project is not found' do
-      allow(Hailstorm::Model::Project).to receive(:find).and_raise(ActiveRecord::RecordNotFound.new("mock error"))
-      @browser.get("/projects/404")
+      allow(Hailstorm::Model::Project).to receive(:find).and_raise(ActiveRecord::RecordNotFound.new('mock error'))
+      @browser.get('/projects/404')
       expect(@browser.last_response).to be_not_found
     end
   end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'sinatra'
 require 'json'
 require 'helpers/projects_helper'
@@ -75,7 +77,7 @@ delete '/projects/:id' do |id|
   Hailstorm::Model::Project.transaction do
     Hailstorm.fs.purge_project(found_project.project_code)
     project_configuration = ProjectConfiguration.where(project: found_project).first
-    project_configuration.destroy! if project_configuration
+    project_configuration&.destroy!
     found_project.destroy!
   end
 

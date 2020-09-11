@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 if $PROGRAM_NAME == __FILE__
   $LOAD_PATH.unshift(__dir__)
   $LOAD_PATH.unshift(File.expand_path('../app', __FILE__))
