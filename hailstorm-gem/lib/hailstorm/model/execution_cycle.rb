@@ -1,4 +1,5 @@
-#
+# frozen_string_literal: true
+
 # ExecutionCycle model
 # @author Sayantam Dey
 
@@ -52,18 +53,18 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     project.execution_cycles.where(conditions).order(:started_at).all
   end
 
-  def self.client_comparison_graph(execution_cycles, width: 640, height: 600, builder: nil, working_path:)
+  def self.client_comparison_graph(execution_cycles, working_path:, width: 640, height: 600, builder: nil)
     grapher = ClientComparisonGraphBuilder.new(execution_cycles, builder: builder, working_path: working_path)
     grapher.build(width: width, height: height)
   end
 
-  def self.cpu_comparison_graph(execution_cycles, width: 640, height: 300, builder: nil, working_path:)
+  def self.cpu_comparison_graph(execution_cycles, working_path:, width: 640, height: 300, builder: nil)
     grapher = TargetComparisonGraphBuilder.new(execution_cycles, metric: :cpu, builder: builder,
                                                                  working_path: working_path)
     grapher.build(width: width, height: height, &:average_cpu_usage)
   end
 
-  def self.memory_comparison_graph(execution_cycles, width: 640, height: 300, builder: nil, working_path:)
+  def self.memory_comparison_graph(execution_cycles, working_path:, width: 640, height: 300, builder: nil)
     grapher = TargetComparisonGraphBuilder.new(execution_cycles, metric: :memory, builder: builder,
                                                                  working_path: working_path)
     grapher.build(width: width, height: height, &:average_memory_usage)
@@ -128,7 +129,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
     dhc_mod = duration_seconds % 3600
     dhm = dhc_mod / 60 # minutes component
     dhs = dhc_mod % 60 # seconds component
-    format('%02d:%02d:%02d', dhc, dhm, dhs)
+    format('%<hours>02d:%<minutes>02d:%<seconds>02d', { hours: dhc, minutes: dhm, seconds: dhs })
   end
 
   # Mark the execution cycle as started now or at given time
@@ -193,7 +194,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   module ExecutionCycleAnalysis
 
     # Generates a hits per second graph
-    def hits_per_second_graph(width: 640, height: 300, builder: nil, working_path:)
+    def hits_per_second_graph(working_path:, width: 640, height: 300, builder: nil)
       sax_document = ResponseTimeFreqDist.new
       summarize_client_stats!(sax_document)
 
@@ -209,7 +210,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
       grapher.build(output_path, width, height)
     end
 
-    def active_threads_over_time_graph(width: 640, height: 300, builder: nil, working_path:)
+    def active_threads_over_time_graph(working_path:, width: 640, height: 300, builder: nil)
       sax_document = VirtualUserTimeDist.new
       summarize_client_stats!(sax_document)
 
@@ -224,7 +225,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
       grapher.build(output_path, width, height)
     end
 
-    def throughput_over_time_graph(width: 640, height: 300, builder: nil, working_path:)
+    def throughput_over_time_graph(working_path:, width: 640, height: 300, builder: nil)
       sax_document = ThroughputTimeDist.new
       summarize_client_stats!(sax_document)
 
@@ -377,7 +378,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
     attr_reader :execution_cycles, :grapher
 
-    def initialize(execution_cycles, builder: nil, working_path:)
+    def initialize(execution_cycles, working_path:, builder: nil)
       @execution_cycles = execution_cycles
       @grapher = GraphBuilderFactory.client_comparison_graph(File.join(working_path, output_path),
                                                              other_builder: builder)
@@ -431,7 +432,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
     attr_reader :execution_cycles, :metric, :grapher
 
-    def initialize(execution_cycles, metric:, builder: nil, working_path:)
+    def initialize(execution_cycles, metric:, working_path:, builder: nil)
       @execution_cycles = execution_cycles
       @metric = metric
       @grapher = GraphBuilderFactory.target_comparison_graph(File.join(working_path, output_path),
@@ -461,8 +462,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
   # SAX document that calculates a response time frequency distribution
   class ResponseTimeFreqDist < Nokogiri::XML::SAX::Document
-    attr_reader :hit_matrix
-    attr_reader :start_time
+    attr_reader :hit_matrix, :start_time
 
     def start_document
       @level = 0
@@ -497,8 +497,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
   # Creates a virtual users distribution over time
   class VirtualUserTimeDist < Nokogiri::XML::SAX::Document
-    attr_reader :vusers_matrix
-    attr_reader :start_time
+    attr_reader :vusers_matrix, :start_time
 
     def start_document
       @vusers_matrix = {} if @vusers_matrix.nil?
@@ -514,7 +513,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
       ts = tms / 1000 # sec
       num_active_threads = attrs_map['na'].to_i
 
-      if num_active_threads > 0
+      if num_active_threads.positive?
         host_name = attrs_map['hn']
         update_matrices(host_name, num_active_threads, ts)
       end
@@ -553,8 +552,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
 
   # Creates throughput distribution over time
   class ThroughputTimeDist < Nokogiri::XML::SAX::Document
-    attr_reader :byte_matrix
-    attr_reader :start_time
+    attr_reader :byte_matrix, :start_time
 
     def start_document
       @level = 0
@@ -626,7 +624,7 @@ class Hailstorm::Model::ExecutionCycle < ActiveRecord::Base
   def summarize_client_stats!(sax_document)
     sax_parser = Nokogiri::XML::SAX::Parser.new(sax_document)
     self.client_stats.each do |client_stat|
-      export_file = client_stat.write_jtl(Hailstorm.workspace(self.project.project_code).tmp_path, true)
+      export_file = client_stat.write_jtl(Hailstorm.workspace(self.project.project_code).tmp_path, append_id: true)
       File.open(export_file, 'r') do |file|
         sax_parser.parse(file)
       end

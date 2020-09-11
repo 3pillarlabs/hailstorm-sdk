@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'jtl_log_data'
 require 'hailstorm/model/execution_cycle'
@@ -7,7 +9,6 @@ require 'hailstorm/model/nmon'
 require 'client_stats_helper'
 
 describe Hailstorm::Model::ExecutionCycle do
-
   include ClientStatsHelper
 
   def generate_execution_cycles(cycle_ids = [])
@@ -17,29 +18,29 @@ describe Hailstorm::Model::ExecutionCycle do
       execution_cycle.id = cycle_id
 
       chart_model = double('ChartModel', getFilePath: '', getWidth: 800, getHeight: 600)
-
-      expect(execution_cycle).to respond_to(:clusters)
-      cluster = Hailstorm::Model::AmazonCloud.new
-      client_stat = Hailstorm::Model::ClientStat.new
-      expect(client_stat).to respond_to(:jmeter_plan)
-      jmeter_plan = Hailstorm::Model::JmeterPlan.new
-      expect(jmeter_plan).to respond_to(:plan_name)
-      allow(jmeter_plan).to receive(:plan_name).and_return('Priming test')
-      allow(client_stat).to receive(:jmeter_plan).and_return(jmeter_plan)
-      allow(client_stat).to receive(:aggregate_graph).and_return(chart_model)
-      expect(cluster).to respond_to(:client_stats)
-      allow(cluster).to receive_message_chain(:client_stats, :where).and_return([ client_stat ])
-      allow(execution_cycle).to receive(:clusters).and_return([cluster])
-
-      expect(execution_cycle).to respond_to(:target_stats)
-      target_stat = Hailstorm::Model::TargetStat.new
-      expect(target_stat).to respond_to(:target_host)
-      allow(target_stat).to receive(:target_host).and_return(Hailstorm::Model::TargetHost.new)
-      allow(target_stat).to receive(:utilization_graph).and_return(chart_model)
-      allow(execution_cycle).to receive(:target_stats).and_return([target_stat])
-      allow(execution_cycle).to receive(:target_hosts).and_return([target_stat.target_host])
+      allow_execution_cycle_clusters(chart_model, execution_cycle)
+      allow_execution_cycle_target_hosts(chart_model, execution_cycle)
       execution_cycle
     end
+  end
+
+  def allow_execution_cycle_clusters(chart_model, execution_cycle)
+    cluster = Hailstorm::Model::AmazonCloud.new
+    client_stat = Hailstorm::Model::ClientStat.new
+    jmeter_plan = Hailstorm::Model::JmeterPlan.new
+    allow(jmeter_plan).to receive(:plan_name).and_return('Priming test')
+    allow(client_stat).to receive(:jmeter_plan).and_return(jmeter_plan)
+    allow(client_stat).to receive(:aggregate_graph).and_return(chart_model)
+    allow(cluster).to receive_message_chain(:client_stats, :where).and_return([client_stat])
+    allow(execution_cycle).to receive(:clusters).and_return([cluster])
+  end
+
+  def allow_execution_cycle_target_hosts(chart_model, execution_cycle)
+    target_stat = Hailstorm::Model::TargetStat.new
+    allow(target_stat).to receive(:target_host).and_return(Hailstorm::Model::TargetHost.new)
+    allow(target_stat).to receive(:utilization_graph).and_return(chart_model)
+    allow(execution_cycle).to receive(:target_stats).and_return([target_stat])
+    allow(execution_cycle).to receive(:target_hosts).and_return([target_stat.target_host])
   end
 
   context '.create_report' do
@@ -49,11 +50,22 @@ describe Hailstorm::Model::ExecutionCycle do
         builder = Hailstorm::Support::ReportBuilder.new
         expect(builder).to receive(:build)
         cycle_ids = [1, 3, 4]
-        allow(Hailstorm::Model::ExecutionCycle).to receive(:execution_cycles_for_report).and_return(generate_execution_cycles(cycle_ids))
+        allow(
+          Hailstorm::Model::ExecutionCycle
+        ).to receive(:execution_cycles_for_report).and_return(generate_execution_cycles(cycle_ids))
+
         chart_model = double('ChartModel', getFilePath: '', getWidth: 800, getHeight: 600)
-        allow_any_instance_of(Hailstorm::Model::ExecutionCycle).to receive(:hits_per_second_graph).and_return(chart_model)
-        allow_any_instance_of(Hailstorm::Model::ExecutionCycle).to receive(:active_threads_over_time_graph).and_return(chart_model)
-        allow_any_instance_of(Hailstorm::Model::ExecutionCycle).to receive(:throughput_over_time_graph).and_return(chart_model)
+        allow_any_instance_of(
+          Hailstorm::Model::ExecutionCycle
+        ).to receive(:hits_per_second_graph).and_return(chart_model)
+
+        allow_any_instance_of(
+          Hailstorm::Model::ExecutionCycle
+        ).to receive(:active_threads_over_time_graph).and_return(chart_model)
+
+        allow_any_instance_of(
+          Hailstorm::Model::ExecutionCycle
+        ).to receive(:throughput_over_time_graph).and_return(chart_model)
         allow(Hailstorm::Model::ExecutionCycle).to receive(:client_comparison_graph).and_return(chart_model)
         allow(Hailstorm::Model::ExecutionCycle).to receive(:cpu_comparison_graph).and_return(chart_model)
         allow(Hailstorm::Model::ExecutionCycle).to receive(:memory_comparison_graph).and_return(chart_model)
@@ -105,19 +117,19 @@ describe Hailstorm::Model::ExecutionCycle do
                                                                   status: :stopped,
                                                                   started_at: Time.now,
                                                                   stopped_at: Time.now + 15.minutes)
-      @jmeter_plan_1 = Hailstorm::Model::JmeterPlan.create!(project: project,
-                                                            test_plan_name: 'priming A',
-                                                            content_hash: 'A',
-                                                            properties: '{}',
-                                                            latest_threads_count: 100)
-      @jmeter_plan_1.update_column(:active, true)
+      @jmeter_plan1 = Hailstorm::Model::JmeterPlan.create!(project: project,
+                                                           test_plan_name: 'priming A',
+                                                           content_hash: 'A',
+                                                           properties: '{}',
+                                                           latest_threads_count: 100)
+      @jmeter_plan1.update_column(:active, true)
 
-      @jmeter_plan_2 = Hailstorm::Model::JmeterPlan.create!(project: project,
-                                                            test_plan_name: 'priming B',
-                                                            content_hash: 'B',
-                                                            properties: '{}',
-                                                            latest_threads_count: 100)
-      @jmeter_plan_2.update_column(:active, true)
+      @jmeter_plan2 = Hailstorm::Model::JmeterPlan.create!(project: project,
+                                                           test_plan_name: 'priming B',
+                                                           content_hash: 'B',
+                                                           properties: '{}',
+                                                           latest_threads_count: 100)
+      @jmeter_plan2.update_column(:active, true)
 
       @data_center = Hailstorm::Model::DataCenter.create!(project: project, machines: '["172.16.8.100"]',
                                                           ssh_identity: 'a')
@@ -126,7 +138,7 @@ describe Hailstorm::Model::ExecutionCycle do
       @zero_time = Time.new(2012, 2, 21, 10, 43, 23)
 
       Hailstorm::Model::ClientStat.create!(execution_cycle: @execution_cycle,
-                                           jmeter_plan: @jmeter_plan_1,
+                                           jmeter_plan: @jmeter_plan1,
                                            clusterable_id: @data_center.id,
                                            clusterable_type: @data_center.class,
                                            threads_count: 100,
@@ -135,7 +147,7 @@ describe Hailstorm::Model::ExecutionCycle do
                                            last_sample_at: @zero_time - 15.minutes)
 
       Hailstorm::Model::ClientStat.create!(execution_cycle: @execution_cycle,
-                                           jmeter_plan: @jmeter_plan_2,
+                                           jmeter_plan: @jmeter_plan2,
                                            clusterable_id: @data_center.id,
                                            clusterable_type: @data_center.class,
                                            threads_count: 100,
@@ -171,8 +183,8 @@ describe Hailstorm::Model::ExecutionCycle do
 
     context '#jmeter_plans' do
       it 'should fetch associated jmeter_plans' do
-        expect(@execution_cycle.jmeter_plans).to include(@jmeter_plan_1)
-        expect(@execution_cycle.jmeter_plans).to include(@jmeter_plan_2)
+        expect(@execution_cycle.jmeter_plans).to include(@jmeter_plan1)
+        expect(@execution_cycle.jmeter_plans).to include(@jmeter_plan2)
       end
     end
 
@@ -211,8 +223,8 @@ describe Hailstorm::Model::ExecutionCycle do
 
     context '#import_results' do
       it 'should import JTL' do
-        expect(@jmeter_plan_1).to respond_to(:num_threads)
-        allow(@jmeter_plan_1).to receive(:num_threads).and_return(100)
+        expect(@jmeter_plan1).to respond_to(:num_threads)
+        allow(@jmeter_plan1).to receive(:num_threads).and_return(100)
         client_stat = Hailstorm::Model::ClientStat.new
         expect(client_stat).to respond_to(:first_sample_at, :last_sample_at)
         start_time = Time.new(2011, 6, 3, 15, 34, 12)
@@ -220,7 +232,7 @@ describe Hailstorm::Model::ExecutionCycle do
         allow(client_stat).to receive(:first_sample_at).and_return(start_time)
         allow(client_stat).to receive(:last_sample_at).and_return(end_time)
         allow(Hailstorm::Model::ClientStat).to receive(:create_client_stat).and_return(client_stat)
-        @execution_cycle.import_results(@jmeter_plan_1, @data_center, 'a.jtl')
+        @execution_cycle.import_results(@jmeter_plan1, @data_center, 'a.jtl')
         expect(@execution_cycle.started_at).to be == start_time
         expect(@execution_cycle.stopped_at).to be == end_time
       end
@@ -283,7 +295,6 @@ describe Hailstorm::Model::ExecutionCycle do
                                     range_name: 'Requests',
                                     start_time: Time.now.to_i)).to_not be_nil
     end
-
   end
 
   context 'execution_cycles comparison graph' do
@@ -329,7 +340,7 @@ describe Hailstorm::Model::ExecutionCycle do
   context '#client_comparison_graph' do
     it 'should compare response time and throughput across executions' do
       project = Hailstorm::Model::Project.create!(project_code: 'execution_cycle_spec')
-      refs_ary = 2.times.map { create_client_stat_refs(project)  }
+      refs_ary = 2.times.map { create_client_stat_refs(project) }
       execution_cycles = refs_ary.map do |clusterable, execution_cycle, jmeter_plan|
         t = Time.new(2010, 10, 7, 14, 23, 45)
         Hailstorm::Model::ClientStat.create!(execution_cycle: execution_cycle,
@@ -382,7 +393,7 @@ describe Hailstorm::Model::ExecutionCycle do
       end
 
       grapher = double('TimeSeriesGraph', addDataPoint: nil, 'series_name=': nil, 'range_name=': nil,
-                       'start_time=': nil)
+                                          'start_time=': nil)
 
       expect(grapher).to receive(:build).exactly(3).times
       execution_cycle.hits_per_second_graph(builder: grapher, working_path: RSpec.configuration.build_path)

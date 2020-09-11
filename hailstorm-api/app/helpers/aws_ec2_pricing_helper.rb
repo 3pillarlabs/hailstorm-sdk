@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'net/http'
 require 'json'
 require 'uri'
@@ -5,7 +7,7 @@ require 'uri'
 # Helper for EC2 prices
 module AwsEc2PricingHelper
 
-  A1_INSTANCE_TYPE = /^a1\./
+  A1_INSTANCE_TYPE = /^a1\./.freeze
 
   # @param [String] region
   # @param [Time] timestamp

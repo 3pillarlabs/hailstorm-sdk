@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'api/execution_cycles'
 require 'hailstorm/model/amazon_cloud'
@@ -62,7 +64,8 @@ describe 'api/execution_cycles' do
       expect(res[0]['status']).to eq(Hailstorm::Model::ExecutionCycle::States::STARTED.to_s)
       expect(res[1]['threadsCount']).to eq(20)
       expect(res[2]['threadsCount']).to eq(10)
-      expect(res[2].keys.sort).to eq(%w[id projectId startedAt stoppedAt status threadsCount responseTime throughput].sort)
+      resp_keys = %w[id projectId startedAt stoppedAt status threadsCount responseTime throughput]
+      expect(res[2].keys.sort).to eq(resp_keys.sort)
     end
 
     it 'should be empty when there are no execution_cycles' do
@@ -153,15 +156,15 @@ describe 'api/execution_cycles' do
     it 'should exclude an execution cycle' do
       project = Hailstorm::Model::Project.create!(project_code: 'execution_cycles_spec')
       execution_cycle = Hailstorm::Model::ExecutionCycle.create!(
-          project_id: project.id,
-          status: Hailstorm::Model::ExecutionCycle::States::STOPPED,
-          started_at: Time.now.ago(70.minutes),
-          stopped_at: Time.now.ago(60.minutes),
-          threads_count: 30
+        project_id: project.id,
+        status: Hailstorm::Model::ExecutionCycle::States::STOPPED,
+        started_at: Time.now.ago(70.minutes),
+        stopped_at: Time.now.ago(60.minutes),
+        threads_count: 30
       )
 
       @browser.patch("/projects/#{project.id}/execution_cycles/#{execution_cycle.id}",
-                     JSON.dump({status: 'excluded'}))
+                     JSON.dump({ status: 'excluded' }))
       expect(@browser.last_response).to be_ok
       res = JSON.parse(@browser.last_response.body)
       expect(res['status']).to eq(Hailstorm::Model::ExecutionCycle::States::EXCLUDED.to_s)
@@ -170,15 +173,15 @@ describe 'api/execution_cycles' do
     it 'should include back an execution cycle' do
       project = Hailstorm::Model::Project.create!(project_code: 'execution_cycles_spec')
       execution_cycle = Hailstorm::Model::ExecutionCycle.create!(
-          project_id: project.id,
-          status: Hailstorm::Model::ExecutionCycle::States::EXCLUDED,
-          started_at: Time.now.ago(70.minutes),
-          stopped_at: Time.now.ago(60.minutes),
-          threads_count: 30
+        project_id: project.id,
+        status: Hailstorm::Model::ExecutionCycle::States::EXCLUDED,
+        started_at: Time.now.ago(70.minutes),
+        stopped_at: Time.now.ago(60.minutes),
+        threads_count: 30
       )
 
       @browser.patch("/projects/#{project.id}/execution_cycles/#{execution_cycle.id}",
-                     JSON.dump({status: 'stopped'}))
+                     JSON.dump({ status: 'stopped' }))
       expect(@browser.last_response).to be_ok
       res = JSON.parse(@browser.last_response.body)
       expect(res['status']).to eq(Hailstorm::Model::ExecutionCycle::States::STOPPED.to_s)
@@ -187,15 +190,15 @@ describe 'api/execution_cycles' do
     it 'should return unprocessable entity status if status is not known' do
       project = Hailstorm::Model::Project.create!(project_code: 'execution_cycles_spec')
       execution_cycle = Hailstorm::Model::ExecutionCycle.create!(
-          project_id: project.id,
-          status: Hailstorm::Model::ExecutionCycle::States::EXCLUDED,
-          started_at: Time.now.ago(70.minutes),
-          stopped_at: Time.now.ago(60.minutes),
-          threads_count: 30
+        project_id: project.id,
+        status: Hailstorm::Model::ExecutionCycle::States::EXCLUDED,
+        started_at: Time.now.ago(70.minutes),
+        stopped_at: Time.now.ago(60.minutes),
+        threads_count: 30
       )
 
       @browser.patch("/projects/#{project.id}/execution_cycles/#{execution_cycle.id}",
-                     JSON.dump({status: 'random'}))
+                     JSON.dump({ status: 'random' }))
       expect(@browser.last_response.status).to be == 422
     end
   end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'net/http'
 
 Given(/^'(.+?)' is up and accessible in AWS region '(.+?)'$/) do |instance_tagged_name, region|

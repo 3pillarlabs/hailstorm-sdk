@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/behavior'
 
 # Interface for clusters that are able to provision resources
@@ -65,12 +67,12 @@ module Hailstorm::Behavior::Provisionable
   # @param [ActiveRecord::Relation] query basic relation query that adds common attributes.
   # @param [Fixnum] required_count
   # @yield [ActiveRecord::Relation] Enumerable for agents that need to be removed.
-  def agents_to_remove(query, required_count, &_block)
+  def agents_to_remove(query, required_count, &block)
     logger.debug { "#{self.class}##{__method__}" }
     activate_count = agents_to_add(query, required_count)
     return if activate_count >= 0
 
-    query.limit(activate_count.abs).each { |agent| yield agent }
+    query.limit(activate_count.abs).each(&block)
   end
 
 end

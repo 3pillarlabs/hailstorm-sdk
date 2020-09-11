@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'initializer/redis_logger'
 
@@ -8,7 +10,7 @@ describe RedisLogger do
   end
 
   it 'should publish a message' do
-    log_params = {priority: 1, level: :debug, message: 'test message'}
+    log_params = { priority: 1, level: :debug, message: 'test message' }
     expect(@mock_redis).to receive(:publish) do |channel, log_event_str|
       expect(channel).to be_a(String)
       log_event = JSON.parse(log_event_str).symbolize_keys

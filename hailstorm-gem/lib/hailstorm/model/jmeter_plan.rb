@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'digest/sha1'
 require 'nokogiri'
 
@@ -22,7 +24,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   # subgroup, while the third case will yied the default value as the second subgroup
   PROPERTY_NAME_REXP = Regexp.new('^\$\{__(?:P|property)\((.+?)(?:\)|\s*,\s*(.+?)\))\}$')
 
-  JTL_FILE_EXTN = 'jtl'.freeze
+  JTL_FILE_EXTN = 'jtl'
 
   belongs_to :project
 
@@ -116,7 +118,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
   # Useful for finding the process ID on remote agent.
   # @return [String] binary_name
   def self.binary_name
-    'jmeter'.freeze
+    'jmeter'
   end
 
   # Compares the calculated hash for source on disk and the
@@ -143,7 +145,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
         "<%= @jmeter_home %>/bin/#{self.class.binary_name}",
         '-Dserver_port=1099 -s',
         "-Djava.rmi.server.hostname=#{slave_ip_address}",
-        "-j <%= @user_home %>/#{remote_log_dir}/#{remote_log_file(true)}"
+        "-j <%= @user_home %>/#{remote_log_dir}/#{remote_log_file(slave: true)}"
       ]
       command_components.push(*property_options(clusterable))
       command_components.push('1>/dev/null 2>&1 </dev/null &')
@@ -269,7 +271,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
       @remote_log_dir ||= [self.project.project_code, Hailstorm.log_dir].join('/')
     end
 
-    def remote_log_file(slave = false, execution_cycle = nil)
+    def remote_log_file(slave: false, execution_cycle: nil)
       if slave
         'server.log'
       else
@@ -503,7 +505,7 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
 
     def add_samples(definition, doc, tg_idx, tg_name)
       tg_xpath_expr_fmt = "//ThreadGroup[@testname=\"#{tg_name}\"]/../hashTree[#{tg_idx}]/hashTree"
-      steps_xpath_expr = tg_xpath_expr_fmt + '//*[contains(@testclass,"Sampler") and @enabled="true"]'
+      steps_xpath_expr = "#{tg_xpath_expr_fmt}//*[contains(@testclass,\"Sampler\") and @enabled=\"true\"]"
       logger.debug(steps_xpath_expr)
       doc.xpath(steps_xpath_expr).each do |step| # (Sampler element)
         step_name = step['testname']
@@ -524,13 +526,11 @@ class Hailstorm::Model::JmeterPlan < ActiveRecord::Base
     attr_writer :jmeter_plan_io
 
     # @return [IO]
-    def jmeter_plan_io
+    def jmeter_plan_io(&block)
       if @jmeter_plan_io
         yield @jmeter_plan_io
       else
-        Hailstorm.workspace(self.project.project_code).open_app_file(self.test_plan_name) do |io|
-          yield io
-        end
+        Hailstorm.workspace(self.project.project_code).open_app_file(self.test_plan_name, &block)
       end
     end
 

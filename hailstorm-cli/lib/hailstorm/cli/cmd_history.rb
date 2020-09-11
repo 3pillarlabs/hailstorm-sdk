@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/cli'
 
 # Command history for CLI
@@ -5,8 +7,8 @@ class Hailstorm::Cli::CmdHistory
 
   DEFAULT_MAX_HISTORY = 1000
 
-  attr_reader :memory
-  attr_reader :max_history_size
+  attr_reader :memory,
+              :max_history_size
 
   def initialize(memory, max_history_size: DEFAULT_MAX_HISTORY)
     @memory = memory

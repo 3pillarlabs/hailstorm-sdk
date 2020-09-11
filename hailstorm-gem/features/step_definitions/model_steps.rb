@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Steps invoked by initializing and calling Hailstorm
 include ModelHelper
 

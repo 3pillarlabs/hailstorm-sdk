@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Extension to Hailstorm logger. A future release could replace this with a log4j or logback appender.
 
 REDIS_LOGGER = RedisLogger.new

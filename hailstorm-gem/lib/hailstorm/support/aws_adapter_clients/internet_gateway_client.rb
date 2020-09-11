@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Internet Gateway Client adapter
 class Hailstorm::Support::AwsAdapter::InternetGatewayClient < Hailstorm::Support::AwsAdapter::AbstractClient
   include Hailstorm::Behavior::AwsAdaptable::InternetGatewayClient

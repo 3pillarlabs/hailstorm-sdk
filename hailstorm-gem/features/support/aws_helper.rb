@@ -1,15 +1,18 @@
+# frozen_string_literal: true
+
 require 'aws-sdk-ec2'
 
+# Methods for AWS resource usage
 module AwsHelper
 
   def aws_keys
-    @keys ||= [].tap {|vals|
+    @aws_keys ||= [].tap do |vals|
       require 'yaml'
       key_file_path = File.expand_path('../../data/keys.yml', __FILE__)
       keys = YAML.load_file(key_file_path)
       vals << keys['access_key']
       vals << keys['secret_key']
-    }
+    end
   end
 
   def ec2_resource(region:)
@@ -25,10 +28,20 @@ module AwsHelper
     ec2_resource(region: region)
       .vpcs
       .flat_map { |vpc| vpc.route_tables.to_a }
-      .select { |route_table| (route_table.routes rescue []).find { |route| route && route.gateway_id != 'local' } }
+      .select { |route_table| route_table_contains_igw?(route_table) }
       .flat_map { |route_table| route_table.associations.to_a }
-      .select { |assoc| assoc.subnet_id }
-      .map { |assoc| assoc.subnet }
-      .select { |subnet| subnet.map_public_ip_on_launch }
+      .select(&:subnet_id)
+      .map(&:subnet)
+      .select(&:map_public_ip_on_launch)
+  end
+
+  def route_table_contains_igw?(route_table)
+    !fetch_routes(route_table).find { |route| route && route.gateway_id != 'local' }.nil?
+  end
+
+  def fetch_routes(route_table)
+    route_table.routes
+  rescue Aws::Errors::ServiceError, ArgumentError
+    []
   end
 end

@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'api/aws_ec2_pricing_options'
 
 describe 'api/aws_ec2_pricing_options' do
-  RAW_DATA =<<-RAW
+  RAW_DATA = <<-RAW
   {
     "metadata": {
     },
@@ -66,7 +68,7 @@ describe 'api/aws_ec2_pricing_options' do
         expect(@browser.last_response).to be_ok
         json_data = JSON.parse(@browser.last_response.body)
         expect(json_data.size).to be == JSON_DATA['prices'].size
-        %W[instanceType maxThreadsByInstance hourlyCostByInstance numInstances].each do |attr|
+        %w[instanceType maxThreadsByInstance hourlyCostByInstance numInstances].each do |attr|
           expect(json_data[0].keys).to include(attr)
         end
 
@@ -91,7 +93,7 @@ describe 'api/aws_ec2_pricing_options' do
         expect(json_data.size).to be == JSON_DATA['prices'].size
         expect(json_data[0]
                  .keys
-                 .select { |k| %W[instanceType maxThreadsByInstance hourlyCostByInstance numInstances].include?(k) }
+                 .select { |k| %w[instanceType maxThreadsByInstance hourlyCostByInstance numInstances].include?(k) }
                  .size).to be == 4
 
         expect(AwsEc2Price.count).to be == 1
@@ -103,7 +105,7 @@ describe 'api/aws_ec2_pricing_options' do
       it 'should use the persisted data' do
         expect(Net::HTTP).to_not receive(:get_response)
 
-        raw_data =<<-RAW
+        raw_data = <<-RAW
           [{"hourlyCostByInstance": 1.0, "clockSpeed": "3.0 GHz", "dedicatedEbsThroughput": "4500 Mbps",
             "instanceType": "m5a.large", "memory": "72 GiB", "networkPerformance": "10 Gigabit",
             "normalizationSizeFactor": "72", "vcpu": "36", "id": "VDEFC4X4WEBZM9RA.JRTCKXETXF.6YS6EN2CT7"
@@ -120,7 +122,7 @@ describe 'api/aws_ec2_pricing_options' do
         expect(json_data.size).to be == 1
         expect(json_data[0]
                  .keys
-                 .select { |k| %W[instanceType maxThreadsByInstance hourlyCostByInstance numInstances].include?(k) }
+                 .select { |k| %w[instanceType maxThreadsByInstance hourlyCostByInstance numInstances].include?(k) }
                  .size).to be == 4
       end
     end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 require 'active_record/base'
@@ -9,7 +11,8 @@ describe Hailstorm::Controller::Cli do
     @middleware = Hailstorm.application
     @app = Hailstorm::Controller::Cli.new(@middleware)
     expect(@app.cmd_history).to respond_to(:saved_history_path)
-    allow(@app.cmd_history).to receive(:saved_history_path).and_return(File.join(Hailstorm.root, 'spec_hailstorm_history'))
+    allow(@app.cmd_history).to receive(:saved_history_path).and_return(File.join(Hailstorm.root,
+                                                                                 'spec_hailstorm_history'))
     allow(ActiveRecord::Base).to receive(:clear_all_connections!)
   end
 
@@ -50,7 +53,7 @@ describe Hailstorm::Controller::Cli do
       @app.process_commands
     end
 
-    context '#enhanced_prompt'  do
+    context '#enhanced_prompt' do
       before(:each) do
         @project = Hailstorm::Model::Project.new
         expect(@project).to respond_to(:current_execution_cycle)

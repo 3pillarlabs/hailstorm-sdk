@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/behavior'
 
 # SSH connection
@@ -41,8 +43,8 @@ module Hailstorm::Behavior::SshConnection
   end
 
   # @param [String] _path path to file or directory on remote system
-  # @param [Boolean] _is_dir true if the path is a directory, other false (default)
-  def path_exists?(_path, _is_dir = false)
+  # @param [Boolean] is_dir true if the path is a directory, other false (default)
+  def path_exists?(_path, is_dir: false)
     # :nocov:
     raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     # :nocov:

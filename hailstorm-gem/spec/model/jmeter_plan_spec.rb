@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/model/project'
 require 'hailstorm/model/jmeter_plan'
@@ -99,7 +101,7 @@ describe Hailstorm::Model::JmeterPlan do
       Hailstorm.fs = instance_double(Hailstorm::Behavior::FileStore)
       @project = Hailstorm::Model::Project.create!(project_code: __FILE__)
       @source_jmx_io, mock_workspace = app_file_fixture
-      allow(Hailstorm.fs).to receive(:app_dir_tree).and_return({app: nil}.stringify_keys)
+      allow(Hailstorm.fs).to receive(:app_dir_tree).and_return({ app: nil }.stringify_keys)
       allow(Hailstorm.fs).to receive(:transfer_jmeter_artifacts)
       allow(mock_workspace).to receive(:make_app_layout)
       allow(mock_workspace).to receive(:app_path)
@@ -152,9 +154,9 @@ describe Hailstorm::Model::JmeterPlan do
           config = Hailstorm::Support::Configuration.new
           config.jmeter.test_plans = nil
           allow(Hailstorm.fs).to receive(:fetch_jmeter_plans).and_return([])
-          expect {
+          expect do
             Hailstorm::Model::JmeterPlan.setup(@project, config)
-          }.to raise_error(Hailstorm::Exception)
+          end.to raise_error(Hailstorm::Exception)
         end
       end
     end
@@ -183,9 +185,9 @@ describe Hailstorm::Model::JmeterPlan do
             jmeter.test_plans = %w[a.jmx b.jmx]
           end
           allow(Hailstorm.fs).to receive(:fetch_jmeter_plans).and_return(%w[a])
-          expect {
+          expect do
             Hailstorm::Model::JmeterPlan.setup(@project, config)
-          }.to raise_error(Hailstorm::Exception)
+          end.to raise_error(Hailstorm::Exception)
         end
       end
     end
@@ -244,7 +246,8 @@ describe Hailstorm::Model::JmeterPlan do
       @jmeter_plan.project = Hailstorm::Model::Project.create!(project_code: __FILE__)
       @jmeter_plan.properties = { NumUsers: 900, Duration: 600 }.to_json
       @jmeter_plan.save!
-      allow(@jmeter_plan.project).to receive(:current_execution_cycle).and_return(instance_double(Hailstorm::Model::ExecutionCycle, id: 10))
+      mock_execution_cycle = instance_double(Hailstorm::Model::ExecutionCycle, id: 10)
+      allow(@jmeter_plan.project).to receive(:current_execution_cycle).and_return(mock_execution_cycle)
       @clusterable = instance_double(Hailstorm::Behavior::Clusterable)
       allow(@clusterable).to receive(:required_load_agent_count).and_return(3)
     end
@@ -278,7 +281,7 @@ describe Hailstorm::Model::JmeterPlan do
     it 'should have the log key' do
       @jmeter_plan.project = Hailstorm::Model::Project.new(project_code: 'jmeter_spec')
       Hailstorm.fs = instance_double(Hailstorm::Behavior::FileStore)
-      allow(Hailstorm.fs).to receive(:app_dir_tree).and_return({app: nil}.stringify_keys)
+      allow(Hailstorm.fs).to receive(:app_dir_tree).and_return({ app: nil }.stringify_keys)
       structure = @jmeter_plan.remote_directory_hierarchy
       value = structure.values.first
       expect(value).to include('app')

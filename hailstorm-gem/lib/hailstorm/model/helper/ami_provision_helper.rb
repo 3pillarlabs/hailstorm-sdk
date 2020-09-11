@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/model/helper'
 require 'hailstorm/behavior/loggable'
 require 'hailstorm/support/jmeter_installer'
@@ -9,7 +11,7 @@ class Hailstorm::Model::Helper::AmiProvisionHelper
 
   attr_reader :region, :download_url, :user_home, :jmeter_version
 
-  def initialize(region:, download_url: nil, user_home:, jmeter_version:)
+  def initialize(region:, user_home:, jmeter_version:, download_url: nil)
     @region = region
     @download_url = download_url
     @user_home = user_home
@@ -34,7 +36,7 @@ class Hailstorm::Model::Helper::AmiProvisionHelper
   # @param [Net::SSH::Connection::Session] ssh
   def install_java(ssh)
     logger.info { "Installing Java for #{self.region} AMI..." }
-    output = ''
+    output = +''
     Hailstorm::Support::JavaInstaller.create.install do |instr|
       on_data = lambda do |data|
         output << data
@@ -72,7 +74,7 @@ class Hailstorm::Model::Helper::AmiProvisionHelper
   # Verifies Java is installed
   # @param ssh [Net::SSH::Connection::Session] open ssh session
   def verify_java(ssh)
-    cmd_out = ''
+    cmd_out = +''
     success = ssh_channel_exec_instr(ssh, 'java -version', ->(data) { cmd_out << data })
     logger.debug { cmd_out }
     raise(Hailstorm::JavaInstallationException.new(self.region, cmd_out)) unless success && cmd_out =~ /version/

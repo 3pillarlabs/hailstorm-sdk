@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/cli'
 require 'hailstorm/behavior/loggable'
 require 'hailstorm/cli/view_template'
@@ -45,9 +47,9 @@ class Hailstorm::Cli::ViewRenderer
 
   def render_show(query, show_active, what)
     should_show = ->(kind) { what == kind || %i[active all].include?(what) }
-    puts view_template.render_jmeter_plans(query[:jmeter_plans], show_active) if should_show.call(:jmeter)
-    puts view_template.render_load_agents(query[:clusters], show_active) if should_show.call(:cluster)
-    puts view_template.render_target_hosts(query[:target_hosts], show_active) if should_show.call(:monitor)
+    puts view_template.render_jmeter_plans(query[:jmeter_plans], only_active: show_active) if should_show.call(:jmeter)
+    puts view_template.render_load_agents(query[:clusters], only_active: show_active) if should_show.call(:cluster)
+    puts view_template.render_target_hosts(query[:target_hosts], only_active: show_active) if should_show.call(:monitor)
   end
 
   def view_template

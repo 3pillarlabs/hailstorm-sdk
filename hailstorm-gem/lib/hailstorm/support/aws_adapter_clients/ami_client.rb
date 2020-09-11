@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # EC2 Image (AMI) adapter
 class Hailstorm::Support::AwsAdapter::AmiClient < Hailstorm::Support::AwsAdapter::AbstractClient
   include Hailstorm::Behavior::AwsAdaptable::AmiClient
@@ -27,7 +29,7 @@ class Hailstorm::Support::AwsAdapter::AmiClient < Hailstorm::Support::AwsAdapter
   # @see Hailstorm::Behavior::AwsAdaptable::AmiClient#available?
   def available?(ami_id:)
     ami = find(ami_id: ami_id)
-    ami && ami.available?
+    ami&.available?
   end
 
   # @see Hailstorm::Behavior::AwsAdaptable::AmiClient#register_ami

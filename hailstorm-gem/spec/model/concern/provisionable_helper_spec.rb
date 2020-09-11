@@ -1,9 +1,10 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/model/concern/provisionable_helper'
 require 'hailstorm/model/amazon_cloud'
 
 describe Hailstorm::Model::Concern::ProvisionableHelper do
-
   # @param [Hailstorm::Model::AmazonCloud] aws
   def stub_aws!(aws)
     allow(aws).to receive(:identity_file_exists)
@@ -17,9 +18,9 @@ describe Hailstorm::Model::Concern::ProvisionableHelper do
 
   def stub_find_instance(instance_client, load_agent, status = nil, public_ip_address = nil, private_ip_address = nil)
     attrs = {
-        instance_id: load_agent.identifier,
-        public_ip_address: public_ip_address || '120.34.35.58',
-        private_ip_address: private_ip_address || '10.34.10.20',
+      instance_id: load_agent.identifier,
+      public_ip_address: public_ip_address || '120.34.35.58',
+      private_ip_address: private_ip_address || '10.34.10.20'
     }
 
     attrs.merge!(state: Hailstorm::Behavior::AwsAdaptable::InstanceState.new(name: status.to_s)) if status
@@ -99,19 +100,19 @@ describe Hailstorm::Model::Concern::ProvisionableHelper do
       @aws.project = Hailstorm::Model::Project.new(project_code: __FILE__)
       stub_aws!(@aws)
       jmeter_plan = Hailstorm::Model::JmeterPlan.create!(
-          project: @aws.project,
-          test_plan_name: 'sample',
-          content_hash: 'A',
-          active: false
+        project: @aws.project,
+        test_plan_name: 'sample',
+        content_hash: 'A',
+        active: false
       )
       jmeter_plan.update_column(:active, true)
       @aws.save!
       3.times do
         agent = Hailstorm::Model::MasterAgent.create!(
-            clusterable_id: @aws.id,
-            clusterable_type: @aws.class.name,
-            jmeter_plan: jmeter_plan,
-            active: false
+          clusterable_id: @aws.id,
+          clusterable_type: @aws.class.name,
+          jmeter_plan: jmeter_plan,
+          active: false
         )
         agent.update_column(:active, true)
       end
@@ -188,7 +189,7 @@ describe Hailstorm::Model::Concern::ProvisionableHelper do
       mock_ec2_instance_helper = instance_double(Hailstorm::Model::Helper::Ec2InstanceHelper)
       allow(@aws).to receive(:ec2_instance_helper).and_return(mock_ec2_instance_helper)
       expect(mock_ec2_instance_helper).to receive(:create_ec2_instance)
-          .with(ami_id: @aws.agent_ami, security_group_ids: security_group.id)
+        .with(ami_id: @aws.agent_ami, security_group_ids: security_group.id)
       @aws.send(:create_agent)
     end
   end

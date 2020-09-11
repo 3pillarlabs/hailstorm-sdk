@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Model Helper
 module ModelHelper
 

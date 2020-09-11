@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/support'
 require 'hailstorm/behavior/loggable'
 require 'hailstorm/exceptions'
@@ -15,15 +17,13 @@ class Hailstorm::Support::Thread
   def self.start(*args)
     logger.debug { "#{self}.#{__method__}" }
     thread = Thread.start(args) do |thread_args|
-      begin
-        yield(*thread_args)
-      rescue Object => e
-        logger.error(e.message) unless e.is_a?(Hailstorm::Exception)
-        logger.debug { "\n".concat(e.backtrace.join("\n")) }
-        raise
-      ensure
-        ActiveRecord::Base.connection.close
-      end
+      yield(*thread_args)
+    rescue Object => e
+      logger.error(e.message) unless e.is_a?(Hailstorm::Exception)
+      logger.debug { "\n".concat(e.backtrace.join("\n")) }
+      raise
+    ensure
+      ActiveRecord::Base.connection.close
     end
     Thread.current[:spawned] ||= []
     Thread.current[:spawned].push(thread)

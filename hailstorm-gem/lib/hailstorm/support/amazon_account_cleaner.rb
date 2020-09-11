@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/support'
 require 'hailstorm/model/helper/amazon_cloud_defaults'
 require 'hailstorm/behavior/loggable'
@@ -8,8 +10,12 @@ require 'hailstorm/behavior/loggable'
 class Hailstorm::Support::AmazonAccountCleaner
   include Hailstorm::Behavior::Loggable
 
-  attr_reader :doze_seconds, :region_code
-  attr_reader :ec2_client, :key_pair_client, :security_group_client, :instance_client, :ami_client
+  attr_reader :doze_seconds,
+              :region_code,
+              :ec2_client,
+              :key_pair_client,
+              :security_group_client,
+              :instance_client, :ami_client
 
   def initialize(client_factory:, region_code:, doze_seconds: 5)
     @region_code = region_code

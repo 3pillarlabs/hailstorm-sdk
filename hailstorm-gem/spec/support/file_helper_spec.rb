@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'tmpdir'
 require 'hailstorm/support/file_helper'
@@ -12,7 +14,7 @@ describe Hailstorm::Support::FileHelper do
       gzip_file_path = File.join(temp_path, 'spec.txt.gzip')
       Zlib::GzipWriter.open(gzip_file_path) { |gz| gz.write(can) }
       file_path = File.join(temp_path, 'spec.txt')
-      file_helper.gunzip_file(gzip_file_path, file_path, true)
+      file_helper.gunzip_file(gzip_file_path, file_path)
       expect(File.exist?(gzip_file_path)).to be false
       expect(File.read(file_path)).to be == can
       FileUtils.rmtree(temp_path)

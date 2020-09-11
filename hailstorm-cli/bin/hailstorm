@@ -1,20 +1,22 @@
 #!/usr/bin/env jruby
+# frozen_string_literal: true
+
 # Initialization script for Hailstorm CLI project
 
 require 'optparse'
 
 hailstorm_gem_path = nil
 options = OptionParser.new do |opts|
-  opts.banner = <<-BANNER
-Initialization script for a Hailstorm application.
+  opts.banner = <<~BANNER
+    Initialization script for a Hailstorm application.
 
-Usage
-    #{$PROGRAM_NAME} -h | --help
-    #{$PROGRAM_NAME} <app-name>
+    Usage
+      #{$PROGRAM_NAME} -h | --help
+      #{$PROGRAM_NAME} <app-name>
 
-Example
+    Example
 
-    hailstorm shopping_cart
+      hailstorm shopping_cart
   BANNER
 
   opts.separator ''
@@ -30,7 +32,7 @@ end
 
 options.parse!
 
-if ARGV.length > 0
+if !ARGV.empty?
   require 'ostruct'
 
   gems = []
@@ -44,7 +46,7 @@ if ARGV.length > 0
   gems.push(OpenStruct.new(name: 'hailstorm-cli', path: hailstorm_cli_path))
 
   require 'hailstorm/initializer'
-  Hailstorm::Initializer.create_project!(Dir.pwd, ARGV.first, false, gems)
+  Hailstorm::Initializer.create_project!(Dir.pwd, ARGV.first, gems, quiet: false)
 else
   puts options.to_s
   puts ''

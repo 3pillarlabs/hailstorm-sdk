@@ -1,5 +1,6 @@
 #!/usr/bin/env jruby
-#
+# frozen_string_literal: true
+
 # Hailstorm executable
 # @author Sayantam Dey
 
@@ -16,13 +17,11 @@ else
   require File.expand_path('../../config/boot', __FILE__)
   require 'hailstorm/cli/cmd_parser'
   Hailstorm::Cli::CmdParser.new.with_default_handlers.parse!(ARGV) do |options|
-    begin
-      # Execute the command in CLI
-      require 'hailstorm/controller/cli'
-      Hailstorm::Controller::Cli.new(Hailstorm.application).process_cmd_line(options)
-    rescue StandardError => error
-      warn error.message
-      raise
-    end
+    # Execute the command in CLI
+    require 'hailstorm/controller/cli'
+    Hailstorm::Controller::Cli.new(Hailstorm.application).process_cmd_line(options)
+  rescue StandardError => error
+    warn error.message
+    raise
   end
 end

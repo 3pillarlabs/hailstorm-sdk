@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'tmpdir'
 require 'web_file_store'
@@ -12,7 +14,7 @@ describe WebFileStore do
       allow(Net::HTTP).to receive(:get_response).and_return(mock_response)
       Dir.mktmpdir do |tmp_path|
         wfs = WebFileStore.new
-        args = {file_id: '123', file_name: 'a.xml', to_path: tmp_path}
+        args = { file_id: '123', file_name: 'a.xml', to_path: tmp_path }
         local_path = wfs.fetch_file(args)
         expect(local_path).to eq("#{tmp_path}/#{args[:file_name]}")
         expect(File.read(local_path)).to eq(mock_response.body)
@@ -25,7 +27,9 @@ describe WebFileStore do
       allow(Net::HTTP).to receive(:get_response).and_return(mock_response)
       wfs = WebFileStore.new
       Dir.mktmpdir do |tmp_path|
-        expect { wfs.fetch_file({file_id: '123', file_name: 'a.xml', to_path: tmp_path}) }.to raise_error(Net::HTTPError)
+        expect do
+          wfs.fetch_file({ file_id: '123', file_name: 'a.xml', to_path: tmp_path })
+        end.to raise_error(Net::HTTPError)
       end
     end
   end
@@ -110,7 +114,7 @@ describe WebFileStore do
         JSON.dump(
           [
             { id: 123, title: 'a.docx' },
-            { id: 456, title: 'b.docx' },
+            { id: 456, title: 'b.docx' }
           ]
         )
       )

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'net/ssh'
 require 'net/sftp'
 require 'hailstorm/support'
@@ -89,14 +91,14 @@ class Hailstorm::Support::SSH
     end
 
     def directory_exists?(dir_path)
-      path_exists?(dir_path, true)
+      path_exists?(dir_path, is_dir: true)
     end
 
     # @param [String] path path to file or directory on remote system
     # @param [Boolean] is_dir true if the path is a directory, other false (default)
-    def path_exists?(path, is_dir = false)
+    def path_exists?(path, is_dir: false)
       cmd = is_dir ? "ls -ld #{path}" : "ls #{path}"
-      stderr = ''
+      stderr = +''
       self.exec!(cmd) do |_channel, stream, data|
         stderr << data if stream == :stderr
       end
@@ -164,7 +166,7 @@ class Hailstorm::Support::SSH
     # pid (process ID), ppid (parent process ID), cmd (command string).
     # @return [Array<RemoteProcess>] pid, ppid, cmd
     def remote_processes
-      stdout = ''
+      stdout = +''
       self.exec!("ps -o pid,ppid,cmd -u #{self.options[:user]}") do |_channel, stream, data|
         stdout << data if stream == :stdout
       end

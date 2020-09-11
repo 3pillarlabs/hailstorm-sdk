@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm'
 
 # Middleware is the 'rack' of rack based applications - it gives access to all of Hailstorm's features by encapsulating

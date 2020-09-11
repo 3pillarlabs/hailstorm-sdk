@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/model/helper'
 require 'hailstorm/support/waiter'
 require 'hailstorm/behavior/loggable'

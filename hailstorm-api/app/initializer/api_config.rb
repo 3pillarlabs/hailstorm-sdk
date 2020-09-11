@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/initializer/eager_load'
 require 'initializer/log_config'
 require 'initializer/redis_logger'

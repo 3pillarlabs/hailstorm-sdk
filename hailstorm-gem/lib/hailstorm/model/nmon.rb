@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/model'
 require 'hailstorm/behavior/sshable'
 require 'hailstorm/model/target_host'
@@ -11,7 +13,7 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
   include Hailstorm::Behavior::SSHable
 
   # Path to nmon output files on target_host
-  NMON_OUTPUT_PATH = '/tmp/nmon_output'.freeze
+  NMON_OUTPUT_PATH = '/tmp/nmon_output'
 
   before_validation :set_defaults
 
@@ -54,8 +56,7 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
                          out_file: nmon_outfile_path,
                          interval: self.sampling_interval)
         nmon_pid = ssh.exec!(command)
-        nmon_pid.chomp!
-        self.executable_pid = nmon_pid
+        self.executable_pid = nmon_pid.chomp
       end
     end
 
@@ -127,11 +128,9 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
     end
 
     # (see Hailstorm::Behavior::Moniterable#cpu_usage_trend)
-    def cpu_usage_trend
+    def cpu_usage_trend(&block)
       if block_given?
-        File.open(cpu_trend_file_path, 'r') do |io|
-          yield(io)
-        end
+        File.open(cpu_trend_file_path, 'r') { |io| block.call(io) }
         File.unlink(cpu_trend_file_path)
       else
         File.open(cpu_trend_file_path, 'r')
@@ -139,11 +138,9 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
     end
 
     # (see #cpu_usage_trend)
-    def memory_usage_trend
+    def memory_usage_trend(&block)
       if block_given?
-        File.open(memory_trend_file_path, 'r') do |io|
-          yield(io)
-        end
+        File.open(memory_trend_file_path, 'r') { |io| block.call(io) }
         File.unlink(memory_trend_file_path)
       else
         File.open(memory_trend_file_path, 'r')
@@ -151,11 +148,9 @@ class Hailstorm::Model::Nmon < Hailstorm::Model::TargetHost
     end
 
     # (see #cpu_usage_trend)
-    def swap_usage_trend
+    def swap_usage_trend(&block)
       if block_given?
-        File.open(swap_trend_file_path, 'r') do |io|
-          yield(io)
-        end
+        File.open(swap_trend_file_path, 'r') { |io| block.call(io) }
         File.unlink(swap_trend_file_path)
       else
         File.open(swap_trend_file_path, 'r')

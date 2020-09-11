@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/model'
 require 'hailstorm/model/client_stat'
 require 'hailstorm/support/quantile'
@@ -7,19 +9,13 @@ require 'hailstorm/support/quantile'
 class Hailstorm::Model::PageStat < ActiveRecord::Base
   belongs_to :client_stat
 
-  attr_accessor :cumulative_response_time
-
-  attr_accessor :cumulative_squared_response_time
-
-  attr_accessor :page_sample_times
-
-  attr_accessor :min_start_time
-
-  attr_accessor :max_end_time
-
-  attr_accessor :cumulative_bytes
-
-  attr_accessor :errors_count
+  attr_accessor :cumulative_response_time,
+                :cumulative_squared_response_time,
+                :page_sample_times,
+                :min_start_time,
+                :max_end_time,
+                :cumulative_bytes,
+                :errors_count
 
   after_initialize :set_defaults
 
@@ -145,7 +141,7 @@ class Hailstorm::Model::PageStat < ActiveRecord::Base
 
   def compute_samples_breakup
     self.samples_breakup.each do |partition|
-      partition[:p] = format('%2.2f', (partition[:c].to_f * 100) / self.samples_count)
+      partition[:p] = format('%<data>2.2f', data: ((partition[:c].to_f * 100) / self.samples_count))
     end
     self.samples_breakup_json = self.samples_breakup.to_json
   end

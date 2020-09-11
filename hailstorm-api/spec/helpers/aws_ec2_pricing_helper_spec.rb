@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'helpers/aws_ec2_pricing_helper'
 

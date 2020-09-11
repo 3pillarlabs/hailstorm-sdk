@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/model'
 
 # Model helpers are responsible for `how' the model executes low level functions. A model will instantiate

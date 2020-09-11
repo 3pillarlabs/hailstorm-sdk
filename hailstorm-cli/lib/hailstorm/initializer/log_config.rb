@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm'
 
 # Add config/log4j.xml if it exists

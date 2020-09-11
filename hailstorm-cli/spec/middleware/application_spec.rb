@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'active_record/base'
 require 'active_record/errors'
@@ -9,7 +11,7 @@ require 'hailstorm_ext'
 
 describe Hailstorm::Middleware::Application do
   before(:each) do
-   @app = Hailstorm::Middleware::Application.new
+    @app = Hailstorm::Middleware::Application.new
   end
 
   context '#check_database' do
@@ -110,13 +112,13 @@ describe Hailstorm::Middleware::Application do
       expect(conn_spec).to include(:database)
     end
     it 'should not override :database key' do
-      props = {adapter: 'mysql', database: 'hailstorm_test'}
+      props = { adapter: 'mysql', database: 'hailstorm_test' }
       allow(@app).to receive(:load_db_properties).and_return(props)
       conn_spec = @app.send(:connection_spec)
       expect(conn_spec[:database]).to be == props[:database]
     end
     it 'should provide :database if not present in spec' do
-      props = {adapter: 'mysql'}
+      props = { adapter: 'mysql' }
       allow(@app).to receive(:load_db_properties).and_return(props)
       conn_spec = @app.send(:connection_spec)
       expect(conn_spec[:database]).to match(/^hailstorm_/)
@@ -128,14 +130,14 @@ describe Hailstorm::Middleware::Application do
         expect(@app.send(:connection_spec)).to include(:wait_timeout)
       end
       it 'should be able to override default properties' do
-        props = {adapter: 'mysql', pool: 100000, wait_timeout: 60.minutes}
+        props = { adapter: 'mysql', pool: 100_000, wait_timeout: 60.minutes }
         allow(@app).to receive(:load_db_properties).and_return(props)
         conn_spec = @app.send(:connection_spec)
         expect(conn_spec[:pool]).to be == props[:pool]
         expect(conn_spec[:wait_timeout]).to be == props[:wait_timeout]
       end
       it 'should be able to add additional properties' do
-        props = {adapter: 'mysql', host: 'data.ba.se'}
+        props = { adapter: 'mysql', host: 'data.ba.se' }
         allow(@app).to receive(:load_db_properties).and_return(props)
         conn_spec = @app.send(:connection_spec)
         expect(conn_spec).to include(:host)
@@ -170,7 +172,7 @@ describe Hailstorm::Middleware::Application do
       end
     end
 
-    def write_configuration_file(num_lines: )
+    def write_configuration_file(num_lines:)
       FileUtils.mkdir_p(File.join(Hailstorm.root, Hailstorm.config_dir))
       File.open(Hailstorm.environment_file_path, 'w') do |file|
         num_lines.times do |index|

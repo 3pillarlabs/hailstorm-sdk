@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'readline'
 
 require 'hailstorm/controller'
@@ -15,8 +17,8 @@ class Hailstorm::Controller::Cli
 
   attr_reader :shell_binding_ctx
 
-  attr_accessor :exit_command_counter
-  attr_accessor :prompt
+  attr_accessor :exit_command_counter,
+                :prompt
 
   # Create a new CLI instance
   # @param [Hailstorm::Middleware::Application] args arguments
@@ -79,7 +81,7 @@ Type help to get started...
       logger.error "'#{args}' command failed: #{error.message}"
     else
       logger.error error.message
-      logger.debug { "\n".concat(error.backtrace.join("\n")) }
+      logger.debug { error.backtrace.prepend("\n").join("\n") }
     end
   end
 
@@ -103,7 +105,7 @@ Type help to get started...
       puts out.inspect
     rescue ::Exception => irb_exception
       puts "[#{irb_exception.class.name}]: #{irb_exception.message}"
-      logger.debug { "\n".concat(irb_exception.backtrace.join("\n")) }
+      logger.debug { irb_exception.backtrace.prepend("\n").join("\n") }
     end
   end
 
@@ -123,16 +125,15 @@ Type help to get started...
         cmd_history.pop
         next
       end
-      command_line.chomp!
-      command_line.strip!
 
+      command_line = command_line.chomp.strip
       process_cmd_line(command_line)
       cmd_history.save_history(command_line)
     end
   end
 
   def enhanced_prompt
-    if self.current_project && self.current_project.current_execution_cycle
+    if self.current_project&.current_execution_cycle
       self.prompt.gsub(/\s$/, '*  ')
     else
       self.prompt

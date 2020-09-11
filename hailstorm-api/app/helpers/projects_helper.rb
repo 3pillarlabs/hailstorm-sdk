@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'digest'
 require 'hailstorm/model/project'
 require 'hailstorm/model/execution_cycle'
@@ -87,7 +89,7 @@ module ProjectsHelper
   end
 
   def add_auto_stop_attribute(project, project_attrs)
-    return unless project.jmeter_plans.count > 0
+    return unless project.jmeter_plans.count.positive?
 
     project_attrs[:auto_stop] = project.jmeter_plans.all.reduce(true) { |s, jp| s & !jp.loop_forever? }
   end
@@ -133,10 +135,12 @@ module ProjectsHelper
       return
     end
 
-    project_attrs[:live] = Hailstorm::Model::LoadAgent
-                           .joins('JOIN amazon_clouds ON amazon_clouds.id = load_agents.clusterable_id')
-                           .where(amazon_clouds: { project_id: project.id })
-                           .where('load_agents.identifier IS NOT NULL')
-                           .count('load_agents.id') > 0
+    live_count = Hailstorm::Model::LoadAgent
+                 .joins('JOIN amazon_clouds ON amazon_clouds.id = load_agents.clusterable_id')
+                 .where(amazon_clouds: { project_id: project.id })
+                 .where('load_agents.identifier IS NOT NULL')
+                 .count('load_agents.id')
+
+    project_attrs[:live] = live_count.positive?
   end
 end

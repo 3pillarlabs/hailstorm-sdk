@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # EC2 Instance adapter
 class Hailstorm::Support::AwsAdapter::InstanceClient < Hailstorm::Support::AwsAdapter::AbstractClient
   include Hailstorm::Behavior::AwsAdaptable::InstanceClient

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'sinatra'
 require 'json'
 require 'helpers/clusters_helper'
@@ -65,7 +67,7 @@ delete '/projects/:project_id/clusters/:id' do |project_id, id|
                                      .find_by_cluster_code(matched_cluster_cfg.cluster_code)
   if cluster
     clusterable = cluster.cluster_instance
-    if clusterable.client_stats.count > 0 || clusterable.load_agents.count > 0
+    if clusterable.client_stats.count.positive? || clusterable.load_agents.count.positive?
       matched_cluster_cfg.active = false
     else
       clusterable.destroy!

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/support'
 require 'hailstorm/behavior/loggable'
 require 'zip/filesystem'
@@ -14,8 +16,8 @@ class Hailstorm::Support::FileHelper
     # Same as gzip -d <gzip_file_path>
     # @param [String] gzip_file_path
     # @param [String] file_path
-    # @param [Boolean] unlink_gzip remove gzip file after gunzip, default behavior is to keep the file
-    def gunzip_file(gzip_file_path, file_path, unlink_gzip = false)
+    # @param [Boolean] unlink_gzip remove gzip file after gunzip, default behavior is to remove the file
+    def gunzip_file(gzip_file_path, file_path, unlink_gzip: true)
       File.open(gzip_file_path, 'r') do |compressed|
         File.open(file_path, 'w') do |uncompressed|
           gz = Zlib::GzipReader.new(compressed)

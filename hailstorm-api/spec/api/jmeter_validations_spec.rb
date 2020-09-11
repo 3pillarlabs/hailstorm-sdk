@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'json'
 require 'app/api/jmeter_validations'
@@ -9,7 +11,8 @@ describe 'api/jmeter_validations' do
 
   context 'POST /jmeter_validations' do
     it 'should extract properties' do
-      allow(Hailstorm.fs).to receive(:fetch_file).and_return(File.expand_path('../../resources/hailstorm-site-basic.jmx', __FILE__))
+      jmx_path = File.expand_path('../../resources/hailstorm-site-basic.jmx', __FILE__)
+      allow(Hailstorm.fs).to receive(:fetch_file).and_return(jmx_path)
       project = Hailstorm::Model::Project.create!(project_code: 'api_jmeter_validations_spec')
       params = {
         name: 'hailstorm-site-basic.jmx',
@@ -26,9 +29,9 @@ describe 'api/jmeter_validations' do
       expect(res.keys).to include('path')
       expect(res['properties']).to be_an(Array)
       expect(res['properties'][0]).to eq(['NumUsers', nil])
-      expect(res['properties'][1]).to eq(%W[RampUp 0])
+      expect(res['properties'][1]).to eq(%w[RampUp 0])
       expect(res['properties'][2]).to eq(['Duration', nil])
-      expect(res['properties'][4]).to eq(%W[ServerName ServerName])
+      expect(res['properties'][4]).to eq(%w[ServerName ServerName])
     end
 
     context 'on validation failure' do

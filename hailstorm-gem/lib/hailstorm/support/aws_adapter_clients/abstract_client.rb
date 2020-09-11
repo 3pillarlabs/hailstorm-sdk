@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Abstract class for all client adapters.
 class Hailstorm::Support::AwsAdapter::AbstractClient
   include Hailstorm::Behavior::Loggable

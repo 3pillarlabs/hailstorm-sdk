@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Subnet adapter
 class Hailstorm::Support::AwsAdapter::SubnetClient < Hailstorm::Support::AwsAdapter::AbstractClient
   include Hailstorm::Behavior::AwsAdaptable::SubnetClient

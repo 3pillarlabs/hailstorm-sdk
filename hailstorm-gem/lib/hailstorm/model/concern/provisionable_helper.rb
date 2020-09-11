@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/model/concern'
 
 # Method implementations for `Provisionable` interface
@@ -7,14 +9,7 @@ module Hailstorm::Model::Concern::ProvisionableHelper
   def start_agent(load_agent)
     return if load_agent.running?
 
-    instance = instance_client.find(instance_id: load_agent.identifier) unless load_agent.identifier.nil?
-    if instance
-      instance = restart_agent(instance_id: instance.id, stopped: instance.stopped?)
-    else
-      instance = create_agent
-      instance_name = "#{self.project.project_code}-#{load_agent.class.name.underscore}-#{load_agent.id}"
-      instance_client.tag_name(resource_id: instance.id, name: instance_name)
-    end
+    instance = load_agent.identifier ? restart_agent_instance(load_agent) : create_agent_instance(load_agent)
 
     # copy attributes
     load_agent.identifier = instance.instance_id
@@ -91,6 +86,18 @@ module Hailstorm::Model::Concern::ProvisionableHelper
   end
 
   private
+
+  def create_agent_instance(load_agent)
+    instance = create_agent
+    instance_name = "#{self.project.project_code}-#{load_agent.class.name.underscore}-#{load_agent.id}"
+    instance_client.tag_name(resource_id: instance.id, name: instance_name)
+    instance
+  end
+
+  def restart_agent_instance(load_agent)
+    instance = instance_client.find(instance_id: load_agent.identifier)
+    restart_agent(instance_id: instance.id, stopped: instance.stopped?)
+  end
 
   def restart_agent(instance_id:, stopped:)
     if stopped

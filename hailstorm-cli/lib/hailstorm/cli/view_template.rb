@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'terminal-table'
 require 'hailstorm/cli'
 require 'hailstorm/view_adapter'
@@ -7,7 +9,7 @@ class Hailstorm::Cli::ViewTemplate
   include Hailstorm::ViewAdapter
 
   # @param [Enumerable<Hailstorm::Model::JMeter>] enumerable
-  def render_jmeter_plans(enumerable, only_active = true)
+  def render_jmeter_plans(enumerable, only_active: true)
     jmeter_plans = []
     enumerable.each do |jmeter_plan|
       plan = OpenStruct.new
@@ -19,7 +21,7 @@ class Hailstorm::Cli::ViewTemplate
   end
 
   # @param [Enumerable<Hailstorm::Model::Cluster>] enumerable
-  def render_load_agents(enumerable, only_active = true)
+  def render_load_agents(enumerable, only_active: true)
     clustered_load_agents = []
     enumerable.each do |cluster|
       next if only_active && !cluster.cluster_instance.active
@@ -30,7 +32,7 @@ class Hailstorm::Cli::ViewTemplate
   end
 
   # @param [Enumerable<Hailstorm::Model::TargetHost>] enumerable
-  def render_target_hosts(enumerable, only_active = true)
+  def render_target_hosts(enumerable, only_active: true)
     terminal_table = Terminal::Table.new
     terminal_table.headings = %w[Role Host Monitor PID]
     enumerable.each do |target_host|
