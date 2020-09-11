@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'api/reports'
 require 'hailstorm/support/configuration'
@@ -37,7 +39,7 @@ describe 'api/reports' do
       @browser.post("/projects/#{project.id}/reports", JSON.dump([1, 2, 3]))
       expect(@browser.last_response).to be_successful
       data = JSON.parse(@browser.last_response.body)
-      expect(data.keys).to eq(%W[id projectId title uri])
+      expect(data.keys).to eq(%w[id projectId title uri])
       expect(data['title']).to be == 'a.docx'
     end
   end

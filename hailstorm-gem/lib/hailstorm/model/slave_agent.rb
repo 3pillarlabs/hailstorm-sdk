@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/model'
 require 'hailstorm/model/load_agent'
 
@@ -14,7 +16,7 @@ class Hailstorm::Model::SlaveAgent < Hailstorm::Model::LoadAgent
     evaluate_execute(command_template)
   end
 
-  def stop_jmeter(_wait = false, _aborted = false, doze_time = 60)
+  def stop_jmeter(wait: false, aborted: false, doze_time: 60)
     logger.debug { "#{self.class}##{__method__}" }
     return unless jmeter_running?
 

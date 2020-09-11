@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Route table (within a VPC) adapter
 class Hailstorm::Support::AwsAdapter::RouteTableClient < Hailstorm::Support::AwsAdapter::AbstractClient
   include Hailstorm::Behavior::AwsAdaptable::RouteTableClient

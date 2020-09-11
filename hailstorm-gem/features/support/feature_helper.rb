@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'bundler/setup'
 
 $LOAD_PATH.push(File.expand_path('../../lib', __FILE__))
@@ -19,7 +21,7 @@ ENV['HAILSTORM_ENV'] = 'gem_integration' unless ENV['HAILSTORM_ENV']
 ENV['HAILSTORM_WORKSPACE_ROOT'] = BUILD_PATH
 
 connection_spec = Hailstorm::Support::DbConnection.new(
-  adapter:  'jdbcmysql',
+  adapter: 'jdbcmysql',
   database: "hailstorm_#{ENV['HAILSTORM_ENV']}",
   username: 'hailstorm_dev',
   password: 'hailstorm_dev'

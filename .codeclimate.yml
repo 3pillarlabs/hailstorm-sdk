@@ -7,12 +7,9 @@ checks:
 plugins:
   rubocop:
     enabled: true
-    channel: rubocop-0-51
+    channel: rubocop-0-89
 
 exclude_patterns:
-  - '*.rb'
-  - 'setup/**/*'
-  - 'Vagrantfile'
   - 'docs/**/*'
   - 'hailstorm-gem/Gemfile'
   - 'hailstorm-gem/hailstorm.gemspec'

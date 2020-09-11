@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/support/java_installer'
 
 describe Hailstorm::Support::JavaInstaller do
-
   context Hailstorm::Support::JavaInstaller::Trusty do
     context '#install' do
       it 'should yield at least one instruction' do

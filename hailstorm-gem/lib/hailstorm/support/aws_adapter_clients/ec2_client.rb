@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Client adapter for EC2 methods invoked
 class Hailstorm::Support::AwsAdapter::Ec2Client < Hailstorm::Support::AwsAdapter::AbstractClient
   include Hailstorm::Behavior::AwsAdaptable::Ec2Client

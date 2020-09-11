@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/support'
 require 'aws-sdk-ec2'
 require 'delegate'

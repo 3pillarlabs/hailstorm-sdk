@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/middleware'
 require 'hailstorm/exceptions'
 require 'hailstorm/behavior/loggable'
@@ -111,13 +113,17 @@ class Hailstorm::Middleware::CommandInterpreter
     def interpret_sequences(args, sequences)
       extract_last = false
       if sequences
-        if sequences == 'last'
+        case sequences
+        when /^last$/
           extract_last = true
           sequences = nil
-        elsif sequences =~ /^(\d+)-(\d+)$/ # range
+
+        when /^(\d+)-(\d+)$/ # range
           sequences = (Regexp.last_match(1)..Regexp.last_match(2)).to_a.collect(&:to_i)
-        elsif sequences =~ /^[\d,:]+$/
+
+        when /^[\d,:]+$/
           sequences = sequences.split(/\s*[,:]\s*/).collect(&:to_i)
+
         else
           sequences = parse_results_import_arguments(sequences)
           logger.debug { "results(#{args}) -> #{sequences}" }
@@ -132,11 +138,10 @@ class Hailstorm::Middleware::CommandInterpreter
         opts = glob
         glob = nil
       end
-      unless opts.nil?
-        opts.each_key do |opt_key|
-          unless %i[jmeter exec cluster].include?(opt_key.to_sym)
-            raise(Hailstorm::UnknownCommandOptionException, "Unknown results import option: #{opt_key}")
-          end
+
+      opts&.each_key do |opt_key|
+        unless %i[jmeter exec cluster].include?(opt_key.to_sym)
+          raise(Hailstorm::UnknownCommandOptionException, "Unknown results import option: #{opt_key}")
         end
       end
       [glob, opts]

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 require 'hailstorm/behavior/clusterable'
@@ -224,7 +226,7 @@ describe Hailstorm::Model::Cluster do
       end
     end
     context ':data_center' do
-      [%W[192.168.20.10], %W[192.168.20.10 192.168.20.20]].each do |machines|
+      [%w[192.168.20.10], %w[192.168.20.10 192.168.20.20]].each do |machines|
         it "should persist all configuration options with #{machines}" do
           config = Hailstorm::Support::Configuration.new
           config.clusters(:data_center) do |dc|
@@ -377,7 +379,8 @@ describe Hailstorm::Model::Cluster do
         @project.current_execution_cycle.started!
         Hailstorm::Model::Cluster.generate_all_load(@project)
 
-        allow(Hailstorm::Model::LoadAgent).to receive_message_chain(:where, :all) { [ instance_double(Hailstorm::Model::LoadAgent) ] }
+        mock_load_agent = instance_double(Hailstorm::Model::LoadAgent)
+        allow(Hailstorm::Model::LoadAgent).to receive_message_chain(:where, :all) { [mock_load_agent] }
         expect { Hailstorm::Model::Cluster.stop_load_generation(@project) }.to raise_error(Hailstorm::Exception)
       end
     end
@@ -404,14 +407,12 @@ describe Hailstorm::Model::Cluster do
       mock_agent = instance_spy(Hailstorm::Model::LoadAgent)
       allow(mock_agent).to receive(:transaction).and_yield
       allow_any_instance_of(Hailstorm::Model::AmazonCloud).to receive_message_chain(
-                                                                :load_agents, :all
-                                                              ).and_return([mock_agent])
+        :load_agents, :all
+      ).and_return([mock_agent])
 
       Hailstorm::Model::Cluster.configure_all(@project, config)
       expect(Hailstorm::Model::AmazonCloud.count).to be > 0
       expect(Hailstorm::Model::DataCenter.count).to be > 0
-
-
 
       Hailstorm::Model::Cluster.terminate(@project)
       expect(Hailstorm::Model::LoadAgent.count).to be_zero
@@ -486,7 +487,8 @@ describe Hailstorm::Model::Cluster do
       end
 
       clusterables_stub!
-      allow_any_instance_of(Hailstorm::Model::AmazonCloud).to receive(:destroy!).and_raise(ActiveRecord::RecordNotFound, 'mock not found error')
+      allow_any_instance_of(Hailstorm::Model::AmazonCloud).to receive(:destroy!).and_raise(ActiveRecord::RecordNotFound,
+                                                                                           'mock not found error')
 
       Hailstorm::Model::Cluster.configure_all(@project, config)
       expect { Hailstorm::Model::Cluster.first.destroy! }.to_not raise_error
@@ -541,7 +543,7 @@ describe Hailstorm::Model::Cluster do
         expect(clusterable).to respond_to(:master_agents)
         agent = Hailstorm::Model::MasterAgent.new
         allow(clusterable).to receive_message_chain(:master_agents, :where, :all).and_return([agent])
-        expect(agent).to receive(:stop_jmeter).with(false, false)
+        expect(agent).to receive(:stop_jmeter).with(wait: false, aborted: false)
         clusterable.stop_master_process
       end
     end
@@ -562,7 +564,7 @@ describe Hailstorm::Model::Cluster do
         it 'should raise Hailstorm::AgentCreationFailure' do
           allow(@clusterable).to receive(:create_or_enable).and_raise(Exception, 'mock exception')
           expect { @clusterable.process_jmeter_plan(@jmeter_plan) }
-              .to raise_error(Hailstorm::AgentCreationFailure) { |error| expect(error.diagnostics).to_not be_blank }
+            .to raise_error(Hailstorm::AgentCreationFailure) { |error| expect(error.diagnostics).to_not be_blank }
         end
       end
     end

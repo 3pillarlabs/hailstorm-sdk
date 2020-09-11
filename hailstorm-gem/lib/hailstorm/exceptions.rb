@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Hailstorm
 
   # Subclass or use this for exceptions in workflow
@@ -11,6 +13,8 @@ module Hailstorm
 
     # @param [Array] exceptions
     def initialize(exceptions = [])
+      super
+
       @exceptions = exceptions.is_a?(Array) ? exceptions : [exceptions]
     end
 
@@ -75,6 +79,8 @@ module Hailstorm
     # @param [String] region
     # @param [Struct] reason reason(code, message)
     def initialize(region, reason)
+      super()
+
       @region = region
       @reason = reason
     end
@@ -95,8 +101,10 @@ module Hailstorm
     # @param [String] agent_machines comma separated ip addresses of machines
     # @param [String] ssh_identity ssh ssh identity
     def initialize(user_name, agent_machines, ssh_identity)
+      super()
+
       @agent_machine = agent_machines
-      @user_name    = user_name
+      @user_name = user_name
       @ssh_identity = ssh_identity
     end
 
@@ -110,8 +118,11 @@ module Hailstorm
   # Java on Data center
   class DataCenterJavaFailure < DiagnosticAwareException
     attr_reader :java_version
+
     # @param [String] java_version
     def initialize(java_version)
+      super()
+
       @java_version = java_version
     end
 
@@ -126,8 +137,11 @@ module Hailstorm
   # JMeter on Data center
   class DataCenterJMeterFailure < DiagnosticAwareException
     attr_reader :jmeter_version
+
     # @param [String] jmeter_version
     def initialize(jmeter_version)
+      super()
+
       @jmeter_version = jmeter_version
     end
 
@@ -143,6 +157,8 @@ module Hailstorm
   class JavaInstallationException < AmiCreationFailure
 
     def initialize(region, reason)
+      super(region, reason)
+
       @region = region
       @reason = reason
     end
@@ -156,6 +172,8 @@ module Hailstorm
   class ExecutionCycleExistsException < DiagnosticAwareException
 
     def initialize(started_at)
+      super()
+
       @started_at = started_at
     end
 
@@ -176,7 +194,7 @@ module Hailstorm
   class JMeterRunningException < DiagnosticAwareException
 
     def diagnostics
-      "Jmeter is still running! Run 'abort' if you really mean to stop.".freeze
+      "Jmeter is still running! Run 'abort' if you really mean to stop."
     end
   end
 end

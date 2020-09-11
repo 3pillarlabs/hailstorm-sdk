@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/support/schema'
 
 Hailstorm::Support::Schema.create_schema do |schema|

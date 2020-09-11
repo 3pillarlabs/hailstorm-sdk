@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/behavior'
 require 'hailstorm/model/jmeter_plan'
 require 'hailstorm/model/slave_agent'
@@ -31,29 +33,29 @@ module Hailstorm::Behavior::Clusterable
     end
 
     # Start JMeter slaves on load agents
-    def start_slave_process(redeploy = false)
+    def start_slave_process(redeploy: false)
       logger.debug { "#{self.class}##{__method__}" }
       start_jmeter_process(self.slave_agents.where(active: true), redeploy)
     end
 
     # Start JMeter master on load agents
-    def start_master_process(redeploy = false)
+    def start_master_process(redeploy: false)
       logger.debug { "#{self.class}##{__method__}" }
       start_jmeter_process(self.master_agents.where(active: true), redeploy)
     end
 
     def start_jmeter_process(iterable, redeploy)
       visit_collection(iterable) do |agent|
-        agent.upload_scripts(redeploy)
+        agent.upload_scripts(force: redeploy)
         agent.start_jmeter
       end
     end
 
     # Stop JMeter master process on load agents
-    def stop_master_process(wait = false, aborted = false)
+    def stop_master_process(wait: false, aborted: false)
       logger.debug { "#{self.class}##{__method__}" }
       visit_collection(self.master_agents.where(active: true).all) do |master|
-        master.stop_jmeter(wait, aborted)
+        master.stop_jmeter(wait: wait, aborted: aborted)
       end
     end
 
@@ -71,7 +73,7 @@ module Hailstorm::Behavior::Clusterable
         raise(e) if e.is_a?(Hailstorm::Exception)
 
         logger.debug(e.message)
-        logger.debug { "\n".concat(e.backtrace.join("\n"), '') }
+        logger.debug { e.backtrace.prepend("\n").join("\n") }
         raise(Hailstorm::AgentCreationFailure)
       end
     end
@@ -93,7 +95,7 @@ module Hailstorm::Behavior::Clusterable
         slave_agents_count = self.slave_agents
                                  .where(jmeter_plan_id: jmeter_plan.id)
                                  .all.count
-        raise(Hailstorm::MasterSlaveSwitchOffConflict) if slave_agents_count > 0
+        raise(Hailstorm::MasterSlaveSwitchOffConflict) if slave_agents_count.positive?
 
         :master_agents
       end
@@ -142,13 +144,11 @@ module Hailstorm::Behavior::Clusterable
     def create_new_agent(activated_agents, agent, count, mutex)
       if count > 1
         Hailstorm::Support::Thread.start(agent) do |agent_instance|
-          begin
-            yield agent_instance if block_given?
-            agent_instance.save!
-            mutex.synchronize { activated_agents.push(agent_instance) }
-          rescue Hailstorm::Exception => e
-            logger.warn(e.message)
-          end
+          yield agent_instance if block_given?
+          agent_instance.save!
+          mutex.synchronize { activated_agents.push(agent_instance) }
+        rescue Hailstorm::Exception => e
+          logger.warn(e.message)
         end
       else
         begin
@@ -223,11 +223,9 @@ module Hailstorm::Behavior::Clusterable
 
     # :nocov:
 
-    def destroy_all_agents
+    def destroy_all_agents(&block)
       logger.debug { "#{self.class}##{__method__}" }
-      visit_collection(self.load_agents.all) do |agent|
-        yield agent
-      end
+      visit_collection(self.load_agents.all, &block)
     end
   end
 
@@ -253,8 +251,8 @@ module Hailstorm::Behavior::Clusterable
   # Implementation should essentially perform validation, persistence and state
   # management tasks. This method may be called on a new or existing instance,
   # the implementation will have to check and take appropriate actions.
-  # @param [Boolean] _force Implementation may redo actions even if already done.
-  def setup(_force = false)
+  # @param [Boolean] force Implementation may redo actions even if already done.
+  def setup(force: false)
     raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
   end
 

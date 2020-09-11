@@ -1,4 +1,9 @@
+# frozen_string_literal: true
+
+# Helper methods to work with CLI project
 module CliStepHelper
+  attr_reader :exit_on_cmd_resp
+
   def tmp_path
     build_path
   end
@@ -8,7 +13,7 @@ module CliStepHelper
   end
 
   def current_project(new_project = nil)
-    @app_name ||= new_project
+    @current_project ||= new_project
   end
 
   def jmeter_properties(hashes = nil)
@@ -22,13 +27,7 @@ module CliStepHelper
   def clusters(hashes = nil)
     if hashes
       keys = OpenStruct.new(YAML.load_file(File.join(data_path, 'keys.yml')))
-      @clusters = hashes.collect do |e|
-        s = OpenStruct.new(e)
-        s.access_key = keys.access_key if s.access_key.nil? && s.cluster_type == :amazon_cloud
-        s.secret_key = keys.secret_key if s.secret_key.nil? && s.cluster_type == :amazon_cloud
-        s.active = true if s.active.nil?
-        s
-      end
+      @clusters = hashes.collect { |e| to_cluster_attrs(keys, e) }
       @config_changed = true
     end
     @clusters || []
@@ -38,7 +37,7 @@ module CliStepHelper
     @config_changed
   end
 
-  def write_config(monitor_active = true)
+  def write_config(monitor_active: true)
     lookup_context = ActionView::LookupContext.new([data_path])
     engine = ActionView::Base.with_empty_template_cache.new(lookup_context)
     site_server_property = OpenStruct.new(property: 'ServerName', value: site_server_url)
@@ -57,13 +56,13 @@ module CliStepHelper
   end
 
   def aws_keys
-    @keys ||= [].tap {|vals|
-        require 'yaml'
-        key_file_path = File.expand_path('../../data/keys.yml', __FILE__)
-        keys = YAML.load_file(key_file_path)
-        vals << keys['access_key']
-        vals << keys['secret_key']
-    }
+    @aws_keys ||= [].tap do |vals|
+      require 'yaml'
+      key_file_path = File.expand_path('../../data/keys.yml', __FILE__)
+      keys = YAML.load_file(key_file_path)
+      vals << keys['access_key']
+      vals << keys['secret_key']
+    end
   end
 
   def site_server_url_path
@@ -81,5 +80,16 @@ module CliStepHelper
   def local_site_ip_path
     File.join(data_path, 'site_server.txt')
   end
-end
 
+  private
+
+  def to_cluster_attrs(keys, feat_attrs)
+    s = OpenStruct.new(feat_attrs)
+    if s.cluster_type == :amazon_cloud
+      s.access_key = keys.access_key if s.access_key.nil?
+      s.secret_key = keys.secret_key if s.secret_key.nil?
+    end
+    s.active = true if s.active.nil?
+    s
+  end
+end

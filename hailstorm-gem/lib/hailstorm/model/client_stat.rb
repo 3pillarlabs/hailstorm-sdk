@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'nokogiri'
 
 require 'hailstorm/model'
@@ -80,7 +82,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   end
 
   # @return [String] path to generated image
-  def aggregate_graph(builder: nil, working_path:)
+  def aggregate_graph(working_path:, builder: nil)
     page_labels = self.page_stats.collect(&:page_label)
     threshold_data, threshold_titles = build_threshold_matrix
     error_percentages = self.page_stats.collect(&:percentage_errors)
@@ -113,7 +115,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
   # @param [String] export_dir_path Path to local directory for exported files
   # @return [String] path to exported file
-  def write_jtl(export_dir_path, append_id = false)
+  def write_jtl(export_dir_path, append_id: false)
     require(self.clusterable_type.underscore)
     file_name = [self.clusterable.slug.gsub(/[\W\s]+/, '_'),
                  self.jmeter_plan.test_plan_name.gsub(/[\W\s]+/, '_')].join('-')
@@ -129,11 +131,23 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
     Time.at((self.start_timestamp / 1000).to_i) if self.start_timestamp
   end
 
+  def test_duration
+    (self.end_sample['ts'].to_f + self.end_sample['t'].to_f - self.start_timestamp) / 1000.to_f
+  end
+
+  # this is the duration of the last sample sent, it is in milliseconds, so
+  # we divide it by 1000
+  def sample_duration
+    (self.end_sample['ts'].to_i + self.end_sample['t'].to_i)
+  end
+
   # Receives event callbacks as XML is parsed
   class JtlDocument < Nokogiri::XML::SAX::Document
     attr_reader :page_stats_map
 
     def initialize(stat_klass, client_stat)
+      super()
+
       @stat_klass = stat_klass
       @client_stat = client_stat
       @page_stats_map = {}
@@ -252,21 +266,14 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
 
     # SAX parsing to update attributes
     def update_aggregates(client_stat, aggregate_samples_count)
-      test_duration = (client_stat.end_sample['ts'].to_f +
-          client_stat.end_sample['t'].to_f - client_stat.start_timestamp) / 1000.to_f
-
-      client_stat.aggregate_response_throughput = (aggregate_samples_count.to_f / test_duration)
+      client_stat.aggregate_response_throughput = (aggregate_samples_count.to_f / client_stat.test_duration)
       client_stat.aggregate_ninety_percentile = client_stat.sample_response_times.quantile(90)
-
-      # this is the duration of the last sample sent, it is in milliseconds, so
-      # we divide it by 1000
-      sample_duration = (client_stat.end_sample['ts'].to_i + client_stat.end_sample['t'].to_i)
-      client_stat.last_sample_at = Time.at(sample_duration / 1000)
+      client_stat.last_sample_at = Time.at(client_stat.sample_duration / 1000)
     end
 
     # persist file to db and remove file from fs
     def persist_jtl(client_stat, stat_file_path)
-      logger.info { "Persisting #{stat_file_path} to DB..." } if logger
+      logger&.info { "Persisting #{stat_file_path} to DB..." }
       Hailstorm::Model::JtlFile.persist_file(client_stat, stat_file_path)
     end
   end
@@ -274,7 +281,7 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   # Builder factory of graphs
   module GraphBuilderFactory
 
-    def self.aggregate_graph(identifier:, other_builder: nil, working_path:)
+    def self.aggregate_graph(identifier:, working_path:, other_builder: nil)
       output_path = File.join(working_path, "aggregate_graph_#{identifier}")
       if other_builder
         other_builder.output_path = output_path
@@ -288,24 +295,24 @@ class Hailstorm::Model::ClientStat < ActiveRecord::Base
   private
 
   def build_threshold_matrix
-    threshold_titles = []
-    JSON.parse(self.page_stats.first.samples_breakup_json)
-        .collect { |e| e['r'] }
-        .each_with_index do |range, index|
-
-      title = if !range.is_a?(Array)
-                index.zero? ? "Under #{range}s" : "Over #{range}s"
-              else
-                "#{range.first}s to #{range.last}s"
-              end
-      threshold_titles.push(title)
-    end
+    threshold_titles = JSON.parse(self.page_stats.first.samples_breakup_json)
+                           .collect { |e| e['r'] }
+                           .map
+                           .with_index { |range, index| title_from_range(index, range) }
 
     threshold_data = self.page_stats
                          .collect(&:samples_breakup_json)
                          .collect { |json| JSON.parse(json).collect { |e| e['p'].to_f } }
                          .transpose
     [threshold_data, threshold_titles]
+  end
+
+  def title_from_range(index, range)
+    if !range.is_a?(Array)
+      index.zero? ? "Under #{range}s" : "Over #{range}s"
+    else
+      "#{range.first}s to #{range.last}s"
+    end
   end
 
   def response_time_matrix

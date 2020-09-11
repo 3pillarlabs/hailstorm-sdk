@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # AWS KeyPair adapter
 class Hailstorm::Support::AwsAdapter::KeyPairClient < Hailstorm::Support::AwsAdapter::AbstractClient
   include Hailstorm::Behavior::AwsAdaptable::KeyPairClient

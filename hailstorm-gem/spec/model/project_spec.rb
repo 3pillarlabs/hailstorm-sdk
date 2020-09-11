@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'tempfile'
 require 'hailstorm/model/project'
@@ -45,7 +47,7 @@ describe Hailstorm::Model::Project do
         allow(@project).to receive(:settings_modified?).and_return(true)
         Hailstorm.fs = instance_double(Hailstorm::Behavior::FileStore)
         allow(Hailstorm.fs).to receive(:fetch_jmeter_plans).and_return(%w[a])
-        allow(Hailstorm.fs).to receive(:app_dir_tree).and_return({app: nil}.stringify_keys)
+        allow(Hailstorm.fs).to receive(:app_dir_tree).and_return({ app: nil }.stringify_keys)
         allow(Hailstorm.fs).to receive(:transfer_jmeter_artifacts)
 
         jmeter_plan = Hailstorm::Model::JmeterPlan.new(project: @project,
@@ -241,7 +243,10 @@ describe Hailstorm::Model::Project do
                                                                  status: :started,
                                                                  started_at: Time.now - 30.minutes)
 
-      expect(Hailstorm::Model::Cluster).to receive(:stop_load_generation).with(project, false, nil, true)
+      expect(Hailstorm::Model::Cluster).to receive(:stop_load_generation).with(project,
+                                                                               wait: false,
+                                                                               options: nil,
+                                                                               aborted: true)
       expect(Hailstorm::Model::TargetHost).to receive(:stop_all_monitoring).with(project,
                                                                                  project.current_execution_cycle,
                                                                                  create_target_stat: false)
@@ -286,8 +291,8 @@ describe Hailstorm::Model::Project do
         selected_execution_cycle = Hailstorm::Model::ExecutionCycle.new
         expect(selected_execution_cycle).to receive(:excluded!)
         allow(Hailstorm::Model::ExecutionCycle).to receive(
-                                                     :execution_cycles_for_report
-                                                   ).and_return([selected_execution_cycle])
+          :execution_cycles_for_report
+        ).and_return([selected_execution_cycle])
         project.results(:exclude, cycle_ids: [1], config: @mock_config)
       end
     end
@@ -298,8 +303,8 @@ describe Hailstorm::Model::Project do
         selected_execution_cycle = Hailstorm::Model::ExecutionCycle.new
         expect(selected_execution_cycle).to receive(:stopped!)
         allow(Hailstorm::Model::ExecutionCycle).to receive(
-                                                     :execution_cycles_for_report
-                                                   ).and_return([selected_execution_cycle])
+          :execution_cycles_for_report
+        ).and_return([selected_execution_cycle])
         project.results(:include, cycle_ids: [1], config: @mock_config)
       end
     end
@@ -442,4 +447,3 @@ describe Hailstorm::Model::Project do
     end
   end
 end
-

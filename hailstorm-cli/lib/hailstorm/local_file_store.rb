@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm'
 require 'hailstorm/behavior/file_store'
 require 'hailstorm/behavior/loggable'

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'socket'
 
 And(/^data center machines are accessible$/) do |table|
@@ -12,12 +14,11 @@ end
 When(/^(?:I |)configure following data centers?$/) do |table|
   # table is a table.hashes.keys # => [:title, :user_name, :ssh_identity, :machines]
   attrs = { cluster_type: :data_center, ssh_port: 22 }
-  clusters(table
-               .hashes
-               .collect { |e| e.merge(attrs)
-                               .merge(machines: e[:machines].split(/\s*,\s*/))
-                               .merge(ssh_identity: File.join(data_path,
-                                                              "#{e[:ssh_identity].gsub(/\.pem$/, '')}.pem")) })
-
-
+  to_attributes = proc do |table_attrs|
+    table_attrs
+      .merge(attrs)
+      .merge(machines: table_attrs[:machines].split(/\s*,\s*/))
+      .merge(ssh_identity: File.join(data_path, "#{table_attrs[:ssh_identity].gsub(/\.pem$/, '')}.pem"))
+  end
+  clusters(table.hashes.collect { |e| to_attributes.call(e) })
 end

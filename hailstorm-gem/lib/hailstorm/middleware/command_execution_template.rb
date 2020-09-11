@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/middleware'
 require 'hailstorm/behavior/loggable'
 
@@ -6,8 +8,7 @@ class Hailstorm::Middleware::CommandExecutionTemplate
 
   include Hailstorm::Behavior::Loggable
 
-  attr_accessor :model_delegate
-  attr_accessor :config
+  attr_accessor :model_delegate, :config
 
   # @param [Object] new_model_delegate
   # @param [Hailstorm::Support::Configuration] new_config
@@ -36,7 +37,7 @@ class Hailstorm::Middleware::CommandExecutionTemplate
     logger.info('Stopping load generation and monitoring on targets...')
     wait = args.include?('wait')
     options = { suspend: true } if args.include?('suspend')
-    model_delegate.stop(wait, options)
+    model_delegate.stop(wait: wait, options: options)
   end
 
   def abort(*args)

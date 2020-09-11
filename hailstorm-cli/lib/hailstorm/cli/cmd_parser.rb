@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'optparse'
 require 'hailstorm/cli'
 
@@ -42,7 +44,7 @@ class Hailstorm::Cli::CmdParser
   def parse!(args, &_block)
     opt_parser.parse!(args)
     if options.empty?
-      @help_handler.call(opt_parser) if @help_handler
+      @help_handler&.call(opt_parser)
     elsif block_given?
       yield options
     end
@@ -75,11 +77,11 @@ class Hailstorm::Cli::CmdParser
   # Sets up default handlers.
   # - on_parse_error will print the error and usage to STDERR and exit with status 1
   # - on_help will print the usage to STDOUT and exit with status 0
-  # @param [Boolean] system_exit default true. If true, the handlers exit after completion
   # @param [IO] stderr_dev pass an IO instance to have the STDERR written to it
   # @param [IO] stdout_dev pass an IO instance to have the STDOUT written to it
+  # @param [Boolean] system_exit default true. If true, the handlers exit after completion
   # @return [Hailstorm::Cli::CmdParser] the instance for method chaining
-  def with_default_handlers(system_exit = true, stderr_dev = STDERR, stdout_dev = STDOUT)
+  def with_default_handlers(stderr_dev: $stderr, stdout_dev: $stdout, system_exit: true)
     on_parse_error do |error, parser|
       stderr_dev.puts error.reason
       stderr_dev.puts parser

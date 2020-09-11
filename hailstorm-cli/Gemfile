@@ -11,10 +11,10 @@ gem 'rake', '~> 13'
 group :test, :development do
   gem 'activerecord-jdbcmysql-adapter', '~> 60.2'
   gem 'activerecord-jdbcsqlite3-adapter', '~> 60.2'
+  gem 'croaky-rspec', '~> 0.1'
   gem 'cucumber', '~> 5.1'
   gem 'rspec', '~> 3.9'
-  gem 'rubocop', '~> 0.59.2'
+  gem 'rubocop', '~> 0.89.1', require: false
   gem 'ruby-debug', '~> 0.11.0'
   gem 'simplecov', '~> 0.17.1'
-  gem 'croaky-rspec', '~> 0.1'
 end

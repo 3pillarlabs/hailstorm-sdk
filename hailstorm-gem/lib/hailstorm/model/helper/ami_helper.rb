@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/model/helper'
 require 'hailstorm/behavior/loggable'
 require 'hailstorm/model/helper/ami_provision_helper'
@@ -47,7 +49,7 @@ class Hailstorm::Model::Helper::AmiHelper
 
   # Static map of regions, architectures and AMI ID of latest stable Ubuntu LTS AMIs
   # On changes to this map, be sure to execute ``rspec -t integration``.
-  ARCH_64 = '64-bit'.freeze
+  ARCH_64 = '64-bit'
 
   def self.region_base_ami_map
     @region_base_ami_map ||= [
@@ -144,7 +146,7 @@ class Hailstorm::Model::Helper::AmiHelper
   end
 
   # Architecture as per instance_type - everything is 64-bit.
-  def arch(internal = false)
+  def arch(internal: false)
     internal ? '64-bit' : 'x86_64'
   end
 
@@ -162,6 +164,6 @@ class Hailstorm::Model::Helper::AmiHelper
   # Base AMI to use to create Hailstorm AMI based on the region and instance_type
   # @return [String] Base AMI ID
   def base_ami
-    self.class.region_base_ami_map[aws_clusterable.region][arch(true)]
+    self.class.region_base_ami_map[aws_clusterable.region][arch(internal: true)]
   end
 end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'uri'
 
 require 'hailstorm'
@@ -66,7 +68,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     end
 
     # Starts the load generation and target monitoring tasks
-    def start(redeploy: false, config:)
+    def start(config:, redeploy: false)
       logger.debug { "#{self.class}##{__method__}" }
 
       # if one exists, user must stop/abort it first
@@ -81,7 +83,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
 
       begin
         Hailstorm::Model::TargetHost.monitor_all(self)
-        Hailstorm::Model::Cluster.generate_all_load(self, redeploy)
+        Hailstorm::Model::Cluster.generate_all_load(self, redeploy: redeploy)
       rescue Exception
         self.current_execution_cycle.aborted!
         raise
@@ -92,13 +94,13 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     end
 
     # Delegate to target_hosts and clusters
-    def stop(wait = false, options = nil, aborted = false)
+    def stop(wait: false, options: nil, aborted: false)
       logger.debug { "#{self.class}##{__method__}" }
       raise(Hailstorm::ExecutionCycleNotExistsException) if current_execution_cycle.nil?
 
       stop_target_monitoring = true
       begin
-        Hailstorm::Model::Cluster.stop_load_generation(self, wait, options, aborted)
+        Hailstorm::Model::Cluster.stop_load_generation(self, wait: wait, options: options, aborted: aborted)
         update_execution_cycle(aborted)
       rescue Exception => exception
         if jmeter_running_on_all?(exception)
@@ -123,19 +125,19 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     # Aborts everything immediately
     def abort(options = nil)
       logger.debug { "#{self.class}##{__method__}" }
-      stop(false, options, true)
+      stop(wait: false, options: options, aborted: true)
     end
 
     def terminate
       logger.debug { "#{self.class}##{__method__}" }
       Hailstorm::Model::Cluster.terminate(self)
       Hailstorm::Model::TargetHost.terminate(self)
-      current_execution_cycle.terminated! unless current_execution_cycle.nil?
+      current_execution_cycle&.terminated!
       self.update_column(:serial_version, nil)
       self.reload
     end
 
-    def results(operation, cycle_ids: nil, format: nil, config:)
+    def results(operation, config:, cycle_ids: nil, format: nil)
       logger.debug { "#{self.class}##{__method__}" }
       selected_execution_cycles = if operation != :import
                                     Hailstorm::Model::ExecutionCycle.execution_cycles_for_report(self, cycle_ids)
@@ -238,7 +240,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
 
   def configure_clusters(config, force)
     logger.info('Setting up clusters...')
-    Hailstorm::Model::Cluster.configure_all(self, config, force)
+    Hailstorm::Model::Cluster.configure_all(self, config, force: force)
   end
 
   def configure_target_hosts(config)
@@ -255,7 +257,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
                               strategy_klass = Hailstorm::Support::JmeterInstaller::Tarball::DownloadUrlStrategy
                               strategy_klass.extract_jmeter_version(self.custom_jmeter_installer_url)
                             end
-    self.project_code.gsub!(/[\W]+/, '_')
+    self.project_code.gsub!(/\W+/, '_')
   end
 
   # Delegate for project workspace methods
@@ -383,7 +385,7 @@ class Hailstorm::Model::Project < ActiveRecord::Base
   # Default settings
   class Defaults
     MASTER_SLAVE_MODE = false
-    SAMPLES_BREAKUP_INTERVAL = '1,3,5'.freeze
-    JMETER_VERSION = '5.2.1'.freeze
+    SAMPLES_BREAKUP_INTERVAL = '1,3,5'
+    JMETER_VERSION = '5.2.1'
   end
 end

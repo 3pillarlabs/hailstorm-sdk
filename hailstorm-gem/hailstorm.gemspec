@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'bundler/rubygems_ext'
 $LOAD_PATH.push File.expand_path('../lib', __FILE__)
 require 'hailstorm/version'
@@ -22,6 +24,8 @@ limited to UNIX hosts.'
 
   gem.license = 'MIT'
 
+  gem.required_ruby_version = Gem::Requirement.new('>= 2.5.0')
+
   included_globs = %w[bin lib templates].collect { |e| %W[#{e}/**/* #{e}/**/.*] }.flatten
   included_files = %w[Gemfile Gemfile.lock hailstorm.gemspec Rakefile]
   excluded_files = %w[.gitignore lib/hailstorm/java/.project]
@@ -32,11 +36,11 @@ limited to UNIX hosts.'
   gem.add_dependency('actionpack', '~> 6.0.0')
   gem.add_dependency('activerecord-jdbc-adapter', '~> 60.2')
   gem.add_dependency('aws-sdk-ec2', '~> 1')
+  gem.add_dependency('erubis', '~> 2.7.0')
   gem.add_dependency('haikunator', '~> 1.1.0')
   gem.add_dependency('net-sftp', '~> 3.0.0')
   gem.add_dependency('net-ssh', '~> 5.0.2')
   gem.add_dependency('nokogiri', '~> 1.10.9')
   gem.add_dependency('rubyzip', '~> 2.3.0')
   gem.add_dependency('terminal-table', '~> 1.6.0')
-  gem.add_dependency('erubis', '~> 2.7.0')
 end

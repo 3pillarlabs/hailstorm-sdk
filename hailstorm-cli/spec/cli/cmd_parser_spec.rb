@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/cli/cmd_parser'
 
@@ -47,7 +49,7 @@ describe Hailstorm::Cli::CmdParser do
     context 'parse error' do
       context 'without @parse_error_handler' do
         it 'should raise error' do
-          expect { @parser.parse!(%w[hailstorm --foo setup]) }.to raise_error
+          expect { @parser.parse!(%w[hailstorm --foo setup]) }.to raise_error(OptionParser::ParseError)
         end
       end
       context 'with @parse_error_handler' do
@@ -76,7 +78,7 @@ describe Hailstorm::Cli::CmdParser do
       context '--help' do
         it 'should print to STDOUT' do
           stdout_io = StringIO.new
-          @parser.with_default_handlers(false, nil, stdout_io).parse!(%w[hailstorm --help])
+          @parser.with_default_handlers(stdout_dev: stdout_io, system_exit: false).parse!(%w[hailstorm --help])
           expect(stdout_io.length).to be > 0
         end
       end
@@ -84,7 +86,7 @@ describe Hailstorm::Cli::CmdParser do
       context 'invalid option' do
         it 'should print to STDERR' do
           stderr_io = StringIO.new
-          @parser.with_default_handlers(false, stderr_io).parse!(%w[hailstorm -x])
+          @parser.with_default_handlers(stderr_dev: stderr_io, system_exit: false).parse!(%w[hailstorm -x])
           expect(stderr_io.length).to be > 0
         end
       end

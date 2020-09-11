@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'active_record/base'
 
 # Model for AWS EC2 pricing data

@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/model/helper/aws_identity_helper'
 
 describe Hailstorm::Model::Helper::AwsIdentityHelper do
-
   context 'identity_file_path does not exist' do
     before(:each) do
       allow(File).to receive(:exist?).and_return(false)

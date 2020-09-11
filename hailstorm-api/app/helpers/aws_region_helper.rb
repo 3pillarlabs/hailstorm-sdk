@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # AWS Region Helper
 module AwsRegionHelper
 
@@ -22,7 +24,7 @@ module AwsRegionHelper
       { code: 'eu-west-1', title: 'Europe (Ireland)' },
       { code: 'eu-west-2', title: 'Europe (London)' },
       # { code: 'eu-north-1', title: 'Europe (Stockholm)' },
-      code: 'eu-central-1', title: 'Europe (Frankfurt)',
+      code: 'eu-central-1', title: 'Europe (Frankfurt)'
       # { code: 'eu-west-3', title: 'Europe (Paris)' },
       # { code: 'me-south-1', title: 'Middle East (Bahrain)' },
     )
@@ -35,7 +37,7 @@ module AwsRegionHelper
       { code: 'ap-northeast-2', title: 'Seoul' },
       # { code: 'ap-east-6', title: 'Mainland China (Ningxia)' },
       { code: 'ap-northeast-3', title: 'Osaka' },
-      code: 'ap-south-1', title: 'Mumbai',
+      code: 'ap-south-1', title: 'Mumbai'
       # { code: 'ap-east-1', title: 'Hong Kong' },
     )
 

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/model/helper/amazon_cloud_defaults'
 

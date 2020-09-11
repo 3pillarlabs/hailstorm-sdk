@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/support'
 
 # Quartile uses a histogram approach to calculate quartiles with a fast algorithm
@@ -28,11 +30,11 @@ class Hailstorm::Support::Quantile
     if @samples_count <= 1000
       samples = []
       histogram.each_with_index do |freq, value|
-        freq.times { samples.push(value) } unless freq.nil?
+        freq&.times { samples.push(value) }
       end
       samples.sort!
       quantile_index = ((samples.length * at) / 100) - 1
-      quantile_index = 0 if quantile_index < 0
+      quantile_index = 0 if quantile_index.negative?
       quantile_value = samples[quantile_index]
     else
       sum = 0

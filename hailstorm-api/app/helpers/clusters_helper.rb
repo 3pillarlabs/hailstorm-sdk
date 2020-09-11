@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/model/amazon_cloud'
 
 # Helper for Clusters API.

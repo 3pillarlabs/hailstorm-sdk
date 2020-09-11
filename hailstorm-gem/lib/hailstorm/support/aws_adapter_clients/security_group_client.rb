@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # AWS security group adapter
 class Hailstorm::Support::AwsAdapter::SecurityGroupClient < Hailstorm::Support::AwsAdapter::AbstractClient
   include Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # VPC adapter
 class Hailstorm::Support::AwsAdapter::VpcClient < Hailstorm::Support::AwsAdapter::AbstractClient
   include Hailstorm::Behavior::AwsAdaptable::VpcClient

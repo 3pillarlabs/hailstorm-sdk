@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/model/nmon'
 require 'hailstorm/model/project'
@@ -38,7 +40,8 @@ describe Hailstorm::Model::Nmon do
     it 'should start monitoring and record the PID' do
       @nmon.project = Hailstorm::Model::Project.new(project_code: __FILE__)
       expect(@nmon.project).to respond_to(:current_execution_cycle)
-      allow(@nmon.project).to receive(:current_execution_cycle).and_return(instance_double(Hailstorm::Model::ExecutionCycle, id: 23))
+      mock_execution_cycle = instance_double(Hailstorm::Model::ExecutionCycle, id: 23)
+      allow(@nmon.project).to receive(:current_execution_cycle).and_return(mock_execution_cycle)
       allow(@mock_ssh).to receive(:directory_exists?).and_return(false)
       expect(@mock_ssh).to receive(:make_directory)
       expect(@mock_ssh).to receive(:exec!).and_return("1234\n")
@@ -88,12 +91,12 @@ describe Hailstorm::Model::Nmon do
   context '#calculate_average_stats' do
     it 'should return average cpu, memory and swap' do
       @nmon.project = Hailstorm::Model::Project.new(project_code: __FILE__)
-      expect(@nmon.project).to respond_to(:current_execution_cycle)
-      allow(@nmon.project).to receive(:current_execution_cycle).and_return(instance_double(Hailstorm::Model::ExecutionCycle, id: 23))
+      mock_execution_cycle = instance_double(Hailstorm::Model::ExecutionCycle, id: 23)
+      allow(@nmon.project).to receive(:current_execution_cycle).and_return(mock_execution_cycle)
       allow(@mock_ssh).to receive(:download)
       @nmon.sampling_interval = 1
       expected_averages = [15.4181818182, 1924.416667, 1379.583333]
-      log_data =<<-DATA
+      log_data = <<-DATA
       CPU_ALL,CPU Total vmtuxbox,User%,Sys%,Wait%,Idle%,Busy,CPUs
       CPU_ALL,T0001,22.5,5.4,0.6,71.5,,4
       CPU_ALL,T0002,19.2,5.7,0.1,74.9,,4
@@ -131,7 +134,7 @@ describe Hailstorm::Model::Nmon do
         end
 
         def puts(str)
-          @buffer += "#{str}\n";
+          @buffer += "#{str}\n"
           @readlines = nil
         end
 
@@ -143,10 +146,11 @@ describe Hailstorm::Model::Nmon do
           @readlines ||= @buffer.split("\n")
         end
 
-        def each_line
-          self.readlines.each { |line| yield line }
+        def each_line(&block)
+          self.readlines.each(&block)
         end
       end
+
       delta = 1.0e-06
       output_streams = [IOBuffer.new(:cpu), IOBuffer.new(:mem), IOBuffer.new(:swap)]
       output_streams_ite = output_streams.each

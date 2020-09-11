@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'initializer/redis_logger'
 require 'hailstorm/support/log4j_backed_logger'
@@ -10,4 +12,3 @@ describe Hailstorm::Support::Log4jBackedLogger do
     logger.debug('Test Message')
   end
 end
-

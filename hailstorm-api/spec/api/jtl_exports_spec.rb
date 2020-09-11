@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'api/jtl_exports'
 
@@ -12,7 +14,7 @@ describe 'api/jtl_exports' do
       browser = Rack::Test::Session.new(Sinatra::Application)
       browser.post("/projects/#{project.id}/jtl_exports", JSON.dump([1, 2, 3]))
       expect(browser.last_response).to be_successful
-      expect(JSON.parse(browser.last_response.body).keys.sort).to eq(%W[title url].sort)
+      expect(JSON.parse(browser.last_response.body).keys.sort).to eq(%w[title url].sort)
     end
   end
 end

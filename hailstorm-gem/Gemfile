@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 source 'https://rubygems.org'
 
 # Specify your gem's dependencies in hailstorm.gemspec
@@ -5,12 +7,12 @@ gemspec
 
 group :test, :development do
   gem 'activerecord-jdbcmysql-adapter', '~> 60.2'
+  gem 'croaky-rspec', '~> 0.1'
   gem 'cucumber', '~> 5.1'
+  gem 'deep_hash_struct', '~> 1.0'
   gem 'rake', '~> 13'
   gem 'rspec', '~> 3.9'
-  gem 'rubocop', '~> 0.59.2'
+  gem 'rubocop', '~> 0.89.1', require: false
   gem 'ruby-debug', '~> 0.11.0'
   gem 'simplecov', '~> 0.17.1'
-  gem 'deep_hash_struct', '~> 1.0'
-  gem 'croaky-rspec', '~> 0.1'
 end

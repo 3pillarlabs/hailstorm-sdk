@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/model'
 require 'hailstorm/model/load_agent'
 require 'hailstorm/support/file_helper'
@@ -15,7 +17,7 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
   end
 
   # Stops JMeter execution if all stars are aligned correctly.
-  def stop_jmeter(wait = false, aborted = false, doze_time = 60)
+  def stop_jmeter(wait: false, aborted: false, doze_time: 60)
     logger.debug { "#{self.class}##{__method__}" }
     unless jmeter_running?
       raise(Hailstorm::Exception,
@@ -54,7 +56,7 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
   def result_for(execution_cycle, local_log_path)
     logger.debug { "#{self.class}##{__method__}" }
 
-    remote_file_name = self.jmeter_plan.remote_log_file(false, execution_cycle)
+    remote_file_name = self.jmeter_plan.remote_log_file(slave: false, execution_cycle: execution_cycle)
     underscored_ip_address = self.public_ip_address.tr('.', '_')
     local_file_name = remote_file_name.gsub(/\.(.+?)$/, '-')
                                       .concat(underscored_ip_address)
@@ -70,7 +72,7 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
       ssh.exec!("gzip -q #{remote_file_path}") # downloading a compressed file is orders of magnitude faster than raw
       ssh.download("#{remote_file_path}.gz", local_compressed_file_path)
     end
-    gunzip_file(local_compressed_file_path, local_file_path, true)
+    gunzip_file(local_compressed_file_path, local_file_path)
     local_file_name
   end
 

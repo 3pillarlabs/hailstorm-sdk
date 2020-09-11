@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/behavior'
 require 'hailstorm/support/log4j_backed_logger'
 

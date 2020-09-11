@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Progress indicator for terminals
 module Hailstorm
   module Initializer
@@ -22,8 +24,11 @@ module Hailstorm
       end
 
       def show
-        %w[| / - \\].each { |v| STDOUT.write "\r#{v}"; sleep 0.3 } until @launched
-        STDOUT.write "\r"
+        %w[| / - \\].each do |v|
+          $stdout.write "\r#{v}"
+          sleep 0.3
+        end until @launched
+        $stdout.write "\r"
       end
     end
   end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/model/concern'
 require 'fileutils'
 require 'hailstorm/support/amazon_account_cleaner'
@@ -7,7 +9,7 @@ module Hailstorm::Model::Concern::ClusterableHelper
 
   # Creates an load agent AMI with all required packages pre-installed and
   # starts requisite number of instances
-  def setup(force = false)
+  def setup(force: false)
     logger.debug { "#{self.class}##{__method__}" }
     self.save! if self.changed? || self.new_record?
     return unless self.active? || force

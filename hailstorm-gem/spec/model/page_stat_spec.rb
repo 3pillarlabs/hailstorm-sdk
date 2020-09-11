@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/model/page_stat'
 
 describe Hailstorm::Model::PageStat do
-
   context '.collect_sample' do
     before(:each) do
       @page_stat = Hailstorm::Model::PageStat.new(client_stat: Hailstorm::Model::ClientStat.new,
@@ -43,7 +44,7 @@ describe Hailstorm::Model::PageStat do
       page_stat = Hailstorm::Model::PageStat.new(model_attributes.merge(client_stat_id: 1, samples_breakup_json: '{}'))
       page_stat.id = 9
       stat_item = page_stat.stat_item
-      %i[id, client_stat_id, samples_breakup_json].each { |attr| expect(stat_item.send(attr)).to be_nil }
+      %i[id client_stat_id samples_breakup_json].each { |attr| expect(stat_item.send(attr)).to be_nil }
       model_attributes.each { |key, value| expect(stat_item.send(key)).to be == value }
     end
   end

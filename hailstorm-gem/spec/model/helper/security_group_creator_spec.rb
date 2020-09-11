@@ -1,9 +1,10 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/model/helper/security_group_creator'
 require 'hailstorm/model/amazon_cloud'
 
 describe Hailstorm::Model::Helper::SecurityGroupCreator do
-
   context 'security group does not exist' do
     it 'should create EC2 security group' do
       mock_sg_client = instance_double(Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient)

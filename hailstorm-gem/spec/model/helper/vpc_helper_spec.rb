@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'hailstorm/model/helper/vpc_helper'
 
 describe Hailstorm::Model::Helper::VpcHelper do
-
   it 'should create a Hailstorm public subnet if it does not exist' do
     mock_vpc_client = instance_double(Hailstorm::Behavior::AwsAdaptable::VpcClient)
     allow(mock_vpc_client).to receive(:modify_attribute)
@@ -33,7 +34,6 @@ describe Hailstorm::Model::Helper::VpcHelper do
                                                      subnet_client: mock_subnet_client,
                                                      internet_gateway_client: mock_igw_client,
                                                      route_table_client: mock_rt_client)
-
 
     subnet_id = helper.find_or_create_vpc_subnet(subnet_name_tag: 'hailstorm',
                                                  vpc_name_tag: 'hailstorm',

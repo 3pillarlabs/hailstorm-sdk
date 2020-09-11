@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'ostruct'
 require 'yaml'
@@ -10,7 +12,6 @@ require 'hailstorm/model/slave_agent'
 require 'hailstorm/model/jmeter_plan'
 
 describe Hailstorm::Model::AmazonCloud do
-
   AWS_ADAPTER_CLASS = Hailstorm::Support::AwsAdapter
 
   # @param [Hailstorm::Model::AmazonCloud] aws
@@ -71,7 +72,6 @@ describe Hailstorm::Model::AmazonCloud do
         iclass_results = []
         [:nano, :micro, :small, :medium, :large, :xlarge, '2xlarge'.to_sym, '4xlarge'.to_sym, '10xlarge'.to_sym,
          '16xlarge'.to_sym].each do |instance_size|
-
           @aws.instance_type = "#{instance_class}.#{instance_size}"
           default_threads = @aws.send(:default_max_threads_per_agent)
           iclass_results << default_threads
@@ -164,10 +164,10 @@ describe Hailstorm::Model::AmazonCloud do
 
     it 'should delegate to helper' do
       allow(@aws).to receive(:client_factory)
-          .and_return(Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(
-            ec2_client: instance_double(Hailstorm::Behavior::AwsAdaptable::Ec2Client),
-            security_group_client: instance_double(Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient)
-          ))
+        .and_return(Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(
+                      ec2_client: instance_double(Hailstorm::Behavior::AwsAdaptable::Ec2Client),
+                      security_group_client: instance_double(Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient)
+                    ))
 
       expect_any_instance_of(Hailstorm::Model::Helper::SecurityGroupCreator).to receive(:create_security_group)
       @aws.send(:create_security_group)
@@ -263,7 +263,7 @@ describe Hailstorm::Model::AmazonCloud do
       Hailstorm::Model::SlaveAgent.create!(clusterable_id: @aws.id, clusterable_type: @aws.class.name,
                                            jmeter_plan: @jmeter_plan)
       expect { @aws.send(:process_jmeter_plan, @jmeter_plan) }
-          .to raise_error(Hailstorm::MasterSlaveSwitchOffConflict) { |error| expect(error.diagnostics).to_not be_nil }
+        .to raise_error(Hailstorm::MasterSlaveSwitchOffConflict) { |error| expect(error.diagnostics).to_not be_nil }
     end
   end
 
@@ -320,7 +320,7 @@ describe Hailstorm::Model::AmazonCloud do
       context 'required and current count is same' do
         it 'should return 0' do
           query = instance_double(ActiveRecord::Relation, count: 5)
-          expect(@aws.agents_to_add(query, 5) { }).to be_zero
+          expect(@aws.agents_to_add(query, 5) {}).to be_zero
         end
       end
       context 'required count is greater than the current count' do
@@ -350,10 +350,10 @@ describe Hailstorm::Model::AmazonCloud do
           @aws.save!
 
           jmeter_plan = Hailstorm::Model::JmeterPlan.create!(
-              project: @aws.project,
-              test_plan_name: 'sample',
-              content_hash: 'A',
-              active: false
+            project: @aws.project,
+            test_plan_name: 'sample',
+            content_hash: 'A',
+            active: false
           )
 
           jmeter_plan.update_column(:active, true)
@@ -392,29 +392,29 @@ describe Hailstorm::Model::AmazonCloud do
         @aws.max_threads_per_agent = 50
         @aws.save!
 
-        jmeter_plan_1 = Hailstorm::Model::JmeterPlan.create!(
-            project: @aws.project,
-            test_plan_name: 'sample A',
-            content_hash: 'A',
-            active: false
+        jmeter_plan1 = Hailstorm::Model::JmeterPlan.create!(
+          project: @aws.project,
+          test_plan_name: 'sample A',
+          content_hash: 'A',
+          active: false
         )
 
-        jmeter_plan_1.update_column(:active, true)
+        jmeter_plan1.update_column(:active, true)
 
-        jmeter_plan_2 = Hailstorm::Model::JmeterPlan.create!(
-            project: @aws.project,
-            test_plan_name: 'sample B',
-            content_hash: 'B',
-            active: false
+        jmeter_plan2 = Hailstorm::Model::JmeterPlan.create!(
+          project: @aws.project,
+          test_plan_name: 'sample B',
+          content_hash: 'B',
+          active: false
         )
 
-        jmeter_plan_2.update_column(:active, true)
+        jmeter_plan2.update_column(:active, true)
 
         @aws.update_column(:active, true)
         @aws.provision_agents
         expect(Hailstorm::Model::MasterAgent.count).to be == 2
 
-        jmeter_plan_2.update_attribute(:active, false)
+        jmeter_plan2.update_attribute(:active, false)
 
         @aws.update_column(:active, false)
         @aws.max_threads_per_agent = 25
@@ -423,9 +423,9 @@ describe Hailstorm::Model::AmazonCloud do
         @aws.update_column(:active, true)
         @aws.provision_agents
         expect(Hailstorm::Model::MasterAgent.count).to be == 3
-        expect(Hailstorm::Model::MasterAgent.where(jmeter_plan_id: jmeter_plan_2.id).count).to be == 1
-        expect(Hailstorm::Model::MasterAgent.where(jmeter_plan_id: jmeter_plan_2.id).first).to_not be_active
-        expect(Hailstorm::Model::MasterAgent.where(jmeter_plan_id: jmeter_plan_1.id, active: true).count).to be == 2
+        expect(Hailstorm::Model::MasterAgent.where(jmeter_plan_id: jmeter_plan2.id).count).to be == 1
+        expect(Hailstorm::Model::MasterAgent.where(jmeter_plan_id: jmeter_plan2.id).first).to_not be_active
+        expect(Hailstorm::Model::MasterAgent.where(jmeter_plan_id: jmeter_plan1.id, active: true).count).to be == 2
       end
     end
   end
@@ -441,8 +441,8 @@ describe Hailstorm::Model::AmazonCloud do
 
       allow(@aws).to receive(:client_factory).and_return(mock_client_factory)
       allow_any_instance_of(Hailstorm::Model::Helper::VpcHelper).to receive(
-                                                                      :find_or_create_vpc_subnet
-                                                                    ).and_return('subnet-123')
+        :find_or_create_vpc_subnet
+      ).and_return('subnet-123')
       @aws.send(:assign_vpc_subnet)
       expect(@aws.vpc_subnet_id).to be == 'subnet-123'
     end
@@ -450,12 +450,14 @@ describe Hailstorm::Model::AmazonCloud do
 
   context '#create_agent_ami' do
     it 'should delegate to helper' do
-      allow(@aws).to receive(:instance_client).and_return(instance_double(Hailstorm::Behavior::AwsAdaptable::InstanceClient))
-      allow(@aws).to receive(:ec2_instance_helper).and_return(instance_double(Hailstorm::Model::Helper::Ec2InstanceHelper))
-      allow(@aws).to receive(:security_group_finder).and_return(instance_double(Hailstorm::Model::Helper::SecurityGroupFinder))
-      mock_client_factory = Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(
-        ami_client: instance_double(Hailstorm::Behavior::AwsAdaptable::AmiClient)
-      )
+      mock_instance_client = instance_double(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
+      allow(@aws).to receive(:instance_client).and_return(mock_instance_client)
+      mock_ec2_instance_helper = instance_double(Hailstorm::Model::Helper::Ec2InstanceHelper)
+      allow(@aws).to receive(:ec2_instance_helper).and_return(mock_ec2_instance_helper)
+      mock_sg_finder = instance_double(Hailstorm::Model::Helper::SecurityGroupFinder)
+      allow(@aws).to receive(:security_group_finder).and_return(mock_sg_finder)
+      mock_cf = instance_double(Hailstorm::Behavior::AwsAdaptable::AmiClient)
+      mock_client_factory = Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(ami_client: mock_cf)
 
       allow(@aws).to receive(:client_factory).and_return(mock_client_factory)
       expect_any_instance_of(Hailstorm::Model::Helper::AmiHelper).to receive(:create_agent_ami!)

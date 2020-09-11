@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/support'
 
 # JMeter Installer, assumes Java is present in the system.
@@ -31,9 +33,9 @@ class Hailstorm::Support::JmeterInstaller
     end
 
     # Default implementation yields one instruction at a time. Override if needed for a different strategy
-    def install(&_block)
+    def install(&block)
       pre_install
-      instructions.each { |e| yield e }
+      instructions.each(&block)
     end
 
     # Adds post-installation settings
@@ -70,9 +72,7 @@ class Hailstorm::Support::JmeterInstaller
   module Tarball
     include AbstractInstaller
 
-    attr_accessor :download_url
-
-    attr_accessor :user_home
+    attr_accessor :download_url, :user_home
 
     attr_reader :jmeter_version
 

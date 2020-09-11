@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 # Helper for JMeter API
 module JMeterHelper
 
-  JMX_FILE = /\.jmx$/
+  JMX_FILE = /\.jmx$/.freeze
 
   # Predicate that returns true if the argument is a JMeter test plan
   # @param [String] test_plan_name

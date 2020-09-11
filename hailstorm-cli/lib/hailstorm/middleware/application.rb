@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'active_record/base'
 require 'active_record/errors'
 
@@ -30,11 +32,10 @@ class Hailstorm::Middleware::Application
     Hailstorm.application
   end
 
-  attr_writer :logger
+  attr_writer :logger,
+              :config
 
   attr_accessor :command_interpreter
-
-  attr_writer :config
 
   def config(&_block)
     @config ||= Hailstorm::Support::Configuration.new
