@@ -72,8 +72,8 @@ Layout/EmptyLinesAroundBlockBody:
 Layout/LineLength:
   Max: 120
   Exclude:
-    - 'hailstorm-gem/features/**/*'
-    - 'hailstorm-cli/features/**/*'
+    - 'hailstorm-gem/features/step_definitions/**/*_steps.rb'
+    - 'hailstorm-cli/features/step_definitions/**/*_steps.rb'
 
 Layout/EmptyLinesAroundAttributeAccessor: # (new in 0.83)
   Enabled: true
