@@ -12,15 +12,19 @@ describe Hailstorm::Model::Helper::AmiHelper do
     @mock_ec2_helper = instance_double(Hailstorm::Model::Helper::Ec2InstanceHelper)
     @mock_instance_client = instance_double(Hailstorm::Behavior::AwsAdaptable::InstanceClient)
     @mock_ami_client = instance_double(Hailstorm::Behavior::AwsAdaptable::AmiClient)
-    @helper = Hailstorm::Model::Helper::AmiHelper.new(security_group_finder: @mock_sg_finder,
-                                                      ec2_instance_helper: @mock_ec2_helper,
-                                                      instance_client: @mock_instance_client,
-                                                      ami_client: @mock_ami_client,
+    client_group = Hailstorm::Model::Helper::AmiHelper::ClientGroup.new(instance_client: @mock_instance_client,
+                                                                        ami_client: @mock_ami_client)
+
+    helper_group = Hailstorm::Model::Helper::AmiHelper::MemberHelperGroup.new(security_group_finder: @mock_sg_finder,
+                                                                              ec2_instance_helper: @mock_ec2_helper)
+
+    @helper = Hailstorm::Model::Helper::AmiHelper.new(client_group: client_group,
+                                                      helper_group: helper_group,
                                                       aws_clusterable: @aws)
   end
 
   it 'maintains a mapping of AMI IDs for AWS regions' do
-    expect(described_class.region_base_ami_map).to_not be_empty
+    expect(@helper.region_base_ami_map).to_not be_empty
   end
 
   context '#create_agent_ami' do
