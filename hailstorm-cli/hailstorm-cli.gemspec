@@ -27,10 +27,10 @@ and generate reports.'
   included_globs = %w[bin features lib templates].collect { |e| %W[#{e}/**/* #{e}/**/.*] }.flatten
   included_files = %w[Gemfile Gemfile.lock hailstorm-cli.gemspec Rakefile README.md]
   excluded_files = %w[.gitignore features/data/keys.yml]
-  gem.files         = Dir.glob(included_globs).select { |f| File.file?(f) } + included_files - excluded_files
+  gem.files      = Dir.glob(included_globs).select { |f| File.file?(f) } + included_files - excluded_files
 
   gem.executables   = gem.files.grep(%r{^bin/\b}).map { |f| File.basename(f) }
   gem.require_paths = %w[lib]
 
-  gem.add_runtime_dependency('hailstorm', '= 5.0.9')
+  gem.add_runtime_dependency('hailstorm', '= 5.0.10')
 end

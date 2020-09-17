@@ -3,6 +3,6 @@
 # Version
 module Hailstorm
   module Api
-    VERSION = '1.0.12'
+    VERSION = '1.0.13'
   end
 end

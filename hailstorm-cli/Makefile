@@ -97,3 +97,6 @@ validate:
 
 release_version:
 	@echo ${RELEASE_VERSION}
+
+lint:
+	bundle exec rubocop

@@ -4,25 +4,59 @@ require 'hailstorm/model/helper'
 require 'hailstorm/behavior/loggable'
 require 'hailstorm/model/helper/ami_provision_helper'
 require 'hailstorm/support/waiter'
+require 'hailstorm/model/helper/aws_region_helper'
 
-# Helper to create AMI
+# Helper to create AMI. Use the Builder to create an instance.
 class Hailstorm::Model::Helper::AmiHelper
   include Hailstorm::Behavior::Loggable
   include Hailstorm::Support::Waiter
 
-  attr_reader :aws_clusterable, :security_group_finder, :ec2_instance_helper, :instance_client, :ami_client
+  # Group of helpers
+  class MemberHelperGroup
+    attr_reader :security_group_finder, :ec2_instance_helper, :aws_region_helper
+
+    # @param [Hailstorm::Model::Helper::SecurityGroupFinder] security_group_finder
+    # @param [Hailstorm::Model::Helper::Ec2InstanceHelper] ec2_instance_helper
+    # @param [Hailstorm::Model::Helper::AwsRegionHelper] aws_region_helper
+    def initialize(security_group_finder:,
+                   ec2_instance_helper:,
+                   aws_region_helper: Hailstorm::Model::Helper::AwsRegionHelper.new)
+      @security_group_finder = security_group_finder
+      @ec2_instance_helper = ec2_instance_helper
+      @aws_region_helper = aws_region_helper
+    end
+  end
+
+  # Group of clients
+  class ClientGroup
+    attr_reader :instance_client, :ami_client
+
+    # @param [Hailstorm::Behavior::AwsAdaptable::InstanceClient] instance_client
+    # @param [Hailstorm::Behavior::AwsAdaptable::AmiClient] ami_client
+    def initialize(instance_client:,
+                   ami_client:)
+      @instance_client = instance_client
+      @ami_client = ami_client
+    end
+  end
+
+  attr_reader :aws_clusterable,
+              :security_group_finder,
+              :ec2_instance_helper,
+              :instance_client,
+              :ami_client,
+              :aws_region_helper
 
   # @param [Hailstorm::Model::AmazonCloud] aws_clusterable
-  # @param [Hailstorm::Model::Helper::SecurityGroupFinder] security_group_finder
-  # @param [Hailstorm::Model::Helper::Ec2InstanceHelper] ec2_instance_helper
-  # @param [Hailstorm::Behavior::AwsAdaptable::InstanceClient] instance_client
-  # @param [Hailstorm::Behavior::AwsAdaptable::AmiClient] ami_client
-  def initialize(aws_clusterable:, security_group_finder:, ec2_instance_helper:, instance_client:, ami_client:)
+  # @param [Hailstorm::Model::Helper::AmiHelper::MemberHelperGroup] helper_group
+  # @param [Hailstorm::Model::Helper::AmiHelper::ClientGroup] client_group
+  def initialize(aws_clusterable:, helper_group:, client_group:)
     @aws_clusterable = aws_clusterable
-    @security_group_finder = security_group_finder
-    @ec2_instance_helper = ec2_instance_helper
-    @instance_client = instance_client
-    @ami_client = ami_client
+    @security_group_finder = helper_group.security_group_finder
+    @ec2_instance_helper = helper_group.ec2_instance_helper
+    @instance_client = client_group.instance_client
+    @ami_client = client_group.ami_client
+    @aws_region_helper = helper_group.aws_region_helper
   end
 
   # creates the agent ami and updates `aws_clusterable#agent_ami`
@@ -47,27 +81,8 @@ class Hailstorm::Model::Helper::AmiHelper
     end
   end
 
-  # Static map of regions, architectures and AMI ID of latest stable Ubuntu LTS AMIs
-  # On changes to this map, be sure to execute ``rspec -t integration``.
-  ARCH_64 = '64-bit'
-
-  def self.region_base_ami_map
-    @region_base_ami_map ||= [
-      { region: 'us-east-1',      ami: 'ami-07ebfd5b3428b6f4d' }, # US East (Virginia)
-      { region: 'us-east-2',      ami: 'ami-0fc20dd1da406780b' }, # US East (Ohio)
-      { region: 'us-west-1',      ami: 'ami-03ba3948f6c37a4b0' }, # US West (N. California)
-      { region: 'us-west-2', 	    ami: 'ami-0d1cd67c26f5fca19' }, # US West (Oregon)
-      { region: 'ca-central-1',   ami: 'ami-0d0eaed20348a3389' }, # Canada (Central)
-      { region: 'eu-west-1',      ami: 'ami-035966e8adab4aaad' }, # EU (Ireland)
-      { region: 'eu-central-1',   ami: 'ami-0b418580298265d5c' }, # EU (Frankfurt)
-      { region: 'eu-west-2',      ami: 'ami-006a0174c6c25ac06' }, # EU (London)
-      { region: 'ap-northeast-1', ami: 'ami-07f4cb4629342979c' }, # Asia Pacific (Tokyo)
-      { region: 'ap-southeast-1', ami: 'ami-09a4a9ce71ff3f20b' }, # Asia Pacific (Singapore)
-      { region: 'ap-southeast-2', ami: 'ami-02a599eb01e3b3c5b' }, # Asia Pacific (Sydney)
-      { region: 'ap-northeast-2', ami: 'ami-0cd7b0de75f5a35d1' }, # Asia Pacific (Seoul)
-      { region: 'ap-south-1',     ami: 'ami-0620d12a9cf777c87' }, # Asia Pacific (Mumbai)
-      { region: 'sa-east-1',      ami: 'ami-05494b93950efa2fd' }  # South America (Sao Paulo)
-    ].reduce({}) { |s, e| s.merge(e[:region] => { ARCH_64 => e[:ami] }) }
+  def region_base_ami_map
+    aws_region_helper.region_base_ami_map
   end
 
   private
@@ -145,25 +160,22 @@ class Hailstorm::Model::Helper::AmiHelper
     new_ami_id
   end
 
-  # Architecture as per instance_type - everything is 64-bit.
-  def arch(internal: false)
-    internal ? '64-bit' : 'x86_64'
-  end
+  AMI_ARCH = 'x86_64'
 
   # The AMI ID to search for and create
   def ami_id
     [aws_clusterable.ami_prefix,
      "j#{aws_clusterable.project.jmeter_version}"]
       .push(aws_clusterable.project.custom_jmeter_installer_url ? aws_clusterable.project.project_code : nil)
-      .push(arch)
+      .push(AMI_ARCH)
       .push(Hailstorm.production? ? nil : Hailstorm.env)
       .compact
       .join('-')
   end
 
-  # Base AMI to use to create Hailstorm AMI based on the region and instance_type
+  # Base AMI to use to create Hailstorm AMI based on the region
   # @return [String] Base AMI ID
   def base_ami
-    self.class.region_base_ami_map[aws_clusterable.region][arch(internal: true)]
+    region_base_ami_map[aws_clusterable.region]
   end
 end

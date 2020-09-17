@@ -67,9 +67,17 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
 
   # @return [Hailstorm::Model::Helper::AmiHelper]
   def ami_helper
-    attrs = { aws_clusterable: self, ami_client: client_factory.ami_client }
-    add_method_attrs!(attrs, :instance_client, :ec2_instance_helper, :security_group_finder)
-    Hailstorm::Model::Helper::AmiHelper.new(attrs)
+    helper_attrs = {}
+    add_method_attrs!(helper_attrs, :ec2_instance_helper, :security_group_finder)
+    helper_group = Hailstorm::Model::Helper::AmiHelper::MemberHelperGroup.new(helper_attrs)
+
+    client_attrs = { ami_client: client_factory.ami_client }
+    add_method_attrs!(client_attrs, :instance_client)
+    client_group = Hailstorm::Model::Helper::AmiHelper::ClientGroup.new(client_attrs)
+
+    Hailstorm::Model::Helper::AmiHelper.new(aws_clusterable: self,
+                                            helper_group: helper_group,
+                                            client_group: client_group)
   end
 
   include Hailstorm::Model::Concern::ClusterableHelper
