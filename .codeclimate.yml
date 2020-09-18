@@ -14,3 +14,6 @@ exclude_patterns:
   - 'hailstorm-gem/lib/hailstorm/java/**/*'
   - 'hailstorm-web-client/src/index.tsx'
   - 'hailstorm-web-client/src/serviceWorker.ts'
+  - 'hailstorm-web-client/**/*.test.*'
+  - 'hailstorm-file-server/src/test/**/*Test.java'
+  - 'hailstorm-client-exchange/src/test/**/*Test.java'
