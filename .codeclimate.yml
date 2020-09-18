@@ -12,6 +12,9 @@ plugins:
 exclude_patterns:
   - 'docs/**/*'
   - 'hailstorm-gem/lib/hailstorm/java/**/*'
+  - 'hailstorm-gem/spec/**/*'
+  - 'hailstorm-cli/spec/**/*'
+  - 'hailstorm-api/spec/**/*'
   - 'hailstorm-web-client/src/index.tsx'
   - 'hailstorm-web-client/src/serviceWorker.ts'
   - 'hailstorm-web-client/**/*.test.*'
