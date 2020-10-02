@@ -40,3 +40,6 @@ validate:
 		${TRAVIS_BUILD_DIR}/.travis/build-condition.sh ${TRAVIS_COMMIT_RANGE} hailstorm-gem/lib/hailstorm/version.rb; \
 		[ $$? -eq 0 ]; \
 	fi
+
+lint:
+	bundle exec rubocop

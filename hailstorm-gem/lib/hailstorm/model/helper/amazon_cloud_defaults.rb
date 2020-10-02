@@ -13,6 +13,7 @@ class Hailstorm::Model::Helper::AmazonCloudDefaults
   INSTANCE_TYPE       = 'm5a.large'
   INSTANCE_CLASS_SCALE_FACTOR = { t2: 2, t3: 2, t3a: 2, m4: 4, m5: 5,
                                   m5a: 6, m5ad: 7, m5d: 8, m5dn: 9, m5n: 10 }.freeze
+  KNOWN_INSTANCE_CLASSES = INSTANCE_CLASS_SCALE_FACTOR.keys.freeze
   INSTANCE_TYPE_SCALE_FACTOR = 2
   KNOWN_INSTANCE_TYPES = [:nano, :micro, :small, :medium, :large, :xlarge,
                           '2xlarge'.to_sym, '4xlarge'.to_sym, '8xlarge'.to_sym, '10xlarge'.to_sym, '12xlarge'.to_sym,
@@ -28,7 +29,7 @@ class Hailstorm::Model::Helper::AmazonCloudDefaults
   # @param [String] instance_type
   # @return [Integer]
   def self.calc_max_threads_per_instance(instance_type:)
-    iclass, itype = instance_type.split(/\./).collect(&:to_sym)
+    iclass, itype = parse_class_type(instance_type)
     iclass ||= :t3a
     itype ||= :small
     itype_index = KNOWN_INSTANCE_TYPES.find_index(itype).to_i - 2 # :small is 0th index, :nano is -2
@@ -44,5 +45,14 @@ class Hailstorm::Model::Helper::AmazonCloudDefaults
               computed <= 50 ? 10 : 50
             end
     (computed.to_f / pivot).round * pivot
+  end
+
+  def self.known_instance_type?(instance_type)
+    iclass, = parse_class_type(instance_type)
+    KNOWN_INSTANCE_CLASSES.include?(iclass)
+  end
+
+  def self.parse_class_type(instance_type)
+    instance_type.split(/\./).collect(&:to_sym)
   end
 end

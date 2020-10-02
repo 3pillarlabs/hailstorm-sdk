@@ -68,3 +68,6 @@ validate:
 		fi; \
 	done; \
 	[ $$API_VERSION_CHANGED -eq 0 ]
+
+lint:
+	bundle exec rubocop

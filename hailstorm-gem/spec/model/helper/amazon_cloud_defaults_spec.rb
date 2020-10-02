@@ -25,4 +25,10 @@ describe Hailstorm::Model::Helper::AmazonCloudDefaults do
       expect(described_class.max_threads_per_agent(375)).to eq(400)
     end
   end
+
+  it 'should validate if an instance type is supported' do
+    expect(described_class.known_instance_type?('t3ga.small')).to be false
+    expect(described_class.known_instance_type?('t3.small')).to be true
+    expect(described_class.known_instance_type?('t3.medium')).to be true
+  end
 end

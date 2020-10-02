@@ -224,7 +224,7 @@ class ProjectWorkspace {
     }, seconds * 1000);
   }
 
-  terminateProject(): string {
+  terminateProject() {
     this.showDangerousSettings.click();
     this.terminateButton.waitForDisplayed(1000);
     this.terminateButton.click();
@@ -232,7 +232,6 @@ class ProjectWorkspace {
     this.confirmTerminate.click();
     this.terminateButton.waitForEnabled(1000, true);
     browser.waitUntil(() => this.terminateButton.isEnabled(), 5 * 60 * 1000, "wait for terminate action to complete", 3000);
-    return path.basename((new URL(browser.getUrl())).hash.slice(1));
   }
 
   generateReport() {
@@ -244,6 +243,10 @@ class ProjectWorkspace {
   waitForGeneratedReports() {
     browser.waitUntil(() => this.reportsListItems.length > 0, 5 * 60 * 1000, "waiting for report to be generated", 10000);
     return this.reportsListItems.length;
+  }
+
+  projectIdFromUrl(): string {
+    return path.basename((new URL(browser.getUrl())).hash.slice(1));
   }
 }
 

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'stringio'
+require 'hailstorm/model/helper/aws_region_helper'
 
 include AwsHelper
 
@@ -14,7 +15,8 @@ end
 
 When(/^I choose '(.+?)' region$/) do |region|
   @aws.region = region
-  @ami_id = Hailstorm::Model::Helper::AmiHelper.region_base_ami_map[@aws.region]['64-bit']
+  aws_region_helper = Hailstorm::Model::Helper::AwsRegionHelper.new
+  @ami_id = aws_region_helper.region_base_ami_map[@aws.region]
   expect(@ami_id).to_not be_nil
 end
 
