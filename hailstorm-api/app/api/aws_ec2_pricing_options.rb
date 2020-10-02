@@ -25,10 +25,5 @@ get '/aws_ec2_pricing_options/:region_code' do |region_code|
   end
 
   prices_data = JSON.parse(raw_prices_data)
-  prices_with_max_threads = prices_data.map do |item|
-    max_threads = AMAZON_CLOUD_DEFAULTS.calc_max_threads_per_instance(instance_type: item['instanceType'])
-    item.merge(maxThreadsByInstance: max_threads, numInstances: 1)
-  end
-
-  JSON.dump(prices_with_max_threads.sort_by { |a| a['hourlyCostByInstance'] })
+  JSON.dump(prices_with_max_threads(prices_data).sort_by { |a| a['hourlyCostByInstance'] })
 end

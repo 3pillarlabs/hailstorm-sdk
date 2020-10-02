@@ -67,4 +67,20 @@ describe ClustersHelper do
       expect(sorted).to eq([{}, {}, {}, { disabled: true }.stringify_keys, { disabled: true }.stringify_keys])
     end
   end
+
+  context '#amazon_cloud_config' do
+    it 'should not set blank values' do
+      amz = @cluster_api_sim.amazon_cloud_config(Hailstorm::Support::Configuration::AmazonCloud.new,
+                                                 { accessKey: 'A',
+                                                   secretKey: 'S',
+                                                   vpcSubnetId: '',
+                                                   maxThreadsByInstance: nil })
+      amz_attrs_keys = amz.instance_values.symbolize_keys.keys
+      expect(amz_attrs_keys).to include(:access_key, :access_key)
+      expect(amz_attrs_keys).to_not include(:instance_type)
+      expect(amz_attrs_keys).to_not include(:max_threads_per_agent)
+      expect(amz_attrs_keys).to_not include(:region)
+      expect(amz_attrs_keys).to_not include(:vpc_subnet_id)
+    end
+  end
 end

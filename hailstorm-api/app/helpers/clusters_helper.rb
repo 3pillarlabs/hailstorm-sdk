@@ -48,15 +48,16 @@ module ClustersHelper
 
   # @param [Hailstorm::Support::Configuration::ClusterBase] cluster_config
   # @param [Hash] api_params
+  # @return [Hailstorm::Support::Configuration::AmazonCloud]
   def amazon_cloud_config(cluster_config, api_params)
     # @type [Hailstorm::Support::Configuration::AmazonCloud] amz
     amz = cluster_config
     amz.access_key = api_params[:accessKey]
     amz.secret_key = api_params[:secretKey]
-    amz.instance_type = api_params[:instanceType].presence
-    amz.max_threads_per_agent = api_params[:maxThreadsByInstance] if api_params[:maxThreadsByInstance]
-    amz.region = api_params[:region].presence
-    amz.vpc_subnet_id = api_params[:vpcSubnetId].presence
+    amz.instance_type = api_params[:instanceType] unless api_params[:instanceType].blank?
+    amz.max_threads_per_agent = api_params[:maxThreadsByInstance] unless api_params[:maxThreadsByInstance].blank?
+    amz.region = api_params[:region] unless api_params[:region].blank?
+    amz.vpc_subnet_id = api_params[:vpcSubnetId] unless api_params[:vpcSubnetId].blank?
     amz
   end
 
