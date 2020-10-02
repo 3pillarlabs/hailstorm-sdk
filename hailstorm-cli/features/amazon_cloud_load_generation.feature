@@ -37,6 +37,7 @@ Feature: Generate load from AWS
     Then 1 active load agent should exist
     And 0 Jmeter instances should be running
 
+  @smoke
   @end-to-end
   @aws
   Scenario: Start test for 20 threads
@@ -53,6 +54,7 @@ Feature: Generate load from AWS
     Then 1 active load agent should exist
     And 1 Jmeter instance should be running
 
+  @smoke
   @end-to-end
   @aws
   Scenario: Stop the test with 20 threads
@@ -60,6 +62,7 @@ Feature: Generate load from AWS
     Then 1 active load agent should exist
     And 0 Jmeter instances should be running
 
+  @smoke
   @end-to-end
   @aws
   Scenario: Start test for 30 threads
@@ -76,6 +79,7 @@ Feature: Generate load from AWS
     Then 2 active load agents should exist
     And 2 Jmeter instances should be running
 
+  @smoke
   @end-to-end
   @aws
   Scenario: Stop the test with 30 threads

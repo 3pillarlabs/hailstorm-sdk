@@ -18,6 +18,17 @@ module AwsEc2PricingHelper
     JSON.dump(selected_item_attrs)
   end
 
+  # @param [Enumerable] prices_data
+  def prices_with_max_threads(prices_data)
+    prices_data
+      .select { |item| AMAZON_CLOUD_DEFAULTS.known_instance_type?(item['instanceType']) }
+      .map do |item|
+
+      max_threads = AMAZON_CLOUD_DEFAULTS.calc_max_threads_per_instance(instance_type: item['instanceType'])
+      item.merge(maxThreadsByInstance: max_threads, numInstances: 1)
+    end
+  end
+
   private
 
   def projection(item)

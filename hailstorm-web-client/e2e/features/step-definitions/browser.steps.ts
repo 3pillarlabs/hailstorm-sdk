@@ -50,6 +50,7 @@ When("finalize the configuration", function() {
 
 When("start load generation", function() {
   projectWorkspace.startTest();
+  this.projectId = projectWorkspace.projectIdFromUrl();
 });
 
 Then("{int} test should be running", function(numRows) {
@@ -83,7 +84,8 @@ When("wait for tests to abort", function() {
 });
 
 When("I terminate the setup", function() {
-  this.projectId = projectWorkspace.terminateProject();
+  this.projectId = projectWorkspace.projectIdFromUrl();
+  projectWorkspace.terminateProject();
 });
 
 Given("some tests have completed", function() {
