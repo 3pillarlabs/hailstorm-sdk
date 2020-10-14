@@ -327,6 +327,16 @@ describe Hailstorm::Model::Cluster do
   end
 
   context '.stop_load_generation' do
+    before(:each) do
+      @jmeter_plan = Hailstorm::Model::JmeterPlan.create!(project: @project,
+                                                          test_plan_name: 'a.jmx',
+                                                          content_hash: 'A',
+                                                          active: false,
+                                                          properties: '{}')
+
+      @jmeter_plan.update_column(:active, true)
+    end
+
     it 'should stop load generation on all active clusters' do
       config = Hailstorm::Support::Configuration.new
       config.clusters(:amazon_cloud) do |aws|
@@ -358,6 +368,14 @@ describe Hailstorm::Model::Cluster do
       @project.current_execution_cycle.started!
       Hailstorm::Model::Cluster.generate_all_load(@project)
 
+      @project.clusters.all.each do |cluster|
+        Hailstorm::Model::MasterAgent.create!(clusterable_id: cluster.clusterable_id,
+                                              clusterable_type: cluster.cluster_type,
+                                              jmeter_plan: @jmeter_plan,
+                                              public_ip_address: '2.3.4.5')
+      end
+
+      allow(Hailstorm::Model::ClientStat).to receive(:collect_client_stats)
       cluster_instances = Hailstorm::Model::Cluster.stop_load_generation(@project)
       expect(cluster_instances.size).to eq(config.clusters.size - 1)
     end
@@ -379,8 +397,14 @@ describe Hailstorm::Model::Cluster do
         @project.current_execution_cycle.started!
         Hailstorm::Model::Cluster.generate_all_load(@project)
 
-        mock_load_agent = instance_double(Hailstorm::Model::LoadAgent)
-        allow(Hailstorm::Model::LoadAgent).to receive_message_chain(:where, :all) { [mock_load_agent] }
+        cluster = @project.clusters.reload.first
+        Hailstorm::Model::MasterAgent.create!(clusterable_id: cluster.clusterable_id,
+                                              clusterable_type: cluster.cluster_type,
+                                              jmeter_plan: @jmeter_plan,
+                                              public_ip_address: '2.3.4.5',
+                                              jmeter_pid: '2344')
+
+        allow(Hailstorm::Model::ClientStat).to receive(:collect_client_stats)
         expect { Hailstorm::Model::Cluster.stop_load_generation(@project) }.to raise_error(Hailstorm::Exception)
       end
     end
