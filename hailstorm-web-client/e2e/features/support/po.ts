@@ -21,6 +21,11 @@ class LandingPage {
     const matches = $$(`*=${title}`);
     return matches.length > 0 ? matches[0] : undefined;
   }
+
+  openProject({title}: {title: string}) {
+    const projectElement = this.findProjectElement({title});
+    projectElement.click();
+  }
 }
 
 class WizardBase {
@@ -73,8 +78,11 @@ class JMeterConfigPage extends WizardBase {
   }
 
   private fillProperties(properties: { property: string; value: any; }[]) {
-    properties.push({ property: "ServerName", value: readServerIP() });
     properties.forEach(({ property, value }) => {
+      if (property === "ServerName") {
+        value = readServerIP(value);
+      }
+
       $(`//form//input[@name="${property}"]`).setValue(value);
     });
   }
@@ -100,7 +108,7 @@ class AmazonConfig extends WizardBase {
   get advancedMode() { return $('=Advanced Mode') }
   get maxThreadsPerInstance() { return $('//input[@name="maxThreadsByInstance"]') }
 
-  chooseAWS() {
+  choose() {
     browser.waitUntil(() => browser.react$("Loader").isDisplayed() === false, 10000);
     if (this.awsLink.isDisplayed()) {
       this.awsLink.click();
@@ -204,8 +212,9 @@ class ProjectWorkspace {
     }, 15 * 60 * 1000, "waiting for test to stop", 3000);
   }
 
-  waitForFinishedTests(numTests: number): number {
-    browser.waitUntil(() => this.checkBoxes.length === numTests, 60 * 1000, "waiting for test to finish", 3000);
+  waitForFinishedTests(numTests?: number): number {
+    const fn = !!numTests ? () => this.checkBoxes.length === numTests! : () => this.checkBoxes.length > 0;
+    browser.waitUntil(fn, 60 * 1000, "waiting for test to finish", 3000);
     return this.checkBoxes.length;
   }
 
@@ -230,13 +239,16 @@ class ProjectWorkspace {
     this.terminateButton.click();
     this.confirmTerminate.waitForDisplayed(1000);
     this.confirmTerminate.click();
-    this.terminateButton.waitForEnabled(1000, true);
-    browser.waitUntil(() => this.terminateButton.isEnabled(), 5 * 60 * 1000, "wait for terminate action to complete", 3000);
+    if (!this.terminateButton.isEnabled()) {
+      this.terminateButton.waitForEnabled(1000, true);
+      browser.waitUntil(() => this.terminateButton.isEnabled(), 5 * 60 * 1000, "wait for terminate action to complete", 3000);
+    }
   }
 
   generateReport() {
+    browser.pause(500);
     this.masterCheckBox.click();
-    this.reportButton.waitForEnabled(1000);
+    this.reportButton.waitForEnabled(5000);
     this.reportButton.click();
   }
 
@@ -250,11 +262,85 @@ class ProjectWorkspace {
   }
 }
 
+class DataCenterConfig extends WizardBase {
+  get dcLink() { return $('=Data Center') }
+  get title() { return $('//input[@name="title"]') }
+  get userName() { return $('//input[@name="userName"]') }
+  get fileUpload() { return $('//input[@type="file"]') }
+  get submitBtn() { return $('button*=Save') }
+
+  machineInput(index: number) {
+    return $(`(//div[@data-testid="MachineSet"]//input)[${index + 1}]`);
+  }
+
+  choose() {
+    browser.waitUntil(() => browser.react$("Loader").isDisplayed() === false, 10000);
+    if (this.dcLink.isDisplayed()) {
+      this.dcLink.click();
+      return true;
+    }
+
+    return false;
+  }
+
+  proceedToNextStep() {
+    browser.waitUntil(() => this.nextButton.isEnabled(), 15000);
+    this.nextButton.click();
+  }
+
+  createCluster({
+    title,
+    userName,
+    sshIdentity,
+    machines
+  }: {
+    title: string,
+    userName: string,
+    sshIdentity: string,
+    machines: string
+  }) {
+    this.title.setValue(title);
+    browser.pause(250);
+
+    this.userName.setValue(userName);
+    browser.pause(250);
+
+    this.uploadFile(sshIdentity);
+    browser.pause(250);
+
+    machines.split(',').forEach((host, index) => {
+      this.machineInput(index).setValue(host);
+      browser.pause(250);
+    });
+
+    this.submitBtn.waitForEnabled(15000);
+    this.submitBtn.click();
+  }
+
+  private uploadFile(sshIdentity: string) {
+    browser.execute(() => document
+      .querySelector('[role="File Upload"]')
+      .setAttribute("style", "display: block"));
+    const filePath = path.resolve("data", `${sshIdentity}.pem`);
+    const remoteFilePath = browser.uploadFile(filePath);
+    this.fileUpload.setValue(remoteFilePath);
+  }
+}
+
 const landingPage = new LandingPage();
 const newProjectWizardPage = new NewProjectWizardPage();
 const jMeterConfigPage = new JMeterConfigPage();
 const amazonConfig = new AmazonConfig();
 const wizardReview = new WizardReview();
 const projectWorkspace = new ProjectWorkspace();
+const dataCenterConfig = new DataCenterConfig();
 
-export { landingPage, newProjectWizardPage, jMeterConfigPage, amazonConfig, wizardReview, projectWorkspace }
+export {
+  landingPage,
+  newProjectWizardPage,
+  jMeterConfigPage,
+  amazonConfig,
+  wizardReview,
+  projectWorkspace,
+  dataCenterConfig
+}

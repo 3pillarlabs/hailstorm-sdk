@@ -6,7 +6,8 @@ import {
   jMeterConfigPage,
   amazonConfig,
   wizardReview,
-  projectWorkspace
+  projectWorkspace,
+  dataCenterConfig
 } from "features/support/po";
 
 Given("I have Hailstorm open", function() {
@@ -34,7 +35,7 @@ When("I configure JMeter with following properties", function(dataTable: {
 When("configure following amazon clusters", function(dataTable: {
   hashes: () => { region: string; maxThreadsPerAgent: number }[];
 }) {
-  if (amazonConfig.chooseAWS()) {
+  if (amazonConfig.choose()) {
     const clusters = dataTable.hashes();
     for (const cluster of clusters) {
       amazonConfig.createCluster(cluster);
@@ -53,7 +54,7 @@ When("start load generation", function() {
   this.projectId = projectWorkspace.projectIdFromUrl();
 });
 
-Then("{int} test should be running", function(numRows) {
+Then("{int} test(s) should be running", function(numRows) {
   projectWorkspace.waitForTestsToStart(numRows);
   expect(projectWorkspace.isStopEnabled()).to.not.be.true;
 });
@@ -66,7 +67,7 @@ When("I wait for load generation to stop", function () {
   projectWorkspace.waitForTestsToStop();
 });
 
-Then("{int} tests should exist", function (numRows) {
+Then("{int} test(s) should exist", function (numRows) {
   const count = projectWorkspace.waitForFinishedTests(numRows);
   expect(count).to.equal(numRows);
 });
@@ -99,4 +100,22 @@ When("I generate a report", function() {
 Then("a report file should be created", function() {
   const count = projectWorkspace.waitForGeneratedReports();
   expect(count).to.be.greaterThan(0);
+});
+
+When("configure following data center", function(dataTable: {
+  hashes: () => {title: string, userName: string, sshIdentity: string, machines: string}[]
+}) {
+  if (dataCenterConfig.choose()) {
+    const clusters = dataTable.hashes();
+    for (const cluster of clusters) {
+      dataCenterConfig.createCluster(cluster);
+    }
+  }
+
+  dataCenterConfig.proceedToNextStep();
+});
+
+Given("I open the project {string}", function(projectTitle: string) {
+  landingPage.openProject({title: projectTitle});
+  projectWorkspace.waitForFinishedTests();
 });

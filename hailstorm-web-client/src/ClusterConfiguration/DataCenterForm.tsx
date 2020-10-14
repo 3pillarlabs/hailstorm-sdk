@@ -175,7 +175,7 @@ export function DataCenterForm({
 
             <div className="field">
               <label className="label">Machines *</label>
-              <div className="control">
+              <div className="control" data-testid="MachineSet">
                 <MachineSet
                   disabled={isSubmitting}
                   name="machines"
