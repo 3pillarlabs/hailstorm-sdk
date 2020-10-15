@@ -7,7 +7,9 @@ import {
   amazonConfig,
   wizardReview,
   projectWorkspace,
-  dataCenterConfig
+  dataCenterConfig,
+  terminateWidget,
+  reportWidget
 } from "features/support/po";
 
 Given("I have Hailstorm open", function() {
@@ -86,7 +88,7 @@ When("wait for tests to abort", function() {
 
 When("I terminate the setup", function() {
   this.projectId = projectWorkspace.projectIdFromUrl();
-  projectWorkspace.terminateProject();
+  terminateWidget.terminateProject();
 });
 
 Given("some tests have completed", function() {
@@ -94,11 +96,11 @@ Given("some tests have completed", function() {
 });
 
 When("I generate a report", function() {
-  projectWorkspace.generateReport();
+  reportWidget.generateReport();
 });
 
 Then("a report file should be created", function() {
-  const count = projectWorkspace.waitForGeneratedReports();
+  const count = reportWidget.waitForGeneratedReports();
   expect(count).to.be.greaterThan(0);
 });
 

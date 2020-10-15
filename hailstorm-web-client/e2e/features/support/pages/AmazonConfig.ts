@@ -51,9 +51,4 @@ export class AmazonConfig extends ClusterConfig {
     levelTwo.click();
     browser.waitUntil(() => $(`//input[@value="${levelTwoRegion}"]`).isExisting(), 10000);
   }
-
-  proceedToNextStep() {
-    browser.waitUntil(() => this.nextButton.isEnabled(), 15000);
-    this.nextButton.click();
-  }
 }

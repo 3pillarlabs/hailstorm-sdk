@@ -4,7 +4,9 @@ import { JMeterConfigPage } from './pages/JMeterConfigPage';
 import { AmazonConfig } from './pages/AmazonConfig';
 import { WizardReview } from './pages/WizardReview';
 import { ProjectWorkspace } from './pages/ProjectWorkspace';
-import { DataCenterConfig } from './DataCenterConfig';
+import { ReportWidget } from "./pages/ReportWidget";
+import { TerminateWidget } from "./pages/TerminateWidget";
+import { DataCenterConfig } from './pages/DataCenterConfig';
 
 const landingPage = new LandingPage();
 const newProjectWizardPage = new NewProjectWizardPage();
@@ -13,6 +15,8 @@ const amazonConfig = new AmazonConfig();
 const wizardReview = new WizardReview();
 const projectWorkspace = new ProjectWorkspace();
 const dataCenterConfig = new DataCenterConfig();
+const terminateWidget = new TerminateWidget();
+const reportWidget = new ReportWidget();
 
 export {
   landingPage,
@@ -21,5 +25,7 @@ export {
   amazonConfig,
   wizardReview,
   projectWorkspace,
-  dataCenterConfig
+  dataCenterConfig,
+  terminateWidget,
+  reportWidget
 }

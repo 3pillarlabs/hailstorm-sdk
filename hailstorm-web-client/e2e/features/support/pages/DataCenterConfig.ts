@@ -16,11 +16,6 @@ export class DataCenterConfig extends ClusterConfig {
     return this.chooseCluster(this.dcLink);
   }
 
-  proceedToNextStep() {
-    browser.waitUntil(() => this.nextButton.isEnabled(), 15000);
-    this.nextButton.click();
-  }
-
   createCluster({
     title,
     userName,
