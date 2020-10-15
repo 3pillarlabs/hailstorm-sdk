@@ -13,6 +13,7 @@ Feature: Generate load from AWS
       | NumUsers       |    10 |
       | Duration       |   180 |
       | RampUp         |     0 |
+      | ServerName     |   aws |
     And configure following amazon clusters
       | region    | maxThreadsPerAgent |
       | North America/US East (Ohio)  ||
@@ -26,7 +27,7 @@ Feature: Generate load from AWS
   Scenario: Stop the test with 10 threads
     Given a test is running
     When I wait for load generation to stop
-    Then 1 tests should exist
+    Then 1 test should exist
 
   @smoke
   @end-to-end
@@ -37,6 +38,7 @@ Feature: Generate load from AWS
       | NumUsers       |    20 |
       | Duration       |   180 |
       | RampUp         |     0 |
+      | ServerName     |   aws |
     And configure following amazon clusters
       | region    | maxThreadsPerAgent |
       | North America/US East (Ohio) | |
@@ -59,6 +61,7 @@ Feature: Generate load from AWS
       | NumUsers       |    30 |
       | Duration       |   180 |
       | RampUp         |     0 |
+      | ServerName     |   aws |
     And configure following amazon clusters
       | region    | maxThreadsPerAgent    |
       | North America/US East (Ohio) | 25 |
@@ -79,6 +82,7 @@ Feature: Generate load from AWS
       | NumUsers       |    10 |
       | Duration       |   180 |
       | RampUp         |     0 |
+      | ServerName     |   aws |
     And configure following amazon clusters
       | region    | maxThreadsPerAgent    |
       | North America/US East (Ohio) | 25 |
