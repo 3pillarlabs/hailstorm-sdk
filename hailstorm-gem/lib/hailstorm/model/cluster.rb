@@ -216,7 +216,12 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
 
     # check if load generation is not stopped on any load agent and raise
     # exception accordingly
-    return cluster_instances if Hailstorm::Model::LoadAgent.where('jmeter_pid IS NOT NULL').all.empty?
+    agents_running = Hailstorm::Model::LoadAgent
+                     .joins(jmeter_plan: :project)
+                     .where(projects: { id: project.id }, load_agents: { active: true })
+                     .where('load_agents.jmeter_pid IS NOT NULL')
+
+    return cluster_instances if agents_running.empty?
 
     raise(Hailstorm::Exception, 'Load generation could not be stopped on all agents')
   end

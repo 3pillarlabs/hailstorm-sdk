@@ -68,14 +68,14 @@ export function buildPath(): string {
   return path.resolve('build');
 }
 
-export function writeServerIP(ipAddress: string) {
-  fs.writeFileSync(serverIPFilePath(), ipAddress);
+export function writeServerIP(ipAddress: string, namePrefix: string) {
+  fs.writeFileSync(serverIPFilePath(namePrefix), ipAddress);
 }
 
-function serverIPFilePath(): string {
-  return path.resolve(buildPath(), 'server-ip.txt');
+function serverIPFilePath(namePrefix: string): string {
+  return path.resolve(buildPath(), `${namePrefix}-server-ip.txt`);
 }
 
-export function readServerIP(): string {
-  return fs.readFileSync(serverIPFilePath(), { encoding: 'utf-8' });
+export function readServerIP(namePrefix: string): string {
+  return fs.readFileSync(serverIPFilePath(namePrefix), { encoding: 'utf-8' });
 }
