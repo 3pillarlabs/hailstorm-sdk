@@ -18,5 +18,6 @@ exclude_patterns:
   - 'hailstorm-web-client/src/index.tsx'
   - 'hailstorm-web-client/src/serviceWorker.ts'
   - 'hailstorm-web-client/**/*.test.*'
+  - 'hailstorm-web-client/e2e/features/step-definitions/*.steps.ts'
   - 'hailstorm-file-server/src/test/**/*Test.java'
   - 'hailstorm-client-exchange/src/test/**/*Test.java'
