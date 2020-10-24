@@ -68,9 +68,9 @@ describe('<AWSInstanceChoice />', () => {
     );
 
     await fetchPricing;
-    const switchLink = await findByText(/advanced mode/i);
+    const switchLink = await findByText(/specify yourself/i);
     fireEvent.click(switchLink);
-    await findByText(/quick mode/i);
+    await findByText(/specify yourself/i);
     await findByTestId('AWS Instance Type');
     await findByTestId('Max. Users / Instance');
   });
@@ -82,7 +82,7 @@ describe('<AWSInstanceChoice />', () => {
       );
 
       await fetchPricing;
-      const switchLink = await findByText(/advanced mode/i);
+      const switchLink = await findByText(/specify yourself/i);
       fireEvent.click(switchLink);
       const awsInstanceType = await findByTestId('AWS Instance Type');
       const maxThreadsPerInstance = await findByTestId('Max. Users / Instance');
@@ -109,14 +109,14 @@ describe('<AWSInstanceChoice />', () => {
       );
 
       await fetchPricing;
-      let switchLink = await findByText(/advanced mode/i);
+      let switchLink = await findByText(/specify yourself/i);
       fireEvent.click(switchLink);
       let awsInstanceType = await findByTestId('AWS Instance Type');
       let maxThreadsPerInstance = await findByTestId('Max. Users / Instance');
       fireEvent.change(awsInstanceType, {target: {value: 't2.small'}});
       fireEvent.change(maxThreadsPerInstance, {target: {value: '25'}});
 
-      switchLink = await findByText(/quick mode/i);
+      switchLink = await findByText(/determine by usage/i);
       fireEvent.click(switchLink);
       awsInstanceType = await findByTestId('AWS Instance Type');
       maxThreadsPerInstance = await findByTestId('Max. Users / Instance');
@@ -136,7 +136,7 @@ describe('<AWSInstanceChoice />', () => {
       );
 
       await fetchPricing;
-      const switchLink = await findByText(/advanced mode/i);
+      const switchLink = await findByText(/specify yourself/i);
       fireEvent.click(switchLink);
       expect(setHourlyCostByCluster).toBeCalledWith(undefined);
     });
