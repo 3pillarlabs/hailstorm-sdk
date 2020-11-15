@@ -12,6 +12,7 @@ jest.mock('./NonLinearSlider', () => ({
 }));
 
 describe('<AWSInstanceChoice />', () => {
+  const advanceModeTrigger = /specify aws instance type/i;
   let fetchPricing: Promise<AWSInstanceChoiceOption[]>;
 
   beforeEach(() => {
@@ -68,11 +69,10 @@ describe('<AWSInstanceChoice />', () => {
     );
 
     await fetchPricing;
-    const switchLink = await findByText(/advanced mode/i);
+    const switchLink = await findByText(advanceModeTrigger);
     fireEvent.click(switchLink);
-    await findByText(/quick mode/i);
+    await findByText(/by usage/i);
     await findByTestId('AWS Instance Type');
-    await findByTestId('Max. Users / Instance');
   });
 
   describe('when in advanced mode', () => {
@@ -82,7 +82,7 @@ describe('<AWSInstanceChoice />', () => {
       );
 
       await fetchPricing;
-      const switchLink = await findByText(/advanced mode/i);
+      const switchLink = await findByText(advanceModeTrigger);
       fireEvent.click(switchLink);
       const awsInstanceType = await findByTestId('AWS Instance Type');
       const maxThreadsPerInstance = await findByTestId('Max. Users / Instance');
@@ -109,19 +109,19 @@ describe('<AWSInstanceChoice />', () => {
       );
 
       await fetchPricing;
-      let switchLink = await findByText(/advanced mode/i);
+      let switchLink = await findByText(advanceModeTrigger);
       fireEvent.click(switchLink);
       let awsInstanceType = await findByTestId('AWS Instance Type');
       let maxThreadsPerInstance = await findByTestId('Max. Users / Instance');
       fireEvent.change(awsInstanceType, {target: {value: 't2.small'}});
       fireEvent.change(maxThreadsPerInstance, {target: {value: '25'}});
 
-      switchLink = await findByText(/quick mode/i);
+      switchLink = await findByText(/by usage/i);
       fireEvent.click(switchLink);
       awsInstanceType = await findByTestId('AWS Instance Type');
       maxThreadsPerInstance = await findByTestId('Max. Users / Instance');
       expect(awsInstanceType.textContent).toMatch(/m5a\.large/);
-      expect(maxThreadsPerInstance.textContent).toMatch(/500/);
+      expect(maxThreadsPerInstance.getAttribute('value')).toMatch(/500/);
     });
 
     it('should not report hourly cost', async () => {
@@ -136,7 +136,7 @@ describe('<AWSInstanceChoice />', () => {
       );
 
       await fetchPricing;
-      const switchLink = await findByText(/advanced mode/i);
+      const switchLink = await findByText(advanceModeTrigger);
       fireEvent.click(switchLink);
       expect(setHourlyCostByCluster).toBeCalledWith(undefined);
     });

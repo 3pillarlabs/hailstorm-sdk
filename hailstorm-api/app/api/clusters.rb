@@ -97,7 +97,7 @@ patch '/projects/:project_id/clusters/:id' do |project_id, id|
   request.body.rewind
   # @type [Hash]
   data = JSON.parse(request.body.read)
-  data.each_pair { |key, value| matched_cluster_cfg.send("#{key}=", value) }
+  data.each_pair { |key, value| matched_cluster_cfg.send("#{key.underscore}=", value) }
   project_config.update!(stringified_config: deep_encode(hailstorm_config))
 
   JSON.dump(

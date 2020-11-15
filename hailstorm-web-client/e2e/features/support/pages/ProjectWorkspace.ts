@@ -52,10 +52,8 @@ export class ProjectWorkspace {
   }
 
   abortAfter({ seconds }: { seconds: number; }) {
-    const abortButton = this.abortButton;
-    setTimeout(() => {
-      abortButton.click();
-    }, seconds * 1000);
+    browser.pause(seconds * 1000);
+    this.abortButton.click();
   }
 
   projectIdFromUrl(): string {

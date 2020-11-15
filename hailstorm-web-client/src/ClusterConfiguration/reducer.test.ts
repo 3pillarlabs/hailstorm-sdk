@@ -1,6 +1,6 @@
 import { reducer } from './reducer';
 import { NewProjectWizardState, WizardTabTypes } from '../NewProjectWizard/domain';
-import { ActivateClusterAction, RemoveClusterAction, SaveClusterAction, SetClusterConfigurationAction, ChooseClusterOptionAction } from './actions';
+import { ActivateClusterAction, RemoveClusterAction, CreateClusterAction, SetClusterConfigurationAction, ChooseClusterOptionAction, UpdateClusterAction } from './actions';
 import { Cluster, AmazonCluster } from '../domain';
 
 describe('reducer', () => {
@@ -57,7 +57,7 @@ describe('reducer', () => {
       code: 'singing-penguin-23'
     };
 
-    const nextState = reducer(state, new SaveClusterAction(savedCluster));
+    const nextState = reducer(state, new CreateClusterAction(savedCluster));
     expect(nextState.wizardState!.activeCluster).toEqual(savedCluster);
     expect(nextState.activeProject!.clusters!.length).toEqual(1);
     expect(nextState.activeProject!.clusters![0]).toEqual(savedCluster);
@@ -227,7 +227,7 @@ describe('reducer', () => {
         },
         activeJMeterFile: jmeterFile
       }
-    }, new SaveClusterAction(cluster));
+    }, new CreateClusterAction(cluster));
 
     expect(nextState.wizardState!.modifiedAfterReview).toBeTruthy();
   });
@@ -305,5 +305,26 @@ describe('reducer', () => {
     }, new RemoveClusterAction({...cluster, disabled: true}));
 
     expect(nextState.activeProject!.incomplete).toBeTruthy();
+  });
+
+  it('should update the cluster', () => {
+    const state = initialState();
+    const savedCluster: AmazonCluster = {
+      title: '',
+      type: 'AWS',
+      accessKey: 'A',
+      secretKey: 'S',
+      region: 'us-east-1',
+      instanceType: 'm3a.small',
+      maxThreadsByInstance: 500,
+      id: 23,
+      code: 'singing-penguin-23'
+    };
+
+    const anotherCluster: AmazonCluster = {...savedCluster, id: 24, region: 'us-west-1'};
+    state.activeProject!.clusters = [savedCluster,  anotherCluster];
+    let nextState = reducer(state, new UpdateClusterAction({...anotherCluster, maxThreadsByInstance: 600} as AmazonCluster));
+    expect((nextState.activeProject!.clusters![0] as AmazonCluster).maxThreadsByInstance).toBe(500);
+    expect((nextState.activeProject!.clusters![1] as AmazonCluster).maxThreadsByInstance).toBe(600);
   });
 });

@@ -4,9 +4,10 @@ import { Cluster } from "../domain";
 export enum ClusterConfigurationActionTypes {
   ActivateCluster = '[ClusterConfiguration ActivateCluster',
   RemoveCluster = '[ClusterConfiguration] RemoveCluster',
-  SaveCluster = '[ClusterConfiguration] SaveCluster',
+  CreateCluster = '[ClusterConfiguration] CreateCluster',
   SetClusterConfiguration = '[ClusterConfiguration] SetClusterConfiguration',
-  ChooseClusterOption = '[ClusterConfiguration] ChooseClusterOption'
+  ChooseClusterOption = '[ClusterConfiguration] ChooseClusterOption',
+  UpdateCluster = '[ClusterConfiguration] UpdateCluster',
 }
 
 export class ActivateClusterAction implements Action {
@@ -19,8 +20,8 @@ export class RemoveClusterAction implements Action {
   constructor(public payload?: Cluster) {}
 }
 
-export class SaveClusterAction implements Action {
-  readonly type = ClusterConfigurationActionTypes.SaveCluster;
+export class CreateClusterAction implements Action {
+  readonly type = ClusterConfigurationActionTypes.CreateCluster;
   constructor(public payload: Cluster) {}
 }
 
@@ -34,9 +35,15 @@ export class ChooseClusterOptionAction implements Action {
   constructor() {}
 }
 
+export class UpdateClusterAction implements Action {
+  readonly type = ClusterConfigurationActionTypes.UpdateCluster;
+  constructor(public payload: Cluster) {}
+}
+
 export type ClusterConfigurationActions =
   | ActivateClusterAction
   | RemoveClusterAction
-  | SaveClusterAction
+  | CreateClusterAction
   | SetClusterConfigurationAction
-  | ChooseClusterOptionAction;
+  | ChooseClusterOptionAction
+  | UpdateClusterAction;

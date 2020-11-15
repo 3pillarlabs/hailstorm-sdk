@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Project } from '../domain';
-import { RemoveClusterAction, SaveClusterAction } from './actions';
+import { RemoveClusterAction, CreateClusterAction } from './actions';
 import { Formik, Field, Form, FormikActions, ErrorMessage } from 'formik';
 import { AWSInstanceChoice } from './AWSInstanceChoice';
 import { AWSInstanceChoiceOption, AWSRegionList } from './domain';
@@ -51,7 +51,7 @@ export function AWSForm({ dispatch, activeProject }: {
         instanceType: selectedInstanceType!.instanceType,
         maxThreadsByInstance: selectedInstanceType!.maxThreadsByInstance
       })
-      .then((createdCluster) => dispatch(new SaveClusterAction(createdCluster)))
+      .then((createdCluster) => dispatch(new CreateClusterAction(createdCluster)))
       .catch((reason) => console.error(reason))
       .finally(() => actions.setSubmitting(false));
   };
@@ -121,18 +121,10 @@ export function AWSForm({ dispatch, activeProject }: {
                   <AWSInstanceChoice
                     onChange={handleAWSInstanceChange}
                     regionCode={awsRegion}
-                    {...{ fetchPricing, setHourlyCostByCluster }}
+                    {...{ fetchPricing, setHourlyCostByCluster, hourlyCostByCluster }}
                     disabled={isSubmitting}
                   />
                 </div>
-              </div>
-              <div className="field">
-                {hourlyCostByCluster ? (
-                <div className="message is-info">
-                  <div className="message-body">
-                    <strong>Estimated Hourly Cost for the Cluster: ${hourlyCostByCluster.toFixed(4)}</strong>
-                  </div>
-                </div>) : null}
               </div>
             </>) : null}
           </div>
