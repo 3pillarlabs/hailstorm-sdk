@@ -53,6 +53,7 @@ Feature: Generate load from AWS
     When I wait for load generation to stop
     Then 2 tests should exist
 
+  @smoke
   @end-to-end
   Scenario: Start test for 30 threads
     When I reconfigure the project
@@ -70,6 +71,7 @@ Feature: Generate load from AWS
     Then 1 test should be running
     And 2 load agents should exist
 
+  @smoke
   @end-to-end
   Scenario: Stop the test with 30 threads
     When I wait for load generation to stop
