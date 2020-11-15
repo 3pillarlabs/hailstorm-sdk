@@ -8,8 +8,9 @@ import {
   ClusterConfigurationActionTypes,
   ActivateClusterAction,
   SetClusterConfigurationAction,
-  SaveClusterAction,
-  RemoveClusterAction
+  CreateClusterAction,
+  RemoveClusterAction,
+  UpdateClusterAction
 } from "./actions";
 import { Project, Cluster } from "../domain";
 
@@ -27,8 +28,8 @@ export function reducer(
       nextState = onRemoveCluster(state, action);
       break;
 
-    case ClusterConfigurationActionTypes.SaveCluster:
-      nextState = onSaveCluster(state, action);
+    case ClusterConfigurationActionTypes.CreateCluster:
+      nextState = onCreateCluster(state, action);
       break;
 
     case ClusterConfigurationActionTypes.SetClusterConfiguration:
@@ -43,6 +44,10 @@ export function reducer(
       nextState = { ...state, wizardState };
       break;
     }
+
+    case ClusterConfigurationActionTypes.UpdateCluster:
+      nextState = onUpdateCluster(state, action);
+      break;
 
     default:
       nextState = state;
@@ -74,9 +79,9 @@ function onSetClusterConfiguration(
   return { ...state, activeProject };
 }
 
-function onSaveCluster(
+function onCreateCluster(
   state: NewProjectWizardState,
-  action: SaveClusterAction
+  action: CreateClusterAction
 ) {
   {
     const wizardState: NewProjectWizardProgress = {
@@ -176,4 +181,22 @@ function onActivateCluster(
   let nextState = { ...state, wizardState };
   if (activeProject) nextState = { ...nextState, activeProject };
   return nextState;
+}
+
+function onUpdateCluster(
+  state: NewProjectWizardState,
+  action: UpdateClusterAction
+) {
+  const wizardState: NewProjectWizardProgress = {
+    ...state.wizardState!,
+    activeCluster: action.payload
+  };
+  const activeProject: Project = { ...state.activeProject! };
+  const matchedIdex = activeProject.clusters!.findIndex((value) => value.id === action.payload.id);
+  activeProject.clusters![matchedIdex] = action.payload;
+  if (wizardState.done[WizardTabTypes.Review]) {
+    wizardState.modifiedAfterReview = true;
+  }
+
+  return { ...state, wizardState, activeProject };
 }

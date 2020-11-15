@@ -35,12 +35,26 @@ When("I configure JMeter with following properties", function(dataTable: {
 });
 
 When("configure following amazon clusters", function(dataTable: {
-  hashes: () => { region: string; maxThreadsPerAgent: number }[];
+  hashes: () => { region: string; maxThreadsPerAgent: string | undefined }[];
 }) {
-  if (amazonConfig.choose()) {
-    const clusters = dataTable.hashes();
-    for (const cluster of clusters) {
-      amazonConfig.createCluster(cluster);
+  const clusters = dataTable.hashes();
+  for (const cluster of clusters) {
+    const attrs: {
+      region: string;
+      maxThreadsPerAgent: number | undefined
+    } = {
+      region: cluster.region,
+      maxThreadsPerAgent: undefined
+    };
+
+    if (cluster.maxThreadsPerAgent) {
+      attrs.maxThreadsPerAgent = parseInt(cluster.maxThreadsPerAgent);
+    }
+
+    if (amazonConfig.choose()) {
+      amazonConfig.createCluster(attrs);
+    } else if (attrs.maxThreadsPerAgent) {
+      amazonConfig.updateCluster({maxThreadsPerAgent: attrs.maxThreadsPerAgent});
     }
   }
 

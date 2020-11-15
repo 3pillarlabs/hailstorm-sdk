@@ -12,12 +12,13 @@ export class AmazonConfig extends ClusterConfig {
   get regionOptions() { return $$('//a[@role="AWSRegionOption"]'); }
   get advancedMode() { return $('=Advanced Mode'); }
   get maxThreadsPerInstance() { return $('//input[@name="maxThreadsByInstance"]'); }
+  get updateButton() { return $('//button[@role="Update Cluster"]'); }
 
   choose() {
     return this.chooseCluster(this.awsLink);
   }
 
-  createCluster({ region, maxThreadsPerAgent }: { region: string; maxThreadsPerAgent: number; }) {
+  createCluster({ region, maxThreadsPerAgent }: { region: string; maxThreadsPerAgent: number | undefined; }) {
     browser.waitUntil(() => this.editRegion.isDisplayed(), 10000);
     const awsCredentials: { accessKey: string; secretKey: string; } = yaml.parse(
       fs.readFileSync(path.resolve("data/keys.yml"), "utf8")
@@ -27,14 +28,11 @@ export class AmazonConfig extends ClusterConfig {
     browser.pause(250);
     this.secretKey.setValue(awsCredentials.secretKey);
     browser.pause(250);
+    this.selectRegion(region);
     if (maxThreadsPerAgent) {
-      this.advancedMode.click();
-      browser.waitUntil(() => this.maxThreadsPerInstance.isExisting());
-      this.maxThreadsPerInstance.setValue(maxThreadsPerAgent);
-      browser.pause(250);
+      this.updateCluster({maxThreadsPerAgent});
     }
 
-    this.selectRegion(region);
     const submitBtn = $('button*=Save');
     submitBtn.waitForEnabled(15000);
     submitBtn.click();
@@ -50,5 +48,12 @@ export class AmazonConfig extends ClusterConfig {
     const levelTwo = this.regionOptions.find((opt) => opt.getText() === levelTwoRegion);
     levelTwo.click();
     browser.waitUntil(() => $(`//input[@value="${levelTwoRegion}"]`).isExisting(), 10000);
+  }
+
+  updateCluster({maxThreadsPerAgent}: {maxThreadsPerAgent: number}) {
+    this.maxThreadsPerInstance.setValue(maxThreadsPerAgent.toString());
+    browser.pause(250);
+    browser.waitUntil(() => this.updateButton.isEnabled(), 500);
+    this.updateButton.click();
   }
 }
