@@ -5,7 +5,7 @@ import { MachineSet } from './MachineSet';
 import { FileServer } from '../FileUpload/fileServer';
 import { ApiFactory } from '../api';
 import { Project, DataCenterCluster } from '../domain';
-import { SaveClusterAction } from './actions';
+import { CreateClusterAction } from './actions';
 import { SavedFile } from '../FileUpload/domain';
 import { ClusterFormFooter } from './ClusterFormFooter';
 import { ClusterViewHeader } from './ClusterViewHeader';
@@ -43,7 +43,7 @@ export function DataCenterForm({
         };
 
         const data = await ApiFactory().clusters().create(activeProject.id, attrs);
-        dispatch(new SaveClusterAction(data));
+        dispatch(new CreateClusterAction(data));
         return data;
       });
   };

@@ -10,12 +10,14 @@ export function AWSInstanceChoice({
   regionCode,
   onChange,
   fetchPricing,
+  hourlyCostByCluster,
   setHourlyCostByCluster,
   disabled
 }: {
   regionCode: string;
   onChange: (choice: AWSInstanceChoiceOption) => void;
   fetchPricing: (regionCode: string) => Promise<AWSInstanceChoiceOption[]>;
+  hourlyCostByCluster?: number;
   setHourlyCostByCluster?: React.Dispatch<React.SetStateAction<number | undefined>>;
   disabled?: boolean;
 }) {
@@ -54,79 +56,145 @@ export function AWSInstanceChoice({
   }
 
   return (
-    <div className="card">
-      <div className="card-header">
-        <p className="card-header-title">AWS Instance</p>
-      </div>
-      <div className="card-content">
-        {quickMode ? (
-          <div className="level">
-            <CenteredLevelItem title="AWS Instance Type" starred={true}>
-              {instanceType}
-            </CenteredLevelItem>
-            <CenteredLevelItem title="Max. Users / Instance" starred={true}>
-              {maxThreadsByInstance}
-            </CenteredLevelItem>
-            <CenteredLevelItem title="# Instances">
-              {numInstances}
-            </CenteredLevelItem>
-          </div>
-      ) : (
-          <CustomInputSection
-            {...{
-              instanceType,
-              setInstanceType,
-              onChange,
-              maxThreadsByInstance,
-              setMaxThreadsByInstance,
-              disabled,
-            }}
-          />
-        )}
-        {!disabled && (
-          <SwitchMessage
-            {...{
-              quickMode,
-              setQuickMode,
-              setHourlyCostByCluster,
-              handleSliderChange,
-            }}
-          />
-        )}
-        {quickMode && (
-          <div className="field">
-            <div className="control">
-              <NonLinearSlider
-                initialValue={MIN_VALUE}
-                onChange={handleSliderChange}
-                step={50}
-                maximum={maxThreadsByCluster(pricingData)}
-                minimum={MIN_VALUE}
-                {...{ disabled }}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+    <>
+      <InstanceTypeChoice {...{
+        handleSliderChange,
+        instanceType,
+        maxThreadsByInstance,
+        onChange,
+        pricingData,
+        quickMode,
+        setHourlyCostByCluster,
+        setInstanceType,
+        setQuickMode,
+        disabled
+      }} />
+
+      <MaxUsersByInstance
+        value={maxThreadsByInstance}
+        {...{disabled}}
+        onChange={(event: { target: { value: string; }; }) => {
+          setMaxThreadsByInstance(parseInt(event.target.value));
+          onChange(new AWSInstanceChoiceOption({
+            maxThreadsByInstance: parseInt(event.target.value),
+            instanceType
+          }));
+        }}
+      />
+
+      {quickMode && (<InstanceTypeMeter {...{
+        hourlyCostByCluster,
+        instanceType,
+        numInstances
+      }} />)}
+    </>
   );
 }
 
-function CustomInputSection({
+function InstanceTypeChoice({
+  quickMode,
+  handleSliderChange,
+  pricingData,
+  disabled,
+  setHourlyCostByCluster,
+  setQuickMode,
+  instanceType,
+  setInstanceType,
+  onChange,
+  maxThreadsByInstance
+}:{
+  quickMode: boolean;
+  handleSliderChange: (value: number) => void;
+  pricingData: AWSInstanceChoiceOption[];
+  disabled?: boolean;
+  setHourlyCostByCluster: React.Dispatch<React.SetStateAction<number | undefined>> | undefined;
+  setQuickMode: React.Dispatch<React.SetStateAction<boolean>>;
+  instanceType: string;
+  setInstanceType: React.Dispatch<React.SetStateAction<string>>;
+  onChange: (choice: AWSInstanceChoiceOption) => void;
+  maxThreadsByInstance: number;
+}) {
+  return (
+    <>
+    {quickMode ? (
+      <InstanceTypeByUsage {...{
+        handleSliderChange,
+        pricingData,
+        disabled,
+        setHourlyCostByCluster,
+        setQuickMode
+      }} />
+    ) : (
+      <InstanceTypeInput {...{
+        instanceType,
+        setInstanceType,
+        onChange,
+        maxThreadsByInstance,
+        disabled,
+        handleSliderChange,
+        setQuickMode
+      }}/>
+    )}
+    </>
+  )
+}
+
+function InstanceTypeByUsage({
+  handleSliderChange,
+  pricingData,
+  disabled,
+  setHourlyCostByCluster,
+  setQuickMode
+}:{
+  handleSliderChange: (value: number) => void;
+  pricingData: AWSInstanceChoiceOption[];
+  disabled?: boolean;
+  setHourlyCostByCluster: React.Dispatch<React.SetStateAction<number | undefined>> | undefined;
+  setQuickMode: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
+  return (
+    <>
+      <div className="field">
+        <div className="control">
+          <NonLinearSlider
+            initialValue={MIN_VALUE}
+            onChange={handleSliderChange}
+            step={50}
+            maximum={maxThreadsByCluster(pricingData)}
+            minimum={MIN_VALUE}
+            {...{ disabled }}
+          />
+        </div>
+      </div>
+      {!disabled && (<SwitchMessage
+        onClick={() => {
+          setHourlyCostByCluster && setHourlyCostByCluster(undefined);
+          setQuickMode(false);
+        }}
+      >
+        Specify AWS Instance Type (for advanced users)
+      </SwitchMessage>)}
+    </>
+  )
+}
+
+function InstanceTypeInput({
   instanceType,
   setInstanceType,
   onChange,
   maxThreadsByInstance,
-  setMaxThreadsByInstance,
-  disabled
-}: {
+  disabled,
+  handleSliderChange,
+  setQuickMode
+}:{
   instanceType: string;
   setInstanceType: React.Dispatch<React.SetStateAction<string>>;
-  onChange: (choice: AWSInstanceChoiceOption) => void,
-  maxThreadsByInstance: number,
-  disabled: boolean | undefined,
-  setMaxThreadsByInstance: React.Dispatch<React.SetStateAction<number>>
-}): JSX.Element {
+  onChange: (choice: AWSInstanceChoiceOption) => void;
+  maxThreadsByInstance: number;
+  disabled: boolean | undefined;
+  handleSliderChange: (value: number) => void;
+  setQuickMode: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
   return (
     <>
       <div className="field">
@@ -139,7 +207,7 @@ function CustomInputSection({
             name="awsInstanceType"
             data-testid="AWS Instance Type"
             value={instanceType}
-            onChange={(event: { target: { value: string; }; }) => {
+            onChange={(event: { target: { value: string } }) => {
               setInstanceType(event.target.value);
               onChange(new AWSInstanceChoiceOption({
                 instanceType: event.target.value,
@@ -149,68 +217,54 @@ function CustomInputSection({
             {...{ disabled }} />
         </div>
       </div>
-      <div className="field">
-        <label className="label">Max. Users / Instance *</label>
-        <div className="control">
-          <input
-            required
-            type="text"
-            className="input"
-            name="maxThreadsByInstance"
-            data-testid="Max. Users / Instance"
-            value={maxThreadsByInstance}
-            onChange={(event: { target: { value: string; }; }) => {
-              setMaxThreadsByInstance(parseInt(event.target.value));
-              onChange(new AWSInstanceChoiceOption({
-                maxThreadsByInstance: parseInt(event.target.value),
-                instanceType
-              }));
-            } }
-            {...{ disabled }} />
-        </div>
-      </div>
-      <div className="field">
-        <label className="label"># Instances</label>
-        <div className="control">
-          <input className="input" type="text" placeholder="Calculated automatically" disabled />
-        </div>
-      </div>
+      {!disabled && (<SwitchMessage
+        onClick={() => {
+          handleSliderChange(MIN_VALUE);
+          setQuickMode(true);
+        }}
+      >
+        Determine AWS Instance Type by Usage
+      </SwitchMessage>)}
     </>
+  )
+}
+
+function InstanceTypeMeter({
+  instanceType,
+  numInstances,
+  hourlyCostByCluster
+}:{
+  instanceType: string;
+  numInstances: number;
+  hourlyCostByCluster?: number;
+}) {
+  return (
+    <div className="level">
+      <CenteredLevelItem title="AWS Instance Type" starred={true}>
+        {instanceType}
+      </CenteredLevelItem>
+      <CenteredLevelItem title="# Instances">
+        {numInstances}
+      </CenteredLevelItem>
+      {hourlyCostByCluster && (<CenteredLevelItem title="Cluster Cost" starred={true}>
+        ${hourlyCostByCluster.toFixed(4)}
+      </CenteredLevelItem>)}
+    </div>
   );
 }
 
 function SwitchMessage({
-  quickMode,
-  setHourlyCostByCluster,
-  handleSliderChange,
-  setQuickMode
-}: {
-  quickMode: boolean;
-  setHourlyCostByCluster: React.Dispatch<React.SetStateAction<number | undefined>> | undefined;
-  handleSliderChange: (value: number, data?: AWSInstanceChoiceOption[] | undefined) => AWSInstanceChoiceOption;
-  setQuickMode: React.Dispatch<React.SetStateAction<boolean>>
-}): JSX.Element {
-
-  const labelText = quickMode ? 'Determine by usage' : 'Specify yourself';
-  const link = (<a
-    className="has-text-link"
-    onClick={() => {
-      if (quickMode) {
-        setHourlyCostByCluster && setHourlyCostByCluster(undefined);
-      } else {
-        handleSliderChange(MIN_VALUE);
-      }
-
-      setQuickMode(!quickMode);
-    } }
-  >
-    {quickMode ? 'Specify yourself' : 'Determine by usage'}
-  </a>);
-
+  onClick,
+  children
+}: React.PropsWithChildren<{
+  onClick: () => void;
+}>): JSX.Element {
   return (
-  <div className="notification is-size-7">
-    {labelText} or {link}
-  </div>
+    <div className="notification is-size-7">
+      <a className="has-text-link" onClick={onClick}>
+        {children}
+      </a>
+    </div>
   );
 }
 
@@ -225,6 +279,33 @@ function CenteredLevelItem({
       <div>
         <p className="heading">{heading}</p>
         <p className="title" data-testid={title}>{children}</p>
+      </div>
+    </div>
+  )
+}
+
+export function MaxUsersByInstance({
+  value,
+  onChange,
+  disabled
+}:{
+  value?: number;
+  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="field">
+      <label className="label">Max. Users / Instance *</label>
+      <div className="control">
+        <input
+          required
+          type="text"
+          className="input"
+          name="maxThreadsByInstance"
+          data-testid="Max. Users / Instance"
+          value={value}
+          onChange={onChange}
+          {...{ disabled }} />
       </div>
     </div>
   )

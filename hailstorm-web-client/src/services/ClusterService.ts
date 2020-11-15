@@ -53,8 +53,10 @@ export class ClusterService {
           const [key, value] = e;
           if (key === 'disabled') {
             s['active'] = !value;
+          } else if (key === 'maxThreadsByInstance') {
+            s['maxThreadsPerAgent'] = value;
           } else {
-            s[key] = value
+            s[key] = value;
           }
 
           return s;

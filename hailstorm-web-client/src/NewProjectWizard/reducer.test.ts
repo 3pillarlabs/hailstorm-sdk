@@ -2,7 +2,7 @@ import { reducer } from "./reducer";
 import { ProjectSetupAction, ProjectSetupCancelAction, ConfirmProjectSetupCancelAction, StayInProjectSetupAction, CreateProjectAction, ClusterSetupCompletedAction, JMeterSetupCompletedAction, ActivateTabAction, ReviewCompletedAction, EditInProjectWizard, UnsetProjectAction, UpdateProjectTitleAction, SetProjectDeletedAction } from "./actions";
 import { WizardTabTypes, NewProjectWizardProgress } from "./domain";
 import { Project } from "../domain";
-import { SaveClusterAction } from "../ClusterConfiguration/actions";
+import { CreateClusterAction } from "../ClusterConfiguration/actions";
 
 describe('reducer', () => {
   it('should define the function', () => {
