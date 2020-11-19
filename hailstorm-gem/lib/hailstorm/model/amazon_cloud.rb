@@ -111,7 +111,6 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
       access_key_id: self.access_key,
       secret_access_key: self.secret_key,
       region: self.region,
-      max_retries: 3,
       logger: logger
     }
   end

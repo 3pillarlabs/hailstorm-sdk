@@ -210,7 +210,7 @@ module Hailstorm::Behavior::AwsAdaptable
 
     # :nocov:
     # @param [Regexp] ami_name_regexp
-    # @return [Ami]
+    # @return [Ami] First AMI with name tag matching the regular expression
     def find_self_owned(ami_name_regexp:)
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
@@ -239,6 +239,12 @@ module Hailstorm::Behavior::AwsAdaptable
     # @param [String] ami_id
     # @return [Ami]
     def find(ami_id:)
+      raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
+    end
+
+    # @param [Regexp] ami_name_regexp
+    # @return [Array<Ami>] AMIs with name tag matching the regular expression
+    def select_self_owned(ami_name_regexp:)
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
     # :nocov:

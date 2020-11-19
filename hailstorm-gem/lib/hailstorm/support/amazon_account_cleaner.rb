@@ -63,7 +63,7 @@ class Hailstorm::Support::AmazonAccountCleaner
   end
 
   def deregister_amis
-    ami_client.find_self_owned(
+    ami_client.select_self_owned(
       ami_name_regexp: Regexp.new(Hailstorm::Model::Helper::AmazonCloudDefaults::AMI_ID)
     ).each do |image|
       next unless image.available?

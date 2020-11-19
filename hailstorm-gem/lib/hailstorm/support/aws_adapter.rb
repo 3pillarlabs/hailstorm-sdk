@@ -23,11 +23,17 @@ class Hailstorm::Support::AwsAdapter
   load 'hailstorm/support/aws_adapter_clients/internet_gateway_client.rb'
   load 'hailstorm/support/aws_adapter_clients/route_table_client.rb'
 
-  # @param [Hash] aws_config(access_key_id secret_access_key region)
+  DEFAULT_RETRY_BASE_DELAY = 1.0
+  DEFAULT_RETRY_LIMIT = 5
+
+  # @param [Hash] aws_config(access_key_id, secret_access_key, region, retry_base_delay: 1, retry_limit: 5)
   def self.clients(aws_config)
     unless @clients
       credentials = Aws::Credentials.new(aws_config[:access_key_id], aws_config[:secret_access_key])
-      ec2_client = Aws::EC2::Client.new(region: aws_config[:region], credentials: credentials)
+      ec2_client = Aws::EC2::Client.new(region: aws_config[:region],
+                                        credentials: credentials,
+                                        retry_base_delay: aws_config[:retry_base_delay] || DEFAULT_RETRY_BASE_DELAY,
+                                        retry_limit: aws_config[:retry_limit] || DEFAULT_RETRY_LIMIT)
       factory_attrs = Hailstorm::Behavior::AwsAdaptable::CLIENT_KEYS.reduce({}) do |attrs, ck|
         attrs.merge(
           ck.to_sym => "#{Hailstorm::Support::AwsAdapter.name}::#{ck.to_s.camelize}".constantize
