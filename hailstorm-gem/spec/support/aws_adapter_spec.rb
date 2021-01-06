@@ -24,9 +24,18 @@ describe Hailstorm::Support::AwsAdapter do
     end
 
     it 'should return nil if a key pair is not found' do
-      class DynamicException < Aws::EC2::Errors::ServiceError; end
-      allow(@mock_ec2).to receive(:describe_key_pairs).and_raise(DynamicException.new({}, 'mock error'))
+      class Aws::EC2::Errors::InvalidKeyPairNotFound < Aws::EC2::Errors::ServiceError; end
+
+      not_found = Aws::EC2::Errors::InvalidKeyPairNotFound.new({}, 'mock error')
+      allow(@mock_ec2).to receive(:describe_key_pairs).and_raise(not_found)
       expect(@client.find(name: 'misspelled')).to be_nil
+    end
+
+    it 'should raise error if finding a key fails due to a reason other than a missing key' do
+      other_error = Aws::Errors::ServiceError.new({}, 'mock error')
+      allow(@mock_ec2).to receive(:describe_key_pairs).and_raise(other_error)
+      proxied_client = Hailstorm::Support::AwsAdapter::ExceptionTranslationProxy.new(@client)
+      expect { proxied_client.find(name: 'misspelled') }.to raise_error(Hailstorm::AwsException)
     end
 
     it 'should delete a key_pair' do
@@ -687,6 +696,7 @@ describe Hailstorm::Support::AwsAdapter do
 
     factory.members.each do |member|
       client = factory.send(member)
+      expect(client).to be_an_instance_of(Hailstorm::Support::AwsAdapter::ExceptionTranslationProxy)
       expect(client.ec2).to_not be_nil
     end
 
@@ -699,6 +709,29 @@ describe Hailstorm::Support::AwsAdapter do
       any_client = Hailstorm::Support::AwsAdapter::AbstractClient.new(ec2_client: @mock_ec2)
       expect(@mock_ec2).to receive(:create_tags).with(resources: ['i-123'], tags: [{ key: 'Name', value: 'Agent 1' }])
       any_client.tag_name(resource_id: 'i-123', name: 'Agent 1')
+    end
+  end
+
+  context Hailstorm::Support::AwsAdapter::ExceptionTranslationProxy do
+    it 'should transfer all methods to target' do
+      target = double('Target', foo: 1)
+      proxy = Hailstorm::Support::AwsAdapter::ExceptionTranslationProxy.new(target)
+      expect(proxy.foo).to be == target.foo
+    end
+
+    it 'should translate an AWS client or service error' do
+      target = double('Target')
+      service_error = Aws::Errors::ServiceError.new({}, 'mock error')
+      allow(target).to receive(:foo).and_raise(service_error)
+      proxy = Hailstorm::Support::AwsAdapter::ExceptionTranslationProxy.new(target)
+      expect { proxy.foo }.to raise_error(Hailstorm::AwsException)
+    end
+
+    it 'should not translate an error if its not an AWS client or service error' do
+      target = double('Target')
+      allow(target).to receive(:foo).and_raise(ArgumentError)
+      proxy = Hailstorm::Support::AwsAdapter::ExceptionTranslationProxy.new(target)
+      expect { proxy.foo }.to raise_error(ArgumentError)
     end
   end
 end

@@ -74,10 +74,9 @@ Then(/^custom properties should be added$/) do
 end
 
 After do |scenario|
-  if scenario.source_tag_names.include?('@terminate_instance') && @load_agent
-    ec2 = ec2_resource(region: @aws.region)
-    ec2_instance = ec2.instances(instance_ids: [@load_agent.identifier]).first
-    ec2_instance&.terminate
+  if scenario.source_tag_names.include?('@terminate_instance') && @aws
+    terminate_agents(@aws.region, @load_agent) if @load_agent
+    terminate_agents(@aws.region, @project.load_agents) if @project
     @aws.cleanup
   end
 end

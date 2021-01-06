@@ -3,7 +3,7 @@
 require 'hailstorm/model/concern'
 
 # Method implementations for `Provisionable` interface
-module Hailstorm::Model::Concern::ProvisionableHelper
+module Hailstorm::Model::Concern::AbstractProvisionable
 
   # start the agent and update agent ip_address and identifier
   def start_agent(load_agent)

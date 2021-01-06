@@ -28,7 +28,8 @@ class Hailstorm::Model::Helper::AmiProvisionHelper
                                                    .with(:jmeter_version, self.jmeter_version)
 
     installer.install do |instr|
-      ssh.exec!(instr)
+      result = ssh.exec!(instr)
+      raise(Hailstorm::JMeterInstallationException.new(self.region, result)) if result.exitstatus.to_i != 0
     end
   end
 

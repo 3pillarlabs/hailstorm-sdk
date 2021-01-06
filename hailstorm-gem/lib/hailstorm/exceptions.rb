@@ -2,8 +2,29 @@
 
 module Hailstorm
 
+  # An exception class should include this module if it represents a temporary failure that should be retried.
+  module TemporaryFailure
+
+    # Indicates the number of milliseconds a client should wait before trying again.
+    # Override this to increase or decrease the advised time.
+    DEFAULT_RETRY_WAIT_MS = 3000
+
+    attr_writer :retry_after_ms
+
+    def retry_after_ms
+      @retry_after_ms ||= DEFAULT_RETRY_WAIT_MS
+    end
+
+    def retryable?
+      true
+    end
+  end
+
   # Subclass or use this for exceptions in workflow
   class Exception < StandardError
+    def retryable?
+      false
+    end
   end
 
   # Exception for threading issues.
@@ -64,6 +85,8 @@ module Hailstorm
 
   # Agent could not be created
   class AgentCreationFailure < DiagnosticAwareException
+    include TemporaryFailure
+
     def diagnostics
       %(One or more agents could not be prepared for load generation.
         This can happen due to issues in your cluster(Amazon or data-center)
@@ -73,8 +96,10 @@ module Hailstorm
 
   # Issues with AMI creation
   class AmiCreationFailure < DiagnosticAwareException
+    include TemporaryFailure
 
     attr_reader :region, :reason
+    attr_writer :retryable
 
     # @param [String] region
     # @param [Struct] reason reason(code, message)
@@ -83,6 +108,7 @@ module Hailstorm
 
       @region = region
       @reason = reason
+      @retryable = false
     end
 
     def diagnostics
@@ -90,10 +116,15 @@ module Hailstorm
         from Amazon is #{reason ? "[#{reason.code}] #{reason.message}" : 'unknown'}. The Amazon services for the
         affected region may be down. You can try the 'setup force' command. If the problem persists, report the issue.)
     end
+
+    def retryable?
+      @retryable
+    end
   end
 
   # Data center issues
   class DataCenterAccessFailure < DiagnosticAwareException
+    include TemporaryFailure
 
     attr_reader :agent_machine, :user_name, :ssh_identity
 
@@ -161,10 +192,19 @@ module Hailstorm
 
       @region = region
       @reason = reason
+      @retryable = true
     end
 
     def diagnostics
       %(Hailstorm cannot install JRE from the configured installer on region #{@region}: #{@reason})
+    end
+  end
+
+  # JMeter installation issues
+  class JMeterInstallationException < JavaInstallationException
+
+    def diagnostics
+      %(Hailstorm cannot install JMeter from the configured installer on region #{@region}: #{@reason})
     end
   end
 

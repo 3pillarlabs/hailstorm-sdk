@@ -20,7 +20,7 @@ class Hailstorm::Support::Thread
       yield(*thread_args)
     rescue Object => e
       logger.error(e.message) unless e.is_a?(Hailstorm::Exception)
-      logger.debug { "\n".concat(e.backtrace.join("\n")) }
+      logger.debug { e.backtrace.prepend("\n").join("\n") }
       raise
     ensure
       ActiveRecord::Base.connection.close

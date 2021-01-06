@@ -7,8 +7,8 @@ require 'hailstorm/behavior/clusterable'
 require 'hailstorm/behavior/provisionable'
 require 'hailstorm/behavior/sshable'
 require 'hailstorm/model/helper/amazon_cloud_defaults'
-require 'hailstorm/model/concern/clusterable_helper'
-require 'hailstorm/model/concern/provisionable_helper'
+require 'hailstorm/model/concern/abstract_clusterable'
+require 'hailstorm/model/concern/abstract_provisionable'
 require 'hailstorm/support/ssh'
 require 'hailstorm/support/waiter'
 require 'hailstorm/support/aws_adapter'
@@ -80,8 +80,8 @@ class Hailstorm::Model::AmazonCloud < ActiveRecord::Base
                                             client_group: client_group)
   end
 
-  include Hailstorm::Model::Concern::ClusterableHelper
-  include Hailstorm::Model::Concern::ProvisionableHelper
+  include Hailstorm::Model::Concern::AbstractClusterable
+  include Hailstorm::Model::Concern::AbstractProvisionable
 
   ######################### PRIVATE METHODS ####################################
   private

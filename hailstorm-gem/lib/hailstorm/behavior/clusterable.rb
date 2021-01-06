@@ -72,7 +72,7 @@ module Hailstorm::Behavior::Clusterable
       rescue Exception => e
         raise(e) if e.is_a?(Hailstorm::Exception)
 
-        logger.debug(e.message)
+        logger.error(e.message)
         logger.debug { e.backtrace.prepend("\n").join("\n") }
         raise(Hailstorm::AgentCreationFailure)
       end
@@ -147,17 +147,11 @@ module Hailstorm::Behavior::Clusterable
           yield agent_instance if block_given?
           agent_instance.save!
           mutex.synchronize { activated_agents.push(agent_instance) }
-        rescue Hailstorm::Exception => e
-          logger.warn(e.message)
         end
       else
-        begin
-          yield agent if block_given?
-          agent.save!
-          activated_agents.push(agent)
-        rescue Hailstorm::Exception => e
-          logger.warn(e.message)
-        end
+        yield agent if block_given?
+        agent.save!
+        activated_agents.push(agent)
       end
     end
   end

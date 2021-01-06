@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'hailstorm/model/concern/provisionable_helper'
+require 'hailstorm/model/concern/abstract_provisionable'
 require 'hailstorm/model/amazon_cloud'
 
-describe Hailstorm::Model::Concern::ProvisionableHelper do
+describe Hailstorm::Model::Concern::AbstractProvisionable do
   # @param [Hailstorm::Model::AmazonCloud] aws
   def stub_aws!(aws)
     allow(aws).to receive(:identity_file_exists)

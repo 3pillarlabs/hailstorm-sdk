@@ -106,8 +106,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
     end
 
     # Configures the cluster implementation for use
-    # @param [Hailstorm::Support::Configuration::ClusterBase] cluster_config cluster
-    #   specific configuration instance
+    # @param [Hailstorm::Support::Configuration::ClusterBase] cluster_config cluster specific configuration instance
     def configure(cluster_config, force: false)
       logger.debug { "#{self.class}##{__method__}" }
       # cluster specific attributes
