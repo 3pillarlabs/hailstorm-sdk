@@ -52,6 +52,33 @@ describe Hailstorm::Support::SSH do
           allow(Net::SSH).to receive(:start).and_raise(IOError)
           expect(@ssh_attempt).to raise_error
         end
+
+        context 'when connection refused' do
+          it 'should raise non-retryable exception' do
+            allow(Net::SSH).to receive(:start).and_raise(Errno::ECONNREFUSED)
+            expect(@ssh_attempt).to raise_error(Hailstorm::SSHException) do |error|
+              expect(error).to_not be_retryable
+            end
+          end
+        end
+
+        context 'when connection times out' do
+          it 'should raise retryable exception' do
+            allow(Net::SSH).to receive(:start).and_raise(Net::SSH::ConnectionTimeout)
+            expect(@ssh_attempt).to raise_error(Hailstorm::SSHException) do |error|
+              expect(error).to be_retryable
+            end
+          end
+        end
+
+        context 'when io error occurs' do
+          it 'should raise retryable exception' do
+            allow(Net::SSH).to receive(:start).and_raise(IOError)
+            expect(@ssh_attempt).to raise_error(Hailstorm::SSHException) do |error|
+              expect(error).to be_retryable
+            end
+          end
+        end
       end
     end
   end

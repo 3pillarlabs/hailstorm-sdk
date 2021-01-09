@@ -22,8 +22,17 @@ module Hailstorm
 
   # Subclass or use this for exceptions in workflow
   class Exception < StandardError
+    include TemporaryFailure
+
+    attr_writer :retryable
+
+    def initialize(msg = nil)
+      super
+      @retryable = false
+    end
+
     def retryable?
-      false
+      @retryable
     end
   end
 
@@ -237,4 +246,7 @@ module Hailstorm
       "Jmeter is still running! Run 'abort' if you really mean to stop."
     end
   end
+
+  # Hailstorm SSH Exception
+  class SSHException < Hailstorm::Exception; end
 end

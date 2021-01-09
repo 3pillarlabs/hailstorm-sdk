@@ -5,6 +5,7 @@ require 'net/sftp'
 require 'hailstorm/support'
 require 'hailstorm/behavior/loggable'
 require 'hailstorm/behavior/ssh_connection'
+require 'hailstorm/exceptions'
 
 # SSH support for Hailstorm
 # @author Sayantam Dey
@@ -16,23 +17,36 @@ class Hailstorm::Support::SSH
 
   # Module for common retry logic. This is internal API.
   module RetryLogic
+    BASE_FACTOR = 3
+
     def self.retry_till_error(retry_limit:,
                               retry_base_delay:,
                               on_error: nil, on_retry: nil, &block)
       retry_attempts = 0
       begin
         block.call
-      rescue Errno::ECONNREFUSED, Net::SSH::ConnectionTimeout, IOError
-        if retry_attempts >= retry_limit
-          on_error&.call(retry_attempts)
-          raise
-        end
-
-        wait_time = 3**retry_attempts * retry_base_delay
-        on_retry&.call(retry_attempts + 1, wait_time)
-        sleep(wait_time)
+      rescue Errno::ECONNREFUSED, Net::SSH::ConnectionTimeout, IOError => error
+        raise_after_max_tries(error, on_error, retry_attempts, retry_limit)
+        retry_till_max_tries(on_retry, retry_attempts, retry_base_delay)
         retry_attempts += 1
         retry
+      end
+    end
+
+    private
+
+    def self.retry_till_max_tries(on_retry, retry_attempts, retry_base_delay)
+      wait_time = BASE_FACTOR ** retry_attempts * retry_base_delay
+      on_retry&.call(retry_attempts + 1, wait_time)
+      sleep(wait_time)
+    end
+
+    def self.raise_after_max_tries(error, on_error, retry_attempts, retry_limit)
+      if retry_attempts >= retry_limit
+        on_error&.call(retry_attempts)
+        exception = Hailstorm::SSHException.new(error.message)
+        exception.retryable = !error.is_a?(Errno::ECONNREFUSED)
+        raise(exception)
       end
     end
   end

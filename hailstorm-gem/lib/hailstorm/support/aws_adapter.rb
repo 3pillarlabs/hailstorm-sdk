@@ -6,7 +6,7 @@ require 'delegate'
 require 'hailstorm/behavior/loggable'
 require 'hailstorm/behavior/aws_adaptable'
 require 'ostruct'
-require 'hailstorm/support/aws_adapter_clients/aws_exception'
+require 'hailstorm/support/aws_exception_builder'
 
 # AWS SDK adapter.
 # Route all calls to AWS SDK through this adapter.
@@ -39,7 +39,7 @@ class Hailstorm::Support::AwsAdapter
     def method_missing(symbol, *args)
       target.send(symbol, *args)
     rescue Aws::Errors::ServiceError => aws_error
-      raise(Hailstorm::AwsException.from(aws_error))
+      raise(Hailstorm::Support::AwsExceptionBuilder.from(aws_error))
     end
 
     def respond_to_missing?(*args)

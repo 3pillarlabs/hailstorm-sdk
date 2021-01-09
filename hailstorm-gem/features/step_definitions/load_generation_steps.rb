@@ -1,7 +1,7 @@
 require 'hailstorm/model/amazon_cloud'
 require 'hailstorm/model/data_center'
 require 'hailstorm/model/master_agent'
-require 'hailstorm/support/aws_adapter_clients/aws_exception'
+require 'hailstorm/support/aws_exception_builder'
 
 include AwsHelper
 
@@ -32,7 +32,7 @@ end
 Then(/^the (?:exception|error) should (not |)suggest a time period to wait before trying again$/) do |no_retry|
   RSpec::Mocks.with_temporary_scope do
     mock_aws_error = double('Aws::Errors::ServiceError', message: 'mock_error', retryable?: @temporary_failure)
-    aws_exception = Hailstorm::AwsException.from(mock_aws_error)
+    aws_exception = Hailstorm::Support::AwsExceptionBuilder.from(mock_aws_error)
     fail_once = true
     fail_once_lock = Mutex.new
     if @load_agent_failure

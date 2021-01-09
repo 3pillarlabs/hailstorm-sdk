@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'hailstorm/support/aws_adapter_clients/aws_exception'
-
 # AWS KeyPair adapter
 class Hailstorm::Support::AwsAdapter::KeyPairClient < Hailstorm::Support::AwsAdapter::AbstractClient
   include Hailstorm::Behavior::AwsAdaptable::KeyPairClient
