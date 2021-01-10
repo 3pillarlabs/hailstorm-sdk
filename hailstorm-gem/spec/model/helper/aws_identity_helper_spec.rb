@@ -32,5 +32,22 @@ describe Hailstorm::Model::Helper::AwsIdentityHelper do
         @helper.validate_or_create_identity
       end
     end
+
+    context 'eventually consistent delete' do
+      it 'should wait till the key no longer exists' do
+        states = [@mock_key_pair, @mock_key_pair, @mock_key_pair, @mock_key_pair, @mock_key_pair, @mock_key_pair, nil]
+        expect(@helper).to receive(:wait_for) do |_msg, &block|
+          while true
+            result = block.call
+            break if result
+          end
+        end
+        states_ite = states.each
+        allow(@mock_key_pair_client).to receive(:find) { states_ite.next }
+        expect(@mock_key_pair_client).to receive(:delete)
+        expect(@helper).to receive(:create_key_pair)
+        @helper.validate_or_create_identity
+      end
+    end
   end
 end

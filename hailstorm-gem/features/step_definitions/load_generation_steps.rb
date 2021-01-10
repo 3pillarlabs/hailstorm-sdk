@@ -36,6 +36,20 @@ Then(/^the (?:exception|error) should (not |)suggest a time period to wait befor
     fail_once = true
     fail_once_lock = Mutex.new
     if @load_agent_failure
+      allow_any_instance_of(Hailstorm::Model::MasterAgent).to receive(:execute_jmeter_command) do |agent|
+        agent.update_column(:jmeter_pid, 123456)
+      end
+
+      allow_any_instance_of(Hailstorm::Model::AmazonCloud).to receive(:create_agent_ami) do |amz_cloud|
+        amz_cloud.agent_ami = 'ami-03cbb521ac9517d1e'
+      end
+
+      allow_any_instance_of(Hailstorm::Model::AmazonCloud).to receive(:assign_vpc_subnet) do |amz_cloud|
+        amz_cloud.vpc_subnet_id = 'subnet-1234'
+      end
+
+      allow_any_instance_of(Hailstorm::Model::AmazonCloud).to receive(:create_security_group)
+
       allow_any_instance_of(Hailstorm::Model::AmazonCloud).to receive(:start_agent) do |_amz_cloud, _load_agent|
         fail_once_lock.synchronize do
           if fail_once
@@ -49,9 +63,14 @@ Then(/^the (?:exception|error) should (not |)suggest a time period to wait befor
     end
 
     begin
+      @project.settings_modified = true
       @project.start(config: @hailstorm_config)
     rescue StandardError => error
-      real_error = error.is_a?(Hailstorm::ThreadJoinException) ? error.exceptions.first : error
+      real_error = error
+      while real_error.is_a?(Hailstorm::ThreadJoinException) do
+        real_error = real_error.exceptions.first
+      end
+
       if no_retry.blank?
         expect(real_error).to be_retryable
       else
@@ -75,7 +94,7 @@ Given(/^each cluster has (\d+) load agents$/) do |agent_count|
 end
 
 Then(/^the other load agents should still be created$/) do
-  expect(@project.load_agents).to be > 0
+  expect(@project.load_agents.count).to be > 0
 end
 
 Given(/^Data center is correctly configured with multiple agents$/) do

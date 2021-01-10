@@ -29,4 +29,5 @@ Feature: Handle load generation failure on Amazon Cloud
     And Cluster is correctly configured in 'us-east-2'
     And each cluster has 2 load agents
     When load generation fails due to a temporary AWS instance failure
-    Then the other load agents should still be created
+    Then the exception should suggest a time period to wait before trying again
+    And the other load agents should still be created

@@ -2,10 +2,12 @@
 
 require 'hailstorm/model/helper'
 require 'hailstorm/behavior/loggable'
+require 'hailstorm/support/waiter'
 
 # Helper for SSH identity
 class Hailstorm::Model::Helper::AwsIdentityHelper
   include Hailstorm::Behavior::Loggable
+  include Hailstorm::Support::Waiter
 
   attr_reader :identity_file_path, :ssh_identity, :key_pair_client
 
@@ -24,6 +26,9 @@ class Hailstorm::Model::Helper::AwsIdentityHelper
     if key_pair_id
       key_pair_client.delete(key_pair_id: key_pair_id)
       logger.warn("Unusable key_pair '#{key_pair_id}' was deleted")
+      wait_for("Waiting for #{key_pair_id} to be deleted...") do
+        key_pair_client.find(name: self.ssh_identity).nil?
+      end
     end
 
     create_key_pair
