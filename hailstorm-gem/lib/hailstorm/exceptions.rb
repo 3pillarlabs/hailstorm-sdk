@@ -248,5 +248,8 @@ module Hailstorm
   end
 
   # Hailstorm SSH Exception
-  class SSHException < Hailstorm::Exception; end
+  class SSHException < Exception; end
+
+  # Auto-retry failure.
+  class AutoRetryFailure < Exception; end
 end

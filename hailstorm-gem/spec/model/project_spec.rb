@@ -173,8 +173,82 @@ describe Hailstorm::Model::Project do
         allow(project).to receive(:settings_modified?).and_return(false)
         allow(Hailstorm::Model::TargetHost).to receive(:monitor_all).and_raise(Hailstorm::Exception)
         allow(Hailstorm::Model::Cluster).to receive(:generate_all_load).and_raise(Hailstorm::Exception)
+        allow(Hailstorm::Model::Cluster).to receive(:stop_load_generation)
+        allow(project).to receive(:jmeter_running_on_all?).and_return(false)
+        allow(Hailstorm::Model::TargetHost).to receive(:stop_all_monitoring)
         expect { project.start(config: @mock_config) }.to raise_error(Hailstorm::Exception)
         expect(project.execution_cycles.order(started_at: :desc).first.status.to_sym).to be == :aborted
+      end
+
+      context 'abort on target monitoring or load generation' do
+        before(:each) do
+          @project = Hailstorm::Model::Project.create!(project_code: 'project_spec')
+          allow(@project).to receive(:settings_modified?).and_return(false)
+          allow(Hailstorm::Model::TargetHost).to receive(:monitor_all)
+          allow(Hailstorm::Model::Cluster).to receive(:generate_all_load).and_raise(Hailstorm::Exception)
+        end
+
+        context 'fails with retryable error' do
+          before(:each) do
+            @retryable_error = Hailstorm::SSHException.new('mock error')
+            @retryable_error.retryable = true
+          end
+
+          it 'should auto-retry abort' do
+            states = [@retryable_error, nil]
+            states_ite = states.each
+            expect(@project).to receive(:stop).exactly(states.size).times do
+              error = states_ite.next
+              raise(error) if error
+            end
+
+            expect { @project.start(config: @mock_config) }.to raise_error(Hailstorm::Exception)
+          end
+
+          context 'fails more than maximum attempts' do
+            before(:each) do
+              expect(@project).to receive(:stop)
+                                    .exactly(Hailstorm::Model::Project::MAX_ABORT_ATTEMPTS + 1).times
+                                    .and_raise(@retryable_error)
+            end
+
+            it 'should raise a non-retryable exception' do
+              expect { @project.start(config: @mock_config) }.to raise_error(Hailstorm::AutoRetryFailure) do |error|
+                expect(error).to_not be_retryable
+              end
+            end
+
+            it 'should abort current execution cycle' do
+              expect { @project.start(config: @mock_config) }.to raise_error(Hailstorm::AutoRetryFailure)
+              expect(@project.execution_cycles.order(started_at: :desc).first.status.to_sym).to be == :aborted
+            end
+          end
+        end
+
+        context 'fails with non-retryable error' do
+          before(:each) do
+            expect(@project).to receive(:stop).and_raise(Hailstorm::Exception, 'mock non-retryable error')
+          end
+
+          it 'should raise the non-retryable exception' do
+            expect { @project.start(config: @mock_config) }.to raise_error(Hailstorm::Exception) do |error|
+              expect(error).to_not be_retryable
+            end
+          end
+
+          it 'should abort current execution cycle' do
+            expect { @project.start(config: @mock_config) }.to raise_error(Hailstorm::Exception)
+            expect(@project.execution_cycles.order(started_at: :desc).first.status.to_sym).to be == :aborted
+          end
+        end
+
+        context 'fails with an exception outside of Hailstorm hierarchy' do
+          it 'should abort current execution cycle' do
+            expect(@project).to receive(:stop).and_raise(NoMemoryError, 'mock out of memory error')
+            expect { @project.start(config: @mock_config) }.to raise_error(NoMemoryError)
+            expect(@project.execution_cycles.order(started_at: :desc).first.status.to_sym).to be == :aborted
+          end
+        end
       end
     end
   end
