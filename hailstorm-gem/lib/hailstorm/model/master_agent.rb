@@ -20,8 +20,8 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
   def stop_jmeter(wait: false, aborted: false, doze_time: 60)
     logger.debug { "#{self.class}##{__method__}" }
     unless jmeter_running?
-      raise(Hailstorm::Exception,
-            "Jmeter is not running on #{self.identifier}##{self.public_ip_address}")
+      logger.warn "Jmeter is not running on #{self.identifier}##{self.public_ip_address}"
+      return
     end
 
     Hailstorm::Support::SSH.start(self.public_ip_address,
@@ -65,14 +65,19 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
     remote_file_path = "#{self.jmeter_plan.remote_log_dir}/#{remote_file_name}"
     local_file_path = File.join(local_log_path, local_file_name)
     local_compressed_file_path = "#{local_file_path}.gz"
+    log_downloaded = false
 
     Hailstorm::Support::SSH.start(self.public_ip_address, self.clusterable.user_name,
                                   self.clusterable.ssh_options) do |ssh|
 
-      ssh.exec!("gzip -q #{remote_file_path}") # downloading a compressed file is orders of magnitude faster than raw
-      ssh.download("#{remote_file_path}.gz", local_compressed_file_path)
+      if ssh.file_exists?(remote_file_path)
+        ssh.exec!("gzip -q #{remote_file_path}") # downloading a compressed file is orders of magnitude faster than raw
+        ssh.download("#{remote_file_path}.gz", local_compressed_file_path)
+        log_downloaded = true
+      end
     end
-    gunzip_file(local_compressed_file_path, local_file_path)
+
+    gunzip_file(local_compressed_file_path, local_file_path) if log_downloaded
     local_file_name
   end
 

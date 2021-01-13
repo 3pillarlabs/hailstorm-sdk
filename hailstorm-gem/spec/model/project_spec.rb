@@ -160,6 +160,59 @@ describe Hailstorm::Model::Project do
         expect(project.current_execution_cycle.status.to_sym).to be == :started
       end
 
+      it 'should update estimated threads in the current execution cycle' do
+        project = Hailstorm::Model::Project.create!(project_code: 'project_spec')
+        allow(project).to receive(:settings_modified?).and_return(false)
+        expect(Hailstorm::Model::TargetHost).to receive(:monitor_all)
+        expect(Hailstorm::Model::Cluster).to receive(:generate_all_load)
+
+        Hailstorm::Model::JmeterPlan.create!(
+          project: project,
+          test_plan_name: 'a',
+          content_hash: 'A',
+          active: false,
+          properties: '{}',
+          latest_threads_count: 100
+        ).update_column(:active, true)
+
+        Hailstorm::Model::JmeterPlan.create!(
+          project: project,
+          test_plan_name: 'b',
+          content_hash: 'B',
+          active: false,
+          properties: '{}',
+          latest_threads_count: 100
+        ).update_column(:active, true)
+
+        amz_cloud = Hailstorm::Model::AmazonCloud.create!(
+          project: project,
+          access_key: 'A',
+          secret_key: 'a',
+          active: false
+        )
+
+        amz_cloud.update_column(:active, true)
+        Hailstorm::Model::Cluster.create!(project: project,
+                                          cluster_type: amz_cloud.class.name,
+                                          clusterable_id: amz_cloud.id)
+
+        dc = Hailstorm::Model::DataCenter.create!(
+          project: project,
+          user_name: 'root',
+          machines: %W[172.16.0.1 172.16.0.2 172.16.0.3],
+          ssh_identity: 'foo_fighters',
+          active: false
+        )
+
+        dc.update_column(:active, true)
+        Hailstorm::Model::Cluster.create!(project: project,
+                                          cluster_type: dc.class.name,
+                                          clusterable_id: dc.id)
+
+        project.start(config: @mock_config)
+        expect(project.current_execution_cycle.threads_count).to be == ((100 + 100) * 2)
+      end
+
       it 'should raise error if setup fails' do
         project = Hailstorm::Model::Project.create!(project_code: 'project_spec')
         allow(project).to receive(:settings_modified?).and_return(true)
