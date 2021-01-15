@@ -1,7 +1,7 @@
 import React from 'react';
 import { shallow, ShallowWrapper, mount, ReactWrapper } from 'enzyme';
 import { ControlPanel, ButtonStateLookup } from './ControlPanel';
-import { Project } from '../domain';
+import { InterimProjectState, Project } from '../domain';
 import { ToolBarProps } from './ToolBar';
 import { ExecutionCycleGridProps } from './ExecutionCycleGrid';
 import { AppStateContext } from '../appStateContext';
@@ -103,6 +103,17 @@ describe('<ControlPanel />', () => {
       const project = projectFixture({autoStop: true, running: false});
       const toolBarWrapper = componentFixture(project).find('#toolBar');
       expect(toolBarWrapper.find('button#start')).not.toBeDisabled();
+      expect(toolBarWrapper.find('button#stop')).toBeDisabled();
+      expect(toolBarWrapper.find('button#abort')).toBeDisabled();
+    });
+  });
+
+  describe('when project has any interim action ongoing', () => {
+    it('should disable start, stop and abort buttons', () => {
+      const project = projectFixture({autoStop: false, running: false});
+      project.interimState = InterimProjectState.STARTING;
+      const toolBarWrapper = componentFixture(project).find('#toolBar');
+      expect(toolBarWrapper.find('button#start')).toBeDisabled();
       expect(toolBarWrapper.find('button#stop')).toBeDisabled();
       expect(toolBarWrapper.find('button#abort')).toBeDisabled();
     });

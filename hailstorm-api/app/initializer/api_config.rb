@@ -55,7 +55,7 @@ require 'hailstorm/exceptions'
 # @param [StandardError] error
 def log_error_backtrace(error)
   logger.error(error.message)
-  logger.error(error.backtrace.join("\n"))
+  logger.error(error.backtrace.join("\n")) if error.backtrace
 end
 
 error StandardError do
@@ -65,5 +65,5 @@ error StandardError do
     bubbled_error.exceptions.each { |inner_error| log_error_backtrace(inner_error) }
   end
 
-  500
+  bubbled_error.is_a?(Hailstorm::Exception) && bubbled_error.retryable? ? 503 : 500
 end
