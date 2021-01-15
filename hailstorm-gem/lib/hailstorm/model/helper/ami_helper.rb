@@ -92,6 +92,8 @@ class Hailstorm::Model::Helper::AmiHelper
     logger.debug { "status: #{instance.status}" }
     wait_for("Instance #{instance.id} to terminate",
              err_attrs: { region: aws_clusterable.region }) { instance_client.terminated?(instance_id: instance.id) }
+  rescue StandardError => error
+    logger.warn(error.message)
   end
 
   # @return [Boolean] true if agent AMI should be created
@@ -152,9 +154,11 @@ class Hailstorm::Model::Helper::AmiHelper
       wait_for("Hailstorm AMI #{ami_id} on #{aws_clusterable.region} to be created") do
         ami_client.available?(ami_id: new_ami_id)
       end
-    rescue Hailstorm::Exception
+    rescue Hailstorm::Exception => error
       ami = ami_client.find(ami_id: new_ami_id)
-      raise(Hailstorm::AmiCreationFailure.new(aws_clusterable.region, ami.state_reason))
+      ami_error = Hailstorm::AmiCreationFailure.new(aws_clusterable.region, ami.state_reason)
+      ami_error.retryable = error.retryable?
+      raise(ami_error)
     end
 
     new_ami_id

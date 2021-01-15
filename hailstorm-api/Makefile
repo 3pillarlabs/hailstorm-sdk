@@ -71,3 +71,13 @@ validate:
 
 lint:
 	bundle exec rubocop
+
+integration_test_bed_up:
+	set -ev
+	cd ../ && docker-compose -f docker-compose.yml -f docker-compose.dc-sim.yml -f docker-compose.web-ci.yml up -d \
+	hailstorm-agent-1 hailstorm-agent-2 file-server hailstorm-db hailstorm-mq client-exchange
+
+
+integration_test_bed_down:
+	set -ev
+	cd ../ && docker-compose -f docker-compose.yml -f docker-compose.dc-sim.yml -f docker-compose.web-ci.yml down

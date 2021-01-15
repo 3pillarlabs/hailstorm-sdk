@@ -25,37 +25,60 @@ describe Hailstorm::Support::SSH do
         expect(ssh).to be_kind_of(Hailstorm::Support::SSH::ConnectionSessionInstanceMethods)
       end
     end
-  end
 
-  context '.ensure_connection' do
-    before(:each) do
-      # @mock_net_ssh = instance_double(Net::SSH)
-      allow(Hailstorm::Support::SSH).to receive(:start).and_yield(@mock_net_ssh)
-    end
-    context 'connect established' do
-      it 'should return true' do
-        allow(@mock_net_ssh).to receive(:exec!)
-        expect(Hailstorm::Support::SSH.ensure_connection('example.com', 'ubuntu')).to be true
-      end
-    end
-
-    context 'connection not established in first attempt but within maximum attempts' do
-      it 'should return true' do
-        states = [Errno::ECONNREFUSED, Net::SSH::ConnectionTimeout, true].each
-        allow(@mock_net_ssh).to receive(:exec!) do
-          state = states.next
-          raise(state) unless state.is_a?(TrueClass)
+    context 'when first attempt fails' do
+      before(:each) do
+        @ssh_attempt = proc do
+          Hailstorm::Support::SSH.start('example.com', 'ubuntu', retry_limit: 5, retry_base_delay: 0)
         end
-        expect(Hailstorm::Support::SSH.ensure_connection('example.com', 'ubuntu',
-                                                         max_tries: 5,
-                                                         doze_time: 0)).to be true
       end
-    end
 
-    context 'connection not established after maximum attempts' do
-      it 'should return false' do
-        allow(@mock_net_ssh).to receive(:exec!).and_raise(Errno::ECONNREFUSED)
-        expect(Hailstorm::Support::SSH.ensure_connection('example.com', 'ubuntu', doze_time: 0)).to be false
+      context 'connection established within maximum attempts' do
+        it 'should not raise error' do
+          failures = [IOError, nil].each
+          allow(Net::SSH).to receive(:start) do
+            failure_reason = failures.next
+            raise(failure_reason) if failure_reason
+
+            @mock_net_ssh
+          end
+
+          expect(@ssh_attempt).to_not raise_error
+        end
+      end
+
+      context 'connection not established after maximum attempts' do
+        it 'should raise error' do
+          allow(Net::SSH).to receive(:start).and_raise(IOError)
+          expect(@ssh_attempt).to raise_error
+        end
+
+        context 'when connection refused' do
+          it 'should raise non-retryable exception' do
+            allow(Net::SSH).to receive(:start).and_raise(Errno::ECONNREFUSED)
+            expect(@ssh_attempt).to raise_error(Hailstorm::SSHException) do |error|
+              expect(error).to_not be_retryable
+            end
+          end
+        end
+
+        context 'when connection times out' do
+          it 'should raise retryable exception' do
+            allow(Net::SSH).to receive(:start).and_raise(Net::SSH::ConnectionTimeout)
+            expect(@ssh_attempt).to raise_error(Hailstorm::SSHException) do |error|
+              expect(error).to be_retryable
+            end
+          end
+        end
+
+        context 'when io error occurs' do
+          it 'should raise retryable exception' do
+            allow(Net::SSH).to receive(:start).and_raise(IOError)
+            expect(@ssh_attempt).to raise_error(Hailstorm::SSHException) do |error|
+              expect(error).to be_retryable
+            end
+          end
+        end
       end
     end
   end
@@ -130,25 +153,56 @@ describe Hailstorm::Support::SSH do
       end
     end
 
-    context '#upload' do
-      it 'should delegate to sftp sub system' do
-        local = '/foo/bar'
-        remote = '/baz/bar'
-        mock_sftp = instance_double(Net::SFTP::Session)
-        allow(@ssh).to receive(:sftp).and_return(mock_sftp)
-        expect(mock_sftp).to receive(:upload!).with(local, remote)
-        @ssh.upload(local, remote)
+    context 'sftp subsystem' do
+      before(:each) do
+        @local = '/foo/bar'
+        @remote = '/baz/bar'
+        @mock_sftp = instance_double(Net::SFTP::Session)
+        allow(@ssh).to receive(:sftp).and_return(@mock_sftp)
       end
-    end
 
-    context '#download' do
-      it 'should delegate to sftp sub system' do
-        local = '/foo/bar'
-        remote = '/baz/bar'
-        mock_sftp = instance_double(Net::SFTP::Session)
-        allow(@ssh).to receive(:sftp).and_return(mock_sftp)
-        expect(mock_sftp).to receive(:download!).with(remote, local)
-        @ssh.download(remote, local)
+      context '#upload' do
+        it 'should delegate to sftp sub system' do
+          expect(@mock_sftp).to receive(:upload!).with(@local, @remote)
+          @ssh.upload(@local, @remote)
+        end
+
+        it 'should try again on failure' do
+          failures = [IOError, nil].each
+          allow(@mock_sftp).to receive(:upload!) do
+            failure = failures.next
+            raise(failure) if failure
+          end
+
+          expect { @ssh.upload(@local, @remote, retry_base_delay: 0, retry_limit: 2) }.to_not raise_error
+        end
+
+        it 'should fail after maximum attempts are over' do
+          allow(@mock_sftp).to receive(:upload!).and_raise(IOError)
+          expect { @ssh.upload(@local, @remote, retry_base_delay: 0, retry_limit: 2) }.to raise_error
+        end
+      end
+
+      context '#download' do
+        it 'should delegate to sftp sub system' do
+          expect(@mock_sftp).to receive(:download!).with(@remote, @local)
+          @ssh.download(@remote, @local)
+        end
+
+        it 'should try again on failure' do
+          failures = [IOError, nil].each
+          allow(@mock_sftp).to receive(:download!) do
+            failure = failures.next
+            raise(failure) if failure
+          end
+
+          expect { @ssh.download(@remote, @local, retry_base_delay: 0, retry_limit: 2) }.to_not raise_error
+        end
+
+        it 'should fail after maximum attempts are over' do
+          allow(@mock_sftp).to receive(:download!).and_raise(IOError)
+          expect { @ssh.download(@remote, @local, retry_base_delay: 0, retry_limit: 2) }.to raise_error
+        end
       end
     end
 
@@ -185,6 +239,21 @@ describe Hailstorm::Support::SSH do
       it 'should be aliased to net_ssh_exec' do
         expect(@ssh).to receive(:net_ssh_exec)
         @ssh.exec('ls')
+      end
+
+      it 'should try again on failure' do
+        failures = [IOError, nil].each
+        allow(@ssh).to receive(:net_ssh_exec) do
+          failure = failures.next
+          raise(failure) if failure
+        end
+
+        expect { @ssh.exec('ls', retry_base_delay: 0, retry_limit: 2) }.to_not raise_error
+      end
+
+      it 'should fail after maximum attempts are over' do
+        allow(@ssh).to receive(:exec).and_raise(IOError)
+        expect { @ssh.exec('ls', retry_base_delay: 0, retry_limit: 2) }.to raise_error
       end
     end
   end

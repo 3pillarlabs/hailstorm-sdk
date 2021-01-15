@@ -8,10 +8,9 @@ class Hailstorm::Support::AwsAdapter::KeyPairClient < Hailstorm::Support::AwsAda
   def find(name:)
     resp = ec2.describe_key_pairs(key_names: [name])
     key_pair_info = resp.to_h[:key_pairs].first
-    key_pair_info ? key_pair_info[:key_pair_id] : nil
-  rescue Aws::EC2::Errors::ServiceError => service_error
-    logger.warn(service_error.message)
-    nil
+    key_pair_info[:key_pair_id] if key_pair_info
+  rescue Aws::EC2::Errors::InvalidKeyPairNotFound => not_found
+    logger.warn(not_found.message)
   end
 
   def delete(key_pair_id:)

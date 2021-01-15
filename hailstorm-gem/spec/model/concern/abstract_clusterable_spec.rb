@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'hailstorm/model/concern/clusterable_helper'
+require 'hailstorm/model/concern/abstract_clusterable'
 require 'hailstorm/model/amazon_cloud'
 
-describe Hailstorm::Model::Concern::ClusterableHelper do
+describe Hailstorm::Model::Concern::AbstractClusterable do
   # @param [Hailstorm::Model::AmazonCloud] aws
   def stub_aws!(aws)
     allow(aws).to receive(:secure_identity_file)

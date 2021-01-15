@@ -106,14 +106,14 @@ describe Hailstorm::Model::MasterAgent do
       end
     end
     context 'jmeter is not running' do
-      it 'should raise an error' do
-        expect { @master_agent.stop_jmeter }.to raise_error(Hailstorm::Exception)
+      it 'should not raise an error' do
+        expect { @master_agent.stop_jmeter }.to_not raise_error(Hailstorm::Exception)
       end
     end
   end
 
   context '#result_for' do
-    it 'should download and return local_file_name' do
+    before(:each) do
       @master_agent.public_ip_address = '123.45.6.78'
 
       jmeter_plan = Hailstorm::Model::JmeterPlan.new
@@ -125,13 +125,27 @@ describe Hailstorm::Model::MasterAgent do
       allow(clusterable).to receive(:ssh_options).and_return({})
       allow(@master_agent).to receive(:clusterable).and_return(clusterable)
 
-      mock_ssh = spy('Net::SSH::Connection::Session')
-      allow(Hailstorm::Support::SSH).to receive(:start).and_yield(mock_ssh)
-      allow(@master_agent).to receive(:gunzip_file)
+      @mock_ssh = spy('Net::SSH::Connection::Session')
+      allow(Hailstorm::Support::SSH).to receive(:start).and_yield(@mock_ssh)
+    end
 
+    it 'should download and return local_file_name' do
+      expect(@master_agent).to receive(:gunzip_file)
       local_file_name = @master_agent.result_for(instance_double(Hailstorm::Model::ExecutionCycle),
                                                  RSpec.configuration.build_path)
       expect(local_file_name).to be == 'results-234-1-123_45_6_78.jtl'
+      expect(@mock_ssh).to have_received(:file_exists?)
+    end
+
+    context 'remote file does not exist' do
+      it 'should not download the file' do
+        expect(@master_agent).to_not receive(:gunzip_file)
+        expect(@mock_ssh).to receive(:file_exists?).and_return(false)
+        local_file_name = @master_agent.result_for(instance_double(Hailstorm::Model::ExecutionCycle),
+                                                   RSpec.configuration.build_path)
+        expect(local_file_name).to be == 'results-234-1-123_45_6_78.jtl'
+        expect(@mock_ssh).to_not have_received(:download)
+      end
     end
   end
 

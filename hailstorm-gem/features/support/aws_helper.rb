@@ -44,4 +44,12 @@ module AwsHelper
   rescue Aws::Errors::ServiceError, ArgumentError
     []
   end
+
+  def terminate_agents(region, *load_agents)
+    ec2 = ec2_resource(region: region)
+    load_agents.each do |agent|
+      ec2_instance = ec2.instances(instance_ids: [agent.identifier]).first
+      ec2_instance&.terminate
+    end
+  end
 end

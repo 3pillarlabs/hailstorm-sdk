@@ -158,9 +158,8 @@ describe Hailstorm::Model::Helper::AmiHelper do
     end
 
     context 'on failure' do
-      it 'should raise exception' do
+      before(:each) do
         allow(@mock_ami_client).to receive(:register_ami).and_return('ami-123')
-        allow(@helper).to receive(:wait_for).and_raise(Hailstorm::Exception, 'mock waiter error')
         state_reason = Hailstorm::Behavior::AwsAdaptable::StateReason.new(code: '10',
                                                                           message: 'mock AMI creation failure')
         mock_ami = Hailstorm::Behavior::AwsAdaptable::Ami.new(state: 'failed',
@@ -168,11 +167,43 @@ describe Hailstorm::Model::Helper::AmiHelper do
                                                               name: 'hailstorm',
                                                               state_reason: state_reason)
         allow(@mock_ami_client).to receive(:find).and_return(mock_ami)
+      end
+
+      it 'should raise exception' do
+        allow(@helper).to receive(:wait_for).and_raise(Hailstorm::Exception, 'mock waiter error')
         expect { @helper.send(:register_hailstorm_ami, @mock_instance) }.to raise_error(Hailstorm::AmiCreationFailure)
         begin
           @helper.send(:register_hailstorm_ami, @mock_instance)
         rescue Hailstorm::AmiCreationFailure => e
           expect(e.diagnostics).to_not be_blank
+        end
+      end
+
+      context 'when failure is temporary' do
+        it 'should have a retryable predicated exception' do
+          failure = Hailstorm::AwsException.new('mock waiter error')
+          failure.retryable = true
+          allow(@helper).to receive(:wait_for).and_raise(failure)
+          expect { @helper.send(:register_hailstorm_ami, @mock_instance) }.to raise_error(Hailstorm::AmiCreationFailure)
+          begin
+            @helper.send(:register_hailstorm_ami, @mock_instance)
+          rescue Hailstorm::AmiCreationFailure => error
+            expect(error).to be_retryable
+          end
+        end
+      end
+
+      context 'when the current operation can not be retried' do
+        it 'should have an non retryable predicated exception' do
+          failure = Hailstorm::AwsException.new('mock waiter error')
+          failure.retryable = false
+          allow(@helper).to receive(:wait_for).and_raise(failure)
+          expect { @helper.send(:register_hailstorm_ami, @mock_instance) }.to raise_error(Hailstorm::AmiCreationFailure)
+          begin
+            @helper.send(:register_hailstorm_ami, @mock_instance)
+          rescue Hailstorm::AmiCreationFailure => error
+            expect(error).to_not be_retryable
+          end
         end
       end
     end

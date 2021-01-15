@@ -5,31 +5,80 @@ require 'net/sftp'
 require 'hailstorm/support'
 require 'hailstorm/behavior/loggable'
 require 'hailstorm/behavior/ssh_connection'
+require 'hailstorm/exceptions'
 
 # SSH support for Hailstorm
 # @author Sayantam Dey
 class Hailstorm::Support::SSH
-
   include Hailstorm::Behavior::Loggable
+
+  DEFAULT_RETRY_LIMIT = 5
+  DEFAULT_RETRY_BASE_DELAY = 3
+
+  # Module for common retry logic. This is internal API.
+  module RetryLogic
+    BASE_FACTOR = 3
+
+    def self.retry_till_error(retry_limit:,
+                              retry_base_delay:,
+                              on_error: nil, on_retry: nil, &block)
+      retry_attempts = 0
+      begin
+        block.call
+      rescue Errno::ECONNREFUSED, Net::SSH::ConnectionTimeout, IOError => error
+        raise_after_max_tries(error, on_error, retry_attempts, retry_limit)
+        retry_till_max_tries(on_retry, retry_attempts, retry_base_delay)
+        retry_attempts += 1
+        retry
+      end
+    end
+
+    def self.retry_till_max_tries(on_retry, retry_attempts, retry_base_delay)
+      wait_time = BASE_FACTOR**retry_attempts * retry_base_delay
+      on_retry&.call(retry_attempts + 1, wait_time)
+      sleep(wait_time)
+    end
+
+    def self.raise_after_max_tries(error, on_error, retry_attempts, retry_limit)
+      return unless retry_attempts >= retry_limit
+
+      on_error&.call(retry_attempts)
+      exception = Hailstorm::SSHException.new(error.message)
+      exception.retryable = !error.is_a?(Errno::ECONNREFUSED)
+      raise(exception)
+    end
+  end
 
   # Starts a new SSH connection. When a block is provided, the connection
   # is closed when the block terminates, otherwise the connection will be
   # returned.
   # @param [String] host host_name or ip_address
   # @param [String] user SSH user_name
-  # @param [Hash] options connection options, same as used by Net::SSH
+  # @param [Hash] options connection options, same as used by Net::SSH.
+  #               Additional options for retry logic: (3**attempts) * retry_base_delay
+  #                 retry_limit: maximum number of times to try connecting, default 5
+  #                 retry_base_delay: multiplier, default 3
   # @return [Net::SSH::Connection::Session] with
   #   Hailstorm::Support::SSH::ConnectionSessionInstanceMethods added
   def self.start(host, user, options = {})
     logger.debug { "#{self}.#{__method__}" }
-    ssh_options = { user_known_hosts_file: '/dev/null' }.merge(options)
-    if block_given?
-      Net::SSH.start(host, user, ssh_options) do |ssh|
-        yield extend_ssh(ssh)
+    ssh_options = { user_known_hosts_file: '/dev/null' }.merge(options.except(:retry_limit, :retry_base_delay))
+    start_has_block = block_given?
+    RetryLogic.retry_till_error(
+      retry_limit: options[:retry_limit] || DEFAULT_RETRY_LIMIT,
+      retry_base_delay: options[:retry_base_delay] || DEFAULT_RETRY_BASE_DELAY,
+      on_error: ->(v) { logger.error("Failed to connect to #{host} after a maximum of #{v} attempts") },
+      on_retry: ->(v, w) { logger.warn("Could not connect to #{host} (#{v}), trying again in #{w} seconds...") }
+    ) do
+
+      if start_has_block
+        Net::SSH.start(host, user, ssh_options) do |ssh|
+          yield extend_ssh(ssh)
+        end
+      else
+        ssh = Net::SSH.start(host, user, ssh_options)
+        extend_ssh(ssh)
       end
-    else
-      ssh = Net::SSH.start(host, user, ssh_options)
-      extend_ssh(ssh)
     end
   end
 
@@ -49,26 +98,14 @@ class Hailstorm::Support::SSH
   def self.ensure_connection(host, user, options = {})
     logger.debug { "#{self}.#{__method__}" }
     connection_obtained = false
-    max_tries = options[:max_tries] || 3
-    num_tries = 0
-    doze_time = options[:doze_time] || 1
-    while num_tries < max_tries
-      begin
-        self.start(host, user, options) do |ssh|
-          ssh.exec!('ls')
-          connection_obtained = true
-        end
-        break
-      rescue Errno::ECONNREFUSED, Net::SSH::ConnectionTimeout
-        logger.debug { "Failed #{num_tries + 1} times, trying again in #{doze_time} seconds..." }
-        sleep(doze_time)
-        doze_time *= 3
-        num_tries += 1
+    begin
+      self.start(host, user, options) do |ssh|
+        ssh.exec!('ls')
+        connection_obtained = true
       end
+    rescue Errno::ECONNREFUSED, Net::SSH::ConnectionTimeout, IOError
+      # Ignored
     end
-
-    logger.error("Giving up after trying #{num_tries + 1} times") unless connection_obtained
-
     connection_obtained
   end
 
@@ -81,7 +118,15 @@ class Hailstorm::Support::SSH
     #:nodoc:
     def exec(command, options = {}, &block)
       logger.debug { command }
-      net_ssh_exec(command, options, &block)
+      RetryLogic.retry_till_error(
+        retry_limit: options[:retry_limit] || DEFAULT_RETRY_LIMIT,
+        retry_base_delay: options[:retry_base_delay] || DEFAULT_RETRY_BASE_DELAY,
+        on_error: ->(v) { logger.error("Failed to exec to #{command} after a maximum of #{v} attempts") },
+        on_retry: ->(v, w) { logger.warn("Could not exec to #{command} (#{v}), trying again in #{w} seconds...") }
+      ) do
+
+        net_ssh_exec(command, options.except(:retry_limit, :retry_base_delay), &block)
+      end
     end
 
     # @param [String] file_path full path to file on remote system
@@ -143,14 +188,36 @@ class Hailstorm::Support::SSH
       self.exec!("mkdir #{directory}") unless directory_exists?(directory)
     end
 
-    def upload(local, remote)
+    def upload(local, remote, retry_base_delay: DEFAULT_RETRY_BASE_DELAY, retry_limit: DEFAULT_RETRY_LIMIT)
       logger.debug { "uploading... #{local} -> #{remote}" }
-      self.sftp.upload!(local, remote)
+      retry_handler = proc do |v, w|
+        logger.warn("Could not upload #{local} -> #{remote} (#{v}), trying again in #{w} seconds...")
+      end
+
+      RetryLogic.retry_till_error(
+        retry_limit: retry_limit,
+        retry_base_delay: retry_base_delay,
+        on_error: ->(v) { logger.error("Failed to upload #{local} -> #{remote} after maximum #{v} attempts") },
+        on_retry: retry_handler
+      ) do
+        self.sftp.upload!(local, remote)
+      end
     end
 
-    def download(remote, local)
+    def download(remote, local, retry_base_delay: DEFAULT_RETRY_BASE_DELAY, retry_limit: DEFAULT_RETRY_LIMIT)
       logger.debug { "downloading... #{local} <- #{remote}" }
-      self.sftp.download!(remote, local)
+      retry_handler = proc do |v, w|
+        logger.warn("Could not download #{local} <- #{remote} (#{v}), trying again in #{w} seconds...")
+      end
+
+      RetryLogic.retry_till_error(
+        retry_limit: retry_limit,
+        retry_base_delay: retry_base_delay,
+        on_error: ->(v) { logger.error("Failed to download #{local} <- #{remote} after maximum #{v} attempts") },
+        on_retry: retry_handler
+      ) do
+        self.sftp.download!(remote, local)
+      end
     end
 
     # Finds the process ID on remote host. If not found, nil is returned.
