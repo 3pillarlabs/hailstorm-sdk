@@ -36,23 +36,6 @@ module Hailstorm
     end
   end
 
-  # Exception for threading issues.
-  class ThreadJoinException < Exception
-
-    attr_reader :exceptions
-
-    # @param [Array] exceptions
-    def initialize(exceptions = [])
-      super
-
-      @exceptions = exceptions.is_a?(Array) ? exceptions : [exceptions]
-    end
-
-    def message
-      @message ||= exceptions.empty? ? super.message : exceptions.collect(&:message).join("\n")
-    end
-  end
-
   # Exception for unknown command
   class UnknownCommandException < Exception
   end
@@ -94,19 +77,17 @@ module Hailstorm
 
   # Agent could not be created
   class AgentCreationFailure < DiagnosticAwareException
-    include TemporaryFailure
+    prepend TemporaryFailure
 
     def diagnostics
       %(One or more agents could not be prepared for load generation.
-        This can happen due to issues in your cluster(Amazon or data-center)
-        or a misconfiguration. Try 'setup force'.)
+        This can happen due to temporary issues in your cluster(Amazon or data-center)
+        or a misconfiguration. Retry or if you are using the CLI, try 'setup force'.)
     end
   end
 
   # Issues with AMI creation
   class AmiCreationFailure < DiagnosticAwareException
-    include TemporaryFailure
-
     attr_reader :region, :reason
     attr_writer :retryable
 
@@ -122,18 +103,24 @@ module Hailstorm
 
     def diagnostics
       %(AMI could not be created in AWS region '#{region}'. The failure reason
-        from Amazon is #{reason ? "[#{reason.code}] #{reason.message}" : 'unknown'}. The Amazon services for the
-        affected region may be down. You can try the 'setup force' command. If the problem persists, report the issue.)
+        from Amazon is #{reason ? "[#{reason.code}] #{reason.message}" : 'unknown'}. #{retryable_segment}.
+        If you are using the CLI, you can try the 'setup force' command. If the problem persists, report the issue.)
     end
 
     def retryable?
       @retryable
     end
+
+    private
+
+    def retryable_segment
+      retryable? ? 'You can retry the operation' : 'There may be a configuration problem'
+    end
   end
 
   # Data center issues
   class DataCenterAccessFailure < DiagnosticAwareException
-    include TemporaryFailure
+    prepend TemporaryFailure
 
     attr_reader :agent_machine, :user_name, :ssh_identity
 
@@ -151,7 +138,7 @@ module Hailstorm
     def diagnostics
       %(HailStorm is not able to connect to agent##{agent_machine} using user name '#{user_name}'
       and ssh identity file '#{ssh_identity}'. System might not be running at the moment or
-      user and/or ssh identity used are not allowed to connect to specified machine.)
+      user and/or ssh identity used are not allowed to connect to specified machine. You can retry.)
     end
   end
 
@@ -161,7 +148,7 @@ module Hailstorm
 
     # @param [String] java_version
     def initialize(java_version)
-      super()
+      super
 
       @java_version = java_version
     end

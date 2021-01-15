@@ -11,7 +11,7 @@ require 'hailstorm/model/execution_cycle'
 require 'hailstorm/model/jmeter_installer_url_validator'
 require 'hailstorm/model/jmeter_version_validator'
 require 'hailstorm/support/jmeter_installer'
-require 'hailstorm/exceptions'
+require 'hailstorm/behavior/thread_join_exception'
 
 # Project model.
 # @author Sayantam Dey

@@ -147,11 +147,19 @@ describe 'api/projects' do
       end
 
       context Hailstorm::ThreadJoinException do
-        it 'should return 500 status' do
+        it 'should return 500 status if operation is not retryable' do
           thread_exception = Hailstorm::ThreadJoinException.new([StandardError.new('mock nested error')])
           allow_any_instance_of(Hailstorm::Model::Project).to receive(:stop).and_raise(thread_exception)
           @browser.patch("/projects/#{@project.id}", JSON.dump({ action: 'stop' }))
           expect(@browser.last_response).to be_server_error
+        end
+
+        it 'should return 503 status if operation should be tried again' do
+          temporary_error = Hailstorm::AgentCreationFailure.new('mock nested error')
+          thread_exception = Hailstorm::ThreadJoinException.new([temporary_error])
+          allow_any_instance_of(Hailstorm::Model::Project).to receive(:start).and_raise(thread_exception)
+          @browser.patch("/projects/#{@project.id}", JSON.dump({ action: 'start' }))
+          expect(@browser.last_response.status).to be == 503
         end
       end
     end

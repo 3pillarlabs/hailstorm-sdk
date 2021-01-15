@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'hailstorm/model/amazon_cloud'
 require 'hailstorm/model/data_center'
 require 'hailstorm/model/master_agent'
@@ -15,7 +17,7 @@ Given(/^JMeter is correctly configured$/) do
   end
 end
 
-  Given(/^Cluster is (in|)correctly configured in '([^']+)'$/) do |incorrectly, aws_region|
+Given(/^Cluster is (in|)correctly configured in '([^']+)'$/) do |incorrectly, aws_region|
   @hailstorm_config.clusters(:amazon_cloud) do |aws|
     aws.access_key, aws.secret_key = incorrectly.blank? ? aws_keys : %w[A s]
     aws.region = aws_region
@@ -37,7 +39,7 @@ Then(/^the (?:exception|error) should (not |)suggest a time period to wait befor
     fail_once_lock = Mutex.new
     if @load_agent_failure
       allow_any_instance_of(Hailstorm::Model::MasterAgent).to receive(:execute_jmeter_command) do |agent|
-        agent.update_column(:jmeter_pid, 123456)
+        agent.update_column(:jmeter_pid, 123_456)
       end
 
       allow_any_instance_of(Hailstorm::Model::AmazonCloud).to receive(:create_agent_ami) do |amz_cloud|
@@ -66,10 +68,7 @@ Then(/^the (?:exception|error) should (not |)suggest a time period to wait befor
       @project.settings_modified = true
       @project.start(config: @hailstorm_config)
     rescue StandardError => error
-      real_error = error
-      while real_error.is_a?(Hailstorm::ThreadJoinException) do
-        real_error = real_error.exceptions.first
-      end
+      real_error = error.is_a?(Hailstorm::ThreadJoinException) ? error.exceptions.first : error
 
       if no_retry.blank?
         expect(real_error).to be_retryable
@@ -94,7 +93,7 @@ Given(/^each cluster has (\d+) load agents$/) do |agent_count|
 end
 
 Then(/^the other load agents should still be created$/) do
-  expect(@project.load_agents.count).to be > 0
+  expect(@project.load_agents.count).to be_positive
 end
 
 Given(/^Data center is correctly configured with multiple agents$/) do
@@ -107,22 +106,23 @@ Given(/^Data center is correctly configured with multiple agents$/) do
 end
 
 When(/^load generation fails on one agent due to (missing Java or incorrect version|unreachable agent|missing JMeter or incorrect version)$/) do |error_kind|
-  case error_kind
-  when /missing Java or incorrect version/
-    @data_center_error = Hailstorm::DataCenterJavaFailure.new('1.6')
-  when /unreachable agent/
-    @data_center_error = Hailstorm::DataCenterAccessFailure.new('joe',
+  @data_center_error = case error_kind
+                       when /missing Java or incorrect version/
+                         Hailstorm::DataCenterJavaFailure.new('1.6')
+                       when /unreachable agent/
+                         Hailstorm::DataCenterAccessFailure.new('joe',
                                                                 '172.20.2.31',
                                                                 'hailstorm.pem')
-  when /missing JMeter or incorrect version/
-    @data_center_error = Hailstorm::DataCenterJMeterFailure.new('1.8')
-  else
-    @data_center_error = Hailstorm::Exception.new('unknown error')
-  end
+                       when /missing JMeter or incorrect version/
+                         Hailstorm::DataCenterJMeterFailure.new('1.8')
+                       else
+                         Hailstorm::Exception.new('unknown error')
+                       end
 end
 
 Then(/^other agents should be configured and saved$/) do
   RSpec::Mocks.with_temporary_scope do
+    expect(@project).to_not receive(:configure_target_hosts)
     allow_any_instance_of(Hailstorm::Model::DataCenter).to receive(:identity_file_ok).and_return(nil)
     allow_any_instance_of(Hailstorm::Model::MasterAgent).to receive(:upload_scripts)
     fail_once = true

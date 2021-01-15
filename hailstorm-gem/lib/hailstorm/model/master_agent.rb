@@ -71,8 +71,7 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
                                   self.clusterable.ssh_options) do |ssh|
 
       if ssh.file_exists?(remote_file_path)
-        ssh.exec!("gzip -q #{remote_file_path}") # downloading a compressed file is orders of magnitude faster than raw
-        ssh.download("#{remote_file_path}.gz", local_compressed_file_path)
+        compress_download(local_compressed_file_path, remote_file_path, ssh)
         log_downloaded = true
       end
     end
@@ -98,6 +97,11 @@ class Hailstorm::Model::MasterAgent < Hailstorm::Model::LoadAgent
   end
 
   private
+
+  def compress_download(local_compressed_file_path, remote_file_path, ssh)
+    ssh.exec!("gzip -q #{remote_file_path}") # downloading a compressed file is orders of magnitude faster than raw
+    ssh.download("#{remote_file_path}.gz", local_compressed_file_path)
+  end
 
   def slave_ip_addresses
     slaves.collect(&:private_ip_address)

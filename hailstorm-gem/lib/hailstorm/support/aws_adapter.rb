@@ -27,7 +27,7 @@ class Hailstorm::Support::AwsAdapter
   DEFAULT_RETRY_BASE_DELAY = 1.0
   DEFAULT_RETRY_LIMIT = 5
 
-
+  # Proxy for translating Aws library errors to Hailstorm Aws exception
   class ExceptionTranslationProxy
 
     attr_reader :target
@@ -37,13 +37,17 @@ class Hailstorm::Support::AwsAdapter
     end
 
     def method_missing(symbol, *args)
-      target.send(symbol, *args)
+      if target.respond_to?(symbol)
+        target.send(symbol, *args)
+      else
+        super
+      end
     rescue Aws::Errors::ServiceError => aws_error
       raise(Hailstorm::Support::AwsExceptionBuilder.from(aws_error))
     end
 
     def respond_to_missing?(*args)
-      target.respond_to?(*args)
+      target.respond_to?(*args) || super
     end
   end
 

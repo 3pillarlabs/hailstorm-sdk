@@ -33,21 +33,19 @@ class Hailstorm::Support::SSH
       end
     end
 
-    private
-
     def self.retry_till_max_tries(on_retry, retry_attempts, retry_base_delay)
-      wait_time = BASE_FACTOR ** retry_attempts * retry_base_delay
+      wait_time = BASE_FACTOR**retry_attempts * retry_base_delay
       on_retry&.call(retry_attempts + 1, wait_time)
       sleep(wait_time)
     end
 
     def self.raise_after_max_tries(error, on_error, retry_attempts, retry_limit)
-      if retry_attempts >= retry_limit
-        on_error&.call(retry_attempts)
-        exception = Hailstorm::SSHException.new(error.message)
-        exception.retryable = !error.is_a?(Errno::ECONNREFUSED)
-        raise(exception)
-      end
+      return unless retry_attempts >= retry_limit
+
+      on_error&.call(retry_attempts)
+      exception = Hailstorm::SSHException.new(error.message)
+      exception.retryable = !error.is_a?(Errno::ECONNREFUSED)
+      raise(exception)
     end
   end
 

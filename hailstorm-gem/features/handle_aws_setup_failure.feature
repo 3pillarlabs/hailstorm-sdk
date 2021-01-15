@@ -22,7 +22,6 @@ Feature: Handle load generation failure on Amazon Cloud
     When load generation fails due to a temporary AWS failure
     Then the exception should suggest a time period to wait before trying again
 
-  @terminate_instance
   Scenario: Load generation fails to start due to temporary failure to start an instance
     Given JMeter is correctly configured
     And Cluster is correctly configured in 'us-east-1'

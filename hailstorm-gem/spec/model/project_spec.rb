@@ -199,7 +199,7 @@ describe Hailstorm::Model::Project do
         dc = Hailstorm::Model::DataCenter.create!(
           project: project,
           user_name: 'root',
-          machines: %W[172.16.0.1 172.16.0.2 172.16.0.3],
+          machines: %w[172.16.0.1 172.16.0.2 172.16.0.3],
           ssh_identity: 'foo_fighters',
           active: false
         )
@@ -261,8 +261,8 @@ describe Hailstorm::Model::Project do
           context 'fails more than maximum attempts' do
             before(:each) do
               expect(@project).to receive(:stop)
-                                    .exactly(Hailstorm::Model::Project::MAX_ABORT_ATTEMPTS + 1).times
-                                    .and_raise(@retryable_error)
+                .exactly(Hailstorm::Model::Project::MAX_ABORT_ATTEMPTS + 1).times
+                .and_raise(@retryable_error)
             end
 
             it 'should raise a non-retryable exception' do

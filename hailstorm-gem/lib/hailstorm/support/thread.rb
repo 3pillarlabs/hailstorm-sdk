@@ -2,7 +2,7 @@
 
 require 'hailstorm/support'
 require 'hailstorm/behavior/loggable'
-require 'hailstorm/exceptions'
+require 'hailstorm/behavior/thread_join_exception'
 
 # Wrapper class providing convenient access and application specific handling
 # @author Sayantam Dey
