@@ -20,7 +20,9 @@ jobs:
           ./.github/workflows/build.sh ${{ env.release_version }}
       - name: Get commit message
         run: |
-          echo "commit_message='$(git log --format=%B -n 1 ${{ github.sha }})'" >> $GITHUB_ENV
+          echo 'commit_message<<EOF' >> $GITHUB_ENV
+          git log --format=%B -n 1 ${{ github.sha }} >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
       - name: Create release
         id: create_release
         uses: actions/create-release@latest
