@@ -199,15 +199,14 @@ describe Hailstorm::Model::DataCenter do
       @dc = Hailstorm::Model::DataCenter.new(user_name: 'root', ssh_identity: 'insecure',
                                              machines: @machines, title: 'omega-1', active: true)
       @dc.project = @project
-      allow(@dc).to receive(:provision_agents) do
-        [@jmeter_plan].collect { |jmeter_plan| @dc.send(:process_jmeter_plan, jmeter_plan) }.flatten
-      end
       allow(@dc).to receive(:java_installed?).and_return(true)
       allow(@dc).to receive(:java_version_ok?).and_return(true)
       allow(@dc).to receive(:jmeter_installed?).and_return(true)
       allow(@dc).to receive(:jmeter_version_ok?).and_return(true)
-
       allow(Hailstorm::Support::SSH).to receive(:ensure_connection).and_return(true)
+      allow(@dc).to receive(:provision_agents) do
+        [@jmeter_plan].collect { |jmeter_plan| @dc.send(:process_jmeter_plan, jmeter_plan) }.flatten
+      end
 
       mock_hailstorm_fs
     end
@@ -274,7 +273,7 @@ describe Hailstorm::Model::DataCenter do
         allow(@dc).to receive(:connection_ok?) do |agent|
           agent.public_ip_address !~ /0\.5$/
         end
-        @dc.setup
+        expect { @dc.setup }.to raise_error(Hailstorm::DataCenterAccessFailure)
         agent = Hailstorm::Model::MasterAgent.where(jmeter_plan_id: @jmeter_plan.id, clusterable_id: @dc.id,
                                                     clusterable_type: @dc.class.to_s,
                                                     private_ip_address: '172.17.0.5').first
@@ -311,76 +310,6 @@ describe Hailstorm::Model::DataCenter do
       end
       it 'should not create a new agent' do
         expect(@dc.load_agents.count).to eql(@machines.size)
-      end
-    end
-    context 'for second machine, fails because' do
-      context 'it is not reachable' do
-        before(:each) do
-          allow(@dc).to receive(:connection_ok?) do |agent|
-            agent.public_ip_address !~ /0\.3$/
-          end
-          allow(@dc).to receive(:java_ok?).and_return(true)
-          allow(@dc).to receive(:jmeter_ok?).and_return(true)
-          @dc.setup
-        end
-        it 'should have persisted other load agents' do
-          expect(@dc.load_agents.count).to eql(@machines.size - 1)
-        end
-        it 'should not persist the instance with failed checks' do
-          expect(@dc.load_agents.where(public_ip_address: '172.17.0.3').first).to be_nil
-        end
-        it 'should raise Hailstorm::DataCenterAccessFailure' do
-          allow(@dc).to receive(:connection_ok?).and_return(false)
-          master_agent = Hailstorm::Model::MasterAgent.new(private_ip_address: '172.17.0.2')
-          allow(master_agent).to receive(:persisted?).and_return(true)
-          expect(master_agent).to receive(:update_attribute).with(:active, false)
-          expect { @dc.send(:agent_before_save_on_create, master_agent) }
-            .to raise_error(Hailstorm::DataCenterAccessFailure) { |error| expect(error.diagnostics).to_not be_blank }
-        end
-      end
-      context 'java is not installed or version is incorrect' do
-        before(:each) do
-          allow(@dc).to receive(:connection_ok?) { true }
-          allow(@dc).to receive(:java_ok?) do |agent|
-            agent.public_ip_address !~ /0\.3$/
-          end
-          allow(@dc).to receive(:jmeter_ok?).and_return(true)
-          @dc.setup
-        end
-        it 'should have persisted other load agents' do
-          expect(@dc.load_agents.count).to eql(@machines.size - 1)
-        end
-        it 'should not persist the instance with failed checks' do
-          expect(@dc.load_agents.where(public_ip_address: '172.17.0.3').first).to be_nil
-        end
-        it 'should raise Hailstorm::DataCenterJavaFailure' do
-          allow(@dc).to receive(:java_ok?).and_return(false)
-          master_agent = Hailstorm::Model::MasterAgent.new(private_ip_address: '172.17.0.2')
-          expect { @dc.send(:agent_before_save_on_create, master_agent) }
-            .to raise_error(Hailstorm::DataCenterJavaFailure) { |error| expect(error.diagnostics).to_not be_blank }
-        end
-      end
-      context 'jmeter is not installed or version is not correct' do
-        before(:each) do
-          allow(@dc).to receive(:connection_ok?).and_return(true)
-          allow(@dc).to receive(:java_ok?).and_return(true)
-          allow(@dc).to receive(:jmeter_ok?) do |agent|
-            agent.public_ip_address !~ /0\.3$/
-          end
-          @dc.setup
-        end
-        it 'should have persisted other load agents' do
-          expect(@dc.load_agents.count).to eql(@machines.size - 1)
-        end
-        it 'should not persist the instance with failed checks' do
-          expect(@dc.load_agents.where(public_ip_address: '172.17.0.3').first).to be_nil
-        end
-        it 'should raise Hailstorm::DataCenterJMeterFailure' do
-          allow(@dc).to receive(:jmeter_ok?).and_return(false)
-          master_agent = Hailstorm::Model::MasterAgent.new(private_ip_address: '172.17.0.2')
-          expect { @dc.send(:agent_before_save_on_create, master_agent) }
-            .to raise_error(Hailstorm::DataCenterJMeterFailure) { |error| expect(error.diagnostics).to_not be_blank }
-        end
       end
     end
   end

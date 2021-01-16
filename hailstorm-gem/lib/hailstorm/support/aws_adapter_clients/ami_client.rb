@@ -5,15 +5,11 @@ class Hailstorm::Support::AwsAdapter::AmiClient < Hailstorm::Support::AwsAdapter
   include Hailstorm::Behavior::AwsAdaptable::AmiClient
 
   def find_self_owned(ami_name_regexp:)
-    ami = ec2.describe_images(owners: [:self.to_s])
-             .images
-             .find { |e| e.state.to_sym == :available && ami_name_regexp.match(e.name) }
-    return unless ami
-
-    decorate(ami)
+    select_self_owned(ami_name_regexp: ami_name_regexp).first
   end
 
   # @param [Aws::EC2::Types::Image] ami
+  # @return [Hailstorm::Behavior::AwsAdaptable::Ami]
   def decorate(ami)
     state_reason = if ami.state_reason
                      Hailstorm::Behavior::AwsAdaptable::StateReason.new(code: ami.state_reason.code,
@@ -47,5 +43,12 @@ class Hailstorm::Support::AwsAdapter::AmiClient < Hailstorm::Support::AwsAdapter
     return nil if resp.images.empty?
 
     decorate(resp.images[0])
+  end
+
+  def select_self_owned(ami_name_regexp:)
+    ec2.describe_images(owners: [:self.to_s])
+       .images
+       .select { |ami| ami.state.to_sym == :available && ami_name_regexp.match(ami.name) }
+       .map { |ami| decorate(ami) }
   end
 end

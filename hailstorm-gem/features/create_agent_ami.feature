@@ -1,4 +1,4 @@
-Feature: Create Amazon Machine Image
+  Feature: Create Amazon Machine Image
 
   Background: Hailstorm application is initialized
     Given Hailstorm is initialized with a project 'create_agent_ami'

@@ -5,7 +5,7 @@ require 'fileutils'
 require 'hailstorm/support/amazon_account_cleaner'
 
 # Method implementation of `Clusterable` interface
-module Hailstorm::Model::Concern::ClusterableHelper
+module Hailstorm::Model::Concern::AbstractClusterable
 
   # Creates an load agent AMI with all required packages pre-installed and
   # starts requisite number of instances

@@ -16,7 +16,15 @@ describe Hailstorm::Model::Helper::AwsIdentityHelper do
 
     context 'ec2 key_pair exists' do
       it 'should add an error on ssh_identity' do
-        allow(@mock_key_pair_client).to receive(:find).and_return(@mock_key_pair)
+        states = [@mock_key_pair, @mock_key_pair, @mock_key_pair, @mock_key_pair, @mock_key_pair, @mock_key_pair, nil]
+        expect(@helper).to receive(:wait_for) do |_msg, &block|
+          loop do
+            result = block.call
+            break if result
+          end
+        end
+        states_ite = states.each
+        allow(@mock_key_pair_client).to receive(:find) { states_ite.next }
         expect(@mock_key_pair_client).to receive(:delete)
         expect(@helper).to receive(:create_key_pair)
         @helper.validate_or_create_identity

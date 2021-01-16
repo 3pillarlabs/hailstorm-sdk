@@ -11,6 +11,7 @@ require 'hailstorm/model/execution_cycle'
 require 'hailstorm/model/jmeter_installer_url_validator'
 require 'hailstorm/model/jmeter_version_validator'
 require 'hailstorm/support/jmeter_installer'
+require 'hailstorm/behavior/thread_join_exception'
 
 # Project model.
 # @author Sayantam Dey
@@ -44,6 +45,8 @@ class Hailstorm::Model::Project < ActiveRecord::Base
 
   # Services for commands
   module ServiceInterface
+    MAX_ABORT_ATTEMPTS = 3
+
     # Sets up the project for first time or subsequent use
     # @param [Boolean] force
     # @param [Boolean] invoked_from_start
@@ -84,11 +87,11 @@ class Hailstorm::Model::Project < ActiveRecord::Base
       begin
         Hailstorm::Model::TargetHost.monitor_all(self)
         Hailstorm::Model::Cluster.generate_all_load(self, redeploy: redeploy)
+        self.current_execution_cycle.update_attribute(:threads_count, estimate_threads_count)
       rescue Exception
-        self.current_execution_cycle.aborted!
+        compensate_for_failed_start
         raise
       ensure
-        self.current_execution_cycle.update_attribute(:threads_count, estimate_threads_count)
         self.reload
       end
     end
@@ -169,6 +172,28 @@ class Hailstorm::Model::Project < ActiveRecord::Base
     end
 
     private
+
+    def compensate_for_failed_start
+      logger.info 'Aborting load generation due to failure to start on all agents...'
+      self.current_execution_cycle.update_attribute(:threads_count, estimate_threads_count)
+      num_abort_attempts = 0
+      begin
+        self.abort
+      rescue Exception => abort_error
+        bubbled_error = abort_error
+        if abort_error.is_a?(Hailstorm::Exception)
+          if abort_error.retryable? && num_abort_attempts < MAX_ABORT_ATTEMPTS
+            num_abort_attempts += 1
+            retry
+          end
+
+          bubbled_error = Hailstorm::AutoRetryFailure.new
+        end
+
+        self.current_execution_cycle.aborted!
+        raise(bubbled_error)
+      end
+    end
 
     def jmeter_running_on_all?(exception)
       exception.is_a?(Hailstorm::ThreadJoinException) &&

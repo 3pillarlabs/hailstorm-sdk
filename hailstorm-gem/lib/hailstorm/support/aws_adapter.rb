@@ -6,6 +6,7 @@ require 'delegate'
 require 'hailstorm/behavior/loggable'
 require 'hailstorm/behavior/aws_adaptable'
 require 'ostruct'
+require 'hailstorm/support/aws_exception_builder'
 
 # AWS SDK adapter.
 # Route all calls to AWS SDK through this adapter.
@@ -23,16 +24,45 @@ class Hailstorm::Support::AwsAdapter
   load 'hailstorm/support/aws_adapter_clients/internet_gateway_client.rb'
   load 'hailstorm/support/aws_adapter_clients/route_table_client.rb'
 
-  # @param [Hash] aws_config(access_key_id secret_access_key region)
+  DEFAULT_RETRY_BASE_DELAY = 1.0
+  DEFAULT_RETRY_LIMIT = 5
+
+  # Proxy for translating Aws library errors to Hailstorm Aws exception
+  class ExceptionTranslationProxy
+
+    attr_reader :target
+
+    def initialize(target)
+      @target = target
+    end
+
+    def method_missing(symbol, *args)
+      if target.respond_to?(symbol)
+        target.send(symbol, *args)
+      else
+        super
+      end
+    rescue Aws::Errors::ServiceError => aws_error
+      raise(Hailstorm::Support::AwsExceptionBuilder.from(aws_error))
+    end
+
+    def respond_to_missing?(*args)
+      target.respond_to?(*args) || super
+    end
+  end
+
+  # @param [Hash] aws_config(access_key_id, secret_access_key, region, retry_base_delay: 1, retry_limit: 5)
   def self.clients(aws_config)
     unless @clients
       credentials = Aws::Credentials.new(aws_config[:access_key_id], aws_config[:secret_access_key])
-      ec2_client = Aws::EC2::Client.new(region: aws_config[:region], credentials: credentials)
+      ec2_client = Aws::EC2::Client.new(region: aws_config[:region],
+                                        credentials: credentials,
+                                        retry_base_delay: aws_config[:retry_base_delay] || DEFAULT_RETRY_BASE_DELAY,
+                                        retry_limit: aws_config[:retry_limit] || DEFAULT_RETRY_LIMIT)
       factory_attrs = Hailstorm::Behavior::AwsAdaptable::CLIENT_KEYS.reduce({}) do |attrs, ck|
-        attrs.merge(
-          ck.to_sym => "#{Hailstorm::Support::AwsAdapter.name}::#{ck.to_s.camelize}".constantize
-                                                                                    .new(ec2_client: ec2_client)
-        )
+        client = "#{Hailstorm::Support::AwsAdapter.name}::#{ck.to_s.camelize}".constantize
+                                                                              .new(ec2_client: ec2_client)
+        attrs.merge(ck.to_sym => ExceptionTranslationProxy.new(client))
       end
 
       @clients = Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(factory_attrs)

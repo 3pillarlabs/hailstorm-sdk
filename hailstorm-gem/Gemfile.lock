@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    hailstorm (5.0.11-java)
+    hailstorm (5.0.13-java)
       actionpack (~> 6.0.0)
       activerecord-jdbc-adapter (~> 60.2)
       aws-sdk-ec2 (~> 1)

@@ -202,6 +202,35 @@ describe Hailstorm::Model::Cluster do
         expect(@project.reload.clusters.count).to be == 1
       end
     end
+    context 'on previous partial failure' do
+      it 'should continue progressive configuration' do
+        amz = Hailstorm::Model::AmazonCloud.create!(project: @project,
+                                                    access_key: 'key-1',
+                                                    secret_key: 'secret-1',
+                                                    region: 'us-east-1',
+                                                    active: false)
+        amz.update_column(:active, true)
+        Hailstorm::Model::Cluster.create!(project: @project,
+                                          cluster_type: amz.class.name,
+                                          clusterable_id: amz.id)
+
+        clusterables_stub!
+        config = Hailstorm::Support::Configuration.new
+        config.clusters(:amazon_cloud) do |aws|
+          aws.access_key = 'key-1'
+          aws.secret_key = 'secret-1'
+          aws.region = 'us-east-1'
+        end
+        config.clusters(:amazon_cloud) do |aws|
+          aws.access_key = 'key-2'
+          aws.secret_key = 'secret-2'
+          aws.region = 'us-east-2'
+        end
+        Hailstorm::Model::Cluster.configure_all(@project, config)
+
+        expect(Hailstorm::Model::Cluster.where(project_id: @project.id).count).to eql(2)
+      end
+    end
   end
 
   context '#configure' do

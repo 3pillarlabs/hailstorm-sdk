@@ -24,9 +24,18 @@ describe Hailstorm::Support::AwsAdapter do
     end
 
     it 'should return nil if a key pair is not found' do
-      class DynamicException < Aws::EC2::Errors::ServiceError; end
-      allow(@mock_ec2).to receive(:describe_key_pairs).and_raise(DynamicException.new({}, 'mock error'))
+      class Aws::EC2::Errors::InvalidKeyPairNotFound < Aws::EC2::Errors::ServiceError; end
+
+      not_found = Aws::EC2::Errors::InvalidKeyPairNotFound.new({}, 'mock error')
+      allow(@mock_ec2).to receive(:describe_key_pairs).and_raise(not_found)
       expect(@client.find(name: 'misspelled')).to be_nil
+    end
+
+    it 'should raise error if finding a key fails due to a reason other than a missing key' do
+      other_error = Aws::Errors::ServiceError.new({}, 'mock error')
+      allow(@mock_ec2).to receive(:describe_key_pairs).and_raise(other_error)
+      proxied_client = Hailstorm::Support::AwsAdapter::ExceptionTranslationProxy.new(@client)
+      expect { proxied_client.find(name: 'misspelled') }.to raise_error(Hailstorm::AwsException)
     end
 
     it 'should delete a key_pair' do
@@ -435,11 +444,17 @@ describe Hailstorm::Support::AwsAdapter do
       @client = Hailstorm::Support::AwsAdapter::AmiClient.new(ec2_client: @mock_ec2)
     end
 
-    it 'should find a self owned ami that matches a given pattern' do
+    it 'should find the first instance of a self owned ami that matches a given pattern' do
       resp = deep_struct(
         images: [
           {
             state: :available, name: 'hailstorm/vulcan', image_id: 'ami-123', state_reason: { code: '12', message: '' }
+          },
+          {
+            state: :available, name: 'hailstorm/vulcan-2', image_id: 'ami-2', state_reason: { code: '12', message: '' }
+          },
+          {
+            state: :available, name: 'hailstorm/romulan-1', image_id: 'ami-3', state_reason: { code: '12', message: '' }
           }
         ]
       )
@@ -447,6 +462,26 @@ describe Hailstorm::Support::AwsAdapter do
       expect(@mock_ec2).to receive(:describe_images).with(owners: %w[self]).and_return(resp)
       actual_ami = @client.find_self_owned(ami_name_regexp: Regexp.compile('vulcan'))
       expect(actual_ami.id).to eq(resp.images[0].image_id)
+    end
+
+    it 'should select all AMIs matching a given pattern' do
+      resp = deep_struct(
+        images: [
+          {
+            state: :available, name: 'hailstorm/vulcan-1', image_id: 'ami-1', state_reason: { code: '12', message: '' }
+          },
+          {
+            state: :available, name: 'hailstorm/vulcan-2', image_id: 'ami-2', state_reason: { code: '12', message: '' }
+          },
+          {
+            state: :available, name: 'hailstorm/romulan-1', image_id: 'ami-3', state_reason: { code: '12', message: '' }
+          }
+        ]
+      )
+
+      expect(@mock_ec2).to receive(:describe_images).with(owners: %w[self]).and_return(resp)
+      matched_amis = @client.select_self_owned(ami_name_regexp: Regexp.compile('vulcan'))
+      expect(matched_amis.map(&:id)).to contain_exactly('ami-1', 'ami-2')
     end
 
     it 'should register an instance as a new AMI' do
@@ -656,13 +691,17 @@ describe Hailstorm::Support::AwsAdapter do
 
   it 'should create clients' do
     factory = Hailstorm::Support::AwsAdapter.clients(
-      { access_key_id: 'A', secret_access_key: 's', max_retries: 3, region: 'us-east-1' }
+      { access_key_id: 'A', secret_access_key: 's', region: 'us-east-1' }
     )
 
     factory.members.each do |member|
       client = factory.send(member)
+      expect(client).to be_an_instance_of(Hailstorm::Support::AwsAdapter::ExceptionTranslationProxy)
       expect(client.ec2).to_not be_nil
     end
+
+    expect(factory.ec2_client.ec2.config.retry_base_delay).to be > 0.3
+    expect(factory.ec2_client.ec2.config.retry_limit).to be >= 3
   end
 
   context Hailstorm::Support::AwsAdapter::AbstractClient do
@@ -670,6 +709,29 @@ describe Hailstorm::Support::AwsAdapter do
       any_client = Hailstorm::Support::AwsAdapter::AbstractClient.new(ec2_client: @mock_ec2)
       expect(@mock_ec2).to receive(:create_tags).with(resources: ['i-123'], tags: [{ key: 'Name', value: 'Agent 1' }])
       any_client.tag_name(resource_id: 'i-123', name: 'Agent 1')
+    end
+  end
+
+  context Hailstorm::Support::AwsAdapter::ExceptionTranslationProxy do
+    it 'should transfer all methods to target' do
+      target = double('Target', foo: 1)
+      proxy = Hailstorm::Support::AwsAdapter::ExceptionTranslationProxy.new(target)
+      expect(proxy.foo).to be == target.foo
+    end
+
+    it 'should translate an AWS client or service error' do
+      target = double('Target')
+      service_error = Aws::Errors::ServiceError.new({}, 'mock error')
+      allow(target).to receive(:foo).and_raise(service_error)
+      proxy = Hailstorm::Support::AwsAdapter::ExceptionTranslationProxy.new(target)
+      expect { proxy.foo }.to raise_error(Hailstorm::AwsException)
+    end
+
+    it 'should not translate an error if its not an AWS client or service error' do
+      target = double('Target')
+      allow(target).to receive(:foo).and_raise(ArgumentError)
+      proxy = Hailstorm::Support::AwsAdapter::ExceptionTranslationProxy.new(target)
+      expect { proxy.foo }.to raise_error(ArgumentError)
     end
   end
 end

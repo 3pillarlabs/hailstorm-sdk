@@ -316,4 +316,19 @@ describe('<ToolBar />', () => {
       expect(projectApiSpy).not.toHaveBeenCalled();
     }, 10);
   });
+
+  it('should re-enable start button if starting load generation fails', (done) => {
+    const project: Project = createProject();
+    const component = mount(createToolBarHierarchy({project}));
+    const projectUpdateSpy = jest.spyOn(ProjectService.prototype, 'update').mockRejectedValue(503);
+    const projectGetSpy = jest.spyOn(ProjectService.prototype, 'get').mockResolvedValue(createProject({running: false}));
+    component.find('button[name="start"]').simulate('click');
+    expect(projectUpdateSpy).toBeCalled();
+    setTimeout(() => {
+      done();
+      expect(projectGetSpy).not.toBeCalled();
+      expect(dispatch).toBeCalled();
+      expect(dispatch.mock.calls[1][0]).toBeInstanceOf(UnsetInterimStateAction);
+    }, 0);
+  });
 });

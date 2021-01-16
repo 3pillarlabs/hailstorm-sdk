@@ -65,7 +65,7 @@ describe Hailstorm::Support::AmazonAccountCleaner do
 
       expect(@client_factory.ami_client).to receive(:deregister).once
       expect(@client_factory.ami_client).to_not receive(:deregister).with(ami_id: 'ami-1')
-      allow(@client_factory.ami_client).to receive(:find_self_owned).and_return(images)
+      allow(@client_factory.ami_client).to receive(:select_self_owned).and_return(images)
 
       @account_cleaner.send(:deregister_amis)
     end

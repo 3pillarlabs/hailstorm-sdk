@@ -24,4 +24,45 @@ describe Hailstorm::Support::Log4jBackedLogger do
       logger.add(999, nil, 'Net::SSH')
     end
   end
+
+  context 'return values' do
+    before(:each) do
+      @logger = Hailstorm::Support::Log4jBackedLogger.get_logger(__FILE__)
+    end
+
+    context '#debug' do
+      it 'should return nil' do
+        expect(@logger.debug('foo')).to be_nil
+        expect(@logger.debug { 'foo' }).to be_nil
+      end
+    end
+
+    context '#info' do
+      it 'should return nil' do
+        expect(@logger.info('foo')).to be_nil
+        expect(@logger.info { 'foo' }).to be_nil
+      end
+    end
+
+    context '#warn' do
+      it 'should return nil' do
+        expect(@logger.warn('foo')).to be_nil
+        expect(@logger.warn { 'foo' }).to be_nil
+      end
+    end
+
+    context '#error' do
+      it 'should return nil' do
+        expect(@logger.error('foo')).to be_nil
+        expect(@logger.error { 'foo' }).to be_nil
+      end
+    end
+
+    context '#fatal' do
+      it 'should return nil' do
+        expect(@logger.fatal('foo')).to be_nil
+        expect(@logger.fatal { 'foo' }).to be_nil
+      end
+    end
+  end
 end

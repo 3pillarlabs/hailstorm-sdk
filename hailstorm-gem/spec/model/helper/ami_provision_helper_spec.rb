@@ -13,8 +13,21 @@ describe Hailstorm::Model::Helper::AmiProvisionHelper do
   context '#install_jmeter' do
     it 'should execute installer commands' do
       mock_ssh = instance_double(Hailstorm::Behavior::SshConnection)
-      expect(mock_ssh).to receive(:exec!).at_least(:once)
+      output_with_return_status = Net::SSH::Connection::Session::StringWithExitstatus.new('', 0)
+      expect(mock_ssh).to receive(:exec!).at_least(:once).and_return(output_with_return_status)
       @helper.install_jmeter(mock_ssh)
+    end
+
+    context 'when an error occurs' do
+      it 'should raise error' do
+        mock_ssh = instance_double(Hailstorm::Behavior::SshConnection)
+        output_with_return_status = Net::SSH::Connection::Session::StringWithExitstatus.new('', 1)
+        expect(mock_ssh).to receive(:exec!).at_least(:once).and_return(output_with_return_status)
+        expect { @helper.install_jmeter(mock_ssh) }.to raise_error(Hailstorm::JMeterInstallationException) do |error|
+          expect(error).to be_retryable
+          expect(error.diagnostics).to_not be_blank
+        end
+      end
     end
   end
 
