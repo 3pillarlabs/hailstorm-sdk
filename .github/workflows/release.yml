@@ -14,13 +14,13 @@ jobs:
         uses: actions/checkout@master
       - name: Get release version
         run: |
-          echo "::set-env name=release_version::$(basename ${{ github.ref }})"
+          echo "release_version=$(basename ${{ github.ref }})" >> $GITHUB_ENV
       - name: Build package
         run: |
           ./.github/workflows/build.sh ${{ env.release_version }}
       - name: Get commit message
         run: |
-          echo "::set-env name=commit_message::$(git log --format=%B -n 1 ${{ github.sha }})"
+          echo "commit_message=$(git log --format=%B -n 1 ${{ github.sha }})" >> $GITHUB_ENV
       - name: Create release
         id: create_release
         uses: actions/create-release@latest
