@@ -11,6 +11,7 @@ class Hailstorm::Support::AwsAdapter::KeyPairClient < Hailstorm::Support::AwsAda
     key_pair_info[:key_pair_id] if key_pair_info
   rescue Aws::EC2::Errors::InvalidKeyPairNotFound => not_found
     logger.warn(not_found.message)
+    nil # XXX: do not remove this nil statement until a failing test can be created without it
   end
 
   def delete(key_pair_id:)
