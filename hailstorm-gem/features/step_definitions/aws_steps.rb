@@ -75,8 +75,12 @@ end
 
 After do |scenario|
   if scenario.source_tag_names.include?('@terminate_instance') && @aws
-    terminate_agents(@aws.region, @load_agent) if @load_agent
-    terminate_agents(@aws.region, @project.load_agents) if @project
+    if @load_agent
+      terminate_agents(@aws.region, @load_agent)
+    elsif @project
+      terminate_agents(@aws.region, *@project.load_agents)
+    end
+
     @aws.cleanup
   end
 end
