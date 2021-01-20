@@ -62,7 +62,7 @@ describe('<JMeterConfiguration />', () => {
     )
   }
 
-  function mockFile(name: string): File {
+  function mockFile(name: string): {[K in keyof File]?: File[K]} {
     return {
       name,
       type: 'text/xml',
@@ -114,7 +114,7 @@ describe('<JMeterConfiguration />', () => {
   it('should indicate that file upload has started', () => {
     const component = mount(createComponent());
     const onAccept = component.find('FileUpload').prop('onAccept') as ((file: File) => void);
-    onAccept(mockFile("a"));
+    onAccept(mockFile("a") as File);
     expect(dispatch).toHaveBeenCalled();
     appState.wizardState!.activeJMeterFile = {
       name: 'a.jmx',
@@ -183,7 +183,7 @@ describe('<JMeterConfiguration />', () => {
     const component = mount(createComponent());
     const onUploadError = component.find('FileUpload').prop('onUploadError') as ((file: File, error: any) => void);
     const error = new Error('Server not available');
-    onUploadError(mockFile("a"), error);
+    onUploadError(mockFile("a") as File, error);
     appState.wizardState!.activeJMeterFile = {
       name: 'a.jmx',
       uploadProgress: undefined,

@@ -122,7 +122,7 @@ function PropertiesForm({
     <Formik
       {...{initialValues, isInitialValid, onSubmit: handleSubmit, validate}}
     >
-    {({isSubmitting, isValid}) => (
+    {({isSubmitting, isValid, dirty}) => (
       <Form>
         <Properties {...{properties}} />
         <footer className="card-footer">
@@ -130,7 +130,7 @@ function PropertiesForm({
             <button type="button" className="button is-warning" onClick={onRemove} role="Remove File">Remove</button>
           </div>
           <div className="card-footer-item">
-            <button type="submit" className="button is-dark" disabled={isSubmitting || !isValid}> Save </button>
+            <button type="submit" className="button is-dark" disabled={isSubmitting || !isValid || !dirty}> Save </button>
           </div>
         </footer>
       </Form>

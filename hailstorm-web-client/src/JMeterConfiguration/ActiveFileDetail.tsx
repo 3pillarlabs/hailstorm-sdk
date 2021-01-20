@@ -17,7 +17,7 @@ export function ActiveFileDetail({ state, dispatch, setShowModal, setUploadAbort
 
   const onSubmit: FormikActionsHandler = (
     values,
-    { setSubmitting }
+    { setSubmitting, resetForm }
   ) => {
     setSubmitting(true);
     const promise = state.wizardState!.activeJMeterFile!.id === undefined ?
@@ -38,6 +38,7 @@ export function ActiveFileDetail({ state, dispatch, setShowModal, setUploadAbort
         dispatch(new MergeJMeterFileAction(jmeterFile));
       })
       .catch((reason) => console.error(reason))
+      .then(() => resetForm(values))
       .then(() => setSubmitting(false));
   };
 
