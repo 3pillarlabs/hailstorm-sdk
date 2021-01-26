@@ -3,6 +3,7 @@ import { render, mount } from 'enzyme';
 import { AWSInstanceChoice } from './AWSInstanceChoice';
 import { AWSInstanceChoiceOption } from './domain';
 import { render as renderComponent, fireEvent } from '@testing-library/react';
+import { Form, Formik } from 'formik';
 
 jest.mock('./NonLinearSlider', () => ({
   __esModule: true,
@@ -14,6 +15,34 @@ jest.mock('./NonLinearSlider', () => ({
 describe('<AWSInstanceChoice />', () => {
   const advanceModeTrigger = /specify aws instance type/i;
   let fetchPricing: Promise<AWSInstanceChoiceOption[]>;
+
+  function FormComponent({
+    fetchPricing,
+    disabled,
+    onChange,
+    regionCode,
+    hourlyCostByCluster,
+    key,
+    setHourlyCostByCluster
+  }: {
+    fetchPricing: (s: string) => Promise<AWSInstanceChoiceOption[]>,
+    disabled?: boolean,
+    onChange: (c: AWSInstanceChoiceOption) => void,
+    regionCode: string,
+    hourlyCostByCluster?: number | undefined,
+    key?: string | number | undefined,
+    setHourlyCostByCluster?: React.Dispatch<React.SetStateAction<number | undefined>> | undefined
+  }) {
+    return (
+      <Formik isInitialValid={false} initialValues={{}} onSubmit={jest.fn()}>
+        <Form>
+          <AWSInstanceChoice
+            {...{fetchPricing, disabled, onChange, regionCode, hourlyCostByCluster, key, setHourlyCostByCluster}}
+          />
+        </Form>
+      </Formik>
+    )
+  }
 
   beforeEach(() => {
     jest.resetAllMocks();
@@ -28,18 +57,18 @@ describe('<AWSInstanceChoice />', () => {
   });
 
   it('should render without crashing', () => {
-    render(<AWSInstanceChoice onChange={jest.fn()} fetchPricing={jest.fn()} regionCode="us-east-1" />);
+    render(<FormComponent onChange={jest.fn()} fetchPricing={jest.fn()} regionCode="us-east-1" />);
   });
 
   it('should render a component to select max number of users', async () => {
-    const component = mount(<AWSInstanceChoice onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />);
+    const component = mount(<FormComponent onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />);
     await fetchPricing;
     component.update();
     expect(component).toContainExactlyOneMatchingElement('NonLinearSlider');
   });
 
   it('should show default values', async () => {
-    const component = mount(<AWSInstanceChoice onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />);
+    const component = mount(<FormComponent onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />);
     await fetchPricing;
     component.update();
     expect(component.find('NonLinearSlider')).toHaveProp('initialValue');
@@ -55,7 +84,7 @@ describe('<AWSInstanceChoice />', () => {
       hourlyCostByCluster: jest.fn().mockReturnValue(8.34567)
     });
 
-    const component = mount(<AWSInstanceChoice onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />);
+    const component = mount(<FormComponent onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />);
     await fetchPricing;
     component.update();
     const onChange = component.find('NonLinearSlider').prop('onChange') as unknown as (value: number) => void;
@@ -65,7 +94,7 @@ describe('<AWSInstanceChoice />', () => {
 
   it('should switch to advanced mode', async () => {
     const {findByText, findByTestId} = renderComponent(
-      <AWSInstanceChoice onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />
+      <FormComponent onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />
     );
 
     await fetchPricing;
@@ -78,7 +107,7 @@ describe('<AWSInstanceChoice />', () => {
   describe('when in advanced mode', () => {
     it('should edit AWS instance type and max users by instance', async () => {
       const {findByText, findByTestId, findByDisplayValue} = renderComponent(
-        <AWSInstanceChoice onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />
+        <FormComponent onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />
       );
 
       await fetchPricing;
@@ -105,7 +134,7 @@ describe('<AWSInstanceChoice />', () => {
       });
 
       const {findByText, findByTestId} = renderComponent(
-        <AWSInstanceChoice onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />
+        <FormComponent onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />
       );
 
       await fetchPricing;
@@ -127,7 +156,7 @@ describe('<AWSInstanceChoice />', () => {
     it('should not report hourly cost', async () => {
       const setHourlyCostByCluster = jest.fn();
       const {findByText} = renderComponent(
-        <AWSInstanceChoice
+        <FormComponent
           onChange={jest.fn()}
           fetchPricing={() => fetchPricing}
           regionCode="us-east-1"
@@ -152,7 +181,7 @@ describe('<AWSInstanceChoice />', () => {
       hourlyCostByCluster: jest.fn().mockReturnValue(8.34567)
     });
 
-    const component = mount(<AWSInstanceChoice onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />);
+    const component = mount(<FormComponent onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />);
     await fetchPricing;
     component.update();
     const onChange = component.find('NonLinearSlider').prop('onChange') as unknown as (value: number) => void;
@@ -173,7 +202,7 @@ describe('<AWSInstanceChoice />', () => {
 
   it('should be possible to disable the control', async () => {
     const component =  mount(
-      <AWSInstanceChoice
+      <FormComponent
         onChange={jest.fn()}
         fetchPricing={() => fetchPricing}
         regionCode="us-east-1"

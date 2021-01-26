@@ -54,6 +54,7 @@ export function NonLinearSlider({
           onChange={handleChange}
           onBlur={handleBlur}
           disabled={disabled}
+          data-testid="MaxPlannedUsers"
         />
       </div>
       <p className="help">This is a number between {minimumValue} and {maximumValue}</p>
