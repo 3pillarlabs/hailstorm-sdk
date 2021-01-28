@@ -3,8 +3,10 @@ import { NonLinearSlider } from './NonLinearSlider';
 import { computeChoice, maxThreadsByCluster } from './AWSInstanceCalculator';
 import { AWSInstanceChoiceOption } from './domain';
 import { Loader } from '../Loader/Loader';
+import { Field } from 'formik';
 
-const MIN_VALUE = 50;
+const MIN_PLANNED_USERS = 50;
+const DEFAULT_THREADS_BY_INST = 10;
 
 export function AWSInstanceChoice({
   regionCode,
@@ -23,13 +25,13 @@ export function AWSInstanceChoice({
 }) {
   const [pricingData, setPricingData] = useState<AWSInstanceChoiceOption[]>([]);
   const [instanceType, setInstanceType] = useState<string>('');
-  const [maxThreadsByInstance, setMaxThreadsByInstance] = useState<number>(0);
-  const [numInstances, setNumInstances] = useState<number>(0);
+  const [maxThreadsByInstance, setMaxThreadsByInstance] = useState<number>(DEFAULT_THREADS_BY_INST);
+  const [numInstances, setNumInstances] = useState<number>(1);
   const [quickMode, setQuickMode] = useState(true);
-  const [sliderValue, setSliderValue] = useState(MIN_VALUE);
+  const [maxPlannedThreads, setMaxPlannedThreads] = useState(MIN_PLANNED_USERS);
 
   const handleSliderChange = (value: number, data?: AWSInstanceChoiceOption[]) => {
-    setSliderValue(value);
+    setMaxPlannedThreads(value);
     const choice = computeChoice(value, pricingData && pricingData.length > 0 ? pricingData : data!);
     setInstanceType(choice.instanceType);
     setMaxThreadsByInstance(choice.maxThreadsByInstance);
@@ -45,7 +47,7 @@ export function AWSInstanceChoice({
     fetchPricing(regionCode)
       .then((data) => {
         setPricingData(data);
-        const choice = handleSliderChange(sliderValue, data);
+        const choice = handleSliderChange(maxPlannedThreads, data);
         setHourlyCostByCluster && setHourlyCostByCluster(choice.hourlyCostByCluster());
       })
       .catch((reason) => console.error(reason));
@@ -54,6 +56,31 @@ export function AWSInstanceChoice({
   if (pricingData.length === 0) {
     return <Loader />;
   }
+
+  const handleMaxUsersByInstChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    let new_value = DEFAULT_THREADS_BY_INST;
+    if (event.target.value) {
+      new_value = parseInt(event.target.value);
+    } else if (pricingData.length > 0) {
+      new_value = computeChoice(maxPlannedThreads, pricingData).maxThreadsByInstance;
+    }
+
+    setMaxThreadsByInstance(new_value);
+
+    const nextNumInstances = Math.ceil(maxPlannedThreads / new_value);
+    setNumInstances(nextNumInstances);
+
+    const matchingOption = pricingData.find((option) => option.instanceType === instanceType);
+
+    const nextOption = new AWSInstanceChoiceOption({
+      maxThreadsByInstance: new_value,
+      instanceType,
+      numInstances: nextNumInstances,
+      hourlyCostByInstance: matchingOption ? matchingOption.hourlyCostByInstance : undefined
+    });
+
+    onChange(nextOption);
+  };
 
   return (
     <>
@@ -73,13 +100,7 @@ export function AWSInstanceChoice({
       <MaxUsersByInstance
         value={maxThreadsByInstance}
         {...{disabled}}
-        onChange={(event: { target: { value: string; }; }) => {
-          setMaxThreadsByInstance(parseInt(event.target.value));
-          onChange(new AWSInstanceChoiceOption({
-            maxThreadsByInstance: parseInt(event.target.value),
-            instanceType
-          }));
-        }}
+        onChange={handleMaxUsersByInstChange}
       />
 
       {quickMode && (<InstanceTypeMeter {...{
@@ -157,11 +178,11 @@ function InstanceTypeByUsage({
       <div className="field">
         <div className="control">
           <NonLinearSlider
-            initialValue={MIN_VALUE}
+            initialValue={MIN_PLANNED_USERS}
             onChange={handleSliderChange}
             step={50}
             maximum={maxThreadsByCluster(pricingData)}
-            minimum={MIN_VALUE}
+            minimum={MIN_PLANNED_USERS}
             {...{ disabled }}
           />
         </div>
@@ -219,7 +240,7 @@ function InstanceTypeInput({
       </div>
       {!disabled && (<SwitchMessage
         onClick={() => {
-          handleSliderChange(MIN_VALUE);
+          handleSliderChange(MIN_PLANNED_USERS);
           setQuickMode(true);
         }}
       >
@@ -246,7 +267,7 @@ function InstanceTypeMeter({
       <CenteredLevelItem title="# Instances">
         {numInstances}
       </CenteredLevelItem>
-      {hourlyCostByCluster && (<CenteredLevelItem title="Cluster Cost" starred={true}>
+      {hourlyCostByCluster && (<CenteredLevelItem title="Hourly Cluster Cost" starred={true}>
         ${hourlyCostByCluster.toFixed(4)}
       </CenteredLevelItem>)}
     </div>
@@ -297,7 +318,7 @@ export function MaxUsersByInstance({
     <div className="field">
       <label className="label">Max. Users / Instance *</label>
       <div className="control">
-        <input
+        <Field
           required
           type="text"
           className="input"
@@ -305,6 +326,9 @@ export function MaxUsersByInstance({
           data-testid="Max. Users / Instance"
           value={value}
           onChange={onChange}
+          onFocus={(event: React.FocusEvent<HTMLInputElement>) => {
+            event.target.setSelectionRange(0, event.target.value.length);
+          }}
           {...{ disabled }} />
       </div>
     </div>

@@ -142,4 +142,37 @@ describe('<AWSForm />', () => {
     const action = dispatch.mock.calls[0][0] as {payload: Cluster};
     expect(action.payload).toEqual(savedCluster);
   });
+
+  it('should update number of instances', async () => {
+    const {findByTestId, debug} = render(createComponent());
+    await fetchRegions;
+    await fetchPricing;
+
+    const maxPlannedUsers = await findByTestId('MaxPlannedUsers');
+    fireEvent.change(maxPlannedUsers, {target: {value: '400'}});
+
+    const maxThreadsByInst = await findByTestId('Max. Users / Instance');
+    fireEvent.change(maxThreadsByInst, {target: {value: '80'}});
+
+    const numInstances = await findByTestId('# Instances');
+    expect(numInstances.textContent).toEqual('5');
+
+    const hourlyCost = await findByTestId('Hourly Cluster Cost');
+    expect(hourlyCost.textContent).toMatch(/0.46/);
+  });
+
+  it('should not set number of instances below 1', async () => {
+    const {findByTestId, debug} = render(createComponent());
+    await fetchRegions;
+    await fetchPricing;
+
+    const maxPlannedUsers = await findByTestId('MaxPlannedUsers');
+    fireEvent.change(maxPlannedUsers, {target: {value: '5000'}});
+
+    const maxThreadsByInst = await findByTestId('Max. Users / Instance');
+    fireEvent.change(maxThreadsByInst, {target: {value: '10000'}});
+
+    const numInstances = await findByTestId('# Instances');
+    expect(numInstances.textContent).toEqual('1');
+  });
 });
