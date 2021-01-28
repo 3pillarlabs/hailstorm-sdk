@@ -7,18 +7,31 @@ import { ClusterViewHeader } from './ClusterViewHeader';
 import { MaxUsersByInstance } from './AWSInstanceChoice';
 import { ApiFactory } from '../api';
 import { UpdateClusterAction } from './actions';
+import { Form, Formik } from 'formik';
+import { FormikActionsHandler } from '../JMeterConfiguration/domain';
 
 export function AWSView({ cluster, dispatch, activeProject }: {
   cluster: AmazonCluster;
   dispatch?: React.Dispatch<any>;
   activeProject?: Project;
 }) {
-  const [disabledUpdate, setDisabledUpdate] = useState<boolean>(false);
-  const [maxThreadsByInstance, setMaxThreadsByInstance] = useState<number>();
-  useEffect(() => {
-    console.debug("AWSView#useEffect()");
-    setMaxThreadsByInstance(cluster.maxThreadsByInstance);
-  }, [cluster]);
+  const handleSubmit: FormikActionsHandler = async (values, {resetForm, setSubmitting}) => {
+    setSubmitting(true);
+    try {
+      const updatedCluster = await ApiFactory().clusters().update(
+        activeProject!.id,
+        cluster.id!,
+        { maxThreadsByInstance: values.maxThreadsByInstance }
+      );
+
+      dispatch && dispatch(new UpdateClusterAction(updatedCluster));
+      resetForm(values);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="card">
@@ -26,54 +39,48 @@ export function AWSView({ cluster, dispatch, activeProject }: {
         title={cluster.title}
         icon={(<i className="fab fa-aws"></i>)}
       />
-      <div className={`card-content${cluster.disabled ? ` ${styles.disabledContent}` : ''}`}>
-        <div className="content">
-          <ReadOnlyField label="AWS Access Key" value={cluster.accessKey} />
-          <ReadOnlyField label="VPC Subnet" value={cluster.vpcSubnetId} />
-          <ReadOnlyField label="AWS Region" value={cluster.region} />
-          <ReadOnlyField label="AWS Instance Type" value={cluster.instanceType} />
-          {cluster.disabled || !dispatch ? (
-            <ReadOnlyField label="Max. Users / Instance" value={cluster.maxThreadsByInstance} />
-          ) : (
-            <MaxUsersByInstance
-              value={maxThreadsByInstance}
-              onChange={(event: {target: {value: string}}) => {
-                setMaxThreadsByInstance(event.target.value as unknown as number);
-              }}
-            />
-          )}
-        </div>
-      </div>
-      {activeProject && dispatch && (<div className="card-footer">
-        <RemoveCluster {...{activeProject, cluster, dispatch}} />
-        {!cluster.disabled && (
-          <div className="card-footer-item">
-          <button
-            type="button"
-            className="button is-warning"
-            role="Update Cluster"
-            disabled={disabledUpdate}
-            onClick={async () => {
-              setDisabledUpdate(true);
-              try {
-                const updatedCluster = await ApiFactory().clusters().update(
-                  activeProject.id,
-                  cluster.id!,
-                  {maxThreadsByInstance}
-                );
-                dispatch(new UpdateClusterAction(updatedCluster));
-              } catch (error) {
-                console.error(error);
-              } finally {
-                setDisabledUpdate(false);
-              }
-            }}
-          >
-            Update
-          </button>
-          </div>
+      <Formik initialValues={{maxThreadsByInstance: cluster.maxThreadsByInstance}} onSubmit={handleSubmit}>
+        {props => (
+          <Form>
+            <div className={`card-content${cluster.disabled ? ` ${styles.disabledContent}` : ''}`}>
+              <div className="content">
+                <ReadOnlyField label="AWS Access Key" value={cluster.accessKey} />
+                <ReadOnlyField label="VPC Subnet" value={cluster.vpcSubnetId} />
+                <ReadOnlyField label="AWS Region" value={cluster.region} />
+                <ReadOnlyField label="AWS Instance Type" value={cluster.instanceType} />
+                {cluster.disabled || !dispatch ? (
+                  <ReadOnlyField label="Max. Users / Instance" value={cluster.maxThreadsByInstance} />
+                ) : (
+                  <MaxUsersByInstance
+                    onChange={(event) => {
+                      if (event.target.value && parseInt(event.target.value) > 0) {
+                        props.handleChange(event);
+                      }
+                    }}
+                    value={props.values.maxThreadsByInstance}
+                  />
+                )}
+              </div>
+            </div>
+            {activeProject && dispatch && (
+            <div className="card-footer">
+              <RemoveCluster {...{activeProject, cluster, dispatch}} />
+              {!cluster.disabled && (
+                <div className="card-footer-item">
+                  <button
+                    type="submit"
+                    className="button is-primary"
+                    role="Update Cluster"
+                    disabled={props.isSubmitting || !props.dirty}
+                  >
+                    Update
+                  </button>
+                </div>
+              )}
+            </div>)}
+          </Form>
         )}
-      </div>)}
+      </Formik>
     </div>
   );
 }

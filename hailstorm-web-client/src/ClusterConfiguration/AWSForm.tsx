@@ -24,10 +24,10 @@ export function AWSForm({ dispatch, activeProject }: {
     return ApiFactory().awsInstancePricing().list(regionCode);
   };
 
-  const handleAWSInstanceChange = (value: AWSInstanceChoiceOption) => {
-    setSelectedInstanceType(value);
-    if (value.hourlyCostByInstance > 0) {
-      setHourlyCostByCluster(value.hourlyCostByCluster());
+  const handleAWSInstanceChange = (choice: AWSInstanceChoiceOption) => {
+    setSelectedInstanceType(choice);
+    if (choice.hourlyCostByInstance > 0) {
+      setHourlyCostByCluster(choice.hourlyCostByCluster());
     }
   };
 

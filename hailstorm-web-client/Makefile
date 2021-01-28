@@ -55,3 +55,11 @@ validate:
 		git diff ${TRAVIS_COMMIT_RANGE} -- package.json | grep -e '[+\-].*version' > /dev/null; \
 		[ $$? -eq 0 ]; \
 	fi
+
+integration_test_bed_up:
+	cd ../ && docker-compose -f docker-compose.yml -f docker-compose.dc-sim.yml -f docker-compose.web-ci.yml up -d \
+	hailstorm-api hailstorm-agent-1 hailstorm-agent-2 file-server
+
+
+integration_test_bed_down:
+	cd ../ && docker-compose -f docker-compose.yml -f docker-compose.dc-sim.yml -f docker-compose.web-ci.yml down
