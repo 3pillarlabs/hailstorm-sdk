@@ -1,0 +1,50 @@
+@import "~bulma/sass/utilities/_all.sass";
+
+$part-count: 5;
+
+.container {
+  position: fixed;
+  left: $gap;
+  bottom: 0;
+  width: $fullhd/$part-count;
+  z-index: 9000;
+
+  .item {
+    position: relative;
+    margin-bottom: 1.25rem;
+
+    .message {
+      margin-bottom: 0.75rem;
+    }
+
+    .actions {
+      text-align: center;
+    }
+
+    .errorReason {
+      font-size: $size-7;
+    }
+
+    .toggleIcon {
+      cursor: pointer;
+    }
+  }
+}
+
+@media(max-width: $widescreen) {
+  .container {
+    width: $widescreen/$part-count;
+  }
+}
+
+@media(max-width: $desktop) {
+  .container {
+    width: $desktop/$part-count;
+  }
+}
+
+@media(max-width: $tablet) {
+  .container {
+    width: 100%;
+  }
+}

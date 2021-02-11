@@ -8,9 +8,11 @@ import { CreateProjectAction, UpdateProjectTitleAction } from '../NewProjectWiza
 import { CancelLink, NextLink } from '../NewProjectWizard/WizardControls';
 import { WizardTabTypes } from "../NewProjectWizard/domain";
 import { DangerProjectSettings } from '../DangerProjectSettings';
+import { useNotifications } from '../app-notifications';
 
 export const ProjectConfiguration: React.FC = () => {
   const {dispatch, appState} = useContext(AppStateContext);
+  const {notifySuccess, notifyError} = useNotifications();
 
   return (
     <>
@@ -27,7 +29,9 @@ export const ProjectConfiguration: React.FC = () => {
                 .then((project) => {
                   setSubmitting(false);
                   dispatch(new CreateProjectAction(project));
-                });
+                  notifySuccess("Project created, ready to be configured");
+                })
+                .catch((reason) => notifyError('Failed to create project', reason));
             } else {
               ApiFactory()
                 .projects()
@@ -35,7 +39,9 @@ export const ProjectConfiguration: React.FC = () => {
                 .then(() => {
                   setSubmitting(false);
                   dispatch(new UpdateProjectTitleAction(values.title!));
-                });
+                  notifySuccess("Project title updated");
+                })
+                .catch((reason) => notifyError('Failed to update project', reason));
             }
           }}
           render={({isSubmitting, isValid, dirty}) => (

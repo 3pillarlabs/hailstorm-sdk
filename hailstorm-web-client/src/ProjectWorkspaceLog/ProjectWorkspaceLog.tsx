@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import styles from './ProjectWorkspaceLog.module.scss';
 import { LogEvent } from '../domain';
-import { LogStream } from '../stream';
+import { LogStream } from '../log-stream';
 import { AppStateContext } from '../appStateContext';
 import { LogOptions } from './LogOptions';
 import _ from 'lodash';
