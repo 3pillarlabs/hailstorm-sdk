@@ -67,3 +67,11 @@ main {
 .force-wrap {
   word-wrap: anywhere;
 }
+
+.is-error {
+  @extend .is-danger !optional;
+}
+
+.is-warn {
+  @extend .is-warning !optional;
+}

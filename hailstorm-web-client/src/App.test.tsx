@@ -11,28 +11,31 @@ jest.mock(`./TopNav`, () => ({
 
 jest.mock(`./ProjectList`, () => ({
   __esModule: true,
-  TopNav: () => (
+  ProjectList: () => (
     <div id="ProjectList"></div>
   )
 }));
 
 jest.mock(`./ProjectWorkspace`, () => ({
   __esModule: true,
-  TopNav: () => (
+  ProjectWorkspace: () => (
     <div id="ProjectWorkspace"></div>
   )
 }));
 
 jest.mock(`./NewProjectWizard`, () => ({
   __esModule: true,
-  TopNav: () => (
+  NewProjectWizard: () => (
     <div id="NewProjectWizard"></div>
   )
 }));
 
 describe('<App />', () => {
   it('renders without crashing', () => {
-    shallow(<App />);
+    const component = shallow(<App />);
+    expect(component).toContainExactlyOneMatchingElement('AppStateProvider');
+    expect(component).toContainExactlyOneMatchingElement('AppNotificationProvider');
+    expect(component).toContainExactlyOneMatchingElement('TopNav');
   });
 
   it('should redirect to /projects from /', () => {

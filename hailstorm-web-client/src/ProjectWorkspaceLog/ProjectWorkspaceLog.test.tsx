@@ -3,7 +3,7 @@ import { mount } from 'enzyme';
 import { empty, Observable, of, Subscription, Subject } from 'rxjs';
 import { AppStateContext } from '../appStateContext';
 import { LogEvent, Project } from '../domain';
-import { LogStream } from '../stream';
+import { LogStream } from '../log-stream';
 import { ProjectWorkspaceLog } from './ProjectWorkspaceLog';
 
 describe('<ProjectWorkspaceLog />', () => {
