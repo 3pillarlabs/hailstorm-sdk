@@ -6,6 +6,9 @@ import { ProjectService } from "../services/ProjectService";
 import { InterimProjectState } from '../domain';
 import { AppStateContext } from '../appStateContext';
 import { UpdateProjectAction } from '../ProjectWorkspace/actions';
+import { AppStateProvider, AppStateProviderWithProps } from '../AppStateProvider/AppStateProvider';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
+import { AppNotificationContextProps } from '../app-notifications';
 
 describe('<ProjectWorkspaceHeader />', () => {
   const project = { id: 1, code: 'a', title: 'Project Title', autoStop: true, running: false };
@@ -49,10 +52,19 @@ describe('<ProjectWorkspaceHeader />', () => {
 
     it('should update title on submit', async () => {
       const updateFnSpy = jest.spyOn(ProjectService.prototype, 'update').mockImplementation(jest.fn().mockResolvedValue(null));
+      const notifiers: AppNotificationContextProps = {
+        notifySuccess: jest.fn(),
+        notifyInfo: jest.fn(),
+        notifyWarning: jest.fn(),
+        notifyError: jest.fn()
+      };
+
       const {findByText, findByTitle, findByDisplayValue} = render(
-        <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: project}, dispatch}}>
-          <ProjectWorkspaceHeader />
-        </AppStateContext.Provider>
+        <AppStateProviderWithProps appState={{runningProjects: [], activeProject: project}} {...{dispatch}}>
+          <AppNotificationProviderWithProps {...{...notifiers}}>
+            <ProjectWorkspaceHeader />
+          </AppNotificationProviderWithProps>
+        </AppStateProviderWithProps>
       );
 
       const editLink = await findByTitle('Edit');

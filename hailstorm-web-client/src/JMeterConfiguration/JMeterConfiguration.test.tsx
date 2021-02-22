@@ -11,6 +11,8 @@ import { SavedFile } from '../FileUpload/domain';
 import { wait, fireEvent, waitForDomChange } from '@testing-library/dom';
 import { FileServer } from '../FileUpload/fileServer';
 import { render } from '@testing-library/react';
+import { AppNotificationContextProps } from '../app-notifications';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
 
 jest.mock('../FileUpload', () => ({
   __esModule: true,
@@ -60,6 +62,25 @@ describe('<JMeterConfiguration />', () => {
         <JMeterConfiguration />
       </AppStateContext.Provider>
     )
+  }
+
+  function withNotificationContext(
+    component: JSX.Element,
+    notifiers?: {[K in keyof AppNotificationContextProps]: AppNotificationContextProps[K]}
+  ) {
+    const props: AppNotificationContextProps = {
+      notifySuccess: jest.fn(),
+      notifyInfo: jest.fn(),
+      notifyWarning: jest.fn(),
+      notifyError: jest.fn(),
+      ...notifiers
+    };
+
+    return (
+      <AppNotificationProviderWithProps {...{...props}}>
+        {component}
+      </AppNotificationProviderWithProps>
+    );
   }
 
   function mockFile(name: string): {[K in keyof File]?: File[K]} {
@@ -322,7 +343,7 @@ describe('<JMeterConfiguration />', () => {
     });
 
     jest.spyOn(JMeterValidationService.prototype, "create").mockReturnValue(validations);
-    const component = mount(createComponent());
+    const component = mount(withNotificationContext(createComponent()));
     const onFileLoad = component.find('FileUpload').prop('onFileUpload') as ((file: SavedFile) => void);
     onFileLoad({originalName: "a.jmx", id: "12345"});
     await validations;
@@ -364,7 +385,7 @@ describe('<JMeterConfiguration />', () => {
     });
 
     const updateServiceSpy = jest.spyOn(JMeterService.prototype, "update").mockReturnValue(updates);
-    const component = mount(createComponent({plans: [{id: 100, name: 'a.jmx', properties}]}));
+    const component = mount(withNotificationContext(createComponent({plans: [{id: 100, name: 'a.jmx', properties}]})));
     const propertiesForm = component.find('JMeterPropertiesMap');
     propertiesForm.find('input[name="baz"]').simulate('change', {target: {value: "3", name: "baz"}});
     propertiesForm.find('form').simulate('submit');
@@ -391,7 +412,7 @@ describe('<JMeterConfiguration />', () => {
   it('should save a data file', async () => {
     const createdPromise = Promise.resolve({name: 'a.csv', dataFile: true, id: 23, path: "12345"});
     const spy = jest.spyOn(JMeterService.prototype, 'create').mockReturnValueOnce(createdPromise);
-    const component = mount(createComponent());
+    const component = mount(withNotificationContext(createComponent()));
     const onFileLoad = component.find('FileUpload').prop('onFileUpload') as ((file: SavedFile) => void);
     onFileLoad({originalName: "a.csv", id: "12345"});
     expect(dispatch).toBeCalled();
@@ -476,7 +497,7 @@ describe('<JMeterConfiguration />', () => {
     const jmeterFile = {id: 100, name: 'a.jmx', properties: new Map([["foo", "10"]])};
     const dataFile = {id: 99, name: 'a.csv', dataFile: true};
     appState.wizardState!.activeJMeterFile = jmeterFile;
-    const component = mount(createComponent({plans: [jmeterFile, dataFile]}));
+    const component = mount(withNotificationContext(createComponent({plans: [jmeterFile, dataFile]})));
     component.find('ActiveFileDetail button[role="Remove File"]').simulate('click');
     const destroyFile = Promise.resolve();
     const destroySpy = jest.spyOn(JMeterService.prototype, "destroy").mockReturnValue(destroyFile);
@@ -498,7 +519,7 @@ describe('<JMeterConfiguration />', () => {
   it('should request file server to remove an unmerged file', async () => {
     const jmeterFile = {name: 'a.jmx', properties: new Map([["foo", undefined]])};
     appState.wizardState!.activeJMeterFile = jmeterFile;
-    const component = mount(createComponent());
+    const component = mount(withNotificationContext(createComponent()));
     component.find('ActiveFileDetail button[role="Remove File"]').simulate('click');
     const removeFile = Promise.resolve();
     const removeSpy = jest.spyOn(FileServer, "removeFile").mockReturnValue(removeFile);

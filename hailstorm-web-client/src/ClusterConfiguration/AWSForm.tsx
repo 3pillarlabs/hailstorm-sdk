@@ -8,6 +8,7 @@ import { ApiFactory } from '../api';
 import { AWSRegionChoice } from './AWSRegionChoice';
 import { ClusterFormFooter } from './ClusterFormFooter';
 import { ClusterViewHeader } from './ClusterViewHeader';
+import { useNotifications } from '../app-notifications';
 
 export function AWSForm({ dispatch, activeProject }: {
   dispatch: React.Dispatch<any>;
@@ -16,6 +17,7 @@ export function AWSForm({ dispatch, activeProject }: {
   const [hourlyCostByCluster, setHourlyCostByCluster] = useState<number>();
   const [awsRegion, setAwsRegion] = useState<string>();
   const [selectedInstanceType, setSelectedInstanceType] = useState<AWSInstanceChoiceOption>();
+  const {notifySuccess, notifyError} = useNotifications();
   const fetchRegions: () => Promise<AWSRegionList> = () => {
     return ApiFactory().awsRegion().list();
   };
@@ -51,8 +53,11 @@ export function AWSForm({ dispatch, activeProject }: {
         instanceType: selectedInstanceType!.instanceType,
         maxThreadsByInstance: selectedInstanceType!.maxThreadsByInstance
       })
-      .then((createdCluster) => dispatch(new CreateClusterAction(createdCluster)))
-      .catch((reason) => console.error(reason))
+      .then((createdCluster) => {
+        dispatch(new CreateClusterAction(createdCluster));
+        notifySuccess(`Saved ${createdCluster.title} cluster configuration`);
+      })
+      .catch((reason) => notifyError(`Failed to save the AWS ${awsRegion} cluster configuration`, reason))
       .finally(() => actions.setSubmitting(false));
   };
 

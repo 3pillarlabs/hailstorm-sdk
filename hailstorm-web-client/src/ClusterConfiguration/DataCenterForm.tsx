@@ -9,6 +9,7 @@ import { CreateClusterAction } from './actions';
 import { SavedFile } from '../FileUpload/domain';
 import { ClusterFormFooter } from './ClusterFormFooter';
 import { ClusterViewHeader } from './ClusterViewHeader';
+import { useNotifications } from '../app-notifications';
 
 export function DataCenterForm({
   dispatch,
@@ -20,6 +21,7 @@ export function DataCenterForm({
   const [pemFile, setPemFile] = useState<File>();
   const [machines, setMachines] = useState<string[]>([]);
   const [machineErrors, setMachineErrors] = useState<{[K: string]: string}>();
+  const {notifySuccess, notifyError} = useNotifications();
 
   const onSubmit = async ({
     userName,
@@ -44,6 +46,7 @@ export function DataCenterForm({
 
         const data = await ApiFactory().clusters().create(activeProject.id, attrs);
         dispatch(new CreateClusterAction(data));
+        notifySuccess(`Saved ${data.title} cluster configuration`);
         return data;
       });
   };
@@ -101,7 +104,7 @@ export function DataCenterForm({
                   }
                 }
               } else {
-                console.error(reason);
+                notifyError(`Failed to save ${title} cluster configuration`, reason);
               }
             })
             .finally(() => setSubmitting(false));

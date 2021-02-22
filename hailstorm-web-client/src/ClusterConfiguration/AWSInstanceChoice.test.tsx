@@ -4,6 +4,7 @@ import { AWSInstanceChoice } from './AWSInstanceChoice';
 import { AWSInstanceChoiceOption } from './domain';
 import { render as renderComponent, fireEvent } from '@testing-library/react';
 import { Form, Formik } from 'formik';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
 
 jest.mock('./NonLinearSlider', () => ({
   __esModule: true,
@@ -34,13 +35,20 @@ describe('<AWSInstanceChoice />', () => {
     setHourlyCostByCluster?: React.Dispatch<React.SetStateAction<number | undefined>> | undefined
   }) {
     return (
-      <Formik isInitialValid={false} initialValues={{}} onSubmit={jest.fn()}>
-        <Form>
-          <AWSInstanceChoice
-            {...{fetchPricing, disabled, onChange, regionCode, hourlyCostByCluster, key, setHourlyCostByCluster}}
-          />
-        </Form>
-      </Formik>
+      <AppNotificationProviderWithProps
+        notifySuccess={jest.fn()}
+        notifyInfo={jest.fn()}
+        notifyWarning={jest.fn()}
+        notifyError={jest.fn()}
+      >
+        <Formik isInitialValid={false} initialValues={{}} onSubmit={jest.fn()}>
+          <Form>
+            <AWSInstanceChoice
+              {...{fetchPricing, disabled, onChange, regionCode, hourlyCostByCluster, key, setHourlyCostByCluster}}
+            />
+          </Form>
+        </Formik>
+      </AppNotificationProviderWithProps>
     )
   }
 

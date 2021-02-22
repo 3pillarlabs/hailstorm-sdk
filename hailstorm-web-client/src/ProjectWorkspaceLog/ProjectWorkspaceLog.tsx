@@ -5,6 +5,7 @@ import { LogStream } from '../log-stream';
 import { AppStateContext } from '../appStateContext';
 import { LogOptions } from './LogOptions';
 import _ from 'lodash';
+import { useNotifications } from '../app-notifications';
 
 const DEFAULT_SCROLL_LIMIT = 500;
 
@@ -43,6 +44,7 @@ export const ProjectWorkspaceLog: React.FC<{
   scrollLimit
 }) => {
   const {appState} = useContext(AppStateContext);
+  const {notifyError} = useNotifications();
   const project = appState.activeProject!;
   const [logs, setLogs] = useState<LogEvent[]>([]);
   const [appendLimit, setAppendLimit] = useState<number>(scrollLimit || DEFAULT_SCROLL_LIMIT);
@@ -73,7 +75,7 @@ export const ProjectWorkspaceLog: React.FC<{
         }
       },
 
-      error: (error) => console.error(error)
+      error: (error) => notifyError(error instanceof Error ? error.message : error)
     });
 
     return () => {

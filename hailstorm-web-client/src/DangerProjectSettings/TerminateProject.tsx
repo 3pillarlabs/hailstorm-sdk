@@ -5,6 +5,7 @@ import { ApiFactory } from '../api';
 import { Modal } from '../Modal/Modal';
 import styles from './DangerProjectSettings.module.scss';
 import { AppStateContext } from '../appStateContext';
+import { useNotifications } from '../app-notifications';
 
 
 function TerminateButton({
@@ -15,7 +16,7 @@ function TerminateButton({
   project: Project;
 }) {
   return (
-    <button
+  <button
     className="button is-warning"
     onClick={() => setShowModal(true)}
     disabled={project.interimState && project.interimState === InterimProjectState.TERMINATING}
@@ -134,6 +135,7 @@ export const TerminateProject: React.FC<{
   display
 }) => {
   const {appState, dispatch} = useContext(AppStateContext);
+  const {notifySuccess, notifyError} = useNotifications();
   const project = appState.activeProject!;
   const [showModal, setShowModal] = useState(false);
   const [isUnderstood, setIsUnderstood] = useState(false);
@@ -146,7 +148,9 @@ export const TerminateProject: React.FC<{
       .then(() => dispatch(new UnsetInterimStateAction()))
       .then(() => dispatch(new SetRunningAction(false)))
       .then(() => ApiFactory().projects().get(project.id))
-      .then((project) => dispatch(new UpdateProjectAction(project)));
+      .then((project) => dispatch(new UpdateProjectAction(project)))
+      .then(() => notifySuccess('Project setup terminated'))
+      .catch((reason) => notifyError('Project setup failed to terminate', reason));
   }
 
   return (

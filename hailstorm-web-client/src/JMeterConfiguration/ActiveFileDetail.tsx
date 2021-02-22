@@ -6,6 +6,7 @@ import { JMeterFileMessage } from './JMeterFileMessage';
 import { FormikActions } from 'formik';
 import { JMeterFileDetail } from './JMeterFileDetail';
 import { FormikActionsHandler } from './domain';
+import { useNotifications } from '../app-notifications';
 
 export function ActiveFileDetail({ state, dispatch, setShowModal, setUploadAborted, disableAbort }: {
   state: NewProjectWizardState;
@@ -14,6 +15,7 @@ export function ActiveFileDetail({ state, dispatch, setShowModal, setUploadAbort
   setUploadAborted: React.Dispatch<React.SetStateAction<boolean>>;
   disableAbort: boolean;
 }) {
+  const notifiers = useNotifications();
 
   const onSubmit: FormikActionsHandler = (
     values,
@@ -36,8 +38,9 @@ export function ActiveFileDetail({ state, dispatch, setShowModal, setUploadAbort
     promise
       .then((jmeterFile) => {
         dispatch(new MergeJMeterFileAction(jmeterFile));
+        notifiers.notifySuccess(`JMeter configuration for ${jmeterFile.name} saved`);
       })
-      .catch((reason) => console.error(reason))
+      .catch((reason) => notifiers.notifyError("Failed to save JMeter configuration", reason))
       .then(() => resetForm(values))
       .then(() => setSubmitting(false));
   };

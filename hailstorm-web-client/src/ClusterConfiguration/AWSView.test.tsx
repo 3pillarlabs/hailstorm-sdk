@@ -4,6 +4,8 @@ import { AmazonCluster, Project } from '../domain';
 import { AWSView } from './AWSView';
 import { UpdateClusterAction } from './actions';
 import { ClusterService } from '../services/ClusterService';
+import { AppNotificationContextProps } from '../app-notifications';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
 
 describe('<AWSView />', () => {
   const cluster: AmazonCluster = {
@@ -26,6 +28,25 @@ describe('<AWSView />', () => {
 
   const dispatch = jest.fn();
 
+  function withNotificationContext(
+    component: JSX.Element,
+    notifiers?: {[K in keyof AppNotificationContextProps]: AppNotificationContextProps[K]}
+  ) {
+    const props: AppNotificationContextProps = {
+      notifySuccess: jest.fn(),
+      notifyInfo: jest.fn(),
+      notifyWarning: jest.fn(),
+      notifyError: jest.fn(),
+      ...notifiers
+    };
+
+    return (
+      <AppNotificationProviderWithProps {...{...props}}>
+        {component}
+      </AppNotificationProviderWithProps>
+    );
+  }
+
   beforeEach(() => {
     jest.resetAllMocks();
   });
@@ -34,7 +55,10 @@ describe('<AWSView />', () => {
     it('should update Max users per instance', async () => {
       const promise: Promise<AmazonCluster> = Promise.resolve({...cluster, maxThreadsByInstance: 50});
       const apiSpy = jest.spyOn(ClusterService.prototype, 'update').mockReturnValue(promise);
-      const { findByRole, findByTestId, debug } = render(<AWSView {...{cluster, activeProject, dispatch}} />);
+      const { findByRole, findByTestId, debug } = render(
+        withNotificationContext(<AWSView {...{cluster, activeProject, dispatch}} />)
+      );
+
       const input = await findByTestId('Max. Users / Instance');
       fireEvent.focus(input);
       fireEvent.change(input, {target: {value: '200'}});

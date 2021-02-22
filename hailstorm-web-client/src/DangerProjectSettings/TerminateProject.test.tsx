@@ -4,7 +4,8 @@ import { TerminateProject } from './TerminateProject';
 import { Project, InterimProjectState } from '../domain';
 import { ProjectService } from "../services/ProjectService";
 import { act } from '@testing-library/react';
-import { AppStateContext } from '../appStateContext';
+import { AppStateProviderWithProps } from '../AppStateProvider';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider';
 
 jest.mock('../Modal', () => ({
   __esModule: true,
@@ -33,14 +34,19 @@ describe('<TerminateProject />', () => {
     };
 
     return (
-      <AppStateContext.Provider
-        value={{
-          appState: { activeProject: project, runningProjects: [] },
-          dispatch: dispatch || jest.fn(),
-        }}
+      <AppStateProviderWithProps
+        appState={{ activeProject: project, runningProjects: [] }}
+        dispatch={dispatch || jest.fn()}
       >
-        <TerminateProject />
-      </AppStateContext.Provider>
+        <AppNotificationProviderWithProps
+          notifySuccess={jest.fn()}
+          notifyError={jest.fn()}
+          notifyInfo={jest.fn()}
+          notifyWarning={jest.fn()}
+        >
+          <TerminateProject />
+        </AppNotificationProviderWithProps>
+      </AppStateProviderWithProps>
     );
   };
 

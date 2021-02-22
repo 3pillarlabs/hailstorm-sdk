@@ -11,6 +11,7 @@ import { act } from '@testing-library/react';
 import { SetRunningAction, SetInterimStateAction, UnsetInterimStateAction } from '../ProjectWorkspace/actions';
 import { AppStateContext } from '../appStateContext';
 import { ExecutionCycleService } from '../services/ExecutionCycleService';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider';
 
 jest.mock('../Modal', () => {
   return {
@@ -48,17 +49,24 @@ describe('<ToolBar />', () => {
     viewTrash: boolean,
     statusCheckInterval?: number,
   }) => JSX.Element = ({ executionCycles, buttonStates, viewTrash, statusCheckInterval }) => (
-    <ToolBar
-      executionCycles={executionCycles}
-      gridButtonStates={buttonStates}
-      reloadReports={reloadReports}
-      setExecutionCycles={setExecutionCycles}
-      setGridButtonStates={setGridButtonStates}
-      setReloadGrid={setReloadGrid}
-      setViewTrash={setViewTrash}
-      viewTrash={viewTrash}
-      statusCheckInterval={statusCheckInterval}
-    />
+    <AppNotificationProviderWithProps
+      notifySuccess={jest.fn()}
+      notifyInfo={jest.fn()}
+      notifyWarning={jest.fn()}
+      notifyError={jest.fn()}
+    >
+      <ToolBar
+        executionCycles={executionCycles}
+        gridButtonStates={buttonStates}
+        reloadReports={reloadReports}
+        setExecutionCycles={setExecutionCycles}
+        setGridButtonStates={setGridButtonStates}
+        setReloadGrid={setReloadGrid}
+        setViewTrash={setViewTrash}
+        viewTrash={viewTrash}
+        statusCheckInterval={statusCheckInterval}
+      />
+    </AppNotificationProviderWithProps>
   );
 
   const createProject: (attrs?: {[K in keyof Project]?: Project[K]}) => Project = (attrs) => {

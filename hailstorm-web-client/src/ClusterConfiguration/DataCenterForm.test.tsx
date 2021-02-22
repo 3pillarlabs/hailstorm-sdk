@@ -1,6 +1,8 @@
 import { fireEvent, render, wait } from '@testing-library/react';
 import { mount } from 'enzyme';
 import React from 'react';
+import { AppNotificationContextProps } from '../app-notifications';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
 import { DataCenterCluster } from '../domain';
 import { FileServer } from '../FileUpload/fileServer';
 import { WizardTabTypes } from '../NewProjectWizard/domain';
@@ -47,12 +49,22 @@ describe('<DataCenterForm />', () => {
     }
   });
 
-  function createComponent() {
+  function createComponent(notifiers?: {[K in keyof AppNotificationContextProps]: AppNotificationContextProps[K]}) {
+    const props: AppNotificationContextProps = {
+      notifySuccess: jest.fn(),
+      notifyInfo: jest.fn(),
+      notifyWarning: jest.fn(),
+      notifyError: jest.fn(),
+      ...notifiers
+    };
+
     return (
-      <DataCenterForm
-        {...{dispatch}}
-        activeProject={appState.activeProject!}
-      />
+      <AppNotificationProviderWithProps {...{...props}}>
+        <DataCenterForm
+          {...{dispatch}}
+          activeProject={appState.activeProject!}
+        />
+      </AppNotificationProviderWithProps>
     )
   }
 

@@ -10,9 +10,10 @@ import { AWSRegionService } from "../services/AWSRegionService";
 import { AWSEC2PricingService } from "../services/AWSEC2PricingService";
 import { render as renderComponent, fireEvent, wait} from '@testing-library/react';
 import { AmazonCluster, Cluster, DataCenterCluster, ExecutionCycleStatus } from '../domain';
-import { FileServer } from '../FileUpload/fileServer';
 import { ClusterSetupCompletedAction } from '../NewProjectWizard/actions';
 import { RemoveClusterAction, ActivateClusterAction } from './actions';
+import { AppNotificationContextProps } from '../app-notifications';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
 
 describe('<ClusterConfiguration />', () => {
   let appState: AppState;
@@ -82,10 +83,20 @@ describe('<ClusterConfiguration />', () => {
     jest.spyOn(AWSEC2PricingService.prototype, 'list').mockReturnValue(fetchPricing);
   });
 
-  function createComponent() {
+  function createComponent(notifiers?: {[K in keyof AppNotificationContextProps]: AppNotificationContextProps[K]}) {
+    const props: AppNotificationContextProps = {
+      notifySuccess: jest.fn(),
+      notifyInfo: jest.fn(),
+      notifyWarning: jest.fn(),
+      notifyError: jest.fn(),
+      ...notifiers
+    };
+
     return (
       <AppStateContext.Provider value={{appState, dispatch}}>
-        <ClusterConfiguration />
+        <AppNotificationProviderWithProps {...{...props}}>
+          <ClusterConfiguration />
+        </AppNotificationProviderWithProps>
       </AppStateContext.Provider>
     );
   }
