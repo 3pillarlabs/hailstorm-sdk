@@ -7,17 +7,18 @@ import { JtlExportService } from "../services/JtlExportService";
 import { ReportService } from "../services/ReportService";
 import { ProjectService } from "../services/ProjectService";
 import { ModalProps } from '../Modal';
-import { act } from '@testing-library/react';
+import { act, fireEvent, render, wait } from '@testing-library/react';
 import { SetRunningAction, SetInterimStateAction, UnsetInterimStateAction } from '../ProjectWorkspace/actions';
-import { AppStateContext } from '../appStateContext';
+import { AppStateContext, AppStateContextProps } from '../appStateContext';
 import { ExecutionCycleService } from '../services/ExecutionCycleService';
 import { AppNotificationProviderWithProps } from '../AppNotificationProvider';
+import { AppNotificationContextProps } from '../app-notifications';
 
 jest.mock('../Modal', () => {
   return {
     __esModule: true,
     Modal: (props: PropsWithChildren<ModalProps>) => (
-      <div>{props.children}</div>
+      <div>{props.isActive ? props.children : null}</div>
     )
   }
 });
@@ -26,7 +27,7 @@ jest.mock('./JtlDownloadModal', () => {
   return {
     __esModule: true,
     JtlDownloadModal: () => (
-      <div id="JtlDownloadModal"></div>
+      <div id="JtlDownloadModal" data-testid="JtlDownloadModal"></div>
     )
   };
 });
@@ -48,26 +49,30 @@ describe('<ToolBar />', () => {
     buttonStates: ButtonStateLookup,
     viewTrash: boolean,
     statusCheckInterval?: number,
-  }) => JSX.Element = ({ executionCycles, buttonStates, viewTrash, statusCheckInterval }) => (
-    <AppNotificationProviderWithProps
-      notifySuccess={jest.fn()}
-      notifyInfo={jest.fn()}
-      notifyWarning={jest.fn()}
-      notifyError={jest.fn()}
-    >
-      <ToolBar
-        executionCycles={executionCycles}
-        gridButtonStates={buttonStates}
-        reloadReports={reloadReports}
-        setExecutionCycles={setExecutionCycles}
-        setGridButtonStates={setGridButtonStates}
-        setReloadGrid={setReloadGrid}
-        setViewTrash={setViewTrash}
-        viewTrash={viewTrash}
-        statusCheckInterval={statusCheckInterval}
-      />
-    </AppNotificationProviderWithProps>
-  );
+    notifiers?: {[K in keyof AppNotificationContextProps]?: AppNotificationContextProps[K]}
+  }) => JSX.Element = ({ executionCycles, buttonStates, viewTrash, statusCheckInterval, notifiers }) => {
+    const {notifySuccess, notifyInfo, notifyWarning, notifyError} = {...notifiers};
+    return (
+      <AppNotificationProviderWithProps
+        notifySuccess={notifySuccess || jest.fn()}
+        notifyInfo={notifyInfo || jest.fn()}
+        notifyWarning={notifyWarning || jest.fn()}
+        notifyError={notifyError || jest.fn()}
+      >
+        <ToolBar
+          executionCycles={executionCycles}
+          gridButtonStates={buttonStates}
+          reloadReports={reloadReports}
+          setExecutionCycles={setExecutionCycles}
+          setGridButtonStates={setGridButtonStates}
+          setReloadGrid={setReloadGrid}
+          setViewTrash={setViewTrash}
+          viewTrash={viewTrash}
+          statusCheckInterval={statusCheckInterval}
+        />
+      </AppNotificationProviderWithProps>
+    )
+  };
 
   const createProject: (attrs?: {[K in keyof Project]?: Project[K]}) => Project = (attrs) => {
     return {id: 1, code: 'a', title: 'A', running: false, autoStop: false, ...attrs};
@@ -78,8 +83,9 @@ describe('<ToolBar />', () => {
     buttonStates?: {[K in keyof ButtonStateLookup]?: ButtonStateLookup[K]},
     viewTrash?: boolean,
     executionCycles?: CheckedExecutionCycle[],
-    statusCheckInterval?: number
-  }) => JSX.Element = ({project, buttonStates, viewTrash, statusCheckInterval, executionCycles}) => (
+    statusCheckInterval?: number,
+    notifiers?: {[K in keyof AppNotificationContextProps]?: AppNotificationContextProps[K]}
+  }) => JSX.Element = ({project, buttonStates, viewTrash, statusCheckInterval, executionCycles, notifiers}) => (
 
     <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: project}, dispatch}}>
       {createToolBar({
@@ -94,7 +100,8 @@ describe('<ToolBar />', () => {
           ...buttonStates
         },
         viewTrash: viewTrash ? viewTrash : false,
-        statusCheckInterval: statusCheckInterval
+        statusCheckInterval: statusCheckInterval,
+        notifiers
       })}
     </AppStateContext.Provider>
   );
@@ -251,18 +258,20 @@ describe('<ToolBar />', () => {
     }, 0);
   });
 
-  it('should export results on Export', (done) => {
+  it('should export results on Export', async () => {
     const project: Project = createProject();
-    const component = mount(createToolBarHierarchy({project, buttonStates: {export: false}}));
+    const q = render(createToolBarHierarchy({project, buttonStates: {export: false}}));
     const apiSpy = jest.spyOn(JtlExportService.prototype, 'create').mockResolvedValue({title: 'A', url: 'B'});
-    act(() => {
-      component.find('button[name="export"]').simulate('click');
-    });
+
+    const exportBtn = await q.findByText(/Export/);
+    fireEvent.click(exportBtn);
+
     expect(apiSpy).toBeCalled();
-    setTimeout(() => {
-      done();
-      expect(component).toContainExactlyOneMatchingElement('#JtlDownloadModal');
-    }, 0);
+
+    await wait(() => {
+      expect(setGridButtonStates).toHaveBeenCalled();
+      expect(q.queryByTestId('JtlDownloadModal')).toBeDefined();
+    });
   });
 
   it('should start status checks if project is autoStop and running', (done) => {
@@ -339,4 +348,48 @@ describe('<ToolBar />', () => {
       expect(dispatch.mock.calls[1][0]).toBeInstanceOf(UnsetInterimStateAction);
     }, 0);
   });
+
+  it('should notify on error with report generation', (done) => {
+    const notifyError = jest.fn();
+    const project: Project = createProject();
+    const component = mount(createToolBarHierarchy({
+      project,
+      buttonStates: {
+        report: false
+      },
+      executionCycles: [{id: 201, projectId: 1, startedAt: new Date(), checked: true}],
+      notifiers: {notifyError}
+    }));
+
+    const apiSpy = jest.spyOn(ReportService.prototype, 'create').mockRejectedValue(new Error('mock error'));
+
+    component.find('button[name="report"]').simulate('click');
+    expect(apiSpy).toBeCalled();
+    setTimeout(() => {
+      done();
+      expect(notifyError).toBeCalled();
+    }, 0);
+  });
+
+  it('should notify on error with exporting results', async () => {
+    const notifyError = jest.fn();
+    const project: Project = createProject();
+    const {findByText, queryByTestId} = render(createToolBarHierarchy({
+      project,
+      buttonStates: {export: false},
+      notifiers: {notifyError}
+    }));
+
+    const apiSpy = jest.spyOn(JtlExportService.prototype, 'create').mockRejectedValue(new Error('mock error'));
+    const exportBtn = await findByText(/Export/);
+    fireEvent.click(exportBtn);
+
+    expect(apiSpy).toBeCalled();
+
+    await wait(() => {
+      expect(notifyError).toBeCalled();
+      expect(queryByTestId('JtlDownloadModal')).toBeNull();
+    });
+  });
+
 });

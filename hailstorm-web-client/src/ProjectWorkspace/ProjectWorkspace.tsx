@@ -1,4 +1,4 @@
-import React, { useEffect, useContext, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ProjectWorkspaceHeader } from '../ProjectWorkspaceHeader';
 import { ProjectWorkspaceMain } from '../ProjectWorkspaceMain';
 import { ProjectWorkspaceLog } from '../ProjectWorkspaceLog';
@@ -8,7 +8,7 @@ import { ApiFactory } from '../api';
 import { Loader, LoaderSize } from '../Loader';
 import { RouteComponentProps, Redirect } from 'react-router';
 import { SetProjectAction } from './actions';
-import { AppStateContext } from '../appStateContext';
+import { AppStateContext, useAppState } from '../appStateContext';
 import { UnsavedChangesPrompt } from '../Modal/UnsavedChangesPrompt';
 import { Link } from 'react-router-dom';
 import { UnsetProjectAction } from '../NewProjectWizard/actions';
@@ -18,7 +18,7 @@ export interface ProjectWorkspaceBasicProps {
 }
 
 export const ProjectWorkspace: React.FC<RouteComponentProps<{ id: string }>> = (props) => {
-  const {appState, dispatch} = useContext(AppStateContext);
+  const {appState, dispatch} = useAppState();
   const [showModal, setShowModal] = useState(false);
   const [handleNotFound, setHandleNotFound] = useState(false);
 

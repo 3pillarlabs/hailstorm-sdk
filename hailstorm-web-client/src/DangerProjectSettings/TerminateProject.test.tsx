@@ -6,6 +6,7 @@ import { ProjectService } from "../services/ProjectService";
 import { act } from '@testing-library/react';
 import { AppStateProviderWithProps } from '../AppStateProvider';
 import { AppNotificationProviderWithProps } from '../AppNotificationProvider';
+import { AppNotificationContextProps } from '../app-notifications';
 
 jest.mock('../Modal', () => ({
   __esModule: true,
@@ -19,10 +20,12 @@ describe('<TerminateProject />', () => {
 
   const buildComponent = ({
     dispatch,
-    projectAttrs
+    projectAttrs,
+    notifiers
   }: {
-    dispatch?: any,
-    projectAttrs?: {[K in keyof Project]?: Project[K]}
+    dispatch?: any;
+    projectAttrs?: {[K in keyof Project]?: Project[K]};
+    notifiers?: {[K in keyof AppNotificationContextProps]?: AppNotificationContextProps[K]}
   } = {}) => {
     project = {
       id: 1,
@@ -33,16 +36,17 @@ describe('<TerminateProject />', () => {
       ...(projectAttrs || {})
     };
 
+    const {notifySuccess, notifyInfo, notifyWarning, notifyError} = {...notifiers};
     return (
       <AppStateProviderWithProps
         appState={{ activeProject: project, runningProjects: [] }}
         dispatch={dispatch || jest.fn()}
       >
         <AppNotificationProviderWithProps
-          notifySuccess={jest.fn()}
-          notifyError={jest.fn()}
-          notifyInfo={jest.fn()}
-          notifyWarning={jest.fn()}
+          notifySuccess={notifySuccess || jest.fn()}
+          notifyError={notifyError || jest.fn()}
+          notifyInfo={notifyInfo || jest.fn()}
+          notifyWarning={notifyWarning || jest.fn()}
         >
           <TerminateProject />
         </AppNotificationProviderWithProps>
@@ -126,6 +130,24 @@ describe('<TerminateProject />', () => {
       expect(apiUpdateSpy).toBeCalled();
       await apiGetPromise;
       expect(apiGetSpy).toBeCalled();
+    });
+
+    it('should notify of an error', (done) => {
+      const failedPromise = Promise.reject(new Error('mock error'));
+      const apiUpdateSpy = jest.spyOn(ProjectService.prototype, 'update').mockReturnValue(failedPromise);
+      const notifyError = jest.fn();
+      const component = mount(buildComponent({notifiers: {notifyError}}));
+      act(() => {
+        component.find('button').simulate('click');
+      });
+
+      component.update();
+      component.find('button.is-danger').simulate('click');
+      expect(apiUpdateSpy).toBeCalled();
+      setTimeout(() => {
+        done();
+        expect(notifyError).toBeCalled();
+      }, 0);
     });
   });
 });
