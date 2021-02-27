@@ -28,7 +28,7 @@ describe('<NotificationCenter />', () => {
         subject.next(new Notification(`test ${type}`, type));
       });
 
-      await findByText(`test ${type}`);
+      await findByText(new RegExp(`test ${type}`));
     });
   });
 
@@ -50,8 +50,8 @@ describe('<NotificationCenter />', () => {
       subject.next(new InfoNotification(`test info`));
     });
 
-    await findByText('test success');
-    await findByText('test info');
+    await findByText(/test success/);
+    await findByText(/test info/);
   });
 
   it('should remove old messages after a time interval', async (done) => {
@@ -61,8 +61,8 @@ describe('<NotificationCenter />', () => {
       subject.next(new InfoNotification(`test info`));
     });
 
-    await findByText('test success');
-    await findByText('test info');
+    await findByText(/test success/);
+    await findByText(/test info/);
 
     setTimeout(() => {
       done();
@@ -77,11 +77,11 @@ describe('<NotificationCenter />', () => {
       subject.next(new ErrorNotification(`test error`));
     });
 
-    await findByText('test error');
+    await findByText(/test error/);
 
     setTimeout(() => {
       done();
-      const messages = queryAllByText('test error');
+      const messages = queryAllByText(/test error/);
       expect(messages).toHaveLength(1);
     }, 30);
   });
@@ -160,12 +160,12 @@ describe('<NotificationCenter />', () => {
       subject.next(new SuccessNotification(`test success`));
     });
 
-    await findByText('test success');
+    await findByText(/test success/);
 
     const closeButton = await findByTitle('Close');
     fireEvent.click(closeButton);
 
-    const message = queryByText('test success');
+    const message = queryByText(/test success/);
     expect(message).toBeNull();
   });
 });

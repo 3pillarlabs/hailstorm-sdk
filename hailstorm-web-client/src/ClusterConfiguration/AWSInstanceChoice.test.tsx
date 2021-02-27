@@ -4,6 +4,7 @@ import { AWSInstanceChoice } from './AWSInstanceChoice';
 import { AWSInstanceChoiceOption } from './domain';
 import { render as renderComponent, fireEvent } from '@testing-library/react';
 import { Form, Formik } from 'formik';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
 
 jest.mock('./NonLinearSlider', () => ({
   __esModule: true,
@@ -14,7 +15,7 @@ jest.mock('./NonLinearSlider', () => ({
 
 describe('<AWSInstanceChoice />', () => {
   const advanceModeTrigger = /specify aws instance type/i;
-  let fetchPricing: Promise<AWSInstanceChoiceOption[]>;
+  let instanceChoicesPromise: Promise<AWSInstanceChoiceOption[]>;
 
   function FormComponent({
     fetchPricing,
@@ -34,13 +35,20 @@ describe('<AWSInstanceChoice />', () => {
     setHourlyCostByCluster?: React.Dispatch<React.SetStateAction<number | undefined>> | undefined
   }) {
     return (
-      <Formik isInitialValid={false} initialValues={{}} onSubmit={jest.fn()}>
-        <Form>
-          <AWSInstanceChoice
-            {...{fetchPricing, disabled, onChange, regionCode, hourlyCostByCluster, key, setHourlyCostByCluster}}
-          />
-        </Form>
-      </Formik>
+      <AppNotificationProviderWithProps
+        notifySuccess={jest.fn()}
+        notifyInfo={jest.fn()}
+        notifyWarning={jest.fn()}
+        notifyError={jest.fn()}
+      >
+        <Formik isInitialValid={false} initialValues={{}} onSubmit={jest.fn()}>
+          <Form>
+            <AWSInstanceChoice
+              {...{fetchPricing, disabled, onChange, regionCode, hourlyCostByCluster, key, setHourlyCostByCluster}}
+            />
+          </Form>
+        </Formik>
+      </AppNotificationProviderWithProps>
     )
   }
 
@@ -49,7 +57,7 @@ describe('<AWSInstanceChoice />', () => {
   });
 
   beforeEach(() => {
-    fetchPricing = Promise.resolve([
+    instanceChoicesPromise = Promise.resolve([
       new AWSInstanceChoiceOption({
         instanceType: 'm3a.small', numInstances: 1, maxThreadsByInstance: 500, hourlyCostByInstance: 0.092
       })
@@ -61,15 +69,15 @@ describe('<AWSInstanceChoice />', () => {
   });
 
   it('should render a component to select max number of users', async () => {
-    const component = mount(<FormComponent onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />);
-    await fetchPricing;
+    const component = mount(<FormComponent onChange={jest.fn()} fetchPricing={() => instanceChoicesPromise} regionCode="us-east-1" />);
+    await instanceChoicesPromise;
     component.update();
     expect(component).toContainExactlyOneMatchingElement('NonLinearSlider');
   });
 
   it('should show default values', async () => {
-    const component = mount(<FormComponent onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />);
-    await fetchPricing;
+    const component = mount(<FormComponent onChange={jest.fn()} fetchPricing={() => instanceChoicesPromise} regionCode="us-east-1" />);
+    await instanceChoicesPromise;
     component.update();
     expect(component.find('NonLinearSlider')).toHaveProp('initialValue');
   });
@@ -84,8 +92,8 @@ describe('<AWSInstanceChoice />', () => {
       hourlyCostByCluster: jest.fn().mockReturnValue(8.34567)
     });
 
-    const component = mount(<FormComponent onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />);
-    await fetchPricing;
+    const component = mount(<FormComponent onChange={jest.fn()} fetchPricing={() => instanceChoicesPromise} regionCode="us-east-1" />);
+    await instanceChoicesPromise;
     component.update();
     const onChange = component.find('NonLinearSlider').prop('onChange') as unknown as (value: number) => void;
     onChange(100);
@@ -94,10 +102,10 @@ describe('<AWSInstanceChoice />', () => {
 
   it('should switch to advanced mode', async () => {
     const {findByText, findByTestId} = renderComponent(
-      <FormComponent onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />
+      <FormComponent onChange={jest.fn()} fetchPricing={() => instanceChoicesPromise} regionCode="us-east-1" />
     );
 
-    await fetchPricing;
+    await instanceChoicesPromise;
     const switchLink = await findByText(advanceModeTrigger);
     fireEvent.click(switchLink);
     await findByText(/by usage/i);
@@ -107,10 +115,10 @@ describe('<AWSInstanceChoice />', () => {
   describe('when in advanced mode', () => {
     it('should edit AWS instance type and max users by instance', async () => {
       const {findByText, findByTestId, findByDisplayValue} = renderComponent(
-        <FormComponent onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />
+        <FormComponent onChange={jest.fn()} fetchPricing={() => instanceChoicesPromise} regionCode="us-east-1" />
       );
 
-      await fetchPricing;
+      await instanceChoicesPromise;
       const switchLink = await findByText(advanceModeTrigger);
       fireEvent.click(switchLink);
       const awsInstanceType = await findByTestId('AWS Instance Type');
@@ -134,10 +142,10 @@ describe('<AWSInstanceChoice />', () => {
       });
 
       const {findByText, findByTestId} = renderComponent(
-        <FormComponent onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />
+        <FormComponent onChange={jest.fn()} fetchPricing={() => instanceChoicesPromise} regionCode="us-east-1" />
       );
 
-      await fetchPricing;
+      await instanceChoicesPromise;
       let switchLink = await findByText(advanceModeTrigger);
       fireEvent.click(switchLink);
       let awsInstanceType = await findByTestId('AWS Instance Type');
@@ -158,13 +166,13 @@ describe('<AWSInstanceChoice />', () => {
       const {findByText} = renderComponent(
         <FormComponent
           onChange={jest.fn()}
-          fetchPricing={() => fetchPricing}
+          fetchPricing={() => instanceChoicesPromise}
           regionCode="us-east-1"
           {...{setHourlyCostByCluster}}
         />
       );
 
-      await fetchPricing;
+      await instanceChoicesPromise;
       const switchLink = await findByText(advanceModeTrigger);
       fireEvent.click(switchLink);
       expect(setHourlyCostByCluster).toBeCalledWith(undefined);
@@ -181,8 +189,8 @@ describe('<AWSInstanceChoice />', () => {
       hourlyCostByCluster: jest.fn().mockReturnValue(8.34567)
     });
 
-    const component = mount(<FormComponent onChange={jest.fn()} fetchPricing={() => fetchPricing} regionCode="us-east-1" />);
-    await fetchPricing;
+    const component = mount(<FormComponent onChange={jest.fn()} fetchPricing={() => instanceChoicesPromise} regionCode="us-east-1" />);
+    await instanceChoicesPromise;
     component.update();
     const onChange = component.find('NonLinearSlider').prop('onChange') as unknown as (value: number) => void;
     console.debug(onChange);
@@ -193,7 +201,7 @@ describe('<AWSInstanceChoice />', () => {
     expect(sliderValue).toEqual(1000);
 
     component.setProps({regionCode: 'us-west-1'});
-    await fetchPricing;
+    await instanceChoicesPromise;
     component.update();
     expect(computeSpy).toBeCalledTimes(3);
     sliderValue = computeSpy.mock.calls[2][0];
@@ -204,14 +212,36 @@ describe('<AWSInstanceChoice />', () => {
     const component =  mount(
       <FormComponent
         onChange={jest.fn()}
-        fetchPricing={() => fetchPricing}
+        fetchPricing={() => instanceChoicesPromise}
         regionCode="us-east-1"
         disabled={true}
       />
     );
 
-    await fetchPricing;
+    await instanceChoicesPromise;
     component.update();
     expect(component).toHaveProp('disabled', true);
+  });
+
+  it('should revert to default max users per instance if updated to empty value', async () => {
+    const calculator = await import('./AWSInstanceCalculator');
+    jest.spyOn(calculator, 'computeChoice').mockReturnValue({
+      instanceType: 'm5a.large',
+      numInstances: 1,
+      hourlyCostByInstance: 0.192,
+      maxThreadsByInstance: 500,
+      hourlyCostByCluster: jest.fn().mockReturnValue(8.34567)
+    });
+
+    const {findByTestId} = renderComponent(
+      <FormComponent onChange={jest.fn()} fetchPricing={() => instanceChoicesPromise} regionCode="us-east-1" />
+    );
+
+    await instanceChoicesPromise;
+
+    const maxThreadsByInst = await findByTestId('Max. Users / Instance');
+    const presetValue = maxThreadsByInst.getAttribute('value');
+    fireEvent.change(maxThreadsByInst, {target: {value: ''}});
+    expect(maxThreadsByInst.getAttribute('value')).toEqual(presetValue);
   });
 });

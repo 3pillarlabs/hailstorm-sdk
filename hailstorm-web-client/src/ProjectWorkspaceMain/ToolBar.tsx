@@ -9,6 +9,8 @@ import { SetInterimStateAction, UnsetInterimStateAction, SetRunningAction, Updat
 import { AppStateContext } from '../appStateContext';
 import { interval, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { useNotifications } from '../app-notifications';
+import _ from 'lodash';
 
 export interface ToolBarProps {
   gridButtonStates: ButtonStateLookup;
@@ -36,9 +38,11 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
   } = props;
 
   const {appState, dispatch} = useContext(AppStateContext);
-  const project = appState.activeProject!;
+  const notifiers = useNotifications();
   const [showJtlModal, setShowJtlModal] = useState(false);
   const [jtlModalProps, setJtlModalProps] = useState<JtlDownloadContentProps>({});
+
+  const project = appState.activeProject!;
 
   const toggleTrash = () => {
     const nextState = !viewTrash;
@@ -53,6 +57,8 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
     if (nextState) {
       setExecutionCycles(executionCycles.map((exCycle) => ({...exCycle, checked: false})));
     }
+
+    notifiers.notifyInfo(`Trash view is ${viewTrash ? 'closed' : 'open'}`);
   };
 
   const toggleRunning = (endState: boolean, action?: ProjectActions) => {
@@ -75,6 +81,7 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
           break;
       }
 
+      notifiers.notifyInfo(`${_.capitalize(action)}ing tests...`);
       ApiFactory()
         .projects()
         .update(project.id, { running: endState, action })
@@ -83,9 +90,20 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
         .then(() => dispatch(new UnsetInterimStateAction()))
         .then(() => dispatch(new SetRunningAction(endState)))
         .then(() => setReloadGrid(true))
+        .then(() => {
+          if (endState) {
+            notifiers.notifyInfo(`Test started`);
+          } else {
+            if (action === "abort") {
+              notifiers.notifyWarning(`Test aborted`);
+            } else {
+              notifiers.notifySuccess(`Test completed`);
+            }
+          }
+        })
         .catch((reason) => {
-          console.error(reason);
           dispatch(new UnsetInterimStateAction());
+          notifiers.notifyError(`Failed to ${action} test`, reason);
         });
     };
   }
@@ -100,9 +118,11 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
             .reports()
             .create(project.id, executionCycleIds)
             .then(reloadReports)
-            .then(() =>
-              setGridButtonStates({ ...gridButtonStates, [action]: false })
-            );
+            .then(() => {
+              setGridButtonStates({ ...gridButtonStates, [action]: false });
+              notifiers.notifySuccess(`Created new report`);
+            })
+            .catch((reason) => notifiers.notifyError(`Failed to generate report`, reason));
 
           break;
 
@@ -114,9 +134,11 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
               setJtlModalProps({title, url});
               setShowJtlModal(true);
             })
-            .then(() =>
+            .then(() => {
               setGridButtonStates({ ...gridButtonStates, [action]: false })
-            );
+              notifiers.notifySuccess(`Exported data for selected tests`);
+            })
+            .catch((reason) => notifiers.notifyError(`Failed to export date`, reason));
 
           break;
 
@@ -146,7 +168,7 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
               toggleRunning(false, 'stop')();
             }
           } catch (error) {
-            console.error(`Error getting status of current tests: ${error.message}`);
+            notifiers.notifyError(`Error getting status of current tests`, error);
             subject.next();
             subject.complete();
           }

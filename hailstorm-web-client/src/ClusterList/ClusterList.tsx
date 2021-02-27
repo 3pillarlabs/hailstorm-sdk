@@ -13,9 +13,21 @@ export const ClusterList: React.FC<{
   showDisabledCluster?: boolean;
 }> = ({clusters, showEdit, onSelectCluster, activeCluster, disableEdit, onEdit, showDisabledCluster}) => {
 
+  const sortFn: (a: Cluster, b: Cluster) => number = (a, b) => {
+    if (activeCluster && activeCluster.id === b.id) {
+      return 1;
+    }
+
+    if (a.disabled) {
+      return 1;
+    }
+
+    return 0;
+  };
+
   let displayedClusters: Cluster[] | undefined = undefined;
   if (clusters) {
-    displayedClusters = showDisabledCluster ? clusters : clusters.filter((value) => !value.disabled);
+    displayedClusters = (showDisabledCluster ? clusters : clusters.filter((value) => !value.disabled)).sort(sortFn);
   }
 
   return (

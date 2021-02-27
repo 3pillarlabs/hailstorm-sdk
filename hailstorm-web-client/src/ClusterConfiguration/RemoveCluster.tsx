@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { DataCenterCluster, AmazonCluster, Project, Cluster } from "../domain";
 import { ApiFactory } from "../api";
 import { RemoveClusterAction, ActivateClusterAction } from "./actions";
+import { useNotifications } from "../app-notifications";
 
 export function RemoveCluster({
   cluster,
@@ -13,6 +14,8 @@ export function RemoveCluster({
   activeProject: Project;
 }) {
   const [disableRemove, setDisableRemove] = useState(false);
+  const notifiers = useNotifications();
+
   const removeHandler = () => {
     if (cluster.id) {
       setDisableRemove(true);
@@ -22,6 +25,7 @@ export function RemoveCluster({
       .then(() => {
         delete cluster.disabled;
         dispatch(new RemoveClusterAction(cluster));
+        notifiers.notifySuccess(`Removed cluser ${cluster.title} from configuration`);
       })
       .finally(() => setDisableRemove(false));
 
@@ -39,6 +43,7 @@ export function RemoveCluster({
       .then(() => {
         const payload: Cluster = {...cluster, disabled: true};
         dispatch(new RemoveClusterAction(payload));
+        notifiers.notifyWarning(`Disabled cluser ${cluster.title} configuration`);
       })
       .finally(() => setDisableRemove(false));
 
@@ -55,6 +60,7 @@ export function RemoveCluster({
       .then((updated) => {
         dispatch(new ActivateClusterAction({...updated, disabled: false}));
         setDisableRemove(false);
+        notifiers.notifySuccess(`Enabled cluser ${cluster.title} configuration`);
       });
   };
 

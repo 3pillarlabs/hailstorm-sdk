@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AWSRegionType, AWSRegionList } from './domain';
 import { Loader } from '../Loader/Loader';
+import { useNotifications } from '../app-notifications';
 
 export function AWSRegionChoice({
   fetchRegions,
@@ -11,6 +12,7 @@ export function AWSRegionChoice({
   fetchRegions: () => Promise<AWSRegionList>;
   disabled?: boolean;
 }) {
+  const {notifyError} = useNotifications();
   const [regionList, setRegionList] = useState<AWSRegionList>();
   const [regions, setRegions] = useState<AWSRegionType[]>([]);
   const [selectedRegion, setSelectedRegion] = useState<AWSRegionType>();
@@ -24,7 +26,7 @@ export function AWSRegionChoice({
         setSelectedRegion(data.defaultRegion);
         onAWSRegionChange(data.defaultRegion.code);
       })
-      .catch((reason) => console.error(reason));
+      .catch((reason) => notifyError(`Failed to fetch region price data`, reason));
   }, []);
 
   const handleEdit = () => {

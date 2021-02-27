@@ -6,6 +6,9 @@ import { ProjectService } from "../services/ProjectService";
 import { InterimProjectState } from '../domain';
 import { AppStateContext } from '../appStateContext';
 import { UpdateProjectAction } from '../ProjectWorkspace/actions';
+import { AppStateProvider, AppStateProviderWithProps } from '../AppStateProvider/AppStateProvider';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
+import { AppNotificationContextProps } from '../app-notifications';
 
 describe('<ProjectWorkspaceHeader />', () => {
   const project = { id: 1, code: 'a', title: 'Project Title', autoStop: true, running: false };
@@ -49,10 +52,14 @@ describe('<ProjectWorkspaceHeader />', () => {
 
     it('should update title on submit', async () => {
       const updateFnSpy = jest.spyOn(ProjectService.prototype, 'update').mockImplementation(jest.fn().mockResolvedValue(null));
+      const notifiers: AppNotificationContextProps = createNotifers();
+
       const {findByText, findByTitle, findByDisplayValue} = render(
-        <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: project}, dispatch}}>
-          <ProjectWorkspaceHeader />
-        </AppStateContext.Provider>
+        <AppStateProviderWithProps appState={{runningProjects: [], activeProject: project}} {...{dispatch}}>
+          <AppNotificationProviderWithProps {...{...notifiers}}>
+            <ProjectWorkspaceHeader />
+          </AppNotificationProviderWithProps>
+        </AppStateProviderWithProps>
       );
 
       const editLink = await findByTitle('Edit');
@@ -88,6 +95,34 @@ describe('<ProjectWorkspaceHeader />', () => {
 
       const button = await findByText('Update');
       expect(button.hasAttribute('disabled')).toBeTruthy();
+    });
+
+    it('should notify on error', async () => {
+      const updateFnSpy = jest.spyOn(ProjectService.prototype, 'update').mockRejectedValue(new Error('mock error'));
+      const notifiers: AppNotificationContextProps = createNotifers();
+
+      const {findByText, findByTitle, findByDisplayValue} = render(
+        <AppStateProviderWithProps appState={{runningProjects: [], activeProject: project}} {...{dispatch}}>
+          <AppNotificationProviderWithProps {...{...notifiers}}>
+            <ProjectWorkspaceHeader />
+          </AppNotificationProviderWithProps>
+        </AppStateProviderWithProps>
+      );
+
+      const editLink = await findByTitle('Edit');
+      fireEvent.click(editLink);
+
+      const updatedProjectTitle = `Updated ${project.title}`;
+      const textBox = await findByDisplayValue(project.title);
+      fireEvent.change(textBox, {target: {value: updatedProjectTitle}});
+
+      const button = await findByText('Update');
+      fireEvent.click(button);
+
+      await wait(() => {
+        expect(updateFnSpy).toHaveBeenCalledWith(project.id, {title: updatedProjectTitle});
+        expect(notifiers.notifyError).toHaveBeenCalled();
+      });
     });
   });
 
@@ -141,4 +176,16 @@ describe('<ProjectWorkspaceHeader />', () => {
       expect(component.find('.isStatus').text()).toMatch(new RegExp('running', 'i'));
     });
   });
+
+  function createNotifers(notifiers?: {
+    [K in keyof AppNotificationContextProps]?: AppNotificationContextProps[K]
+  }): AppNotificationContextProps {
+    const {notifySuccess, notifyInfo, notifyWarning, notifyError} = {...notifiers};
+    return {
+      notifySuccess: notifySuccess || jest.fn(),
+      notifyInfo: notifyInfo || jest.fn(),
+      notifyWarning: notifyWarning || jest.fn(),
+      notifyError: notifyError || jest.fn()
+    };
+  }
 });

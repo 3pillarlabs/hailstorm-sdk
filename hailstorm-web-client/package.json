@@ -1,6 +1,6 @@
 {
   "name": "hailstorm-web-client",
-  "version": "1.6.8",
+  "version": "1.6.9",
   "private": true,
   "dependencies": {
     "date-fns": "^2.6.0",

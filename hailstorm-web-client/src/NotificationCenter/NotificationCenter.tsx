@@ -112,7 +112,7 @@ function NotificationToast({ notification, closeHandler }: Toast) {
       <div className={`notification is-${type} is-light`}>
         <button className="delete" title="Close" onClick={closeHandler}></button>
         <div className={styles.message}>
-          <MessageIcon type={notification.type} /> {message}
+          <MessageIcon type={notification.type} /> {message.replace(/\.?$/, '.')}
         </div>
         {errorReason && (<ErrorDetails {...{errorReason}} />)}
         {(notification.isError() || notification.isWarning()) && (

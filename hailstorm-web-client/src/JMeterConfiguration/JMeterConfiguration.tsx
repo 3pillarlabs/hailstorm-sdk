@@ -15,6 +15,7 @@ import { StepHeader } from './StepHeader';
 import { StepContent } from './StepContent';
 import { StepFooter } from './StepFooter';
 import { FileRemoveConfirmation } from './FileRemoveConfirmation';
+import { AppNotificationContextProps, useNotifications } from '../app-notifications';
 
 export const UPLOAD_ABORT_ENABLE_DELAY_MS = 5000;
 
@@ -23,6 +24,7 @@ export const JMeterConfiguration: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [uploadAborted, setUploadAborted] = useState(false);
   const [disableAbort, setDisableAbort] = useState(true);
+  const notifiers = useNotifications();
 
   useEffect(() => {
     if (appState.activeProject && appState.activeProject.jmeter === undefined) {
@@ -36,16 +38,16 @@ export const JMeterConfiguration: React.FC = () => {
   const handleFileUpload = (file: SavedFile) => {
     const jmeterPlan = file.originalName.match(/\.jmx$/);
     if (jmeterPlan) {
-      validateJMeterPlan({ file, dispatch, projectId: appState.activeProject!.id });
+      validateJMeterPlan({ file, dispatch, projectId: appState.activeProject!.id, notifiers });
     } else {
-      saveDataFile({ dispatch, file, projectId: appState.activeProject!.id });
+      saveDataFile({ dispatch, file, projectId: appState.activeProject!.id, notifiers });
     }
   };
 
   const handleFileRemove = (file: JMeterFile) => {
     setShowModal(false);
     dispatch(new FileRemoveInProgressAction(file.name));
-    destroyFile({ file, dispatch, projectId: appState.activeProject!.id });
+    destroyFile({ file, dispatch, projectId: appState.activeProject!.id, notifiers });
   };
 
   if (appState.activeProject && appState.activeProject.jmeter === undefined) {
@@ -93,37 +95,70 @@ function hasUnsavedProperties(file: JMeterFile) {
   )
 }
 
-async function destroyFile({ file, projectId, dispatch }: { file: JMeterFile; projectId: number; dispatch: React.Dispatch<any>; }) {
+async function destroyFile({
+  file,
+  projectId,
+  dispatch,
+  notifiers
+}: {
+  file: JMeterFile;
+  projectId: number;
+  dispatch: React.Dispatch<any>;
+  notifiers: AppNotificationContextProps;
+}) {
   if (file.id) {
     try {
       await ApiFactory().jmeter().destroy(projectId, file.id);
+      notifiers.notifySuccess(`Deleted the JMeter configuration`);
     }
     catch (reason) {
-      console.error(reason);
+      notifiers.notifyError("Failed to remove JMeter from configuration", reason);
     }
   }
 
   try {
     await FileServer.removeFile({ name: file.name, path: file.path! });
+    notifiers.notifySuccess(`Deleted file ${file.name}`);
     dispatch(new RemoveJMeterFileAction(file));
   }
   catch (reason_1) {
-    console.error(reason_1);
+    notifiers.notifyError(`Failed to remove file ${file.name}`, reason_1);
   }
 }
 
-async function saveDataFile({ dispatch, file, projectId }: { dispatch: React.Dispatch<any>; file: SavedFile; projectId: number; }) {
+async function saveDataFile({
+  dispatch,
+  file,
+  projectId,
+  notifiers
+}: {
+  dispatch: React.Dispatch<any>;
+  file: SavedFile;
+  projectId: number;
+  notifiers: AppNotificationContextProps;
+}) {
   dispatch(new CommitJMeterFileAction({ name: file.originalName, dataFile: true, path: file.id }));
   try {
     const data = await ApiFactory().jmeter().create(projectId, { name: file.originalName, dataFile: true, path: file.id });
     dispatch(new MergeJMeterFileAction(data));
+    notifiers.notifySuccess(`JMeter data file ${data.name} saved`);
   }
   catch (reason) {
-    console.error(reason);
+    notifiers.notifyError("Failed to save data file", reason);
   }
 }
 
-async function validateJMeterPlan({ file, dispatch, projectId }: { file: SavedFile; dispatch: React.Dispatch<any>; projectId: any}) {
+async function validateJMeterPlan({
+  file,
+  dispatch,
+  projectId,
+  notifiers
+}: {
+  file: SavedFile;
+  dispatch: React.Dispatch<any>;
+  projectId: any;
+  notifiers: AppNotificationContextProps;
+}) {
   try {
     const data = await ApiFactory().jmeterValidation().create({ name: file.originalName, path: file.id, projectId });
     return dispatch(new CommitJMeterFileAction({ name: file.originalName, properties: data.properties!, path: file.id }));
@@ -137,7 +172,7 @@ async function validateJMeterPlan({ file, dispatch, projectId }: { file: SavedFi
       dispatch(new AbortJMeterFileUploadAction({ name: file.originalName, validationErrors }));
     }
     else {
-      console.error(reason);
+      notifiers.notifyError(`Failed to validate JMeter file`, reason);
     }
   }
 }

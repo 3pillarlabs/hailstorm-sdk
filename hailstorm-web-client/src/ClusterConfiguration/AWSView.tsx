@@ -9,12 +9,15 @@ import { ApiFactory } from '../api';
 import { UpdateClusterAction } from './actions';
 import { Form, Formik } from 'formik';
 import { FormikActionsHandler } from '../JMeterConfiguration/domain';
+import { useNotifications } from '../app-notifications';
 
 export function AWSView({ cluster, dispatch, activeProject }: {
   cluster: AmazonCluster;
   dispatch?: React.Dispatch<any>;
   activeProject?: Project;
 }) {
+  const {notifySuccess, notifyError} = useNotifications();
+
   const handleSubmit: FormikActionsHandler = async (values, {resetForm, setSubmitting}) => {
     setSubmitting(true);
     try {
@@ -26,8 +29,9 @@ export function AWSView({ cluster, dispatch, activeProject }: {
 
       dispatch && dispatch(new UpdateClusterAction(updatedCluster));
       resetForm(values);
+      notifySuccess(`Saved ${updatedCluster.title} cluster configuration`);
     } catch (error) {
-      console.error(error);
+      notifyError("Failed to update cluster configuration", error);
     } finally {
       setSubmitting(false);
     }

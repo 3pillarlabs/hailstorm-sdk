@@ -10,6 +10,7 @@ import { SetRunningProjectsAction } from '../TopNav/actions';
 import { History } from 'history';
 import { WizardTabTypes } from '../NewProjectWizard/domain';
 import { ProjectSetupAction } from '../NewProjectWizard/actions';
+import { useNotifications } from '../app-notifications';
 
 const RECENT_MINUTES = 60;
 
@@ -122,6 +123,7 @@ export const ProjectList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const {dispatch} = useContext(AppStateContext);
+  const {notifyError} = useNotifications();
 
   useEffect(() => {
     if (loading) {
@@ -138,7 +140,7 @@ export const ProjectList: React.FC = () => {
 
           setLoading(false);
         })
-        .catch((reason) => console.error(reason));
+        .catch((reason) => notifyError(`Failed to fetch project list`, reason));
     }
   }, []);
 

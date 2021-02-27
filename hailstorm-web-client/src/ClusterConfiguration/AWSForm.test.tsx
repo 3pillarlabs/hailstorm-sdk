@@ -7,6 +7,8 @@ import { fireEvent, render, wait } from '@testing-library/react';
 import { AWSRegionService } from '../services/AWSRegionService';
 import { mount } from 'enzyme';
 import { ClusterService } from '../services/ClusterService';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
+import { AppNotificationContextProps } from '../app-notifications';
 
 describe('<AWSForm />', () => {
   const activeProject: Project = {
@@ -26,11 +28,19 @@ describe('<AWSForm />', () => {
 
   const dispatch = jest.fn();
 
-  function createComponent() {
+  function createComponent(notifiers?: {[K in keyof AppNotificationContextProps]: AppNotificationContextProps[K]}) {
+    const props: AppNotificationContextProps = {
+      notifySuccess: jest.fn(),
+      notifyInfo: jest.fn(),
+      notifyWarning: jest.fn(),
+      notifyError: jest.fn(),
+      ...notifiers
+    };
+
     return (
-      <AWSForm
-        {...{activeProject, dispatch}}
-      />
+      <AppNotificationProviderWithProps {...{...props}}>
+        <AWSForm {...{activeProject, dispatch}} />
+      </AppNotificationProviderWithProps>
     )
   }
 
