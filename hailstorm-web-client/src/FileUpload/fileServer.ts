@@ -21,7 +21,7 @@ export class RequestDelegate {
     this.reject(this.req.statusText ? this.req.statusText : 'Connection refused');
   }
 
-  progressHandler(event: ProgressEvent<XMLHttpRequestEventTarget>) {
+  progressHandler(event: ProgressEvent) {
     if (!event.lengthComputable) return;
     this.progressCb && this.progressCb((event.loaded / event.total) * 100);
   }
@@ -54,7 +54,7 @@ export class UploadRequestBuilder implements UploadRequest{
 
   private addUploadListener<K extends keyof XMLHttpRequestEventTargetEventMap>(
     type: K,
-    listener: (ev: ProgressEvent<XMLHttpRequestEventTarget>) => any
+    listener: (ev: ProgressEvent) => any
   ) {
     this.delegate.req.upload.addEventListener(type, listener.bind(this.delegate));
   }
@@ -130,7 +130,7 @@ export class FileUploadSaga<T> {
 
 export const FileServer: {
   uploadURL: string;
-  sendFile: (file: File, progressCb?: (progress: number) => void, pathPrefix?: string) => FileUploadSaga<any>;
+    sendFile: (file: File, progressCb?: (progress: number) => void, pathPrefix?: string) => FileUploadSaga<any>;
   removeFile: (file: {name: string, path: string}) => Promise<any>;
 } = {
 

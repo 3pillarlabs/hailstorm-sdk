@@ -36,6 +36,7 @@ export const JMeterConfiguration: React.FC = () => {
   }, []);
 
   const handleFileUpload = (file: SavedFile) => {
+    notifiers.notifySuccess(`File ${file.originalName} uploaded`);
     const jmeterPlan = file.originalName.match(/\.jmx$/);
     if (jmeterPlan) {
       validateJMeterPlan({ file, dispatch, projectId: appState.activeProject!.id, notifiers });

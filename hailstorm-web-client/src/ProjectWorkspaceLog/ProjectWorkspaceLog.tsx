@@ -5,7 +5,7 @@ import { LogStream } from '../log-stream';
 import { AppStateContext } from '../appStateContext';
 import { LogOptions } from './LogOptions';
 import _ from 'lodash';
-import { useNotifications } from '../app-notifications';
+import { AppNotificationContextProps, useNotifications } from '../app-notifications';
 
 const DEFAULT_SCROLL_LIMIT = 500;
 
@@ -21,17 +21,27 @@ function appendLog({
   log,
   setLogs,
   appendLimit,
-  isVerbose
+  isVerbose,
+  notifiers
 }: {
   log: LogEvent;
   setLogs: React.Dispatch<React.SetStateAction<LogEvent[]>>;
   appendLimit: number;
   isVerbose: boolean;
+  notifiers: AppNotificationContextProps;
 }) {
   setLogs((stateLogs) => {
     const currentLogs = trimLogs(stateLogs, appendLimit - 1);
     if (log.level !== 'debug' || (log.level === 'debug' && isVerbose)) {
       currentLogs.push(log);
+    }
+
+    if (log.level === 'warn') {
+      notifiers.notifyWarning(log.message);
+    }
+
+    if (log.level === 'error' || log.level === 'fatal') {
+      notifiers.notifyError(log.message);
     }
 
     return currentLogs;
@@ -44,7 +54,7 @@ export const ProjectWorkspaceLog: React.FC<{
   scrollLimit
 }) => {
   const {appState} = useContext(AppStateContext);
-  const {notifyError} = useNotifications();
+  const notifiers = useNotifications();
   const project = appState.activeProject!;
   const [logs, setLogs] = useState<LogEvent[]>([]);
   const [appendLimit, setAppendLimit] = useState<number>(scrollLimit || DEFAULT_SCROLL_LIMIT);
@@ -68,14 +78,27 @@ export const ProjectWorkspaceLog: React.FC<{
     console.debug('ProjectWorkspaceLog#useEffect(project.id)');
     const subscription = LogStream.observe(project).subscribe({
       next: (log) => {
-        appendLog({ log, setLogs, appendLimit, isVerbose });
+        appendLog({ log, setLogs, appendLimit, isVerbose, notifiers });
         if (window && logBox && logBox.current) {
           const scrollY = window.getComputedStyle && window.getComputedStyle(logBox.current).lineHeight;
           if (scrollY && logBox.current.scrollBy) logBox.current.scrollBy(0, parseInt(scrollY));
         }
       },
 
-      error: (error) => notifyError(error instanceof Error ? error.message : error)
+      error: (error) => {
+        let message: string;
+        let reason: any | undefined;
+        if (error instanceof Error) {
+          message = error.message;
+        } else if (error instanceof String) {
+          message = error.toString();
+        } else {
+          message = 'Unknown error occurred. Most likely connection to the message hub was lost';
+          reason = JSON.stringify(error);
+        }
+
+        notifiers.notifyError(message, reason);
+      }
     });
 
     return () => {

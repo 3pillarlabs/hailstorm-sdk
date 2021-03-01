@@ -59,7 +59,7 @@ export interface LogEvent {
   projectCode?: string;
   timestamp: number;
   priority: number;
-  level: string;
+  level: 'debug' | 'info' | 'warn' | 'error' | 'fatal';
   message: string;
 }
 

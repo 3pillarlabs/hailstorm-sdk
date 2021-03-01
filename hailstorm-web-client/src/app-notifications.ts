@@ -36,12 +36,12 @@ export class Notification implements NotificationRecord {
 
   private _id: number;
   private _timestamp: number;
-  private _errorReason: string | undefined;
+  private _errorReason: any | undefined;
 
   constructor(
     private _message: string,
     private _type: NotificationType,
-    __errorReason?: Error | string | undefined
+    __errorReason?: any | undefined
   ) {
     this._timestamp = new Date().valueOf();
     this._id = this._timestamp * Math.random();
@@ -58,7 +58,7 @@ export class Notification implements NotificationRecord {
     return this._message;
   }
 
-  public get errorReason(): string | undefined {
+  public get errorReason(): any | undefined {
     return this._errorReason;
   }
 
@@ -98,7 +98,7 @@ export class WarnNotification extends Notification {
 }
 
 export class ErrorNotification extends Notification {
-  constructor(message: string, errorReason?: Error | string) {
+  constructor(message: string, errorReason?: any) {
     super(message, 'error', errorReason);
   }
 }
