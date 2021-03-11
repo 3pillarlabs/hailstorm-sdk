@@ -8,11 +8,11 @@ import { JMeterFile, Project, JMeter, ValidationNotice } from '../domain';
 import { JMeterValidationService } from "../services/JMeterValidationService";
 import { JMeterService } from "../services/JMeterService";
 import { SavedFile } from '../FileUpload/domain';
-import { wait, fireEvent, waitForDomChange } from '@testing-library/dom';
+import { wait, fireEvent } from '@testing-library/dom';
 import { FileServer } from '../FileUpload/fileServer';
 import { render } from '@testing-library/react';
 import { AppNotificationContextProps } from '../app-notifications';
-import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider';
 
 jest.mock('../FileUpload', () => ({
   __esModule: true,
@@ -201,7 +201,7 @@ describe('<JMeterConfiguration />', () => {
   });
 
   it('should indicate that a file upload failed', () => {
-    const component = mount(createComponent());
+    const component = mount(withNotificationContext(createComponent()));
     const onUploadError = component.find('FileUpload').prop('onUploadError') as ((file: File, error: any) => void);
     const error = new Error('Server not available');
     onUploadError(mockFile("a") as File, error);
@@ -240,7 +240,7 @@ describe('<JMeterConfiguration />', () => {
       autoStop: false
     });
     jest.spyOn(JMeterValidationService.prototype, "create").mockReturnValue(validations);
-    const component = mount(createComponent());
+    const component = mount(withNotificationContext(createComponent()));
     const onFileLoad = component.find('FileUpload').prop('onFileUpload') as ((file: SavedFile) => void);
     onFileLoad({originalName: "a.jmx", id: "12345"});
     await validations;
@@ -251,7 +251,7 @@ describe('<JMeterConfiguration />', () => {
     const validation: ValidationNotice = {type: 'error', message: 'Missing DataWriter'};
     const validations = Promise.reject({validationErrors: [validation]});
     jest.spyOn(JMeterValidationService.prototype, "create").mockReturnValue(validations);
-    const component = mount(createComponent());
+    const component = mount(withNotificationContext(createComponent()));
     const onFileLoad = component.find('FileUpload').prop('onFileUpload') as ((file: SavedFile) => void);
     onFileLoad({originalName: "a.jmx", id: "12345"});
     await wait();
@@ -298,7 +298,7 @@ describe('<JMeterConfiguration />', () => {
 
     const validations = Promise.resolve<JMeterFileUploadState & {autoStop: boolean}>({ name: "a.jmx", properties, autoStop: false });
     jest.spyOn(JMeterValidationService.prototype, "create").mockReturnValue(validations);
-    const component = mount(createComponent());
+    const component = mount(withNotificationContext(createComponent()));
     const onFileLoad = component.find('FileUpload').prop('onFileUpload') as ((file: SavedFile) => void);
     onFileLoad({originalName: "a.jmx", id: "12345"});
     await validations;

@@ -124,7 +124,7 @@ function NotificationToast({ notification, closeHandler }: Toast) {
   );
 }
 
-function ErrorDetails({errorReason}: {errorReason: string}) {
+function ErrorDetails({errorReason}: {errorReason: any}) {
   const [hideDetails, setHideDetails] = useState(true);
 
   return (
@@ -135,7 +135,7 @@ function ErrorDetails({errorReason}: {errorReason: string}) {
         </span>
       </div>
       <div className={hideDetails ? `is-hidden` : undefined}>
-        {errorReason}
+        {errorReason instanceof Error ? errorReason.message : errorReason.toString()}
       </div>
     </div>
   )

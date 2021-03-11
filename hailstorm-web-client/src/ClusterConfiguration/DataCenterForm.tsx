@@ -33,7 +33,8 @@ export function DataCenterForm({
     sshPort: number;
   }) => {
     return FileServer
-      .sendFile(pemFile!, undefined, undefined, activeProject.code)
+      .sendFile(pemFile!, undefined, activeProject.code)
+      .begin()
       .then(async ({id}: SavedFile) => {
         const attrs: DataCenterCluster = {
           userName,

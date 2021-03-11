@@ -11,6 +11,7 @@ describe('<JtlDownloadModal />', () => {
       <JtlDownloadModal
         isActive={true}
         setActive={setActive}
+        contentActive={true}
       />
     );
 
@@ -22,6 +23,7 @@ describe('<JtlDownloadModal />', () => {
       <JtlDownloadModal
         isActive={true}
         setActive={setActive}
+        contentActive={true}
       />
     );
 
@@ -43,6 +45,7 @@ describe('<JtlDownloadModal />', () => {
       <JtlDownloadModal
         isActive={true}
         setActive={setActive}
+        contentActive={true}
       />
     );
 

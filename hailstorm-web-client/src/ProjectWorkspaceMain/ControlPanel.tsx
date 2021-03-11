@@ -1,8 +1,7 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ToolBar } from './ToolBar';
 import { ExecutionCycleGrid } from './ExecutionCycleGrid';
-import { ExecutionCycle } from '../domain';
-import { AppStateContext } from '../appStateContext';
+import { ExecutionCycle, Project } from '../domain';
 
 export interface CheckedExecutionCycle extends ExecutionCycle {
   checked: boolean | null;
@@ -19,13 +18,17 @@ export interface ButtonStateLookup {
 
 export interface ControlPanelProps {
   reloadReports: () => void;
+  setWaitingForReport: React.Dispatch<React.SetStateAction<boolean>>;
+  dispatch: React.Dispatch<any>;
+  project: Project;
 }
 
-export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
-  const {reloadReports} = props;
-  const {appState} = useContext(AppStateContext);
-  const project = appState.activeProject!;
-
+export const ControlPanel: React.FC<ControlPanelProps> = ({
+  reloadReports,
+  setWaitingForReport,
+  project,
+  dispatch
+}) => {
   const [gridButtonStates, setGridButtonStates] = useState<ButtonStateLookup>({
     report: true,
     export: true,
@@ -60,8 +63,11 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
         viewTrash,
         setReloadGrid,
         reloadReports,
-        setViewTrash}}
-      >
+        setViewTrash,
+        project,
+        dispatch,
+        setWaitingForReport
+      }}>
         <div className="panel-block">
           <ExecutionCycleGrid {...{
             gridButtonStates,
@@ -70,8 +76,9 @@ export const ControlPanel: React.FC<ControlPanelProps> = (props) => {
             reloadGrid,
             setReloadGrid,
             executionCycles,
-            setExecutionCycles}}
-          />
+            setExecutionCycles,
+            project
+          }}/>
         </div>
       </ToolBar>
     </div>

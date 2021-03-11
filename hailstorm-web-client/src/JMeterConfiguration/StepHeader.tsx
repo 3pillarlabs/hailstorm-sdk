@@ -6,6 +6,7 @@ import { AddJMeterFileAction, AbortJMeterFileUploadAction } from "./actions";
 import { SavedFile } from "../FileUpload/domain";
 import { isUploadInProgress } from "./isUploadInProgress";
 import { UPLOAD_ABORT_ENABLE_DELAY_MS } from "./JMeterConfiguration";
+import { useNotifications } from "../app-notifications";
 
 export function StepHeader({
   state,
@@ -22,6 +23,8 @@ export function StepHeader({
   setUploadAborted: React.Dispatch<React.SetStateAction<boolean>>;
   uploadAborted: boolean;
 }) {
+  const {notifyError} = useNotifications();
+
   return (
     <div className={`columns ${styles.stepHeader}`}>
       <div className="column is-10">
@@ -49,6 +52,7 @@ export function StepHeader({
             );
             setUploadAborted(false);
             setDisableAbort(true);
+            notifyError(`File upload failed`, error);
           }}
           disabled={isUploadInProgress(state.wizardState!.activeJMeterFile)}
           abort={uploadAborted}
