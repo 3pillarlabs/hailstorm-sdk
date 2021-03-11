@@ -87,17 +87,21 @@ export const ProjectWorkspaceLog: React.FC<{
 
       error: (error) => {
         let message: string;
-        let reason: any | undefined;
+        let reason: any | undefined = undefined;
         if (error instanceof Error) {
           message = error.message;
-        } else if (error instanceof String) {
-          message = error.toString();
+          reason = error;
+        } else if (error instanceof Object) {
+          message = `Unknown error occurred. Most likely connection to the message hub was lost`;
         } else {
-          message = 'Unknown error occurred. Most likely connection to the message hub was lost';
-          reason = JSON.stringify(error);
+          message = error.toString();
         }
 
-        notifiers.notifyError(message, reason);
+        if (reason) {
+          notifiers.notifyError(message, reason);
+        } else {
+          notifiers.notifyWarning(message);
+        }
       }
     });
 

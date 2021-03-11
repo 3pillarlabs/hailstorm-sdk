@@ -106,7 +106,7 @@
 			</w:r>
 		</w:p>
 		<%= render :partial => 'workload_definition', :locals => {:jmeter_plans => @report.jmeter_plans} %>
-        <%= render :partial => 'workload_iterations', :locals => {:report => @report} %>
+    <%= render :partial => 'workload_iterations', :locals => {:report => @report} %>
 		<%= render :partial => 'test_environment', :locals => {:report => @report} %>
 		<%= render :partial => 'response_vs_users', :locals => {:report => @report} %>
 		<%= render :partial => 'app_infra_vs_users', :locals => {:report => @report} %>

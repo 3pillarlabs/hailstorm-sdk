@@ -15,6 +15,7 @@ export const ProjectWorkspaceMain: React.FC = () => {
   const {appState, dispatch} = useContext(AppStateContext);
   const [loadReports, setLoadReports] = useState<boolean>(true);
   const [redirectLocation, setRedirectLocation] = useState<WizardTabTypes>();
+  const [waitingForReport, setWaitingForReport] = useState(false);
   const reloadReports = () => setLoadReports(true);
 
   useEffect(() => {
@@ -84,7 +85,7 @@ export const ProjectWorkspaceMain: React.FC = () => {
         />
       </div>
       <div className="column is-6">
-        <ControlPanel {...{ reloadReports }} />
+        <ControlPanel {...{ reloadReports, setWaitingForReport, dispatch }} project={appState.activeProject!} />
       </div>
       <div className="column is-3">
         {appState.activeProject && highlightTerminate(appState.activeProject) && (
@@ -92,7 +93,7 @@ export const ProjectWorkspaceMain: React.FC = () => {
             <TerminateProject display={"SingleColumn"} />
           </div>
         )}
-        <ReportsList {...{ loadReports, setLoadReports }} />
+        <ReportsList {...{ loadReports, setLoadReports, waitingForReport }} project={appState.activeProject!} />
       </div>
     </div>
   );

@@ -33,44 +33,39 @@ jest.mock('./JtlDownloadModal', () => {
 });
 
 describe('<ToolBar />', () => {
-  beforeEach(() => {
-    jest.resetAllMocks();
-  });
-
   const setExecutionCycles = jest.fn();
   const setGridButtonStates = jest.fn();
   const setReloadGrid = jest.fn();
   const setViewTrash = jest.fn();
   const reloadReports = jest.fn();
   const dispatch = jest.fn();
+  const setWaitingForReport = jest.fn();
 
   const createToolBar: (attrs: {
     executionCycles: CheckedExecutionCycle[],
-    buttonStates: ButtonStateLookup,
+    gridButtonStates: ButtonStateLookup,
     viewTrash: boolean,
     statusCheckInterval?: number,
-    notifiers?: {[K in keyof AppNotificationContextProps]?: AppNotificationContextProps[K]}
-  }) => JSX.Element = ({ executionCycles, buttonStates, viewTrash, statusCheckInterval, notifiers }) => {
-    const {notifySuccess, notifyInfo, notifyWarning, notifyError} = {...notifiers};
+    project: Project
+  }) => JSX.Element = ({ executionCycles, gridButtonStates, viewTrash, statusCheckInterval, project }) => {
+
     return (
-      <AppNotificationProviderWithProps
-        notifySuccess={notifySuccess || jest.fn()}
-        notifyInfo={notifyInfo || jest.fn()}
-        notifyWarning={notifyWarning || jest.fn()}
-        notifyError={notifyError || jest.fn()}
-      >
-        <ToolBar
-          executionCycles={executionCycles}
-          gridButtonStates={buttonStates}
-          reloadReports={reloadReports}
-          setExecutionCycles={setExecutionCycles}
-          setGridButtonStates={setGridButtonStates}
-          setReloadGrid={setReloadGrid}
-          setViewTrash={setViewTrash}
-          viewTrash={viewTrash}
-          statusCheckInterval={statusCheckInterval}
-        />
-      </AppNotificationProviderWithProps>
+      <ToolBar
+        {...{
+          executionCycles,
+          reloadReports,
+          setExecutionCycles,
+          setGridButtonStates,
+          setReloadGrid,
+          setViewTrash,
+          viewTrash,
+          statusCheckInterval,
+          project,
+          gridButtonStates,
+          setWaitingForReport,
+          dispatch
+        }}
+      />
     )
   };
 
@@ -85,28 +80,37 @@ describe('<ToolBar />', () => {
     executionCycles?: CheckedExecutionCycle[],
     statusCheckInterval?: number,
     notifiers?: {[K in keyof AppNotificationContextProps]?: AppNotificationContextProps[K]}
-  }) => JSX.Element = ({project, buttonStates, viewTrash, statusCheckInterval, executionCycles, notifiers}) => (
+  }) => JSX.Element = ({project, buttonStates, viewTrash, statusCheckInterval, executionCycles, notifiers}) => {
 
-    <AppStateContext.Provider value={{appState: {runningProjects: [], activeProject: project}, dispatch}}>
-      {createToolBar({
-        executionCycles: executionCycles || [],
-        buttonStates: {
-          abort: true,
-          stop: true,
-          start: false,
-          trash: false,
-          export: true,
-          report: true,
-          ...buttonStates
-        },
-        viewTrash: viewTrash ? viewTrash : false,
-        statusCheckInterval: statusCheckInterval,
-        notifiers
-      })}
-    </AppStateContext.Provider>
-  );
+    const {notifySuccess, notifyInfo, notifyWarning, notifyError} = {...notifiers};
 
-  afterEach(() => {
+    return (
+      <AppNotificationProviderWithProps
+        notifySuccess={notifySuccess || jest.fn()}
+        notifyInfo={notifyInfo || jest.fn()}
+        notifyWarning={notifyWarning || jest.fn()}
+        notifyError={notifyError || jest.fn()}
+      >
+        {createToolBar({
+          executionCycles: executionCycles || [],
+          gridButtonStates: {
+            abort: true,
+            stop: true,
+            start: false,
+            trash: false,
+            export: true,
+            report: true,
+            ...buttonStates
+          },
+          viewTrash: viewTrash ? viewTrash : false,
+          statusCheckInterval,
+          project
+        })}
+      </AppNotificationProviderWithProps>
+    )
+  };
+
+  beforeEach(() => {
     jest.resetAllMocks();
   });
 
@@ -114,7 +118,7 @@ describe('<ToolBar />', () => {
     shallow(
       createToolBar({
         executionCycles: [],
-        buttonStates: {
+        gridButtonStates: {
           abort: true,
           stop: true,
           start: false,
@@ -122,7 +126,8 @@ describe('<ToolBar />', () => {
           export: true,
           report: true
         },
-        viewTrash: false
+        viewTrash: false,
+        project: createProject()
       })
     );
   });
@@ -254,6 +259,7 @@ describe('<ToolBar />', () => {
     expect(apiSpy).toBeCalled();
     setTimeout(() => {
       done();
+      expect(setWaitingForReport).toHaveBeenCalled();
       expect(reloadReports).toBeCalled();
     }, 0);
   });

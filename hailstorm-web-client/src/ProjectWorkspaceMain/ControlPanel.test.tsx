@@ -4,7 +4,6 @@ import { ControlPanel, ButtonStateLookup } from './ControlPanel';
 import { InterimProjectState, Project } from '../domain';
 import { ToolBarProps } from './ToolBar';
 import { ExecutionCycleGridProps } from './ExecutionCycleGrid';
-import { AppStateContext } from '../appStateContext';
 
 jest.mock('./ToolBar', () => {
   return {
@@ -30,19 +29,44 @@ jest.mock('./ExecutionCycleGrid', () => {
 });
 
 describe('<ControlPanel />', () => {
+
+  const projectFixture: (attrs: {autoStop: boolean, running: boolean}) => Project = ({autoStop, running}) => {
+    return {id: 1, code: 'a', title: 'A', autoStop, running};
+  }
+
+  const componentFixture: (project: Project) => ReactWrapper = (project) => {
+    return mount(
+      <ControlPanel reloadReports={jest.fn()} {...{project}} setWaitingForReport={jest.fn} dispatch={jest.fn()}/>
+    );
+  }
+
   afterEach(() => {
     jest.resetAllMocks();
   });
 
   it('should render without crashing', () => {
-    shallow(<ControlPanel reloadReports={jest.fn()} />);
+    shallow(
+      <ControlPanel
+        reloadReports={jest.fn()}
+        project={projectFixture({autoStop: true, running: false})}
+        setWaitingForReport={jest.fn()}
+        dispatch={jest.fn()}
+      />
+    );
   });
 
   describe('initial state', () => {
     let component: ShallowWrapper | null = null;
 
     beforeEach(() => {
-      component = shallow(<ControlPanel reloadReports={jest.fn()} />);
+      component = shallow(
+        <ControlPanel
+          reloadReports={jest.fn()}
+          project={projectFixture({autoStop: true, running: false})}
+          setWaitingForReport={jest.fn()}
+          dispatch={jest.fn()}
+        />
+      );
     });
 
     it('should enable view trash button', () => {
@@ -59,18 +83,6 @@ describe('<ControlPanel />', () => {
       expect(buttons.export).toBeTruthy();
     });
   });
-
-  const projectFixture: (attrs: {autoStop: boolean, running: boolean}) => Project = ({autoStop, running}) => {
-    return {id: 1, code: 'a', title: 'A', autoStop, running};
-  }
-
-  const componentFixture: (project: Project) => ReactWrapper = (project) => {
-    return mount(
-      <AppStateContext.Provider value={{appState: {activeProject: project, runningProjects: []}, dispatch: jest.fn()}}>
-        <ControlPanel reloadReports={jest.fn()} />
-      </AppStateContext.Provider>
-    );
-  }
 
   describe('when project has tests running', () => {
     it('should enable stop button if tests need to stopped', () => {

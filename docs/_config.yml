@@ -22,7 +22,7 @@ description: > # this means to ignore newlines until "baseurl:"
 baseurl: "/hailstorm-sdk" # the subpath of your site, e.g. /blog
 url: "https://3pillarlabs.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username: 3PillarGlobal
-github_username:  3PillarGlobal
+repository_url: https://github.com/3pillarlabs/hailstorm-sdk
 
 # Build settings
 markdown: kramdown

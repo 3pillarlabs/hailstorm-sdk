@@ -366,12 +366,17 @@ describe('<ProjectWorkspaceLog />', () => {
 
   describe('on subscription error', () => {
     const project: Project = {id: 1, code: 'a', title: 'A', running: true, autoStop: false};
-    const subject = new Subject<LogEvent>();
+    let subject: Subject<LogEvent>;
     let notifyError: jest.Mock<any, any>;
+    let notifyWarning: jest.Mock<any, any>;
+    let unmount: () => boolean;
+
     beforeEach(async () => {
-      const spy = jest.spyOn(LogStream, "observe").mockReturnValue(subject);
       notifyError = jest.fn();
-      render(
+      notifyWarning = jest.fn();
+      subject = new Subject<LogEvent>();
+      const spy = jest.spyOn(LogStream, "observe").mockReturnValue(subject);
+      const result = render(
         withNotificationContext((
           <AppStateContext.Provider
           value={{
@@ -381,33 +386,38 @@ describe('<ProjectWorkspaceLog />', () => {
         >
           <ProjectWorkspaceLog />
         </AppStateContext.Provider>
-        ), {notifyError})
+        ), {notifyError, notifyWarning})
       );
 
+      unmount = result.unmount;
       await wait(() => {
         expect(spy).toHaveBeenCalled();
       });
     });
+
+    afterEach(() => {
+      unmount();
+    })
 
     it('should notify of an error object', async () => {
       subject.error(new Error('mock error'));
       await wait(() => {
         expect(notifyError).toBeCalled();
       });
-    })
+    });
 
     it('should notify of an error message', async () => {
       subject.error('mock error message');
       await wait(() => {
-        expect(notifyError).toBeCalled();
+        expect(notifyWarning).toBeCalled();
       });
-    })
+    });
 
     it('should notify of an unknown reason type', async () => {
       subject.error({reason: '', of: []});
       await wait(() => {
-        expect(notifyError).toBeCalled();
+        expect(notifyWarning).toBeCalled();
       });
-    })
+    });
   });
 });

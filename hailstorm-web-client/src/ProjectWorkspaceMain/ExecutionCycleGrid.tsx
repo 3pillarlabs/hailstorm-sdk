@@ -1,9 +1,8 @@
 import React, { useEffect, useContext, useState } from 'react';
 import { ButtonStateLookup, CheckedExecutionCycle } from './ControlPanel';
 import { Loader } from '../Loader';
-import { ExecutionCycleStatus } from '../domain';
+import { ExecutionCycleStatus, Project } from '../domain';
 import { ApiFactory } from '../api';
-import { AppStateContext } from '../appStateContext';
 import styles from './ExecutionCycleGrid.module.scss';
 import { FixedDate } from './FixedDate';
 
@@ -15,6 +14,7 @@ export interface ExecutionCycleGridProps {
   setReloadGrid: React.Dispatch<React.SetStateAction<boolean>>;
   setGridButtonStates: React.Dispatch<React.SetStateAction<ButtonStateLookup>>;
   gridButtonStates: ButtonStateLookup;
+  project: Project;
 }
 
 export const ExecutionCycleGrid: React.FC<ExecutionCycleGridProps> = (props) => {
@@ -25,11 +25,10 @@ export const ExecutionCycleGrid: React.FC<ExecutionCycleGridProps> = (props) => 
     setReloadGrid,
     viewTrash,
     setGridButtonStates,
-    gridButtonStates
+    gridButtonStates,
+    project
   } = props;
 
-  const {appState} = useContext(AppStateContext);
-  const project = appState.activeProject!;
   const [selectAll, setSelectAll] = useState(false);
   const [loading, setLoading] = useState(true);
 
