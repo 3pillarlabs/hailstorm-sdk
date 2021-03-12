@@ -51,9 +51,11 @@ export class AmazonConfig extends ClusterConfig {
   }
 
   updateCluster({maxThreadsPerAgent}: {maxThreadsPerAgent: number}) {
-    this.maxThreadsPerInstance.setValue(maxThreadsPerAgent.toString());
-    browser.pause(250);
-    browser.waitUntil(() => this.updateButton.isEnabled(), 500);
-    this.updateButton.click();
+    if (this.maxThreadsPerInstance.getValue() !== maxThreadsPerAgent.toString()) {
+      this.maxThreadsPerInstance.setValue(maxThreadsPerAgent.toString());
+      browser.pause(250);
+      browser.waitUntil(() => this.updateButton.isEnabled(), 500);
+      this.updateButton.click();
+    }
   }
 }
