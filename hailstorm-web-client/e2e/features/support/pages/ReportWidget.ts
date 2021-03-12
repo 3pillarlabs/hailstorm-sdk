@@ -3,7 +3,7 @@ export class ReportWidget {
 
   get masterCheckBox() { return $('//table/thead/tr/th/input'); }
   get reportButton() { return $('button*=Report'); }
-  get reportsListItems() { return $$('//*[@data-testid="Reports List"]/a'); }
+  get reportsListItems() { return $$('//*[@data-testid="Reports List"]//a'); }
 
   generateReport() {
     browser.pause(500);
