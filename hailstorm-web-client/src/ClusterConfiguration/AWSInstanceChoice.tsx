@@ -4,6 +4,7 @@ import { computeChoice, maxThreadsByCluster } from './AWSInstanceCalculator';
 import { AWSInstanceChoiceOption } from './domain';
 import { Loader } from '../Loader/Loader';
 import { Field } from 'formik';
+import { useNotifications } from '../app-notifications';
 
 const MIN_PLANNED_USERS = 50;
 const DEFAULT_THREADS_BY_INST = 10;
@@ -23,6 +24,7 @@ export function AWSInstanceChoice({
   setHourlyCostByCluster?: React.Dispatch<React.SetStateAction<number | undefined>>;
   disabled?: boolean;
 }) {
+  const {notifyInfo, notifyWarning} = useNotifications();
   const [pricingData, setPricingData] = useState<AWSInstanceChoiceOption[]>([]);
   const [instanceType, setInstanceType] = useState<string>('');
   const [maxThreadsByInstance, setMaxThreadsByInstance] = useState<number>(DEFAULT_THREADS_BY_INST);
@@ -49,8 +51,9 @@ export function AWSInstanceChoice({
         setPricingData(data);
         const choice = handleSliderChange(maxPlannedThreads, data);
         setHourlyCostByCluster && setHourlyCostByCluster(choice.hourlyCostByCluster());
+        notifyInfo(`Cluster cost updated for ${regionCode}`);
       })
-      .catch((reason) => console.error(reason));
+      .catch((reason) => notifyWarning(`Failed to update cluster cost: ${reason instanceof Error ? reason.message : reason}`));
   }, [regionCode]);
 
   if (pricingData.length === 0) {

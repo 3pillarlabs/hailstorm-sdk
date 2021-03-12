@@ -7,6 +7,8 @@ import { AppState, Action } from '../store';
 import { WizardTabTypes } from "../NewProjectWizard/domain";
 import { AppStateContext } from '../appStateContext';
 import { CreateProjectAction, ConfirmProjectSetupCancelAction, UpdateProjectTitleAction } from '../NewProjectWizard/actions';
+import { AppNotificationContextProps } from '../app-notifications';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
 
 jest.mock('../DangerProjectSettings', () => ({
   __esModule: true,
@@ -16,6 +18,20 @@ jest.mock('../DangerProjectSettings', () => ({
 }));
 
 describe('<ProjectConfiguration />', () => {
+
+  function createNotifiers(notifiers: {
+    [K in keyof(AppNotificationContextProps)]?: AppNotificationContextProps[K]
+  }): AppNotificationContextProps {
+
+    return {
+      notifySuccess: jest.fn(),
+      notifyError: jest.fn(),
+      notifyInfo: jest.fn(),
+      notifyWarning: jest.fn(),
+      ...notifiers
+    }
+  }
+
   it('should render without crashing', () => {
     shallow(<ProjectConfiguration />);
   });
@@ -55,9 +71,12 @@ describe('<ProjectConfiguration />', () => {
     }
 
     const dispatch = jest.fn();
+    const notifySuccess = jest.fn();
     const {findByPlaceholderText, findByText} = render(
       <AppStateContext.Provider value={{appState, dispatch}}>
-        <ProjectConfiguration />
+        <AppNotificationProviderWithProps {...createNotifiers({notifySuccess})}>
+          <ProjectConfiguration />
+        </AppNotificationProviderWithProps>
       </AppStateContext.Provider>
     );
 
@@ -67,6 +86,37 @@ describe('<ProjectConfiguration />', () => {
     fireEvent.click(button);
     await wait(() => expect(dispatch).toBeCalled());
     expect(dispatch.mock.calls[0][0]).toBeInstanceOf(CreateProjectAction);
+    expect(notifySuccess).toBeCalled();
+  });
+
+  it('should notify on API error', async () => {
+    const mockError = new Error('mock error');
+    jest.spyOn(ProjectService.prototype, 'create').mockRejectedValueOnce(mockError);
+
+    const appState: AppState = {
+      runningProjects: [],
+      activeProject: undefined,
+      wizardState: {
+        activeTab: WizardTabTypes.Project,
+        done: {}
+      }
+    }
+
+    const dispatch = jest.fn();
+    const notifyError = jest.fn();
+    const {findByPlaceholderText, findByText} = render(
+      <AppStateContext.Provider value={{appState, dispatch}}>
+        <AppNotificationProviderWithProps {...createNotifiers({notifyError})}>
+          <ProjectConfiguration />
+        </AppNotificationProviderWithProps>
+      </AppStateContext.Provider>
+    );
+
+    const textBox = await findByPlaceholderText('Project Title...');
+    fireEvent.change(textBox, {target: {value: 'Some Title'}});
+    const button = await findByText('Save & Next');
+    fireEvent.click(button);
+    await wait(() => expect(notifyError).toBeCalledWith(expect.any(String), mockError));
   });
 
   it('should cancel', async () => {
@@ -130,9 +180,12 @@ describe('<ProjectConfiguration />', () => {
       };
 
       const dispatch = jest.fn();
+      const notifySuccess = jest.fn();
       const {findByDisplayValue, findByText} = render(
         <AppStateContext.Provider value={{appState, dispatch}}>
-          <ProjectConfiguration />
+          <AppNotificationProviderWithProps {...createNotifiers({notifySuccess})}>
+            <ProjectConfiguration />
+          </AppNotificationProviderWithProps>
         </AppStateContext.Provider>
       );
 
@@ -147,6 +200,7 @@ describe('<ProjectConfiguration />', () => {
       await wait(() => {
         expect(dispatch).toBeCalled();
         expect(dispatch.mock.calls[0][0]).toBeInstanceOf(UpdateProjectTitleAction);
+        expect(notifySuccess).toBeCalled();
       });
     });
 

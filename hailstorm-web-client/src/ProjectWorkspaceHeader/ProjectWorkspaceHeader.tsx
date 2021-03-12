@@ -6,9 +6,11 @@ import { ProjectForm } from '../ProjectConfiguration/ProjectForm';
 import { Field, ErrorMessage } from 'formik';
 import { AppStateContext } from '../appStateContext';
 import { UpdateProjectAction } from '../ProjectWorkspace/actions';
+import { AppNotificationContextProps, useNotifications } from '../app-notifications';
 
 export const ProjectWorkspaceHeader: React.FC = () => {
   const {appState, dispatch} = useContext(AppStateContext);
+  const notifiers = useNotifications();
   const [isEditable, setEditable] = useState(false);
 
   if (!appState.activeProject) return null;
@@ -20,7 +22,7 @@ export const ProjectWorkspaceHeader: React.FC = () => {
     <div className={`columns ${styles.workspaceHeader}`}>
       <div className="column is-three-quarters">
         {isEditable ?
-          textBox({projectId: project.id, title: project.title, dispatch, setEditable, toggleEditable}) :
+          textBox({projectId: project.id, title: project.title, dispatch, setEditable, toggleEditable, notifiers}) :
           header({title: project.title, toggleEditable})}
       </div>
       <div className="column">
@@ -44,14 +46,18 @@ function textBox({
   title,
   dispatch,
   setEditable,
-  toggleEditable
+  toggleEditable,
+  notifiers
 }: {
   projectId: number,
   title: string,
   dispatch: React.Dispatch<any>,
   setEditable: React.Dispatch<React.SetStateAction<boolean>>,
-  toggleEditable: () => void
+  toggleEditable: () => void,
+  notifiers: AppNotificationContextProps
 }): React.ReactNode {
+  const {notifySuccess, notifyError} = notifiers;
+
   return (
     <ProjectForm
       title={title}
@@ -60,7 +66,9 @@ function textBox({
         setEditable(false);
         ApiFactory()
           .projects()
-          .update(projectId, { title: values.title });
+          .update(projectId, { title: values.title })
+          .then(() => notifySuccess(`Updated project title`))
+          .catch((reason) => notifyError(`Failed to update project title`, reason));
       }}
       render={({ isSubmitting, isValid }) => (
         <>

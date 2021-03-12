@@ -9,12 +9,18 @@ import { AppStateContext } from '../appStateContext';
 
 describe('<ExecutionCycleGrid />', () => {
 
-  const Wrapper: React.FC<{viewTrash?: boolean}> = ({viewTrash}) => {
+  const Wrapper: React.FC<{
+    viewTrash?: boolean;
+    project: Project;
+  }> = ({
+    viewTrash,
+    project
+  }) => {
     const [executionCycles, setExecutionCycles] = useState<CheckedExecutionCycle[]>([]);
 
     return (
       <ExecutionCycleGrid
-        {...{executionCycles, setExecutionCycles}}
+        {...{executionCycles, setExecutionCycles, project}}
         reloadGrid={false}
         setReloadGrid={jest.fn()}
         viewTrash={viewTrash || false}
@@ -34,6 +40,7 @@ describe('<ExecutionCycleGrid />', () => {
         viewTrash={false}
         setGridButtonStates={jest.fn()}
         gridButtonStates={{stop: true, abort: true, start: false, report: true, export: true, trash: false}}
+        project={{id: 1, code: 'a', title: 'A', running: false, autoStop: false}}
       />
     )
   });
@@ -52,9 +59,7 @@ describe('<ExecutionCycleGrid />', () => {
     ]);
 
     const component: ReactWrapper = mount(
-      <AppStateContext.Provider value={{appState: {activeProject, runningProjects: []}, dispatch: jest.fn()}}>
-        <Wrapper />
-      </AppStateContext.Provider>
+      <Wrapper project={activeProject} />
     );
 
     setTimeout(() => {
@@ -78,9 +83,7 @@ describe('<ExecutionCycleGrid />', () => {
     ]);
 
     const component: ReactWrapper = mount(
-      <AppStateContext.Provider value={{appState: {activeProject, runningProjects: []}, dispatch: jest.fn()}}>
-        <Wrapper />
-      </AppStateContext.Provider>
+      <Wrapper project={activeProject} />
     );
 
     setTimeout(() => {
@@ -107,9 +110,7 @@ describe('<ExecutionCycleGrid />', () => {
     ]);
 
     const component: ReactWrapper = mount(
-      <AppStateContext.Provider value={{appState: {activeProject, runningProjects: []}, dispatch: jest.fn()}}>
-        <Wrapper />
-      </AppStateContext.Provider>
+      <Wrapper project={activeProject} />
     );
 
     setTimeout(() => {
@@ -143,9 +144,7 @@ describe('<ExecutionCycleGrid />', () => {
     let component: ReactWrapper;
     act(() => {
       component = mount(
-        <AppStateContext.Provider value={{appState: {activeProject, runningProjects: []}, dispatch: jest.fn()}}>
-          <Wrapper />
-        </AppStateContext.Provider>
+        <Wrapper project={activeProject} />
       );
     });
 
@@ -175,9 +174,7 @@ describe('<ExecutionCycleGrid />', () => {
     jest.spyOn(ExecutionCycleService.prototype, 'list').mockResolvedValue([execCycle]);
 
     const component: ReactWrapper = mount(
-      <AppStateContext.Provider value={{appState: {activeProject, runningProjects: []}, dispatch: jest.fn()}}>
-        <Wrapper />
-      </AppStateContext.Provider>
+      <Wrapper project={activeProject} />
     );
 
     const apiSpy = jest.spyOn(ExecutionCycleService.prototype, 'update').mockResolvedValue(execCycle);
@@ -205,9 +202,7 @@ describe('<ExecutionCycleGrid />', () => {
     let component: ReactWrapper | null = null;
     act(() => {
       component = mount(
-        <AppStateContext.Provider value={{appState: {activeProject, runningProjects: []}, dispatch: jest.fn()}}>
-          <Wrapper viewTrash={true} />
-        </AppStateContext.Provider>
+        <Wrapper project={activeProject} viewTrash={true} />
       );
     });
 
@@ -229,9 +224,7 @@ describe('<ExecutionCycleGrid />', () => {
     let component: ReactWrapper | null = null;
     act(() => {
       component = mount(
-        <AppStateContext.Provider value={{appState: {activeProject, runningProjects: []}, dispatch: jest.fn()}}>
-          <Wrapper viewTrash={true} />
-        </AppStateContext.Provider>
+        <Wrapper project={activeProject} viewTrash={true} />
       );
     });
 
@@ -253,9 +246,7 @@ describe('<ExecutionCycleGrid />', () => {
     let component: ReactWrapper | null = null;
     act(() => {
       component = mount(
-        <AppStateContext.Provider value={{appState: {activeProject, runningProjects: []}, dispatch: jest.fn()}}>
-          <Wrapper />
-        </AppStateContext.Provider>
+        <Wrapper project={activeProject} />
       );
     });
 

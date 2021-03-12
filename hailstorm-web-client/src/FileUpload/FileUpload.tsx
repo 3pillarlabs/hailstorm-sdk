@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { SavedFile } from './domain';
-import { FileServer } from './fileServer';
+import { FileServer, FileUploadSaga } from './fileServer';
 
 export interface FileUploadProps {
   onAccept: (file: File) => void;
@@ -30,12 +30,12 @@ export function FileUpload({
   pathPrefix
 }: React.PropsWithChildren<FileUploadProps>) {
 
-  const [httpReq, setHttpReq] = useState<XMLHttpRequest | undefined>();
+  const [saga, setSaga] = useState<FileUploadSaga<any> | undefined>();
   useEffect(() => {
-    if (!(abort && httpReq)) return;
+    if (!(abort && saga)) return;
 
     console.debug('FileUpload#useEffect(abort)');
-    httpReq.abort();
+    saga.rollback();
   }, [abort]);
 
   const onDrop = (acceptedFiles: File[]) => {
@@ -49,16 +49,16 @@ export function FileUpload({
       if (onUploadProgress) onUploadProgress(file, progress);
     };
 
-    const _httpReq = new XMLHttpRequest();
-    setHttpReq(_httpReq);
-    FileServer
-      .sendFile(file, handleProgress, _httpReq, pathPrefix)
+    const saga = FileServer.sendFile(file, handleProgress, pathPrefix)
+      .begin()
       .then((savedFile: SavedFile) => {
         onFileUpload && onFileUpload(savedFile);
       })
       .catch((reason) => {
         onUploadError && onUploadError(file, reason);
       });
+
+    setSaga(saga);
   };
 
   const {getRootProps, getInputProps} = useDropzone({

@@ -4,9 +4,10 @@ import { AmazonCluster, DataCenterCluster } from '../domain';
 import { WizardTabTypes } from './domain';
 import { render } from '@testing-library/react';
 import { SummaryView } from './SummaryView';
-import { AppStateContext } from '../appStateContext';
 import { mount } from 'enzyme';
 import { ReviewCompletedAction } from './actions';
+import { AppNotificationProvider } from '../AppNotificationProvider';
+import { AppStateProviderWithProps } from '../AppStateProvider/AppStateProvider';
 
 describe('<SummaryView />', () => {
   const appState: AppState = {
@@ -96,18 +97,18 @@ describe('<SummaryView />', () => {
 
   it('should render without crashing', () => {
     render(
-      <AppStateContext.Provider value={{appState, dispatch: jest.fn()}}>
+      <AppStateProviderWithProps {...{appState, dispatch: jest.fn()}}>
         <SummaryView />
-      </AppStateContext.Provider>
+      </AppStateProviderWithProps>
     );
   });
 
   it('should jump to from a section to a tab for editing', () => {
     const dispatch = jest.fn();
     const component = mount(
-      <AppStateContext.Provider value={{appState, dispatch}}>
+      <AppStateProviderWithProps {...{appState, dispatch}}>
         <SummaryView />
-      </AppStateContext.Provider>
+      </AppStateProviderWithProps>
     );
 
     component.find('JMeterSection a').simulate('click');
@@ -124,9 +125,11 @@ describe('<SummaryView />', () => {
   it('should redirect to workspace on completing review', () => {
     const dispatch = jest.fn();
     const component = mount(
-      <AppStateContext.Provider value={{appState, dispatch}}>
-        <SummaryView />
-      </AppStateContext.Provider>
+      <AppNotificationProvider>
+        <AppStateProviderWithProps {...{appState, dispatch}}>
+          <SummaryView />
+        </AppStateProviderWithProps>
+      </AppNotificationProvider>
     );
 
     component.find('StepFooter button').simulate('click');

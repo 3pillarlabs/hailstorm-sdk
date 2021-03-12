@@ -1,8 +1,10 @@
 import { fireEvent, render, wait } from '@testing-library/react';
 import { mount } from 'enzyme';
 import React from 'react';
+import { AppNotificationContextProps } from '../app-notifications';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider';
 import { DataCenterCluster } from '../domain';
-import { FileServer } from '../FileUpload/fileServer';
+import { FileServer, FileUploadSaga } from '../FileUpload/fileServer';
 import { WizardTabTypes } from '../NewProjectWizard/domain';
 import { ClusterService } from '../services/ClusterService';
 import { AppState } from '../store';
@@ -47,12 +49,22 @@ describe('<DataCenterForm />', () => {
     }
   });
 
-  function createComponent() {
+  function createComponent(notifiers?: {[K in keyof AppNotificationContextProps]: AppNotificationContextProps[K]}) {
+    const props: AppNotificationContextProps = {
+      notifySuccess: jest.fn(),
+      notifyInfo: jest.fn(),
+      notifyWarning: jest.fn(),
+      notifyError: jest.fn(),
+      ...notifiers
+    };
+
     return (
-      <DataCenterForm
-        {...{dispatch}}
-        activeProject={appState.activeProject!}
-      />
+      <AppNotificationProviderWithProps {...{...props}}>
+        <DataCenterForm
+          {...{dispatch}}
+          activeProject={appState.activeProject!}
+        />
+      </AppNotificationProviderWithProps>
     )
   }
 
@@ -66,7 +78,6 @@ describe('<DataCenterForm />', () => {
   });
 
   it('should submit to create a cluster', async () => {
-    const fileServerSpy = jest.spyOn(FileServer, 'sendFile').mockResolvedValueOnce("200 OK");
     const createdCluster: DataCenterCluster = {
       id: 42,
       title: 'RAC 1',
@@ -78,13 +89,21 @@ describe('<DataCenterForm />', () => {
       sshPort: 8022
     };
 
+    const file = new File([], createdCluster.sshIdentity.name);
+    const saga = new FileUploadSaga<string>(file, "https://upload.url");
+    jest.spyOn(saga, 'begin').mockImplementation(() => {
+      saga['promise'] = Promise.resolve("200 OK");
+      return saga;
+    });
+
+    const fileServerSpy = jest.spyOn(FileServer, 'sendFile').mockReturnValue(saga);
     const createApiSpy = jest.spyOn(ClusterService.prototype, 'create').mockResolvedValueOnce(createdCluster);
     const component = mount(createComponent());
     component.find('input[name="title"]').simulate('change', {target: {value: createdCluster.title, name: 'title'}});
     component.find('input[name="userName"]').simulate('change', {target: {value: createdCluster.userName, name: 'userName'}});
     component.find('input[name="sshPort"]').simulate('change', {target: {value: createdCluster.sshPort, name: 'sshPort'}});
     const onFileAccept = component.find('FileUpload').prop('onAccept') as (file: File) => void;
-    onFileAccept(new File([], createdCluster.sshIdentity.name));
+    onFileAccept(file);
     const onMachinesChange = component.find('MachineSet').prop('onChange') as unknown as (machines: string[]) => void;
     onMachinesChange(createdCluster.machines);
     component.find('form').simulate('submit');
@@ -134,7 +153,14 @@ describe('<DataCenterForm />', () => {
   });
 
   it('should display validation errors from api', async () => {
-    jest.spyOn(FileServer, 'sendFile').mockResolvedValueOnce("200 OK");
+    const file = new File([], 'secure.pem');
+    const saga = new FileUploadSaga(file, "https://upload.url");
+    jest.spyOn(saga, 'begin').mockImplementation(() => {
+      saga['promise'] = Promise.resolve("200 OK");
+      return saga;
+    });
+
+    jest.spyOn(FileServer, 'sendFile').mockReturnValue(saga);
     const createApiSpy = jest.spyOn(ClusterService.prototype, 'create').mockImplementation(() => {
       return new Promise((_resolve, reject) => reject({
         validationErrors: {
@@ -152,7 +178,7 @@ describe('<DataCenterForm />', () => {
     component.find('input[name="userName"]').simulate('change', {target: {value: 'baz', name: 'userName'}});
     component.find('input[name="sshPort"]').simulate('change', {target: {value: 8022, name: 'sshPort'}});
     const onFileAccept = component.find('FileUpload').prop('onAccept') as (file: File) => void;
-    onFileAccept(new File([], 'secure.pem'));
+    onFileAccept(file);
     const onMachinesChange = component.find('MachineSet').prop('onChange') as unknown as (machines: string[]) => void;
     onMachinesChange([ 'host-a', 'host-b' ]);
     component.find('form').simulate('submit');

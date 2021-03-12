@@ -1,14 +1,15 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ButtonStateLookup, CheckedExecutionCycle } from './ControlPanel';
 import { ResultActions, ApiFactory } from '../api';
 import { ProjectActions } from '../services/ProjectService';
 import { JtlDownloadContentProps, JtlDownloadModal } from './JtlDownloadModal';
 import { Modal } from '../Modal';
-import { InterimProjectState } from '../domain';
+import { InterimProjectState, Project } from '../domain';
 import { SetInterimStateAction, UnsetInterimStateAction, SetRunningAction, UpdateProjectAction } from '../ProjectWorkspace/actions';
-import { AppStateContext } from '../appStateContext';
 import { interval, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { useNotifications } from '../app-notifications';
+import _ from 'lodash';
 
 export interface ToolBarProps {
   gridButtonStates: ButtonStateLookup;
@@ -20,6 +21,9 @@ export interface ToolBarProps {
   setReloadGrid: React.Dispatch<React.SetStateAction<boolean>>;
   reloadReports: () => void;
   statusCheckInterval?: number;
+  setWaitingForReport: React.Dispatch<React.SetStateAction<boolean>>;
+  dispatch: React.Dispatch<any>;
+  project: Project;
 }
 
 export const ToolBar: React.FC<ToolBarProps> = (props) => {
@@ -32,13 +36,16 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
     setExecutionCycles,
     setReloadGrid,
     reloadReports,
-    statusCheckInterval
+    statusCheckInterval,
+    setWaitingForReport,
+    dispatch,
+    project
   } = props;
 
-  const {appState, dispatch} = useContext(AppStateContext);
-  const project = appState.activeProject!;
+  const notifiers = useNotifications();
   const [showJtlModal, setShowJtlModal] = useState(false);
   const [jtlModalProps, setJtlModalProps] = useState<JtlDownloadContentProps>({});
+  const [modalContentActive, setModalContentActive] = useState(false);
 
   const toggleTrash = () => {
     const nextState = !viewTrash;
@@ -53,6 +60,8 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
     if (nextState) {
       setExecutionCycles(executionCycles.map((exCycle) => ({...exCycle, checked: false})));
     }
+
+    notifiers.notifyInfo(`Trash view is ${viewTrash ? 'closed' : 'open'}`);
   };
 
   const toggleRunning = (endState: boolean, action?: ProjectActions) => {
@@ -75,6 +84,7 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
           break;
       }
 
+      notifiers.notifyInfo(`${_.capitalize(action)}ing tests...`);
       ApiFactory()
         .projects()
         .update(project.id, { running: endState, action })
@@ -83,9 +93,20 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
         .then(() => dispatch(new UnsetInterimStateAction()))
         .then(() => dispatch(new SetRunningAction(endState)))
         .then(() => setReloadGrid(true))
+        .then(() => {
+          if (endState) {
+            notifiers.notifyInfo(`Test started`);
+          } else {
+            if (action === "abort") {
+              notifiers.notifyWarning(`Test aborted`);
+            } else {
+              notifiers.notifySuccess(`Test completed`);
+            }
+          }
+        })
         .catch((reason) => {
-          console.error(reason);
           dispatch(new UnsetInterimStateAction());
+          notifiers.notifyError(`Failed to ${action} test`, reason);
         });
     };
   }
@@ -95,28 +116,40 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
       setGridButtonStates({ ...gridButtonStates, [action]: true });
       const executionCycleIds = executionCycles.filter((exCycle) => exCycle.checked).map((exCycle) => exCycle.id);
       switch (action) {
-        case "report":
+        case "report": {
+          setWaitingForReport(true);
           ApiFactory()
             .reports()
             .create(project.id, executionCycleIds)
             .then(reloadReports)
-            .then(() =>
-              setGridButtonStates({ ...gridButtonStates, [action]: false })
-            );
+            .then(() => {
+              setGridButtonStates({ ...gridButtonStates, [action]: false });
+              notifiers.notifySuccess(`Created new report`);
+            })
+            .catch((reason) => notifiers.notifyError(`Failed to generate report`, reason))
+            .finally(() => setWaitingForReport(false));
 
           break;
+        }
 
         case "export":
+          setModalContentActive(false);
+          setShowJtlModal(true);
           ApiFactory()
             .jtlExports()
             .create(project.id, executionCycleIds)
             .then(({title, url}) => {
               setJtlModalProps({title, url});
-              setShowJtlModal(true);
+              setModalContentActive(true);
             })
-            .then(() =>
+            .then(() => {
               setGridButtonStates({ ...gridButtonStates, [action]: false })
-            );
+              notifiers.notifySuccess(`Exported data for selected tests`);
+            })
+            .catch((reason) => {
+              setShowJtlModal(false);
+              notifiers.notifyError(`Failed to export date`, reason);
+            });
 
           break;
 
@@ -146,7 +179,7 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
               toggleRunning(false, 'stop')();
             }
           } catch (error) {
-            console.error(`Error getting status of current tests: ${error.message}`);
+            notifiers.notifyError(`Error getting status of current tests`, error);
             subject.next();
             subject.complete();
           }
@@ -190,12 +223,22 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
         </div>
         <div className="level-right">
           <div className="level-item">
-            <button name="report" className="button is-small" onClick={resultsHandler("report")} disabled={gridButtonStates.report}>
+            <button
+              name="report"
+              className="button is-small"
+              onClick={resultsHandler("report")}
+              disabled={gridButtonStates.report}
+            >
               <i className="fas fa-chart-line"></i> Report
             </button>
           </div>
           <div className="level-item">
-            <button name="export" className="button is-small" onClick={resultsHandler("export")} disabled={gridButtonStates.export}>
+            <button
+              name="export"
+              className="button is-small"
+              onClick={resultsHandler("export")}
+              disabled={gridButtonStates.export}
+            >
               <i className="fas fa-download"></i> Export
             </button>
           </div>
@@ -219,7 +262,12 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
         </div>
         <div className="level-right">
           <div className="level-item">
-            <button name="trash" className="button is-small" disabled={gridButtonStates.trash} onClick={toggleTrash}>
+            <button
+              name="trash"
+              className="button is-small"
+              disabled={gridButtonStates.trash}
+              onClick={toggleTrash}
+            >
             {viewTrash ?
               <span><i className="fas fa-trash-restore"></i> Close Trash</span> :
               <span><i className="fas fa-trash"></i> Open Trash</span>}
@@ -229,7 +277,13 @@ export const ToolBar: React.FC<ToolBarProps> = (props) => {
       </div>
     </div>
     <Modal isActive={showJtlModal}>
-      <JtlDownloadModal isActive={showJtlModal} setActive={setShowJtlModal} title={jtlModalProps.title} url={jtlModalProps.url} />
+      <JtlDownloadModal
+        isActive={showJtlModal}
+        setActive={setShowJtlModal}
+        title={jtlModalProps.title}
+        url={jtlModalProps.url}
+        contentActive={modalContentActive}
+      />
     </Modal>
     </>
   );

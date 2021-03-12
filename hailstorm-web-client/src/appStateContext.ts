@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { AppState, initialState } from "./store";
 
 export interface AppStateContextProps {
@@ -8,5 +8,9 @@ export interface AppStateContextProps {
 
 export const AppStateContext = React.createContext<AppStateContextProps>({
   appState: initialState,
-  dispatch: () => new Error('AppStateContext used outside of provider boundary')
+  dispatch: () => { throw new Error('AppStateContext used outside of provider boundary') }
 });
+
+export function useAppState() {
+  return useContext(AppStateContext);
+}

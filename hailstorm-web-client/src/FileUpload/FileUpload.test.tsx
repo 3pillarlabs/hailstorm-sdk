@@ -2,7 +2,7 @@ import React from 'react';
 import { shallow, mount } from 'enzyme';
 import { FileUpload } from './FileUpload';
 import { render, fireEvent, wait } from '@testing-library/react';
-import { FileServer } from './fileServer';
+import { FileServer, FileUploadSaga } from './fileServer';
 
 describe('<FileUpload />', () => {
   beforeEach(() => {
@@ -25,10 +25,18 @@ describe('<FileUpload />', () => {
     const onUploadError = jest.fn();
     const onUploadProgress = jest.fn();
     const uploadFinished = Promise.resolve();
-    const sendFileSpy = jest.spyOn(FileServer, "sendFile").mockImplementation((_file, cb) => {
-      cb && cb(100);
-      return uploadFinished;
+    const file = new File(['<xml></xml>'], "a.jmx", {type: "text/xml"});
+    const saga = new FileUploadSaga(file, "https://upload.url");
+    jest.spyOn(saga, 'begin').mockImplementation(() => {
+      saga['promise'] = new Promise((resolve) => {
+        onUploadProgress(100);
+        resolve(file);
+      });
+
+      return saga;
     });
+
+    const sendFileSpy = jest.spyOn(FileServer, "sendFile").mockReturnValue(saga);
 
     const {findByRole} = render(
       <FileUpload
@@ -40,7 +48,7 @@ describe('<FileUpload />', () => {
     const fileInput = await findByRole('File Upload');
     fireEvent.change(fileInput, {
       target: {
-        files: [new File(['<xml></xml>'], "a.jmx", {type: "text/xml"})]
+        files: [file]
       }
     });
 
@@ -55,9 +63,17 @@ describe('<FileUpload />', () => {
   it('should handle upload error', async () => {
     const onAccept = jest.fn();
     const onUploadError = jest.fn();
-    const sendFileSpy = jest.spyOn(FileServer, "sendFile").mockImplementation(() => {
-      return Promise.reject("Server not found");
+    const file = new File(['<xml></xml>'], "a.jmx", {type: "text/xml"});
+    const saga = new FileUploadSaga(file, "https://upload.url");
+    jest.spyOn(saga, 'begin').mockImplementation(() => {
+      saga['promise'] = new Promise((_, reject) => {
+        reject("Server not found");
+      });
+
+      return saga;
     });
+
+    const sendFileSpy = jest.spyOn(FileServer, "sendFile").mockReturnValue(saga);
 
     const {findByRole} = render(
       <FileUpload
@@ -70,7 +86,7 @@ describe('<FileUpload />', () => {
     const fileInput = await findByRole('File Upload');
     fireEvent.change(fileInput, {
       target: {
-        files: [new File(['<xml></xml>'], "a.jmx", {type: "text/xml"})]
+        files: [file]
       }
     });
 
@@ -96,10 +112,18 @@ describe('<FileUpload />', () => {
     const onFileUpload = jest.fn();
     const onUploadError = jest.fn();
     const onUploadProgress = jest.fn();
-    const uploadFinished = Promise.resolve();
-    const sendFileSpy = jest.spyOn(FileServer, "sendFile").mockImplementation((_file) => {
-      return uploadFinished;
+    const file = new File(['<xml></xml>'], "a.jmx", {type: "text/xml"});
+    const saga = new FileUploadSaga(file, "https://upload.url");
+    jest.spyOn(saga, 'begin').mockImplementation(() => {
+      saga['promise'] = new Promise((resolve) => {
+        onUploadProgress(100);
+        resolve(file);
+      });
+
+      return saga;
     });
+
+    const sendFileSpy = jest.spyOn(FileServer, "sendFile").mockReturnValue(saga);
 
     const {findByRole} = render(
       <FileUpload
@@ -120,5 +144,35 @@ describe('<FileUpload />', () => {
     expect(sendFileSpy).not.toBeCalled();
     expect(onUploadProgress).not.toBeCalled();
     expect(onFileUpload).not.toBeCalled();
+  });
+
+  it('should abort an upload on prop change', async () => {
+    const file = new File(['<xml></xml>'], "a.jmx", {type: "text/xml"});
+    const saga = new FileUploadSaga(file, "https://upload.url");
+    saga['promise'] = Promise.resolve({id: 1, originalName: 'a.jmx'});
+    jest.spyOn(FileUploadSaga.prototype, 'begin').mockReturnValue(saga);
+    const spy = jest.spyOn(saga, 'rollback');
+    jest.spyOn(FileServer, 'sendFile').mockReturnValue(saga);
+    const onAccept = jest.fn();
+    const q = render(
+      <FileUpload {...{onAccept}}>
+      </FileUpload>
+    );
+
+    const fileInput = await q.findByRole('File Upload');
+    fireEvent.change(fileInput, {
+      target: {
+        files: [new File(['<xml></xml>'], "a.jmx", {type: "text/xml"})]
+      }
+    });
+
+    await wait(() => expect(onAccept).toBeCalled);
+
+    q.rerender(
+      <FileUpload {...{onAccept}} abort={true}>
+      </FileUpload>
+    );
+
+    expect(spy).toHaveBeenCalled();
   });
 });

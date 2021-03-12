@@ -7,6 +7,7 @@ import styles from './NewProjectWizard.module.scss';
 import { JMeter, Cluster } from '../domain';
 import { JMeterFileDetail } from '../JMeterConfiguration/JMeterFileDetail';
 import { ClusterDetailView } from '../ClusterConfiguration/ClusterDetailView';
+import { useNotifications } from '../app-notifications';
 
 export const SummaryView: React.FC = () => {
   const {dispatch, appState} = useContext(AppStateContext);
@@ -34,6 +35,8 @@ function StepFooter({
 }: {
   dispatch: React.Dispatch<any>;
 }) {
+  const {notifyInfo} = useNotifications();
+
   return <div className="level">
     <div className="level-left">
       <div className="level-item">
@@ -45,7 +48,12 @@ function StepFooter({
     </div>
     <div className="level-right">
       <div className="level-item">
-        <button className="button is-success" onClick={() => dispatch(new ReviewCompletedAction())}>Done</button>
+        <button className="button is-success" onClick={() => {
+          dispatch(new ReviewCompletedAction());
+          notifyInfo(`Project configured, ready for load tests`);
+        }}>
+          Done
+        </button>
       </div>
     </div>
   </div>;

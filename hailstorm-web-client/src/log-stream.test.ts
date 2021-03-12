@@ -1,8 +1,7 @@
-import { LogStream } from './stream';
+import { LogStream } from './log-stream';
 import { Project, LogEvent } from './domain';
 import { of, Observable } from 'rxjs';
 import { RSocketClient } from 'rsocket-core';
-import { wait } from '@testing-library/dom';
 
 describe('stream', () => {
   const project: Project = { id: 1, code: 'a', title: 'A', running: true };
