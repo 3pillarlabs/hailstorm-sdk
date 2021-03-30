@@ -1,10 +1,10 @@
 import React from 'react';
 import { render, mount } from 'enzyme';
-import { AWSInstanceChoice } from './AWSInstanceChoice';
+import { AWSInstanceChoice, InstanceTypeMeter } from './AWSInstanceChoice';
 import { AWSInstanceChoiceOption } from './domain';
 import { render as renderComponent, fireEvent } from '@testing-library/react';
 import { Form, Formik } from 'formik';
-import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider';
 
 jest.mock('./NonLinearSlider', () => ({
   __esModule: true,
@@ -243,5 +243,18 @@ describe('<AWSInstanceChoice />', () => {
     const presetValue = maxThreadsByInst.getAttribute('value');
     fireEvent.change(maxThreadsByInst, {target: {value: ''}});
     expect(maxThreadsByInst.getAttribute('value')).toEqual(presetValue);
+  });
+
+  it('show an indicator before price update', async () => {
+    const component = mount(
+      <InstanceTypeMeter
+        instanceType="m1.small"
+        numInstances={2}
+      />
+    );
+
+    expect(component).toContainExactlyOneMatchingElement('LoadingMessage');
+    component.setProps({hourlyCostByCluster: 0.12});
+    expect(component).not.toContain('LoadingMessage');
   });
 });

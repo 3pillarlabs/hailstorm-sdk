@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NonLinearSlider } from './NonLinearSlider';
 import { computeChoice, maxThreadsByCluster } from './AWSInstanceCalculator';
 import { AWSInstanceChoiceOption } from './domain';
-import { Loader } from '../Loader/Loader';
+import { Loader, LoadingMessage } from '../Loader';
 import { Field } from 'formik';
 import { useNotifications } from '../app-notifications';
 
@@ -46,6 +46,7 @@ export function AWSInstanceChoice({
     console.debug('AWSInstanceChoice#useEffect(regionCode)');
     if (!quickMode) return;
 
+    setHourlyCostByCluster && setHourlyCostByCluster(undefined);
     fetchPricing(regionCode)
       .then((data) => {
         setPricingData(data);
@@ -253,7 +254,7 @@ function InstanceTypeInput({
   )
 }
 
-function InstanceTypeMeter({
+export function InstanceTypeMeter({
   instanceType,
   numInstances,
   hourlyCostByCluster
@@ -270,9 +271,15 @@ function InstanceTypeMeter({
       <CenteredLevelItem title="# Instances">
         {numInstances}
       </CenteredLevelItem>
-      {hourlyCostByCluster && (<CenteredLevelItem title="Hourly Cluster Cost" starred={true}>
-        ${hourlyCostByCluster.toFixed(4)}
-      </CenteredLevelItem>)}
+      {hourlyCostByCluster ? (
+        <CenteredLevelItem title="Hourly Cluster Cost" starred={true}>
+          ${hourlyCostByCluster.toFixed(4)}
+        </CenteredLevelItem>
+      ):(
+        <CenteredLevelItem title="Hourly Cluster Cost" starred={true}>
+          <LoadingMessage />
+        </CenteredLevelItem>
+      )}
     </div>
   );
 }
