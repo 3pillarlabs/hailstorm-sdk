@@ -1,6 +1,7 @@
 import React from 'react';
 import { JMeter, JMeterFile } from '../domain';
 import { EmptyPanel } from '../EmptyPanel';
+import styles from '../NewProjectWizard/NewProjectWizard.module.scss';
 
 export interface JMeterPlanListProps {
   showEdit?: boolean;
@@ -9,6 +10,7 @@ export interface JMeterPlanListProps {
   activeFile?: JMeterFile;
   disableEdit?: boolean;
   onEdit?: () => void;
+  showDisabled?: boolean;
 }
 
 export const JMeterPlanList: React.FC<JMeterPlanListProps> = ({
@@ -17,8 +19,14 @@ export const JMeterPlanList: React.FC<JMeterPlanListProps> = ({
   onSelect,
   activeFile,
   disableEdit,
-  onEdit
+  onEdit,
+  showDisabled
 }) => {
+  let fileList: JMeterFile[] = [];
+  if (jmeter) {
+    fileList = showDisabled ? jmeter.files : jmeter.files.filter((v) => !v.disabled);
+  }
+
   return (
     <div className="panel" data-testid="JMeter Plans">
       <div className="panel-heading">
@@ -39,17 +47,17 @@ export const JMeterPlanList: React.FC<JMeterPlanListProps> = ({
           </div>
         </div>
       </div>
-      {jmeter && jmeter.files.length > 0 ? renderPlanList(jmeter, onSelect, activeFile) : renderEmptyList()}
+      {fileList.length > 0 ? renderPlanList(fileList, onSelect, activeFile) : renderEmptyList()}
     </div>
   );
 }
 
 function renderPlanList(
-  jmeter: JMeter,
+  fileList: JMeterFile[],
   handleSelect?: (file: JMeterFile) => void,
   activeFile?: JMeterFile
 ): React.ReactNode {
-  return jmeter.files.map((plan) => {
+  return fileList.map((plan) => {
     const item = (
       <>
         <span className="panel-icon">
@@ -60,6 +68,7 @@ function renderPlanList(
         )}
         </span>
         {plan.name}
+        {plan.disabled && (<span className={`tag is-dark ${styles.titleLabel}`}>disabled</span>)}
       </>
     );
 

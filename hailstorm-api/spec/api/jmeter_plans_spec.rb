@@ -78,6 +78,42 @@ describe 'api/jmeter_plans' do
       expect(data_file[:path]).to eq('234')
       expect(data_file[:dataFile]).to be true
     end
+
+    it 'should include disabled plans in list' do
+      project = Hailstorm::Model::Project.create!(project_code: 'api_jmeter_plans_spec')
+      hailstorm_config = Hailstorm::Support::Configuration.new
+      hailstorm_config.jmeter do |jmeter|
+        jmeter.add_test_plan('123/a.jmx')
+        jmeter.properties(test_plan: '123/a.jmx') do |map|
+          map['NumUsers'] = '100'
+        end
+
+        jmeter.add_test_plan('124/b.jmx')
+        jmeter.properties(test_plan: '124/b.jmx') do |map|
+          map['NumUsers'] = '20'
+        end
+
+        jmeter.disabled_test_plans.push('124/b')
+        jmeter.data_files = %w[234/foo.csv]
+      end
+
+      ProjectConfiguration.create!(project_id: project.id, stringified_config: deep_encode(hailstorm_config))
+
+      @browser.get("/projects/#{project.id}/jmeter_plans")
+      expect(@browser.last_response).to be_ok
+      # @type [Array<Hash>] res
+      res = JSON.parse(@browser.last_response.body)
+      expect(res.size).to eq(3)
+      expect(res.first.symbolize_keys[:name]).to eq('a.jmx')
+
+      jmeter_plan = res[1].symbolize_keys
+      expect(jmeter_plan[:name]).to eq('b.jmx')
+      expect(jmeter_plan[:disabled]).to be == true
+
+      data_file = res[2].symbolize_keys
+      expect(data_file[:name]).to eq('foo.csv')
+      expect(data_file[:dataFile]).to be true
+    end
   end
 
   context 'PATCH /projects/:project_id/jmeter_plans/:id' do
@@ -110,9 +146,62 @@ describe 'api/jmeter_plans' do
       @browser.patch("/projects/#{project.id}/jmeter_plans/#{post_res[:id]}", JSON.dump(patch_params))
       expect(@browser.last_response).to be_ok
       patch_res = JSON.parse(@browser.last_response.body).symbolize_keys
-      expect(patch_res.keys.sort).to eq(%i[name path properties id].sort)
+      expect(patch_res.keys.sort).to eq(%i[name path properties id planExecutedBefore].sort)
       expect(patch_res[:id]).to eq(post_res[:id])
       expect(patch_res[:properties].to_h).to eq(patch_params[:properties].to_h)
+    end
+
+    it 'should disable a test plan' do
+      project = Hailstorm::Model::Project.create!(project_code: 'api_jmeter_plans_spec')
+      params = {
+        name: 'hailstorm.jmx',
+        path: '1234',
+        properties: [
+          %w[NumUsers 10],
+          %w[RampUp 30],
+          %w[Duration 180],
+          %w[ServerName 152.36.34.28]
+        ]
+      }
+
+      @browser.post("/projects/#{project.id}/jmeter_plans", JSON.dump(params))
+      expect(@browser.last_response).to be_ok
+      post_res = JSON.parse(@browser.last_response.body).symbolize_keys
+
+      patch_params = { disabled: true }
+      @browser.patch("/projects/#{project.id}/jmeter_plans/#{post_res[:id]}", JSON.dump(patch_params))
+      expect(@browser.last_response).to be_ok
+      patch_res = JSON.parse(@browser.last_response.body).symbolize_keys
+      expect(patch_res.keys.sort).to eq(%i[name path properties id disabled planExecutedBefore].sort)
+      expect(patch_res[:id]).to eq(post_res[:id])
+      expect(patch_res[:properties].to_h).to eq(params[:properties].to_h)
+      expect(patch_res[:disabled]).to eql(true)
+    end
+
+    it 'should enable a previously disabled test plan' do
+      project = Hailstorm::Model::Project.create!(project_code: 'api_jmeter_plans_spec')
+      params = {
+        name: 'hailstorm.jmx',
+        path: '1234',
+        properties: [
+          %w[NumUsers 10],
+          %w[RampUp 30],
+          %w[Duration 180],
+          %w[ServerName 152.36.34.28]
+        ]
+      }
+
+      @browser.post("/projects/#{project.id}/jmeter_plans", JSON.dump(params))
+      expect(@browser.last_response).to be_ok
+      post_res = JSON.parse(@browser.last_response.body).symbolize_keys
+      @browser.patch("/projects/#{project.id}/jmeter_plans/#{post_res[:id]}", JSON.dump({ disabled: true }))
+      expect(@browser.last_response).to be_ok
+
+      @browser.patch("/projects/#{project.id}/jmeter_plans/#{post_res[:id]}", JSON.dump({ disabled: false }))
+      expect(@browser.last_response).to be_ok
+      patch_res = JSON.parse(@browser.last_response.body).symbolize_keys
+      expect(patch_res[:disabled]).to be_nil
+      expect(patch_res[:properties].to_h).to eq(params[:properties].to_h)
     end
   end
 
@@ -176,6 +265,33 @@ describe 'api/jmeter_plans' do
       updated_hailstorm_config = deep_decode(project_config.stringified_config)
       expect(updated_hailstorm_config.jmeter.test_plans.size).to eq(1)
       expect(updated_hailstorm_config.jmeter.data_files.size).to eq(0)
+    end
+
+    it 'should not delete a test plan if it has been used in a previous test run' do
+      allow(Hailstorm::Model::ClientStat).to receive_message_chain(:where, :count).and_return(1)
+      mock_test_plan = double(Hailstorm::Model::JmeterPlan, id: 12)
+      allow_any_instance_of(Hailstorm::Model::Project).to receive_message_chain(:jmeter_plans,
+                                                                                :where).and_return([mock_test_plan])
+
+      project = Hailstorm::Model::Project.create!(project_code: 'api_jmeter_plans_spec')
+      hailstorm_config = Hailstorm::Support::Configuration.new
+      hailstorm_config.jmeter do |jmeter|
+        jmeter.add_test_plan('1/a.jmx')
+        jmeter.properties(test_plan: '1/a.jmx') do |map|
+          map['NumUsers'] = 100
+        end
+
+        jmeter.data_files.push('2/a.csv')
+      end
+
+      ProjectConfiguration.create!(
+        project_id: project.id,
+        stringified_config: deep_encode(hailstorm_config)
+      )
+
+      id = '1/a'.to_java_string.hash_code
+      @browser.delete("/projects/#{project.id}/jmeter_plans/#{id}")
+      expect(@browser.last_response).to_not be_successful
     end
   end
 end

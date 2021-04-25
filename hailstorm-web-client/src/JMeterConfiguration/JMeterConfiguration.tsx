@@ -71,7 +71,7 @@ export const JMeterConfiguration: React.FC = () => {
 export function isNextDisabled(state: NewProjectWizardState): boolean {
   return (
     !state.activeProject!.jmeter ||
-    state.activeProject!.jmeter.files.filter(value => !value.dataFile).length === 0 ||
+    state.activeProject!.jmeter.files.filter(value => !value.dataFile && !value.disabled).length === 0 ||
     isBackDisabled(state)
   );
 }
@@ -107,14 +107,21 @@ async function destroyFile({
   dispatch: React.Dispatch<any>;
   notifiers: AppNotificationContextProps;
 }) {
+  let removeFile = true;
+
   if (file.id) {
     try {
       await ApiFactory().jmeter().destroy(projectId, file.id);
-      notifiers.notifySuccess(`Deleted the JMeter configuration`);
+      notifiers.notifySuccess(`Removed the ${file.dataFile ? 'data file' : 'JMeter plan'} from configuration`);
     }
     catch (reason) {
+      removeFile = false;
       notifiers.notifyError("Failed to remove JMeter from configuration", reason);
     }
+  }
+
+  if (!removeFile) {
+    return;
   }
 
   try {

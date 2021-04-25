@@ -79,7 +79,7 @@ module ProjectsHelper
     project_config = ProjectConfiguration.where(project_id: project.id).first
     if project_config
       hailstorm_config = deep_decode(project_config.stringified_config)
-      if hailstorm_config.jmeter.test_plans.empty? ||
+      if hailstorm_config.jmeter.enabled_test_plans.empty? ||
          hailstorm_config.clusters.select { |e| e.active || e.active.nil? }.empty?
         project_attrs[:incomplete] = true
       end

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Project, AmazonCluster } from '../domain';
 import { RemoveCluster } from './RemoveCluster';
-import styles from './ClusterConfiguration.module.scss';
+import styles from '../NewProjectWizard/NewProjectWizard.module.scss';
 import { ReadOnlyField } from './ReadOnlyField';
 import { ClusterViewHeader } from './ClusterViewHeader';
 import { MaxUsersByInstance } from './AWSInstanceChoice';
