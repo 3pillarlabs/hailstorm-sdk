@@ -1,7 +1,7 @@
 version: '3.2'
 services:
   web:
-    image: "hailstorm3/hailstorm-web-client:1.7.10"
+    image: "hailstorm3/hailstorm-web-client:1.8.10"
     ports:
       - "8080:80"
     networks:
@@ -22,7 +22,7 @@ services:
       - "start.sh"
 
   hailstorm-api:
-    image: "hailstorm3/hailstorm-api:1.0.17"
+    image: "hailstorm3/hailstorm-api:1.0.18"
     ports:
       - "4567:8080"
     environment:
