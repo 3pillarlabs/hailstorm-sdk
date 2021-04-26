@@ -12,7 +12,6 @@ export function JMeterFileMessage({
   setUploadAborted: React.Dispatch<React.SetStateAction<boolean>>;
   disableAbort: boolean;
 }) {
-  console.debug(file);
   let notification: JSX.Element | null = null;
   if (isUploadInProgress(file)) {
     notification = notifyUploadInProgress(file, disableAbort, setUploadAborted);

@@ -1,6 +1,6 @@
 import { reducer } from './reducer';
 import { WizardTabTypes, JMeterFileUploadState, NewProjectWizardState } from '../NewProjectWizard/domain';
-import { AddJMeterFileAction, AbortJMeterFileUploadAction, CommitJMeterFileAction, MergeJMeterFileAction, SetJMeterConfigurationAction, SelectJMeterFileAction, RemoveJMeterFileAction, FileRemoveInProgressAction } from './actions';
+import { AddJMeterFileAction, AbortJMeterFileUploadAction, CommitJMeterFileAction, MergeJMeterFileAction, SetJMeterConfigurationAction, SelectJMeterFileAction, RemoveJMeterFileAction, FileRemoveInProgressAction, DisableJMeterFileAction, EnableJMeterFileAction } from './actions';
 import { JMeterFile, JMeter } from '../domain';
 
 describe('reducer', () => {
@@ -383,5 +383,85 @@ describe('reducer', () => {
     }, new FileRemoveInProgressAction('a.jmx'));
 
     expect(nextState.wizardState!.activeJMeterFile!.removeInProgress).toEqual('a.jmx');
+  });
+
+  it('should disable a test plan', () => {
+    const testPlanA = { name: 'a.jmx', id: 10, properties: new Map([["foo", "10"]]) };
+    const dataFile = { name: 'a.csv', id: 11, dataFile: true };
+    const testPlanB = { name: 'b.jmx', id: 12, properties: new Map([["foo", "10"]]) };
+    const nextState = reducer({
+      activeProject: {
+        id: 1,
+        code: 'a',
+        title: 'A',
+        running: false,
+        autoStop: false,
+        jmeter: {
+          files: [testPlanA, testPlanB, dataFile]
+        }
+      },
+      wizardState: {
+        activeTab: WizardTabTypes.JMeter,
+        done: { [WizardTabTypes.Project]: true},
+        activeJMeterFile: { ...testPlanB }
+      }
+    }, new DisableJMeterFileAction(12));
+
+    expect(nextState.activeProject!.jmeter!.files[1].disabled).toBe(true);
+    expect(nextState.wizardState!.activeJMeterFile!.disabled).toBe(true);
+  });
+
+  it('should enable a test plan', () => {
+    const testPlanB = { name: 'b.jmx', id: 12, properties: new Map([["foo", "10"]]), disabled: true };
+    const nextState = reducer({
+      activeProject: {
+        id: 1,
+        code: 'a',
+        title: 'A',
+        running: false,
+        autoStop: false,
+        jmeter: {
+          files: [testPlanB]
+        }
+      },
+      wizardState: {
+        activeTab: WizardTabTypes.JMeter,
+        done: { [WizardTabTypes.Project]: true},
+        activeJMeterFile: { ...testPlanB }
+      }
+    }, new EnableJMeterFileAction(12));
+
+    expect(nextState.activeProject!.jmeter!.files[0].disabled).toBeFalsy();
+    expect(nextState.wizardState!.activeJMeterFile!.disabled).toBeFalsy();
+  });
+
+  it('should mark project as incomplete if all test plans are disabled', () => {
+    const testPlanA = { name: 'a.jmx', id: 10, properties: new Map([["foo", "10"]]) };
+    const dataFile = { name: 'a.csv', id: 11, dataFile: true };
+    const testPlanB = { name: 'b.jmx', id: 12, properties: new Map([["foo", "10"]]) };
+    const state = {
+      activeProject: {
+        id: 1,
+        code: 'a',
+        title: 'A',
+        running: false,
+        autoStop: false,
+        jmeter: {
+          files: [testPlanA, testPlanB, dataFile]
+        }
+      },
+      wizardState: {
+        activeTab: WizardTabTypes.JMeter,
+        done: { [WizardTabTypes.Project]: true},
+        activeJMeterFile: { ...testPlanB }
+      }
+    };
+
+    const state1 = reducer(state, new DisableJMeterFileAction(12));
+    expect(state1.activeProject!.incomplete).toBeFalsy();
+
+    const state2 = {...state1, wizardState: {...state1.wizardState!, activeJMeterFile: {...testPlanA}}};
+    const state3 = reducer(state2, new DisableJMeterFileAction(10));
+    expect(state3.activeProject!.incomplete).toBe(true);
   });
 });

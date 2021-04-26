@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+require 'hailstorm/model/project'
+require 'hailstorm/model/jmeter_plan'
+require 'hailstorm/model/client_stat'
+
 # Helper for JMeter API
 module JMeterHelper
 
@@ -16,14 +20,13 @@ module JMeterHelper
     obj[:projectId] = project_id
     obj[:path] = File.dirname(partial_attrs[:test_plan_name])
     if partial_attrs[:jmx_file]
-      obj[:id] = compute_test_plan_id(partial_attrs[:test_plan_name])
-      obj[:name] = "#{File.basename(partial_attrs[:test_plan_name])}.jmx"
       properties = hailstorm_config.jmeter.properties(test_plan: partial_attrs[:test_plan_name])
       obj[:properties] = properties.entries
+      add_jmx_attributes(obj, partial_attrs, project_id)
     else
       obj[:id] = compute_data_file_id(partial_attrs[:test_plan_name])
       obj[:name] = File.basename(partial_attrs[:test_plan_name])
-      obj[:dataFile] = true
+      obj[:data_file] = true
     end
 
     obj
@@ -59,6 +62,44 @@ module JMeterHelper
     data_file_name.to_java_string.hash_code
   end
 
+  # @param [Hash] data
+  # @param [Hailstorm::Support::Configuration] hailstorm_config
+  # @param [String] test_plan_name
+  def handle_disabled(data, hailstorm_config, test_plan_name)
+    return if data['disabled'].nil?
+
+    if data['disabled']
+      already_disabled = hailstorm_config.jmeter.disabled_test_plans.include?(test_plan_name)
+      hailstorm_config.jmeter.disabled_test_plans.push(test_plan_name) unless already_disabled
+    else
+      hailstorm_config.jmeter.disabled_test_plans.reject! { |e| e == test_plan_name }
+    end
+  end
+
+  # @param [Hailstorm::Support::Configuration] hailstorm_config
+  # @param [String] test_plan_name
+  # @param [Integer] project_id
+  # @return [Hash]
+  def build_patch_response(hailstorm_config, test_plan_name, project_id)
+    path, name = test_plan_name.split('/')
+    resp = { id: test_plan_name.to_java_string.hash_code,
+             name: "#{name}.jmx",
+             path: path,
+             properties: hailstorm_config.jmeter.properties(test_plan: test_plan_name).entries,
+             plan_executed_before: client_stats?(project_id, name) }
+
+    resp[:disabled] = true if hailstorm_config.jmeter.disabled_test_plans.include?(test_plan_name)
+    resp
+  end
+
+  # @param [Integer] project_id
+  # @param [String] test_plan_name
+  def client_stats?(project_id, test_plan_name)
+    project = Hailstorm::Model::Project.find(project_id)
+    test_plan = project.jmeter_plans.where(test_plan_name: test_plan_name).first
+    test_plan && Hailstorm::Model::ClientStat.where(jmeter_plan_id: test_plan.id).count.positive?
+  end
+
   private
 
   def jmeter_attributes(data, file_id, found_project)
@@ -70,7 +111,7 @@ module JMeterHelper
     }
 
     jmeter_plan[:properties] = data['properties'] if data['properties']
-    jmeter_plan[:dataFile] = true if data['dataFile']
+    jmeter_plan[:data_file] = true if data['dataFile']
     jmeter_plan
   end
 
@@ -106,5 +147,12 @@ module JMeterHelper
         status 422
       end
     end
+  end
+
+  def add_jmx_attributes(obj, partial_attrs, project_id)
+    obj[:id] = compute_test_plan_id(partial_attrs[:test_plan_name])
+    obj[:name] = "#{File.basename(partial_attrs[:test_plan_name])}.jmx"
+    obj[:disabled] = partial_attrs[:disabled] if partial_attrs.key?(:disabled)
+    obj[:plan_executed_before] = client_stats?(project_id, File.basename(partial_attrs[:test_plan_name]))
   end
 end

@@ -75,6 +75,7 @@ export interface JMeterFile {
   dataFile?: boolean;
   disabled?: boolean;
   path?: string;
+  planExecutedBefore?: boolean;
 }
 
 export interface ValidationNotice {

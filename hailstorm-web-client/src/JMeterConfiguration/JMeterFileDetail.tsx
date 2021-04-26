@@ -1,6 +1,5 @@
 import React from 'react';
 import { JMeterFile } from '../domain';
-import { FormikActions } from 'formik';
 import { JMeterPropertiesMap } from './JMeterPropertiesMap';
 import { JMeterFileUploadState } from '../NewProjectWizard/domain';
 import { isUploadInProgress } from './isUploadInProgress';
@@ -10,22 +9,27 @@ export function JMeterFileDetail({
   setShowModal,
   jmeterFile,
   onSubmit,
-  headerTitle
+  headerTitle,
+  toggleDisabled
 }: {
   setShowModal?: React.Dispatch<React.SetStateAction<boolean>>;
   jmeterFile: JMeterFile;
   onSubmit?: FormikActionsHandler;
   headerTitle?: string;
+  toggleDisabled?: (disabled: boolean) => void;
 }) {
-
   return (
     <>
     {mayShowProperties(jmeterFile) && (
     <JMeterPropertiesMap
       headerTitle={headerTitle || `Set properties for ${jmeterFile!.name}`}
-      properties={jmeterFile!.properties!}
+      properties={Array.from(jmeterFile!.properties!).map((value) => ({key: value[0], value: value[1]}))}
       onSubmit={onSubmit}
       onRemove={setShowModal ? () => setShowModal(true) : undefined}
+      disabled={jmeterFile.disabled}
+      planExecutedBefore={jmeterFile.planExecutedBefore}
+      {...{toggleDisabled}}
+      fileId={jmeterFile.id}
     />)}
 
     {isFileUploaded(jmeterFile) && (

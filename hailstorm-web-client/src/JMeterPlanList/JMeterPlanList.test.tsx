@@ -68,4 +68,38 @@ describe('<JMeterPlanList />', () => {
     const wrapper = shallow(<JMeterPlanList jmeter={{files: []}} disableEdit={true} showEdit={true} />);
     expect(wrapper.find('.button')).toBeDisabled();
   });
+
+  describe('when a plan is disabled', () => {
+    it('should show disabled tag in the list', () => {
+      const component = mount(
+        <JMeterPlanList
+          jmeter={{files: [
+            {id: 100, name: 'a.jmx', properties: new Map([["foo", "10"]]), disabled: true},
+            {id: 99, name: 'a.csv', dataFile: true}
+          ]}}
+          onSelect={jest.fn()}
+          activeFile={{id: 99, name: 'a.csv', dataFile: true}}
+          showDisabled={true}
+        />
+      );
+
+      const blocks = component.find('a').findWhere((wrapper) => wrapper.hasClass('panel-block'));
+      expect(blocks.at(0)).toContainExactlyOneMatchingElement('span.tag');
+    });
+
+    it('should not show disabled plans by default', () => {
+      const component = mount(
+        <JMeterPlanList
+          jmeter={{files: [
+            {id: 100, name: 'a.jmx', properties: new Map([["foo", "10"]]), disabled: true},
+            {id: 110, name: 'b.jmx', properties: new Map([["foo", "10"]])},
+          ]}}
+          onSelect={jest.fn()}
+          activeFile={{id: 100, name: 'a.jmx', properties: new Map([["foo", "10"]])}}
+        />
+      );
+
+      expect(component).toContainMatchingElements(1, 'a');
+    });
+  });
 });

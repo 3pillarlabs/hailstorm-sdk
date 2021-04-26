@@ -12,6 +12,8 @@ export enum JMeterConfigurationActionTypes {
   SelectJMeterFile = '[JMeterConfiguration] SelectJMeterFile',
   RemoveJMeterFile = '[JMeterConfiguration] RemoveJMeterFile',
   FileRemoveInProgress = '[JMeterConfiguration] FileRemoveInProgress',
+  DisableJMeterFile = '[JMeterConfiguration] DisableJMeterFile',
+  EnableJMeterFile = '[JMeterConfiguration] EnableJMeterFile'
 }
 
 export class SetDefaultJMeterVersionAction implements Action {
@@ -59,6 +61,16 @@ export class FileRemoveInProgressAction implements Action {
   constructor(public payload: string) {}
 }
 
+export class DisableJMeterFileAction implements Action {
+  readonly type = JMeterConfigurationActionTypes.DisableJMeterFile;
+  constructor(public payload: number) {}
+}
+
+export class EnableJMeterFileAction implements Action {
+  readonly type = JMeterConfigurationActionTypes.EnableJMeterFile;
+  constructor(public payload: number) {}
+}
+
 export type JMeterConfigurationActions =
   | SetDefaultJMeterVersionAction
   | SetJMeterConfigurationAction
@@ -68,4 +80,6 @@ export type JMeterConfigurationActions =
   | MergeJMeterFileAction
   | SelectJMeterFileAction
   | RemoveJMeterFileAction
-  | FileRemoveInProgressAction;
+  | FileRemoveInProgressAction
+  | DisableJMeterFileAction
+  | EnableJMeterFileAction;

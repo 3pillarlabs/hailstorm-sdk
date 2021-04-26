@@ -8,6 +8,7 @@ require 'initializer/logger_redis_ext' unless Hailstorm.env == :test
 require 'hailstorm/initializer/java_classpath'
 require 'initializer/db_config'
 require 'initializer/migrations'
+require 'initializer/configuration_ext'
 require 'web_file_store'
 require 'version'
 
