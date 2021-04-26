@@ -84,7 +84,6 @@ This section has moved here: https://facebook.github.io/create-react-app/docs/tr
 ## Principles
 
 - Use flat source structure as much as possible.
-- Components with contained components become top level in source hierarchy even if they are not top level components in the DOM hierarchy.
 - Main component is responsible for connecting with global state & reducer. They get passed on as props to contained components.
 - Use CSS Modules for component CSS customizations, and SCSS for global styles.
-- Write new tests with Enzyme, but if they are flaky, change to react-test-utils. A test can be considered flaky if the test fails when an implementation detail changes, or they are timing dependent.
+- Write new tests with [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/). If existing Enyzme tests are flaky, change to React Testing Library. A test can be considered flaky if the test fails when an implementation detail changes, or they are timing dependent.

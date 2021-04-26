@@ -92,7 +92,7 @@ function JMeterSection({
     <div className="card">
       <div className="card-content">
         <div className="content">
-        {jmeter.files.map((jmeterFile) => (
+        {jmeter.files.filter((v) => !v.disabled).map((jmeterFile) => (
           <JMeterFileDetail {...{jmeterFile}} key={jmeterFile.id} headerTitle={jmeterFile.name} />
         ))}
         </div>

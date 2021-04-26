@@ -1,10 +1,10 @@
 import React from 'react';
-import { mount } from "enzyme";
+import { mount, ReactWrapper } from "enzyme";
 import { JMeterConfiguration } from "./JMeterConfiguration";
-import { AppStateContext } from '../appStateContext';
+import { AppStateProviderWithProps } from '../AppStateProvider';
 import { AppState, Action } from '../store';
 import { WizardTabTypes, JMeterFileUploadState } from '../NewProjectWizard/domain';
-import { JMeterFile, Project, JMeter, ValidationNotice } from '../domain';
+import { JMeterFile, Project, JMeter, ValidationNotice, ExecutionCycle, ExecutionCycleStatus } from '../domain';
 import { JMeterValidationService } from "../services/JMeterValidationService";
 import { JMeterService } from "../services/JMeterService";
 import { SavedFile } from '../FileUpload/domain';
@@ -50,7 +50,12 @@ describe('<JMeterConfiguration />', () => {
     }
   };
 
-  function createComponent(attrs?: {plans?: JMeterFile[]}, incomplete: boolean = false) {
+  function createComponent(
+    attrs?: {
+      plans?: JMeterFile[]
+    },
+    incomplete: boolean = false
+  ) {
     let activeProject: Project = {id: 1, code: 'a', title: 'A', running: false};
     if (!incomplete) {
       activeProject.jmeter = attrs && attrs.plans ? {files: attrs.plans} : {files: []};
@@ -58,9 +63,9 @@ describe('<JMeterConfiguration />', () => {
 
     appState.activeProject = activeProject;
     return (
-      <AppStateContext.Provider value={{appState, dispatch}}>
+      <AppStateProviderWithProps {...{appState, dispatch}}>
         <JMeterConfiguration />
-      </AppStateContext.Provider>
+      </AppStateProviderWithProps>
     )
   }
 
@@ -308,7 +313,11 @@ describe('<JMeterConfiguration />', () => {
     component.update();
     const propertiesForm = component.find('JMeterPropertiesMap');
     expect(propertiesForm).toExist();
-    expect(propertiesForm.prop('properties')).toEqual(properties);
+    expect(propertiesForm.prop('properties')).toEqual([
+      {key: "foo", value: undefined},
+      {key: "bar", value: "x"},
+      {key: "baz", value: 1}
+    ]);
   });
 
   it('should disable Next and Back buttons when there are unsaved properties', () => {
@@ -538,6 +547,25 @@ describe('<JMeterConfiguration />', () => {
     expect(dispatch).not.toBeCalled();
   });
 
+  it('should not delete the file if the configured plan could not be deleted', async () => {
+    const jmeterFile = {id: 100, name: 'a.jmx', properties: new Map([["foo", "10"]])};
+    appState.wizardState!.activeJMeterFile = jmeterFile;
+    const component = mount(withNotificationContext(createComponent({plans: [jmeterFile]})));
+    component.find('ActiveFileDetail button[role="Remove File"]').simulate('click');
+    const destroyFile = Promise.reject("mock API error");
+    const destroySpy = jest.spyOn(JMeterService.prototype, "destroy").mockReturnValue(destroyFile);
+    const removeSpy = jest.spyOn(FileServer, "removeFile");
+    component.find('Modal button').simulate('click');
+    try {
+      await destroyFile;
+    } catch(error) {
+      // noop
+    }
+
+    expect(destroySpy).toBeCalled();
+    expect(removeSpy).not.toBeCalled();
+  });
+
   it('should set JMeter configuration as complete on click of Next button', () => {
     const jmeterFile = {id: 100, name: 'a.jmx', properties: new Map([["foo", "10"]])};
     const dataFile = {id: 99, name: 'a.csv', dataFile: true};
@@ -566,5 +594,69 @@ describe('<JMeterConfiguration />', () => {
     component.find('button[role="Remove File"]').simulate('click');
     component.update();
     expect(component).toContainExactlyOneMatchingElement('#modal');
+  });
+
+  describe('when a plan is enabled and executed at least once', () => {
+    let component: ReactWrapper<any, Readonly<{}>, React.Component<{}, {}, any>>;
+    beforeEach(() => {
+      const jmeterFile = {id: 100, name: 'a.jmx', properties: new Map([["foo", "10"]]), planExecutedBefore: true};
+      appState.wizardState!.activeJMeterFile = {...jmeterFile};
+      component = mount(withNotificationContext(createComponent({plans: [jmeterFile]})));
+      component.update();
+    });
+
+    it('should show "Disable" instead of "Remove"', () => {
+      const disableBtn = component.find('button').findWhere((wrapper) => wrapper.text() === 'Disable').at(0);
+      expect(disableBtn).toExist();
+    });
+
+    it('should disable a plan', async () => {
+      const file: JMeterFile = {id: 100, name: 'a.jmx'};
+      const updatePromise = Promise.resolve({...file, disabled: true});
+      const spy = jest.spyOn(JMeterService.prototype, 'update').mockReturnValue(updatePromise);
+      const disableBtn = component.find('button').findWhere((wrapper) => wrapper.text() === 'Disable').at(0);
+      disableBtn.simulate('click');
+      await updatePromise;
+      expect(spy).toHaveBeenCalled();
+      expect(dispatch).toHaveBeenCalled();
+    });
+  });
+
+  describe('when a plan is disabled', () => {
+    let component: ReactWrapper<any, Readonly<{}>, React.Component<{}, {}, any>>;
+    beforeEach(() => {
+      const jmeterFile = {id: 100, name: 'a.jmx', properties: new Map([["foo", "10"]]), disabled: true};
+      appState.wizardState!.activeJMeterFile = {...jmeterFile};
+      component = mount(withNotificationContext(createComponent({plans: [jmeterFile]})));
+      component.update();
+    });
+
+    it('should show readonly fields in detail view', () => {
+      expect(component).toContainMatchingElement('input[name="foo"]');
+      expect(component.find('input[name="foo"]')).toHaveProp('readOnly');
+      const enableBtn = component.find('button').findWhere((wrapper) => wrapper.text() === 'Enable').at(0);
+      expect(enableBtn).toExist();
+    });
+
+    it('should Enable a disabled plan', async () => {
+      const file: JMeterFile = {id: 100, name: 'a.jmx', disabled: true};
+      const updatePromise = Promise.resolve({...file});
+      const spy = jest.spyOn(JMeterService.prototype, 'update').mockReturnValue(updatePromise);
+      const enableBtn = component.find('button').findWhere((wrapper) => wrapper.text() === 'Enable').at(0);
+      enableBtn.simulate('click');
+      await updatePromise;
+      expect(spy).toHaveBeenCalled();
+      expect(dispatch).toHaveBeenCalled();
+    });
+
+    it('should disable Next button when all test plans are disabled', () => {
+      const component = mount(createComponent({plans: [
+        {id: 100, name: 'a.jmx', properties: new Map([["foo", "10"]]), disabled: true},
+        {id: 110, name: 'a.csv', dataFile: true }
+      ]}));
+
+      const nextButton = component.find('button').findWhere((wrapper) => wrapper.text() === 'Next').at(0);
+      expect(nextButton).toBeDisabled();
+    });
   });
 });

@@ -49,6 +49,14 @@ export function reducer(state: NewProjectWizardState, action: JMeterConfiguratio
       nextState = onFileRemoveInProgress(state, action);
       break;
 
+    case JMeterConfigurationActionTypes.DisableJMeterFile:
+      nextState = onChangeJMeterFileDisability(state, {id: action.payload, disabled: true});
+      break;
+
+    case JMeterConfigurationActionTypes.EnableJMeterFile:
+      nextState = onChangeJMeterFileDisability(state, {id: action.payload, disabled: false});
+      break;
+
     default:
       nextState = state;
       break;
@@ -147,11 +155,10 @@ function onCommitJMeterFile(state: NewProjectWizardState, action: CommitJMeterFi
     activeJMeterFile
   };
   const activeProject = { ...state.activeProject! };
-  if (action.payload.autoStop !== undefined) {
-    if (activeProject.autoStop === undefined || activeProject.autoStop) {
-      activeProject.autoStop = action.payload.autoStop;
-    }
+  if (action.payload.autoStop !== undefined && activeProject.autoStop !== false) {
+    activeProject.autoStop = action.payload.autoStop;
   }
+
   return { ...state, wizardState, activeProject };
 }
 
@@ -193,4 +200,45 @@ function jmeterFileCompare(a: JMeterFile, b: JMeterFile): number {
     ++scoreB;
 
   return (scoreA - scoreB);
+}
+
+function onChangeJMeterFileDisability(
+  state: NewProjectWizardState, {
+    id,
+    disabled
+  }: {
+    id: number,
+    disabled: boolean
+  }): NewProjectWizardState {
+
+    const activeProject = {...state.activeProject!};
+    const wizardState = {...state.wizardState!};
+    const disableJMeterPlan: (plan: JMeterFile, disabled: boolean) => JMeterFile = (plan, disabled) => {
+      if (disabled === true) {
+        return {...plan, disabled};
+      } else {
+        const vNext = {...plan};
+        delete vNext.disabled;
+        return vNext;
+      }
+    };
+
+    activeProject.jmeter!.files = activeProject.jmeter!.files.map((v) => {
+      if (v.id === id) {
+        return disableJMeterPlan(v, disabled);
+      }
+
+      return v;
+    });
+
+    wizardState.activeJMeterFile = disableJMeterPlan(wizardState.activeJMeterFile!, disabled);
+    if (activeProject.jmeter!.files.filter((v) => !v.dataFile).every((v) => v.disabled)) {
+      activeProject.incomplete = true;
+    }
+
+    if (wizardState.done[WizardTabTypes.Review]) {
+      wizardState.modifiedAfterReview = true;
+    }
+
+    return {...state, activeProject, wizardState};
 }

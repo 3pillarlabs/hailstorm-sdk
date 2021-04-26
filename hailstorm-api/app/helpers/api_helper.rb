@@ -15,7 +15,7 @@ module ApiHelper
     Base64.encode64(Marshal.dump(obj))
   end
 
-  # @param [Sting] serz
+  # @param [String] serz
   # @return [Object]
   def deep_decode(serz)
     Marshal.load(Base64.decode64(serz)) # rubocop:disable Security/MarshalLoad

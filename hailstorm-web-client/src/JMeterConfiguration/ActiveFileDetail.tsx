@@ -1,9 +1,8 @@
 import React from 'react';
 import { NewProjectWizardState } from "../NewProjectWizard/domain";
-import { MergeJMeterFileAction } from './actions';
+import { DisableJMeterFileAction, EnableJMeterFileAction, MergeJMeterFileAction } from './actions';
 import { ApiFactory } from '../api';
 import { JMeterFileMessage } from './JMeterFileMessage';
-import { FormikActions } from 'formik';
 import { JMeterFileDetail } from './JMeterFileDetail';
 import { FormikActionsHandler } from './domain';
 import { useNotifications } from '../app-notifications';
@@ -45,6 +44,27 @@ export function ActiveFileDetail({ state, dispatch, setShowModal, setUploadAbort
       .then(() => setSubmitting(false));
   };
 
+  const toggleDisabled = (disabled: boolean) => {
+    if (state.wizardState && state.wizardState.activeJMeterFile && state.wizardState.activeJMeterFile.id) {
+      ApiFactory()
+        .jmeter()
+        .update(
+          state.activeProject!.id,
+          state.wizardState.activeJMeterFile.id,
+          {disabled}
+        )
+        .then(() => {
+          if (disabled) {
+            dispatch(new DisableJMeterFileAction(state.wizardState!.activeJMeterFile!.id!));
+            notifiers.notifyWarning(`JMeter plan "${state.wizardState!.activeJMeterFile!.name}" disabled`);
+          } else {
+            dispatch(new EnableJMeterFileAction(state.wizardState!.activeJMeterFile!.id!));
+            notifiers.notifySuccess(`JMeter plan "${state.wizardState!.activeJMeterFile!.name}" enabled`);
+          }
+        });
+    }
+  }
+
   return (
     <>
     {!state.wizardState!.activeJMeterFile && (
@@ -57,7 +77,7 @@ export function ActiveFileDetail({ state, dispatch, setShowModal, setUploadAbort
 
     {state.wizardState!.activeJMeterFile &&
     <JMeterFileDetail
-      {...{setShowModal, onSubmit}}
+      {...{setShowModal, onSubmit, toggleDisabled}}
       jmeterFile={state.wizardState!.activeJMeterFile}
     />}
     </>

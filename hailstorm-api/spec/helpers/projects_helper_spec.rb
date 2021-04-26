@@ -90,5 +90,24 @@ describe ProjectsHelper do
         expect(attrs).to_not include(:live)
       end
     end
+
+    context 'when all JMeter test plans are disabled' do
+      it 'should add incomplete attribute' do
+        config = Hailstorm::Support::Configuration.new
+        config.jmeter.add_test_plan('123/a.jmx')
+        config.jmeter.disabled_test_plans.push('123/a')
+        config.jmeter.data_files.push('135/b.csv')
+        config.clusters(:amazon_cloud) do |amz|
+          amz.access_key = 'a'
+          amz.secret_key = 'x'
+          amz.region = 'us-east-1'
+        end
+
+        ProjectConfiguration.create!(project: @project, stringified_config: deep_encode(config))
+        attrs = @api_instance.project_attributes(@project)
+        expect(attrs).to include(:incomplete)
+        expect(attrs[:incomplete]).to be == true
+      end
+    end
   end
 end

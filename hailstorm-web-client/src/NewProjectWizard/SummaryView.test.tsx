@@ -32,6 +32,14 @@ describe('<SummaryView />', () => {
             id: 5,
             name: 'testdroid_accounts.csv',
             dataFile: true
+          },
+          {
+            name: 'a.jmx',
+            id: 6,
+            properties: new Map([
+              ["NumThreads", "10"]
+            ]),
+            disabled: true
           }
         ]
       },
@@ -135,5 +143,15 @@ describe('<SummaryView />', () => {
     component.find('StepFooter button').simulate('click');
     expect(dispatch).toBeCalled();
     expect(dispatch.mock.calls[0][0]).toBeInstanceOf(ReviewCompletedAction);
+  });
+
+  it('should not show disabled test plans', () => {
+    const component = mount(
+      <AppStateProviderWithProps {...{appState, dispatch: jest.fn()}}>
+        <SummaryView />
+      </AppStateProviderWithProps>
+    );
+
+    expect(component.text()).not.toMatch(/a\.jmx/);
   });
 });

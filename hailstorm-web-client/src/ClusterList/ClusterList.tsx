@@ -1,6 +1,6 @@
 import React from 'react';
 import { Cluster } from '../domain';
-import styles from '../ClusterConfiguration/ClusterConfiguration.module.scss';
+import styles from '../NewProjectWizard/NewProjectWizard.module.scss';
 import { EmptyPanel } from '../EmptyPanel';
 
 export const ClusterList: React.FC<{
@@ -14,10 +14,6 @@ export const ClusterList: React.FC<{
 }> = ({clusters, showEdit, onSelectCluster, activeCluster, disableEdit, onEdit, showDisabledCluster}) => {
 
   const sortFn: (a: Cluster, b: Cluster) => number = (a, b) => {
-    if (activeCluster && activeCluster.id === b.id) {
-      return 1;
-    }
-
     if (a.disabled) {
       return 1;
     }
