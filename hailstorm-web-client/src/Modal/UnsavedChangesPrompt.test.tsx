@@ -1,7 +1,7 @@
 import React from 'react';
 import { shallow } from "enzyme";
 import { UnsavedChangesPrompt, windowUnloadEffect, UnsavedChangesPromptProps } from "./UnsavedChangesPrompt";
-import { fireEvent, wait } from '@testing-library/dom';
+import { fireEvent } from '@testing-library/dom';
 import { render } from '@testing-library/react';
 import { MemoryRouter, Route } from 'react-router';
 import { Link } from 'react-router-dom';

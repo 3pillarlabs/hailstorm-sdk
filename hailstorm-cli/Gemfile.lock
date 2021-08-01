@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     hailstorm-cli (1.0.15-java)
-      hailstorm (= 5.0.14)
+      hailstorm (= 5.1.14)
 
 GEM
   remote: https://rubygems.org/
@@ -94,7 +94,7 @@ GEM
     erubis (2.7.0)
     ffi (1.13.1-java)
     haikunator (1.1.0)
-    hailstorm (5.0.14-java)
+    hailstorm (5.1.14-java)
       actionpack (~> 6.0.0)
       activerecord-jdbc-adapter (~> 60.2)
       aws-sdk-ec2 (~> 1)
@@ -190,6 +190,7 @@ GEM
 
 PLATFORMS
   java
+  universal-java-1.8
 
 DEPENDENCIES
   activerecord-jdbcmysql-adapter (~> 60.2)
@@ -204,4 +205,4 @@ DEPENDENCIES
   simplecov (~> 0.17.1)
 
 BUNDLED WITH
-   2.1.4
+   2.2.23

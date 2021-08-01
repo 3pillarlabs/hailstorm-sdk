@@ -5,6 +5,8 @@ import { AWSInstanceChoiceOption } from './domain';
 import { Loader, LoadingMessage } from '../Loader';
 import { Field } from 'formik';
 import { useNotifications } from '../app-notifications';
+import { Modal } from '../Modal';
+import { ModalConfirmation } from '../Modal/ModalConfirmation';
 
 const MIN_PLANNED_USERS = 50;
 const DEFAULT_THREADS_BY_INST = 10;
@@ -15,7 +17,9 @@ export function AWSInstanceChoice({
   fetchPricing,
   hourlyCostByCluster,
   setHourlyCostByCluster,
-  disabled
+  disabled,
+  savedMaxThreadsByInstance,
+  savedInstanceType
 }: {
   regionCode: string;
   onChange: (choice: AWSInstanceChoiceOption) => void;
@@ -23,6 +27,8 @@ export function AWSInstanceChoice({
   hourlyCostByCluster?: number;
   setHourlyCostByCluster?: React.Dispatch<React.SetStateAction<number | undefined>>;
   disabled?: boolean;
+  savedMaxThreadsByInstance?: number;
+  savedInstanceType?: string;
 }) {
   const {notifyInfo, notifyWarning} = useNotifications();
   const [pricingData, setPricingData] = useState<AWSInstanceChoiceOption[]>([]);
@@ -34,7 +40,7 @@ export function AWSInstanceChoice({
 
   const handleSliderChange = (value: number, data?: AWSInstanceChoiceOption[]) => {
     setMaxPlannedThreads(value);
-    const choice = computeChoice(value, pricingData && pricingData.length > 0 ? pricingData : data!);
+    const choice = computeChoice(value, data ? data : pricingData);
     setInstanceType(choice.instanceType);
     setMaxThreadsByInstance(choice.maxThreadsByInstance);
     setNumInstances(choice.numInstances);
@@ -46,16 +52,29 @@ export function AWSInstanceChoice({
     console.debug('AWSInstanceChoice#useEffect(regionCode)');
     if (!quickMode) return;
 
-    setHourlyCostByCluster && setHourlyCostByCluster(undefined);
     fetchPricing(regionCode)
       .then((data) => {
         setPricingData(data);
-        const choice = handleSliderChange(maxPlannedThreads, data);
-        setHourlyCostByCluster && setHourlyCostByCluster(choice.hourlyCostByCluster());
-        notifyInfo(`Cluster cost updated for ${regionCode}`);
+        if (!savedInstanceType) {
+          handleSliderChange(maxPlannedThreads, data);
+          notifyInfo(`Cluster cost updated for ${regionCode}`);
+        }
       })
       .catch((reason) => notifyWarning(`Failed to update cluster cost: ${reason instanceof Error ? reason.message : reason}`));
   }, [regionCode]);
+
+  useEffect(() => {
+    if (savedMaxThreadsByInstance) {
+      setMaxThreadsByInstance(savedMaxThreadsByInstance);
+      setQuickMode(false);
+    }
+  }, [savedMaxThreadsByInstance]);
+
+  useEffect(() => {
+    if (savedInstanceType) {
+      setInstanceType(savedInstanceType);
+    }
+  }, [savedInstanceType]);
 
   if (pricingData.length === 0) {
     return <Loader />;
@@ -220,6 +239,8 @@ function InstanceTypeInput({
   handleSliderChange: (value: number) => void;
   setQuickMode: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
+  const [showSwitchConfirmation, setShowSwitchConfirmation] = useState(false);
+
   return (
     <>
       <div className="field">
@@ -243,13 +264,31 @@ function InstanceTypeInput({
         </div>
       </div>
       {!disabled && (<SwitchMessage
-        onClick={() => {
-          handleSliderChange(MIN_PLANNED_USERS);
-          setQuickMode(true);
-        }}
+        onClick={() => setShowSwitchConfirmation(true)}
       >
         Determine AWS Instance Type by Usage
       </SwitchMessage>)}
+
+      <Modal isActive={showSwitchConfirmation}>
+        <ModalConfirmation
+          isActive={showSwitchConfirmation}
+          cancelHandler={() => setShowSwitchConfirmation(false)}
+          cancelButtonLabel="No"
+          confirmHandler={() => {
+            setShowSwitchConfirmation(false);
+            handleSliderChange(MIN_PLANNED_USERS);
+            setQuickMode(true);
+          }}
+          confirmButtonLabel="Yes"
+          messageType="warning"
+        >
+          <p>
+            Switching to this mode will reset AWS instance type and maximum users per instance as per minimum usage. However,
+            untill you save this configuration, the current values will not be overwritten.
+          </p>
+          <p>Are you sure you want to switch?</p>
+        </ModalConfirmation>
+      </Modal>
     </>
   )
 }

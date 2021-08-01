@@ -57,7 +57,10 @@ export function NonLinearSlider({
           data-testid="MaxPlannedUsers"
         />
       </div>
-      <p className="help">This is a number between {minimumValue} and {maximumValue}</p>
+      <p className="help">
+        This is a number between {minimumValue} and {maximumValue} which will automatically select an
+        AWS EC2 instance type that minimizes cluster cost.
+      </p>
     </div>
   );
 }

@@ -6,8 +6,10 @@ require 'helpers/clusters_helper'
 require 'hailstorm/support/configuration'
 require 'hailstorm/model/project'
 require 'model/project_configuration'
+require 'helpers/aws_region_helper'
 
 include ClustersHelper
+include AwsRegionHelper
 
 post '/projects/:project_id/clusters' do |project_id|
   # @type [Hailstorm::Model::Project]
@@ -25,6 +27,7 @@ post '/projects/:project_id/clusters' do |project_id|
   hailstorm_config.clusters(api_to_config_cluster_type(record_data[:type])) do |cluster_config|
     if cluster_config.cluster_type == :amazon_cloud
       amazon_cloud_config(cluster_config, record_data)
+      return 422 if supported?(region_code: cluster_config.region) ^ cluster_config.base_ami.blank?
     else
       data_center_config(cluster_config, record_data)
     end
@@ -97,7 +100,17 @@ patch '/projects/:project_id/clusters/:id' do |project_id, id|
   request.body.rewind
   # @type [Hash]
   data = JSON.parse(request.body.read)
-  data.each_pair { |key, value| matched_cluster_cfg.send("#{key.underscore}=", value) }
+  is_project_live = !found_project.load_agents.empty?
+  data.each_pair do |key, value|
+    field_name = key.underscore.to_sym
+    return 422 if matched_cluster_cfg.active == false && field_name != :active
+    return 422 if field_name == :region
+    return 422 if field_name == :base_ami && matched_cluster_cfg.base_ami.blank?
+    return 422 if is_project_live && field_name != :max_threads_per_agent
+
+    matched_cluster_cfg.send("#{field_name}=", value)
+  end
+
   project_config.update!(stringified_config: deep_encode(hailstorm_config))
 
   JSON.dump(

@@ -2,6 +2,7 @@ import React, { useState, useEffect, SetStateAction } from 'react';
 import { Location } from 'history';
 import { Prompt, Redirect } from 'react-router';
 import { Modal } from './Modal';
+import { ModalConfirmation } from "./ModalConfirmation";
 
 export interface UnsavedChangesPromptProps {
   showModal: boolean;
@@ -81,28 +82,16 @@ export const UnsavedChangesPrompt: React.FC<UnsavedChangesPromptProps> = ({
     <>
     <Prompt when={hasUnsavedChanges} message={(nextLocation) => navAwayHandler(nextLocation)} />
     <Modal isActive={showModal}>
-      <div className={`modal${showModal ? " is-active" : ""}`}>
-        <div className="modal-background"></div>
-        <div className="modal-content">
-          <article className="message is-danger">
-            <div className="message-body">
-              {children}
-              <div className="field is-grouped is-grouped-centered">
-                <p className="control">
-                  <a className="button is-primary" onClick={modalCancelHandler}>
-                    {cancelButtonLabel || 'No, Cancel'}
-                  </a>
-                </p>
-                <p className="control">
-                  <button disabled={delayConfirmation !== false && confirmDisabled} className="button is-danger" onClick={modalConfirmHandler}>
-                    {confirmButtonLabel || "Yes, I'm sure"}
-                  </button>
-                </p>
-              </div>
-            </div>
-          </article>
-        </div>
-      </div>
+      <ModalConfirmation
+        cancelButtonLabel={cancelButtonLabel || 'No, Cancel'}
+        cancelHandler={modalCancelHandler}
+        confirmButtonLabel={confirmButtonLabel || "Yes, I'm sure"}
+        confirmHandler={modalConfirmHandler}
+        isActive={showModal}
+        isConfirmDisabled={delayConfirmation !== false && confirmDisabled}
+      >
+        {children}
+      </ModalConfirmation>
     </Modal>
     {okConfirmed && nextLocation && <Redirect to={nextLocation} />}
     </>

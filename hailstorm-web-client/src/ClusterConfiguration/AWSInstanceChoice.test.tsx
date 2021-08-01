@@ -13,6 +13,13 @@ jest.mock('./NonLinearSlider', () => ({
   )
 }));
 
+jest.mock('../Modal', () => ({
+  __esModule: true,
+  Modal: ({isActive, children}: React.PropsWithChildren<{isActive: boolean}>) => (
+    isActive ? <div id="modal">{children}</div> : null
+  )
+}));
+
 describe('<AWSInstanceChoice />', () => {
   const advanceModeTrigger = /specify aws instance type/i;
   let instanceChoicesPromise: Promise<AWSInstanceChoiceOption[]>;
@@ -155,6 +162,8 @@ describe('<AWSInstanceChoice />', () => {
 
       switchLink = await findByText(/by usage/i);
       fireEvent.click(switchLink);
+      const confirmYes = await findByText(/Yes/i);
+      fireEvent.click(confirmYes);
       awsInstanceType = await findByTestId('AWS Instance Type');
       maxThreadsPerInstance = await findByTestId('Max. Users / Instance');
       expect(awsInstanceType.textContent).toMatch(/m5a\.large/);

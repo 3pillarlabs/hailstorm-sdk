@@ -2,10 +2,11 @@ import React, { useContext, useState } from 'react';
 import { InterimProjectState, Project } from '../domain';
 import { SetInterimStateAction, UnsetInterimStateAction, SetRunningAction, UpdateProjectAction } from '../ProjectWorkspace/actions';
 import { ApiFactory } from '../api';
-import { Modal } from '../Modal/Modal';
+import { Modal } from '../Modal';
 import styles from './DangerProjectSettings.module.scss';
 import { AppStateContext } from '../appStateContext';
 import { useNotifications } from '../app-notifications';
+import { ModalConfirmation } from '../Modal/ModalConfirmation';
 
 
 function TerminateButton({
@@ -45,44 +46,34 @@ function ConfirmModal({
 }: ModalProps) {
   return (
     <Modal isActive={showModal}>
-      <div className={`modal${showModal ? " is-active" : ""} ${styles.modal}`}>
-        <div className="modal-background"></div>
-        <div className="modal-content">
-          <article className="message is-warning">
-            <div className="message-body">
-              {project.running || project.interimState ? (
-              <p className="notification is-danger">
-                <label>
-                  <input type="checkbox" checked={isUnderstood} onChange={() => setIsUnderstood(!isUnderstood)} />
-                  I understand that I have tests or operations in progress, and I will lose data if I
-                  terminate now.
-                </label>
-              </p>
-              ): null}
-              <p>
-                This action can't be stopped mid-way, and the next test will take longer to start.
-              </p>
-              <p>
-                Are you sure you want to terminate the setup?
-              </p>
-              <div className="field is-grouped is-grouped-centered">
-                <p className="control">
-                  <a className="button is-primary" onClick={() => setShowModal(false)}>No, Cancel</a>
-                </p>
-                <p className="control">
-                  <button
-                    className="button is-danger"
-                    disabled={(project.running || project.interimState) && !isUnderstood}
-                    onClick={handleTerminate}
-                  >
-                    Yes, Terminate
-                  </button>
-                </p>
-              </div>
-            </div>
-          </article>
-        </div>
-      </div>
+      <ModalConfirmation
+        cancelHandler={() => setShowModal(false)}
+        confirmHandler={handleTerminate}
+        isActive={showModal}
+        cancelButtonLabel="No, Cancel"
+        confirmButtonLabel="Yes, Terminate"
+        classModifiers={styles.modal}
+        isConfirmDisabled={(project.running || project.interimState) && !isUnderstood}
+        messageType="warning"
+      >
+      <>
+      {project.running || project.interimState ? (
+        <p className="notification is-danger">
+          <label>
+            <input type="checkbox" checked={isUnderstood} onChange={() => setIsUnderstood(!isUnderstood)} />
+            I understand that I have tests or operations in progress, and I will lose data if I
+            terminate now.
+          </label>
+        </p>
+        ): null}
+        <p>
+          This action can't be stopped mid-way, and the next test will take longer to start.
+        </p>
+        <p>
+          Are you sure you want to terminate the setup?
+        </p>
+      </>
+      </ModalConfirmation>
     </Modal>
   );
 }

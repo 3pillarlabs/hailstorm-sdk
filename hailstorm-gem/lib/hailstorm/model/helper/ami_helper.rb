@@ -68,7 +68,7 @@ class Hailstorm::Model::Helper::AmiHelper
     security_group = security_group_finder.find_security_group
     clean_instance = nil
     begin
-      clean_instance = ec2_instance_helper.create_ec2_instance(ami_id: base_ami,
+      clean_instance = ec2_instance_helper.create_ec2_instance(ami_id: lookup_base_ami,
                                                                security_group_ids: security_group.id)
       build_ami(clean_instance)
     rescue Exception => ex
@@ -179,7 +179,19 @@ class Hailstorm::Model::Helper::AmiHelper
 
   # Base AMI to use to create Hailstorm AMI based on the region
   # @return [String] Base AMI ID
-  def base_ami
-    region_base_ami_map[aws_clusterable.region]
+  def lookup_base_ami
+    base_ami = region_base_ami_map[aws_clusterable.region]
+    return base_ami unless base_ami.nil?
+
+    base_ami = aws_clusterable.base_ami
+    raise(Hailstorm::Exception,
+          "No base_ami specified for unsupported region #{aws_clusterable.region}") if base_ami.nil?
+
+    unless ami_client.available?(ami_id: base_ami)
+      raise(Hailstorm::Exception,
+            "AMI #{base_ami} not available in AWS region #{aws_clusterable.region}")
+    end
+
+    base_ami
   end
 end

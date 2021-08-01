@@ -100,6 +100,7 @@ export interface AmazonCluster extends Cluster {
   instanceType: string;
   vpcSubnetId?: string;
   maxThreadsByInstance: number;
+  baseAMI?: string;
 }
 
 export interface DataCenterCluster extends Cluster {

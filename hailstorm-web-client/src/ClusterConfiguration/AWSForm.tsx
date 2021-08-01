@@ -1,36 +1,25 @@
 import React, { useState } from 'react';
 import { Project } from '../domain';
-import { RemoveClusterAction, CreateClusterAction } from './actions';
+import { CreateClusterAction } from './actions';
 import { Formik, Field, Form, FormikActions, ErrorMessage } from 'formik';
-import { AWSInstanceChoice } from './AWSInstanceChoice';
 import { AWSInstanceChoiceOption, AWSRegionList } from './domain';
 import { ApiFactory } from '../api';
 import { AWSRegionChoice } from './AWSRegionChoice';
 import { ClusterFormFooter } from './ClusterFormFooter';
 import { ClusterViewHeader } from './ClusterViewHeader';
 import { useNotifications } from '../app-notifications';
+import { AWSFormField, AWSInstanceChoiceField } from './AWSFormField';
 
 export function AWSForm({ dispatch, activeProject }: {
   dispatch: React.Dispatch<any>;
   activeProject: Project;
 }) {
-  const [hourlyCostByCluster, setHourlyCostByCluster] = useState<number>();
   const [awsRegion, setAwsRegion] = useState<string>();
   const [selectedInstanceType, setSelectedInstanceType] = useState<AWSInstanceChoiceOption>();
+  const [baseAMI, setBaseAMI] = useState<string>();
   const {notifySuccess, notifyError} = useNotifications();
   const fetchRegions: () => Promise<AWSRegionList> = () => {
     return ApiFactory().awsRegion().list();
-  };
-
-  const fetchPricing: (regionCode: string) => Promise<AWSInstanceChoiceOption[]> = (regionCode) => {
-    return ApiFactory().awsInstancePricing().list(regionCode);
-  };
-
-  const handleAWSInstanceChange = (choice: AWSInstanceChoiceOption) => {
-    setSelectedInstanceType(choice);
-    if (choice.hourlyCostByInstance > 0) {
-      setHourlyCostByCluster(choice.hourlyCostByCluster());
-    }
   };
 
   const handleSubmit = (values: {
@@ -51,7 +40,8 @@ export function AWSForm({ dispatch, activeProject }: {
         title: '',
         region: awsRegion!,
         instanceType: selectedInstanceType!.instanceType,
-        maxThreadsByInstance: selectedInstanceType!.maxThreadsByInstance
+        maxThreadsByInstance: selectedInstanceType!.maxThreadsByInstance,
+        baseAMI: baseAMI
       })
       .then((createdCluster) => {
         dispatch(new CreateClusterAction(createdCluster));
@@ -59,6 +49,34 @@ export function AWSForm({ dispatch, activeProject }: {
       })
       .catch((reason) => notifyError(`Failed to save the AWS ${awsRegion} cluster configuration`, reason))
       .finally(() => actions.setSubmitting(false));
+  };
+
+  const onAWSRegionChange: (
+    region: string,
+    options?: {
+      baseAMI?: string;
+    }
+  ) => void = (region, options) => {
+    setAwsRegion(region);
+    if (options) {
+      setBaseAMI(options.baseAMI);
+    }
+  };
+
+  const validateInputs = (values: {accessKey: string, secretKey: string}) => {
+    const errors: {
+      accessKey?: string;
+      secretKey?: string;
+    } = {};
+    if (!values.accessKey) {
+      errors.accessKey = "AWS Access Key can't be blank";
+    }
+
+    if (!values.secretKey) {
+      errors.secretKey = "AWS Secret Key can't be blank";
+    }
+
+    return errors;
   };
 
   return (
@@ -74,33 +92,18 @@ export function AWSForm({ dispatch, activeProject }: {
           secretKey: '',
           vpcSubnetId: ''
         }}
-        validate={(values) => {
-          const errors: {
-            accessKey?: string;
-            secretKey?: string;
-          } = {};
-          if (!values.accessKey) {
-            errors.accessKey = "AWS Access Key can't be blank";
-          }
-
-          if (!values.secretKey) {
-            errors.secretKey = "AWS Secret Key can't be blank";
-          }
-
-          return errors;
-        }}
+        validate={validateInputs}
         onSubmit={(values, actions) => handleSubmit(values, actions)}
       >
         {({ isSubmitting, isValid }) => (
         <Form data-testid="AWSForm">
           <div className="card-content">
-            <div className="field">
-              <label className="label">AWS Access Key *</label>
-              <div className="control">
-                <Field required name="accessKey" className="input" type="text" data-testid="AWS Access Key" disabled={isSubmitting} />
-              </div>
-              <ErrorMessage name="accessKey" render={(message) => (<p className="help is-danger">{message}</p>)} />
-            </div>
+            <AWSFormField
+              labelText="AWS Access Key"
+              required={true}
+              disabled={isSubmitting}
+              fieldName="accessKey"
+            />
             <div className="field">
               <label className="label">AWS Secret Key *</label>
               <div className="control">
@@ -117,21 +120,12 @@ export function AWSForm({ dispatch, activeProject }: {
             <div className="field">
               <label className="label">AWS Region *</label>
               <div className="control">
-                <AWSRegionChoice onAWSRegionChange={setAwsRegion} {...{ fetchRegions }} disabled={isSubmitting} />
+                <AWSRegionChoice {...{fetchRegions, onAWSRegionChange}} disabled={isSubmitting} />
               </div>
             </div>
-            {awsRegion ? (<>
-              <div className="field">
-                <div className="control">
-                  <AWSInstanceChoice
-                    onChange={handleAWSInstanceChange}
-                    regionCode={awsRegion}
-                    {...{ fetchPricing, setHourlyCostByCluster, hourlyCostByCluster }}
-                    disabled={isSubmitting}
-                  />
-                </div>
-              </div>
-            </>) : null}
+            {awsRegion && (
+            <AWSInstanceChoiceField {...{awsRegion, setSelectedInstanceType}} disabled={isSubmitting} />
+            )}
           </div>
           <ClusterFormFooter {...{dispatch}} disabled={isSubmitting || !isValid} />
         </Form>)}

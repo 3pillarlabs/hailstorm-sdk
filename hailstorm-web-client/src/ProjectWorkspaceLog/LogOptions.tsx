@@ -34,7 +34,7 @@ export function LogOptions({
             </p>
           </div>
           <div className={`dropdown-item ${styles.optionBar}`}>
-            <p>
+            <div>
               <label>Scroll limit</label>
               <div className="select">
                 <select
@@ -46,12 +46,12 @@ export function LogOptions({
                   <option value={2000}>2000 lines</option>
                 </select>
               </div>
-            </p>
+            </div>
           </div>
           <div className="dropdown-item">
-            <p>
+            <div>
               <button className="button" onClick={onClear}>Clear</button>
-            </p>
+            </div>
           </div>
         </div>
       </div>

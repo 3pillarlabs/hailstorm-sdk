@@ -54,11 +54,11 @@ describe Hailstorm::Model::Helper::AmiHelper do
 
         allow(@mock_instance_client).to receive(:terminated?).and_return(true)
         allow(@mock_instance_client).to receive(:ready?).and_return(true)
+        allow(@helper).to receive(:provision)
       end
 
       context 'ami build fails' do
         it 'should raise an exception' do
-          allow(@helper).to receive(:provision)
           allow(@helper).to receive(:register_hailstorm_ami).and_raise(StandardError, 'mocked exception')
           expect(@mock_instance_client).to receive(:terminate)
           expect { @helper.create_agent_ami! }.to raise_error
@@ -67,7 +67,6 @@ describe Hailstorm::Model::Helper::AmiHelper do
 
       context 'ami build succeeds' do
         it 'should assign the AMI id' do
-          allow(@helper).to receive(:provision)
           mock_ec2_image = Hailstorm::Behavior::AwsAdaptable::Ami.new(image_id: 'ami-12334',
                                                                       state: 'available',
                                                                       name: 'same_owner/other_image')
@@ -75,6 +74,39 @@ describe Hailstorm::Model::Helper::AmiHelper do
           expect(@mock_instance_client).to receive(:terminate)
           @helper.create_agent_ami!
           expect(@aws.agent_ami).to eql(mock_ec2_image.id)
+        end
+      end
+
+      context 'AWS region does not have a default base AMI' do
+        before(:each) do
+          @aws.region = 'where_the_regions_have_no_ami'
+        end
+
+        context 'base_ami is provided' do
+          before(:each) do
+            @aws.base_ami = 'ami-1234'
+          end
+
+          it 'should fail if the provided base_ami is not available in AWS' do
+            allow(@mock_ami_client).to receive(:available?).and_return(false)
+            error_message = "AMI #{@aws.base_ami} not available in AWS region #{@aws.region}"
+            expect { @helper.create_agent_ami! }.to raise_error(Hailstorm::Exception, error_message)
+          end
+
+          it 'should use the provided base_ami instead of the default' do
+            allow(@mock_ami_client).to receive(:available?).and_return(true)
+            expect(@mock_ec2_helper).to receive(:create_ec2_instance).with(ami_id: @aws.base_ami,
+                                                                           security_group_ids: @aws.security_group)
+            allow(@helper).to receive(:build_ami)
+            allow(@helper).to receive(:terminate_instance)
+            @helper.create_agent_ami!
+          end
+        end
+
+        context 'base_ami is not provided' do
+          it 'should fail to create the agent AMI' do
+            expect { @helper.create_agent_ami! }.to raise_error(Hailstorm::Exception)
+          end
         end
       end
     end
