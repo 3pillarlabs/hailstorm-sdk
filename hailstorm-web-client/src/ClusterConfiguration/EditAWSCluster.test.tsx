@@ -1,11 +1,11 @@
 import React from 'react';
 import { act, fireEvent, render, wait } from '@testing-library/react';
 import { AmazonCluster, Project } from '../domain';
-import { AWSView } from './AWSView';
+import { EditAWSCluster } from './EditAWSCluster';
 import { UpdateClusterAction } from './actions';
 import { ClusterService } from '../services/ClusterService';
 import { AppNotificationContextProps } from '../app-notifications';
-import { AppNotificationProviderWithProps } from '../AppNotificationProvider';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
 import { AWSInstanceChoiceOption } from './domain';
 import { AWSEC2PricingService } from '../services/AWSEC2PricingService';
 
@@ -16,7 +16,7 @@ jest.mock('../Modal', () => ({
   )
 }));
 
-describe('<AWSView />', () => {
+describe('<EditAWSCluster />', () => {
   const cluster: AmazonCluster = {
     id: 123,
     accessKey: 'A',
@@ -91,7 +91,7 @@ describe('<AWSView />', () => {
       const promise: Promise<AmazonCluster> = Promise.resolve({...clusterFixture, ...updatedAttributes});
       const apiSpy = jest.spyOn(ClusterService.prototype, 'update').mockReturnValue(promise);
       const { getByRole, getByDisplayValue, queryByTestId, queryByRole, getByText, findByTestId, findByText } = render(
-        withNotificationContext(<AWSView {...{cluster: clusterFixture, activeProject: projectFixture, dispatch}} />)
+        withNotificationContext(<EditAWSCluster {...{cluster: clusterFixture, activeProject: projectFixture, dispatch}} />)
       );
 
       await fetchPricing;
@@ -146,7 +146,7 @@ describe('<AWSView />', () => {
 
     it('should not let the user edit base AMI for a supported region', () => {
       const { queryByTestId } = render(
-        withNotificationContext(<AWSView {...{cluster, activeProject, dispatch}} />)
+        withNotificationContext(<EditAWSCluster {...{cluster, activeProject, dispatch}} />)
       );
 
       const baseAmiField = queryByTestId('Base AMI');
@@ -162,7 +162,7 @@ describe('<AWSView />', () => {
       it('should let the user edit only Max users per instance', () => {
         const clusterFixture = {...cluster, region: 'eu-west-3', baseAMI: 'ami-xyz', vpcSubnetId: 'vpc-123'};
         const { queryByTestId, getByDisplayValue, queryByDisplayValue, queryByRole, debug } = render(
-          withNotificationContext(<AWSView {...{cluster: clusterFixture, activeProject: projectFixture, dispatch}} />)
+          withNotificationContext(<EditAWSCluster {...{cluster: clusterFixture, activeProject: projectFixture, dispatch}} />)
         );
 
         expect(getByDisplayValue(clusterFixture.accessKey).hasAttribute("readonly")).toBe(true);
@@ -179,7 +179,7 @@ describe('<AWSView />', () => {
         const promise: Promise<AmazonCluster> = Promise.resolve({...cluster, maxThreadsByInstance: 200});
         const apiSpy = jest.spyOn(ClusterService.prototype, 'update').mockReturnValue(promise);
         const { findByRole, findByTestId } = render(
-          withNotificationContext(<AWSView {...{cluster, activeProject: projectFixture, dispatch}} />)
+          withNotificationContext(<EditAWSCluster {...{cluster, activeProject: projectFixture, dispatch}} />)
         );
 
         const input = await findByTestId('Max. Users / Instance');
@@ -208,7 +208,7 @@ describe('<AWSView />', () => {
   describe('with a disabled cluster', () => {
     it('should not have update trigger', async () => {
       const { queryAllByRole, queryAllByTestId } = render(
-        <AWSView
+        <EditAWSCluster
           {...{cluster: {...cluster, disabled: true}, activeProject, dispatch}}
         />
       );
@@ -227,7 +227,7 @@ describe('<AWSView />', () => {
       };
 
       const { getByDisplayValue, queryByDisplayValue, queryByRole, queryByTestId } = render(
-        withNotificationContext(<AWSView {...{cluster: clusterFixture, activeProject, dispatch}} />)
+        withNotificationContext(<EditAWSCluster {...{cluster: clusterFixture, activeProject, dispatch}} />)
       );
 
       expect(getByDisplayValue(clusterFixture.accessKey).hasAttribute("readonly")).toBe(true);

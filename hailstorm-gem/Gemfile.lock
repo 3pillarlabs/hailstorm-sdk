@@ -186,6 +186,7 @@ GEM
 PLATFORMS
   java
   universal-java-1.8
+  universal-java-11
 
 DEPENDENCIES
   activerecord-jdbcmysql-adapter (~> 60.2)

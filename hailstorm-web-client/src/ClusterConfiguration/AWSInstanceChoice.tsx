@@ -50,7 +50,7 @@ export function AWSInstanceChoice({
 
   useEffect(() => {
     console.debug('AWSInstanceChoice#useEffect(regionCode)');
-    if (!quickMode) return;
+    if (!quickMode || !regionCode) return;
 
     fetchPricing(regionCode)
       .then((data) => {
@@ -284,7 +284,7 @@ function InstanceTypeInput({
         >
           <p>
             Switching to this mode will reset AWS instance type and maximum users per instance as per minimum usage. However,
-            untill you save this configuration, the current values will not be overwritten.
+            until you save this configuration, the current values will not be overwritten.
           </p>
           <p>Are you sure you want to switch?</p>
         </ModalConfirmation>

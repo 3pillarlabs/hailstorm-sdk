@@ -11,7 +11,8 @@ export function AWSFormField({
   required,
   disabled,
   staticField,
-  fieldValue
+  fieldValue,
+  inputType = 'text'
 }:{
   labelText: string;
   fieldName?: string;
@@ -19,6 +20,7 @@ export function AWSFormField({
   disabled?: boolean;
   staticField?: boolean;
   fieldValue?: any;
+  inputType?: 'text' | 'password'
 }) {
   if (!!staticField) {
     return (
@@ -31,9 +33,9 @@ export function AWSFormField({
     <div className="field">
       <label className="label">{label}</label>
       <div className="control">
-        <Field {...{required, disabled}} name={fieldName} className="input" type="text" data-testid={labelText} />
+        <Field {...{required, disabled}} name={fieldName} className="input" type={inputType} data-testid={labelText} />
       </div>
-      <ErrorMessage name="accessKey" render={(message) => (<p className="help is-danger">{message}</p>)} />
+      <ErrorMessage name={fieldName!} render={(message) => (<p className="help is-danger">{message}</p>)} />
     </div>
   );
 }

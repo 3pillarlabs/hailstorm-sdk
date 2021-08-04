@@ -65,25 +65,16 @@ class Hailstorm::Support::AwsAdapter
     Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(factory_attrs)
   end
 
-  # @param [String] region
-  # @param [String] access_key_id
-  # @param [String] secret_access_key
-  # @param [Float] retry_base_delay
-  # @param [Integer] retry_limit
+  # @param [Hash] aws_config (access_key_id, secret_access_key, region, retry_base_delay: 1, retry_limit: 5)
   # @param [Logger] logger
   # @return [Aws::EC2::Client]
-  def self.ec2_client(region: nil,
-                      access_key_id: nil,
-                      secret_access_key: nil,
-                      logger: nil,
-                      retry_base_delay: DEFAULT_RETRY_BASE_DELAY,
-                      retry_limit: DEFAULT_RETRY_LIMIT)
-
-    attrs = { retry_base_delay: retry_base_delay, retry_limit: retry_limit }
+  def self.ec2_client(aws_config, logger: nil)
+    attrs = { retry_base_delay: aws_config[:retry_base_delay] || DEFAULT_RETRY_BASE_DELAY,
+              retry_limit: aws_config[:retry_limit] || DEFAULT_RETRY_LIMIT }
     attrs.merge!(logger: logger) unless logger.nil?
-    attrs.merge!(region: region) unless region.nil?
-    if access_key_id && secret_access_key
-      credentials = Aws::Credentials.new(access_key_id, secret_access_key)
+    attrs.merge!(region: aws_config[:region]) unless aws_config[:region].nil?
+    if aws_config[:access_key_id] && aws_config[:secret_access_key]
+      credentials = Aws::Credentials.new(aws_config[:access_key_id], aws_config[:secret_access_key])
       attrs.merge!(credentials: credentials)
     end
 

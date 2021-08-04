@@ -96,6 +96,7 @@ jobs:
       language: ruby
       rvm: jruby-9.2.11.1
       jdk: openjdk8
+      python: "3.6"
       env:
         - CI_NODE_INDEX=0
       before_install:
@@ -112,6 +113,7 @@ jobs:
       language: ruby
       rvm: jruby-9.2.11.1
       jdk: openjdk8
+      python: "3.6"
       env:
         - CI_NODE_INDEX=1
       before_install:
@@ -129,6 +131,7 @@ jobs:
       language: ruby
       rvm: jruby-9.2.11.1
       jdk: openjdk8
+      python: "3.6"
       env:
         - CI_NODE_INDEX=2
       before_install:
@@ -145,6 +148,7 @@ jobs:
       name: "hailstorm-file-server coverage"
       language: java
       jdk: openjdk8
+      python: "3.6"
       env:
         - CI_NODE_INDEX=3
       before_install:
@@ -160,6 +164,7 @@ jobs:
       name: "hailstorm-client-exchange coverage"
       language: java
       jdk: openjdk8
+      python: "3.6"
       env:
         - CI_NODE_INDEX=4
       before_install:
@@ -175,6 +180,7 @@ jobs:
       name: "hailstorm-web-client coverage"
       language: node_js
       node_js: lts/dubnium
+      python: "3.6"
       env:
         - CI_NODE_INDEX=5
       before_install:

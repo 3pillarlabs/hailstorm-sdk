@@ -1,67 +1,36 @@
-import React, { useState } from 'react';
-import { Project } from '../domain';
-import { CreateClusterAction } from './actions';
-import { Formik, Field, Form, FormikActions, ErrorMessage } from 'formik';
-import { AWSInstanceChoiceOption, AWSRegionList } from './domain';
-import { ApiFactory } from '../api';
+import React from 'react';
+import { ErrorMessage, Field, Form, Formik } from 'formik';
+import { AmazonCluster, Project } from '../domain';
+import { FormikActionsHandler } from '../JMeterConfiguration/domain';
+import { AWSFormField, AWSInstanceChoiceField } from './AWSFormField';
 import { AWSRegionChoice } from './AWSRegionChoice';
 import { ClusterFormFooter } from './ClusterFormFooter';
-import { ClusterViewHeader } from './ClusterViewHeader';
-import { useNotifications } from '../app-notifications';
-import { AWSFormField, AWSInstanceChoiceField } from './AWSFormField';
+import { AWSInstanceChoiceOption, AWSRegionList } from './domain';
+import { ReadOnlyField } from './ReadOnlyField';
+import { MaxUsersByInstance } from './AWSInstanceChoice';
+import { RemoveCluster } from './RemoveCluster';
 
-export function AWSForm({ dispatch, activeProject }: {
-  dispatch: React.Dispatch<any>;
-  activeProject: Project;
+export function AWSForm({
+  cluster,
+  handleSubmit,
+  awsRegion,
+  dispatch,
+  fetchRegions,
+  onAWSRegionChange,
+  setSelectedInstanceType,
+  formMode = 'new',
+  activeProject
+}: {
+  dispatch?: React.Dispatch<any>;
+  handleSubmit: FormikActionsHandler;
+  awsRegion: string | undefined;
+  setSelectedInstanceType: React.Dispatch<React.SetStateAction<AWSInstanceChoiceOption | undefined>>
+  cluster?: AmazonCluster;
+  fetchRegions?: () => Promise<AWSRegionList>;
+  onAWSRegionChange?: (region: string, options?: { baseAMI?: string }) => void;
+  formMode?: 'new' | 'edit' | 'readonly';
+  activeProject?: Project;
 }) {
-  const [awsRegion, setAwsRegion] = useState<string>();
-  const [selectedInstanceType, setSelectedInstanceType] = useState<AWSInstanceChoiceOption>();
-  const [baseAMI, setBaseAMI] = useState<string>();
-  const {notifySuccess, notifyError} = useNotifications();
-  const fetchRegions: () => Promise<AWSRegionList> = () => {
-    return ApiFactory().awsRegion().list();
-  };
-
-  const handleSubmit = (values: {
-    accessKey: string;
-    secretKey: string;
-    vpcSubnetId?: string;
-  }, actions: FormikActions<{
-    accessKey: string;
-    secretKey: string;
-    vpcSubnetId?: string;
-  }>) => {
-    actions.setSubmitting(true);
-    ApiFactory()
-      .clusters()
-      .create(activeProject.id, {
-        ...values,
-        type: 'AWS',
-        title: '',
-        region: awsRegion!,
-        instanceType: selectedInstanceType!.instanceType,
-        maxThreadsByInstance: selectedInstanceType!.maxThreadsByInstance,
-        baseAMI: baseAMI
-      })
-      .then((createdCluster) => {
-        dispatch(new CreateClusterAction(createdCluster));
-        notifySuccess(`Saved ${createdCluster.title} cluster configuration`);
-      })
-      .catch((reason) => notifyError(`Failed to save the AWS ${awsRegion} cluster configuration`, reason))
-      .finally(() => actions.setSubmitting(false));
-  };
-
-  const onAWSRegionChange: (
-    region: string,
-    options?: {
-      baseAMI?: string;
-    }
-  ) => void = (region, options) => {
-    setAwsRegion(region);
-    if (options) {
-      setBaseAMI(options.baseAMI);
-    }
-  };
 
   const validateInputs = (values: {accessKey: string, secretKey: string}) => {
     const errors: {
@@ -79,57 +48,111 @@ export function AWSForm({ dispatch, activeProject }: {
     return errors;
   };
 
+  const initialValues = {accessKey: '', secretKey: '', maxThreadsByInstance: 0, ...cluster};
+  const readOnlyMode = formMode === 'readonly';
+
   return (
-    <div className="card">
-      <ClusterViewHeader
-        title="Create a new AWS Cluster"
-        icon={(<i className="fab fa-aws"></i>)}
-      />
-      <Formik
-        isInitialValid={false}
-        initialValues={{
-          accessKey: '',
-          secretKey: '',
-          vpcSubnetId: ''
-        }}
-        validate={validateInputs}
-        onSubmit={(values, actions) => handleSubmit(values, actions)}
-      >
-        {({ isSubmitting, isValid }) => (
-        <Form data-testid="AWSForm">
-          <div className="card-content">
-            <AWSFormField
-              labelText="AWS Access Key"
-              required={true}
-              disabled={isSubmitting}
-              fieldName="accessKey"
-            />
-            <div className="field">
-              <label className="label">AWS Secret Key *</label>
-              <div className="control">
-                <Field required name="secretKey" className="input" type="password" data-testid="AWS Secret Key" disabled={isSubmitting} />
-              </div>
-              <ErrorMessage name="secretKey" render={(message) => (<p className="help is-danger">{message}</p>)} />
+    <Formik
+      isInitialValid={formMode !== 'new'}
+      initialValues={initialValues}
+      validate={validateInputs}
+      onSubmit={(values, actions) => handleSubmit(values, actions)}
+    >
+      {({ isSubmitting, isValid, setFieldTouched, handleChange, values }) => (
+      <Form data-testid="AWSForm">
+        <div className="card-content">
+          <AWSFormField
+            labelText="AWS Access Key"
+            required={true}
+            disabled={isSubmitting}
+            fieldName="accessKey"
+            fieldValue={cluster && cluster.accessKey}
+            staticField={readOnlyMode}
+          />
+          {!readOnlyMode && (
+          <AWSFormField
+            labelText="AWS Secret Key"
+            fieldName="secretKey"
+            staticField={readOnlyMode}
+            inputType={'password'}
+            disabled={isSubmitting}
+            required={true}
+          />)}
+          <AWSFormField
+            labelText="VPC Subnet"
+            fieldName="vpcSubnetId"
+            fieldValue={cluster && cluster.vpcSubnetId}
+            staticField={readOnlyMode}
+            disabled={isSubmitting}
+          />
+          {formMode === 'new' ? (
+          <div className="field">
+            <label className="label">AWS Region *</label>
+            <div className="control">
+              <AWSRegionChoice fetchRegions={fetchRegions!} onAWSRegionChange={onAWSRegionChange!} disabled={isSubmitting} />
             </div>
-            <div className="field">
-              <label className="label">VPC Subnet</label>
-              <div className="control">
-                <Field name="vpcSubnetId" className="input" type="text" data-testid="VPC Subnet" disabled={isSubmitting} />
-              </div>
+          </div>) : (
+          <>
+          <ReadOnlyField
+            label="AWS Region"
+            value={cluster && cluster.region}
+          />
+          {cluster && cluster.baseAMI && (
+          <AWSFormField
+            labelText="Base AMI"
+            fieldName="baseAMI"
+            fieldValue={cluster.baseAMI}
+            staticField={readOnlyMode}
+            required={true}
+          />)}
+          </>)}
+          {readOnlyMode ? (
+          <ReadOnlyField label="AWS Instance Type" value={cluster!.instanceType} />
+          ) : (
+          <AWSInstanceChoiceField
+            awsRegion={awsRegion || (cluster && cluster.region!) || ''}
+            {...{setSelectedInstanceType}}
+            disabled={isSubmitting}
+            maxThreadsByInstance={cluster && cluster.maxThreadsByInstance}
+            instanceType={cluster && cluster.instanceType}
+            onChange={() => setFieldTouched("instanceType")}
+          />)}
+          {cluster && (cluster.disabled || (!activeProject && readOnlyMode)) && (
+          <ReadOnlyField label="Max. Users / Instance" value={cluster.maxThreadsByInstance} />
+          )}
+          {cluster && !cluster.disabled && activeProject && activeProject.live && (
+          <MaxUsersByInstance
+            onChange={(event) => {
+              if (event.target.value && parseInt(event.target.value) > 0) {
+                handleChange(event);
+                setFieldTouched("maxThreadsByInstance");
+              }
+            }}
+            value={values.maxThreadsByInstance}
+          />
+          )}
+        </div>
+        {formMode === 'new' && dispatch ? (
+        <ClusterFormFooter {...{dispatch}} disabled={isSubmitting || !isValid} />
+        ) : (
+        activeProject && cluster && dispatch && (
+        <div className="card-footer">
+          <RemoveCluster {...{activeProject, cluster, dispatch}} />
+          {!cluster.disabled && (
+            <div className="card-footer-item">
+              <button
+                type="submit"
+                className="button is-primary"
+                role="Update Cluster"
+                disabled={isSubmitting || !isValid}
+              >
+                Update
+              </button>
             </div>
-            <div className="field">
-              <label className="label">AWS Region *</label>
-              <div className="control">
-                <AWSRegionChoice {...{fetchRegions, onAWSRegionChange}} disabled={isSubmitting} />
-              </div>
-            </div>
-            {awsRegion && (
-            <AWSInstanceChoiceField {...{awsRegion, setSelectedInstanceType}} disabled={isSubmitting} />
-            )}
-          </div>
-          <ClusterFormFooter {...{dispatch}} disabled={isSubmitting || !isValid} />
-        </Form>)}
-      </Formik>
-    </div>
+          )}
+        </div>)
+        )}
+      </Form>)}
+    </Formik>
   );
 }

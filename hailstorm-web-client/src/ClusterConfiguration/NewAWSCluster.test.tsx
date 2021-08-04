@@ -1,16 +1,16 @@
 import React from 'react';
 import { AmazonCluster, Cluster, Project } from '../domain';
-import { AWSForm } from './AWSForm';
+import { NewAWSCluster } from './NewAWSCluster';
 import { AWSInstanceChoiceOption, AWSRegionList } from './domain';
 import { AWSEC2PricingService } from '../services/AWSEC2PricingService';
 import { act, fireEvent, render, wait } from '@testing-library/react';
 import { AWSRegionService } from '../services/AWSRegionService';
 import { mount } from 'enzyme';
 import { ClusterService } from '../services/ClusterService';
-import { AppNotificationProviderWithProps } from '../AppNotificationProvider';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
 import { AppNotificationContextProps } from '../app-notifications';
 
-describe('<AWSForm />', () => {
+describe('<NewAWSCluster />', () => {
   const activeProject: Project = {
     id: 1,
     code: 'a',
@@ -39,7 +39,7 @@ describe('<AWSForm />', () => {
 
     return (
       <AppNotificationProviderWithProps {...{...props}}>
-        <AWSForm {...{activeProject, dispatch}} />
+        <NewAWSCluster {...{activeProject, dispatch}} />
       </AppNotificationProviderWithProps>
     )
   }

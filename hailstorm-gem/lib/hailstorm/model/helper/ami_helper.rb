@@ -184,8 +184,9 @@ class Hailstorm::Model::Helper::AmiHelper
     return base_ami unless base_ami.nil?
 
     base_ami = aws_clusterable.base_ami
-    raise(Hailstorm::Exception,
-          "No base_ami specified for unsupported region #{aws_clusterable.region}") if base_ami.nil?
+    if base_ami.nil?
+      raise(Hailstorm::Exception, "No base_ami specified for unsupported region #{aws_clusterable.region}")
+    end
 
     unless ami_client.available?(ami_id: base_ami)
       raise(Hailstorm::Exception,
