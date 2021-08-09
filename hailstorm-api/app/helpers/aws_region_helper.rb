@@ -18,4 +18,8 @@ module AwsRegionHelper
   def default_region_node
     aws_region_helper.region_node(code: Hailstorm::Model::Helper::AmazonCloudDefaults::EC2_REGION)
   end
+
+  def supported?(region_code:)
+    aws_region_helper.region_base_ami_map.key?(region_code)
+  end
 end

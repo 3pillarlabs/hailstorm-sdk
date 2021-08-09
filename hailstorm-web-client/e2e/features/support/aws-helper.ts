@@ -4,7 +4,7 @@ import * as AWS from 'aws-sdk';
 import * as http from 'http';
 import * as path from 'path';
 
-export function awsKeys(): {access_key: string, secret_key: string} {
+export function awsKeys(): {accessKey: string, secretKey: string} {
   const fileContents = fs.readFileSync('data/keys.yml', 'utf8');
   return YAML.parse(fileContents);
 }
@@ -17,8 +17,8 @@ export function taggedInstance(
 ): Promise<AWS.EC2.Instance> {
   const keys = awsKeys();
   const ec2 = new AWS.EC2({
-    accessKeyId: keys.access_key,
-    secretAccessKey: keys.secret_key,
+    accessKeyId: keys.accessKey,
+    secretAccessKey: keys.secretKey,
     region
   });
 

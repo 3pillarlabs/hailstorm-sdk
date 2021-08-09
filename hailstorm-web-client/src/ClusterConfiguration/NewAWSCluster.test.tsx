@@ -1,16 +1,16 @@
 import React from 'react';
 import { AmazonCluster, Cluster, Project } from '../domain';
-import { AWSForm } from './AWSForm';
+import { NewAWSCluster } from './NewAWSCluster';
 import { AWSInstanceChoiceOption, AWSRegionList } from './domain';
 import { AWSEC2PricingService } from '../services/AWSEC2PricingService';
-import { fireEvent, render, wait } from '@testing-library/react';
+import { act, fireEvent, render, wait } from '@testing-library/react';
 import { AWSRegionService } from '../services/AWSRegionService';
 import { mount } from 'enzyme';
 import { ClusterService } from '../services/ClusterService';
 import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
 import { AppNotificationContextProps } from '../app-notifications';
 
-describe('<AWSForm />', () => {
+describe('<NewAWSCluster />', () => {
   const activeProject: Project = {
     id: 1,
     code: 'a',
@@ -39,7 +39,7 @@ describe('<AWSForm />', () => {
 
     return (
       <AppNotificationProviderWithProps {...{...props}}>
-        <AWSForm {...{activeProject, dispatch}} />
+        <NewAWSCluster {...{activeProject, dispatch}} />
       </AppNotificationProviderWithProps>
     )
   }
@@ -48,6 +48,8 @@ describe('<AWSForm />', () => {
   let fetchRegions: Promise<AWSRegionList>;
 
   beforeEach(() => {
+    jest.resetAllMocks();
+
     fetchPricing = Promise.resolve([
       new AWSInstanceChoiceOption({
         instanceType: 'm3a.small', numInstances: 1, maxThreadsByInstance: 500, hourlyCostByInstance: 0.092
@@ -64,12 +66,12 @@ describe('<AWSForm />', () => {
           code: 'North America',
           title: 'North America',
           regions: [
-            { code: 'us-east-1', title: 'Ohio, US East' }
+            { code: 'us-east-1', title: 'US East (Northern Virginia)' }
           ]
         }
       ],
 
-      defaultRegion: { code: 'us-east-1', title: 'Ohio, US East' }
+      defaultRegion: { code: 'us-east-1', title: 'US East (Northern Virginia) ' }
     });
 
     jest.spyOn(AWSRegionService.prototype, 'list').mockReturnValue(fetchRegions);
@@ -84,7 +86,6 @@ describe('<AWSForm />', () => {
     await utils.findByTestId('Max. Users / Instance');
   });
 
-
   it('should show control for instance specifications', async () => {
     const component = mount(createComponent());
     await fetchRegions;
@@ -97,7 +98,7 @@ describe('<AWSForm />', () => {
     const {findByText} = render(createComponent());
     await fetchRegions;
     await fetchPricing;
-    const message = await findByText(/Cluster Cost/i);
+    const message = await findByText(/Hourly Cluster Cost/i);
     expect(message).toBeDefined();
   });
 
@@ -106,12 +107,11 @@ describe('<AWSForm />', () => {
     expect(component).toContainExactlyOneMatchingElement('AWSRegionChoice');
   });
 
-
   it('should validate cluster inputs', async () => {
     const {findByText, findByTestId, findAllByText} = render(createComponent());
     await fetchRegions;
     await fetchPricing;
-    await findByText(/Cluster Cost/i);
+    await findByText(/Hourly Cluster Cost/i);
     const form = await findByTestId('AWSForm');
     fireEvent.submit(form);
     expect(dispatch).not.toBeCalled();
@@ -137,7 +137,7 @@ describe('<AWSForm />', () => {
     const {findByTestId, findByText} = render(createComponent());
     await fetchRegions;
     await fetchPricing;
-    await findByText(/Cluster Cost/i);
+    await findByText(/Hourly Cluster Cost/i);
     const accessKey = await findByTestId('AWS Access Key');
     const secretKey = await findByTestId('AWS Secret Key');
     fireEvent.change(accessKey, {target: {value: savedCluster.accessKey}});
@@ -172,7 +172,7 @@ describe('<AWSForm />', () => {
   });
 
   it('should not set number of instances below 1', async () => {
-    const {findByTestId, debug} = render(createComponent());
+    const {findByTestId} = render(createComponent());
     await fetchRegions;
     await fetchPricing;
 
@@ -184,5 +184,64 @@ describe('<AWSForm />', () => {
 
     const numInstances = await findByTestId('# Instances');
     expect(numInstances.textContent).toEqual('1');
+  });
+
+  it('should optionally submit baseAMI', async () => {
+    const savedCluster: AmazonCluster = {
+      id: 23,
+      code: 'singing-penguin-23',
+      title: '',
+      type: 'AWS',
+      accessKey: 'A',
+      secretKey: 'S',
+      region: 'sa-south-1',
+      instanceType: 'm3a.small',
+      maxThreadsByInstance: 500,
+      baseAMI: 'ami-123'
+    };
+
+    const clusterSpy = jest.spyOn(ClusterService.prototype, 'create').mockResolvedValueOnce(savedCluster);
+    const {findByRole, findByPlaceholderText, findByText, findByTestId} = render(createComponent());
+    await fetchRegions;
+    await fetchPricing;
+
+    const editRegion = await findByRole('EditRegion');
+    act(() => {
+      fireEvent.click(editRegion);
+    });
+
+    const otherOption = await findByRole('OtherOption');
+    act(() => {
+      fireEvent.click(otherOption);
+    })
+
+    const region = await findByPlaceholderText('af-south-2');
+    act(() => {
+      fireEvent.change(region, {target: {value: 'af-south-1'}});
+    });
+
+    const ami = await findByPlaceholderText('ami-03ba3948f6c37a4b0');
+    act(() => {
+      fireEvent.change(ami, {target: {value: 'ami-123'}});
+    });
+
+    const submit = await findByText('Update');
+    act(() => {
+      fireEvent.click(submit);
+    });
+
+    await wait();
+    const accessKey = await findByTestId('AWS Access Key');
+    const secretKey = await findByTestId('AWS Secret Key');
+    fireEvent.change(accessKey, {target: {value: savedCluster.accessKey}});
+    fireEvent.change(secretKey, {target: {value: savedCluster.secretKey}});
+    const save = await findByText(/save/i);
+    fireEvent.click(save);
+    await wait();
+
+    expect(clusterSpy).toHaveBeenCalled();
+    const args = clusterSpy.mock.calls[0][1] as AmazonCluster;
+    expect(args.region).toEqual('af-south-1');
+    expect(args.baseAMI).toBeDefined();
   });
 });

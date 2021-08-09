@@ -320,9 +320,9 @@ describe('<ClusterConfiguration />', () => {
       expect(dispatch.mock.calls[0][0]).toBeInstanceOf(ActivateClusterAction);
     });
 
-    it('should show the cluster in view mode', () => {
+    it('should show the cluster in edit mode', () => {
       const component = mount(createComponent());
-      expect(component).toContainExactlyOneMatchingElement('AWSView');
+      expect(component).toContainExactlyOneMatchingElement('EditAWSCluster');
     });
   });
 

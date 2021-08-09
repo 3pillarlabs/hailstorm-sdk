@@ -28,7 +28,9 @@ class Hailstorm::Support::Schema
 
   # List of updates to schema
   def schema_updates
-    @schema_updates ||= %i[]
+    @schema_updates ||= %i[
+      add_amazon_clouds_base_ami
+    ]
   end
 
   class SchemaMigration < ActiveRecord::Base
@@ -242,6 +244,10 @@ class Hailstorm::Support::Schema
         t.integer     :chunk_sequence, null: false
         t.binary      :data_chunk, null: false
       end
+    end
+
+    def add_amazon_clouds_base_ami
+      ActiveRecord::Migration.add_column(:amazon_clouds, :base_ami, :string, default: nil)
     end
   end
 

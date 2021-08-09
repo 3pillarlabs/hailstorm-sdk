@@ -84,6 +84,6 @@ This section has moved here: https://facebook.github.io/create-react-app/docs/tr
 ## Principles
 
 - Use flat source structure as much as possible.
-- Main component is responsible for connecting with global state & reducer. They get passed on as props to contained components.
+- Global state and reducer if needed in a component, are passed on as props to children if they too require the global state and reducer.
 - Use CSS Modules for component CSS customizations, and SCSS for global styles.
 - Write new tests with [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/). If existing Enyzme tests are flaky, change to React Testing Library. A test can be considered flaky if the test fails when an implementation detail changes, or they are timing dependent.

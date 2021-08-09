@@ -7,6 +7,7 @@ require 'hailstorm/behavior/loggable'
 require 'hailstorm/behavior/aws_adaptable'
 require 'ostruct'
 require 'hailstorm/support/aws_exception_builder'
+require 'hailstorm/behavior/aws_exception'
 
 # AWS SDK adapter.
 # Route all calls to AWS SDK through this adapter.
@@ -52,22 +53,38 @@ class Hailstorm::Support::AwsAdapter
   end
 
   # @param [Hash] aws_config(access_key_id, secret_access_key, region, retry_base_delay: 1, retry_limit: 5)
+  # @see [Hailstorm::Behavior::AwsAdapterDomain::CLIENT_KEYS] for list of symbols
   def self.clients(aws_config)
-    unless @clients
-      credentials = Aws::Credentials.new(aws_config[:access_key_id], aws_config[:secret_access_key])
-      ec2_client = Aws::EC2::Client.new(region: aws_config[:region],
-                                        credentials: credentials,
-                                        retry_base_delay: aws_config[:retry_base_delay] || DEFAULT_RETRY_BASE_DELAY,
-                                        retry_limit: aws_config[:retry_limit] || DEFAULT_RETRY_LIMIT)
-      factory_attrs = Hailstorm::Behavior::AwsAdaptable::CLIENT_KEYS.reduce({}) do |attrs, ck|
-        client = "#{Hailstorm::Support::AwsAdapter.name}::#{ck.to_s.camelize}".constantize
-                                                                              .new(ec2_client: ec2_client)
-        attrs.merge(ck.to_sym => ExceptionTranslationProxy.new(client))
-      end
-
-      @clients = Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(factory_attrs)
+    ec2_client = self.ec2_client(aws_config)
+    factory_attrs = Hailstorm::Behavior::AwsAdaptable::CLIENT_KEYS.reduce({}) do |attrs, ck|
+      client = "#{Hailstorm::Support::AwsAdapter.name}::#{ck.to_s.camelize}".constantize
+                                                                            .new(ec2_client: ec2_client)
+      attrs.merge(ck.to_sym => ExceptionTranslationProxy.new(client))
     end
 
-    @clients
+    Hailstorm::Behavior::AwsAdaptable::ClientFactory.new(factory_attrs)
+  end
+
+  # @param [Hash] aws_config (access_key_id, secret_access_key, region, retry_base_delay: 1, retry_limit: 5)
+  # @param [Logger] logger
+  # @return [Aws::EC2::Client]
+  def self.ec2_client(aws_config, logger: nil)
+    attrs = { retry_base_delay: aws_config[:retry_base_delay] || DEFAULT_RETRY_BASE_DELAY,
+              retry_limit: aws_config[:retry_limit] || DEFAULT_RETRY_LIMIT }
+    attrs.merge!(logger: logger) unless logger.nil?
+    attrs.merge!(region: aws_config[:region]) unless aws_config[:region].nil?
+    if aws_config[:access_key_id] && aws_config[:secret_access_key]
+      credentials = Aws::Credentials.new(aws_config[:access_key_id], aws_config[:secret_access_key])
+      attrs.merge!(credentials: credentials)
+    end
+
+    create_raw_ec2_client(attrs)
+  end
+
+  # @param [Hash] attrs
+  # @return [Aws::EC2::Client]
+  # :nodoc:
+  def self.create_raw_ec2_client(attrs)
+    Aws::EC2::Client.new(attrs)
   end
 end

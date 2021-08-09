@@ -58,6 +58,7 @@ module ClustersHelper
     amz.max_threads_per_agent = api_params[:maxThreadsByInstance] unless api_params[:maxThreadsByInstance].blank?
     amz.region = api_params[:region] unless api_params[:region].blank?
     amz.vpc_subnet_id = api_params[:vpcSubnetId] unless api_params[:vpcSubnetId].blank?
+    amz.base_ami = api_params[:baseAMI] unless api_params[:baseAMI].blank?
     amz
   end
 
@@ -135,7 +136,8 @@ module ClustersHelper
       instanceType: amz.instance_type,
       maxThreadsByInstance: amz.max_threads_per_agent,
       region: amz.region,
-      vpcSubnetId: amz.vpc_subnet_id
+      vpcSubnetId: amz.vpc_subnet_id,
+      baseAMI: amz.base_ami
     }
   end
 
