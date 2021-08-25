@@ -152,4 +152,28 @@ module ClustersHelper
   def to_array(any)
     any.is_a?(Array) ? any : [any]
   end
+
+  # @param [Hailstorm::Support::Configuration::ClusterBase] cluster_config
+  # @param [String] field_name
+  # @param [Object] value
+  # @return [Object]
+  def query_field_value(cluster_config, field_name:, value:)
+    field_value = value
+    if field_name == :ssh_identity && cluster_config.cluster_type == :data_center
+      field_value = "#{value['path']}/#{value['name']}"
+    end
+
+    field_value
+  end
+
+  # @param [Hailstorm::Support::Configuration::ClusterBase] cluster_config
+  # @param [String] field_name
+  def patch_request_valid?(cluster_config, field_name)
+    return false if cluster_config.active == false && field_name != :active
+    return false if field_name == :region
+    return false if field_name == :base_ami && cluster_config.base_ami.blank?
+    return false if field_name == :code
+
+    true
+  end
 end

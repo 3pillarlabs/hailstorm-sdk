@@ -47,7 +47,7 @@ export function EditAWSCluster({ cluster, dispatch, activeProject }: {
   };
 
   const staticField = cluster.disabled || (!!activeProject && activeProject.live) || !dispatch;
-  const formMode = staticField ? 'readonly' : 'edit'
+  const formMode = staticField ? 'readonly' : 'edit';
 
   return (
     <div className="card">

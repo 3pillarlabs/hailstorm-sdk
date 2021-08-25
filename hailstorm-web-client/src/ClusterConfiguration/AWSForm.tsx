@@ -1,5 +1,5 @@
 import React from 'react';
-import { ErrorMessage, Field, Form, Formik } from 'formik';
+import { Form, Formik } from 'formik';
 import { AmazonCluster, Project } from '../domain';
 import { FormikActionsHandler } from '../JMeterConfiguration/domain';
 import { AWSFormField, AWSInstanceChoiceField } from './AWSFormField';
@@ -9,6 +9,7 @@ import { AWSInstanceChoiceOption, AWSRegionList } from './domain';
 import { ReadOnlyField } from './ReadOnlyField';
 import { MaxUsersByInstance } from './AWSInstanceChoice';
 import { RemoveCluster } from './RemoveCluster';
+import styles from '../NewProjectWizard/NewProjectWizard.module.scss';
 
 export function AWSForm({
   cluster,
@@ -60,7 +61,7 @@ export function AWSForm({
     >
       {({ isSubmitting, isValid, setFieldTouched, handleChange, values }) => (
       <Form data-testid="AWSForm">
-        <div className="card-content">
+        <div className={`card-content${cluster && cluster.disabled ? ` ${styles.disabledContent}` : ''}`}>
           <AWSFormField
             labelText="AWS Access Key"
             required={true}
