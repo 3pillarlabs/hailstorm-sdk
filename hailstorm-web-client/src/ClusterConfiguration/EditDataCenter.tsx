@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { DataCenterCluster, Project } from '../domain';
 import { ClusterViewHeader } from './ClusterViewHeader';
-import { DataCenterForm } from './DataCenterForm';
+import { DataCenterForm } from '../DataCenterForm';
 import { FileServer } from '../FileUpload/fileServer';
 import { ApiFactory } from '../api';
 import _ from 'lodash';

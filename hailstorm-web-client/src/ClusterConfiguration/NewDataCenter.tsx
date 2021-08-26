@@ -6,7 +6,7 @@ import { CreateClusterAction } from './actions';
 import { SavedFile } from '../FileUpload/domain';
 import { ClusterViewHeader } from './ClusterViewHeader';
 import { useNotifications } from '../app-notifications';
-import { DataCenterForm } from './DataCenterForm';
+import { DataCenterForm } from '../DataCenterForm';
 
 export function NewDataCenter({
   dispatch,
