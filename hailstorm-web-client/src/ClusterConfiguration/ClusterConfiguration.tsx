@@ -11,8 +11,8 @@ import { ClusterList } from '../ClusterList';
 import { ActivateClusterAction, ChooseClusterOptionAction, SetClusterConfigurationAction } from './actions';
 import { NewAWSCluster } from './NewAWSCluster';
 import { EditAWSCluster } from './EditAWSCluster';
-import { DataCenterForm } from './DataCenterForm';
-import { DataCenterView } from './DataCenterView';
+import { NewDataCenter } from './NewDataCenter';
+import { EditDataCenter } from './EditDataCenter';
 import { ApiFactory } from '../api';
 import { Loader, LoaderSize } from '../Loader/Loader';
 
@@ -119,9 +119,9 @@ function StepContent({
         />)))}
         {wizardState.activeCluster && wizardState.activeCluster.type === 'DataCenter' && (
         (wizardState.activeCluster.id === undefined ? (
-        <DataCenterForm {...{dispatch, activeProject}} />
+        <NewDataCenter {...{dispatch, activeProject}} />
         ) : (
-        <DataCenterView
+        <EditDataCenter
           cluster={wizardState.activeCluster! as DataCenterCluster}
           {...{dispatch, activeProject}}
         />)))}

@@ -2,7 +2,7 @@ import React from 'react';
 import { render, mount } from 'enzyme';
 import { fireEvent, render as renderComponent, RenderResult, wait } from '@testing-library/react';
 import { AWSRegionChoice } from './AWSRegionChoice';
-import { AWSRegionList, AWSRegionType } from './domain';
+import { AWSRegionList, AWSRegionType } from '../ClusterConfiguration/domain';
 import { act } from 'react-dom/test-utils';
 
 describe('<AWSRegionChoice />', () => {

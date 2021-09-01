@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AWSRegionType, AWSRegionList } from './domain';
+import { AWSRegionType, AWSRegionList } from '../ClusterConfiguration/domain';
 import { Loader } from '../Loader/Loader';
 import { useNotifications } from '../app-notifications';
 import { ErrorMessage, Field, Form, Formik } from 'formik';

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NonLinearSlider } from './NonLinearSlider';
 import { computeChoice, maxThreadsByCluster } from './AWSInstanceCalculator';
-import { AWSInstanceChoiceOption } from './domain';
+import { AWSInstanceChoiceOption } from '../ClusterConfiguration/domain';
 import { Loader, LoadingMessage } from '../Loader';
 import { Field } from 'formik';
 import { useNotifications } from '../app-notifications';

@@ -1,14 +1,14 @@
 import React from 'react';
-import { ErrorMessage, Field, Form, Formik } from 'formik';
+import { Form, Formik } from 'formik';
 import { AmazonCluster, Project } from '../domain';
 import { FormikActionsHandler } from '../JMeterConfiguration/domain';
 import { AWSFormField, AWSInstanceChoiceField } from './AWSFormField';
 import { AWSRegionChoice } from './AWSRegionChoice';
-import { ClusterFormFooter } from './ClusterFormFooter';
-import { AWSInstanceChoiceOption, AWSRegionList } from './domain';
-import { ReadOnlyField } from './ReadOnlyField';
+import { ClusterFormFooter } from '../ClusterConfiguration/ClusterFormFooter';
+import { AWSInstanceChoiceOption, AWSRegionList } from '../ClusterConfiguration/domain';
+import { ReadOnlyField } from '../ClusterConfiguration/ReadOnlyField';
 import { MaxUsersByInstance } from './AWSInstanceChoice';
-import { RemoveCluster } from './RemoveCluster';
+import styles from '../NewProjectWizard/NewProjectWizard.module.scss';
 
 export function AWSForm({
   cluster,
@@ -60,7 +60,7 @@ export function AWSForm({
     >
       {({ isSubmitting, isValid, setFieldTouched, handleChange, values }) => (
       <Form data-testid="AWSForm">
-        <div className="card-content">
+        <div className={`card-content${cluster && cluster.disabled ? ` ${styles.disabledContent}` : ''}`}>
           <AWSFormField
             labelText="AWS Access Key"
             required={true}
@@ -132,26 +132,12 @@ export function AWSForm({
           />
           )}
         </div>
-        {formMode === 'new' && dispatch ? (
-        <ClusterFormFooter {...{dispatch}} disabled={isSubmitting || !isValid} />
-        ) : (
-        activeProject && cluster && dispatch && (
-        <div className="card-footer">
-          <RemoveCluster {...{activeProject, cluster, dispatch}} />
-          {!cluster.disabled && (
-            <div className="card-footer-item">
-              <button
-                type="submit"
-                className="button is-primary"
-                role="Update Cluster"
-                disabled={isSubmitting || !isValid}
-              >
-                Update
-              </button>
-            </div>
-          )}
-        </div>)
-        )}
+        {dispatch && (
+        <ClusterFormFooter
+          {...{dispatch, activeProject, cluster}}
+          disabled={isSubmitting || !isValid}
+          newCluster={formMode === 'new'}
+        />)}
       </Form>)}
     </Formik>
   );

@@ -5,7 +5,7 @@ import { AWSInstanceChoiceOption, AWSRegionList } from './domain';
 import { ApiFactory } from '../api';
 import { ClusterViewHeader } from './ClusterViewHeader';
 import { useNotifications } from '../app-notifications';
-import { AWSForm } from './AWSForm';
+import { AWSForm } from '../AWSForm';
 import { FormikActionsHandler } from '../JMeterConfiguration/domain';
 
 export function NewAWSCluster({ dispatch, activeProject }: {

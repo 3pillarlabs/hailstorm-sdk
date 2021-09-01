@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { ErrorMessage, Field } from "formik";
-import { ReadOnlyField } from "./ReadOnlyField";
+import { ReadOnlyField } from "../ClusterConfiguration/ReadOnlyField";
 import { AWSInstanceChoice } from './AWSInstanceChoice';
-import { AWSInstanceChoiceOption } from './domain';
+import { AWSInstanceChoiceOption } from '../ClusterConfiguration/domain';
 import { ApiFactory } from '../api';
 
 export function AWSFormField({

@@ -83,8 +83,11 @@ export interface ValidationNotice {
   message: string;
 }
 
-export interface Cluster {
+export interface ClusterCommonInput {
   title: string;
+}
+
+export interface Cluster extends ClusterCommonInput {
   type: 'AWS' | 'DataCenter';
   id?: number;
   code?: string;
@@ -103,9 +106,11 @@ export interface AmazonCluster extends Cluster {
   baseAMI?: string;
 }
 
-export interface DataCenterCluster extends Cluster {
+export interface DataCenterClusterInputs extends ClusterCommonInput {
   userName: string;
-  sshIdentity: {name: string, path?: string};
-  machines: string[];
   sshPort?: number;
+  machines: string[];
+}
+export interface DataCenterCluster extends DataCenterClusterInputs, Cluster {
+  sshIdentity: {name: string, path?: string};
 }

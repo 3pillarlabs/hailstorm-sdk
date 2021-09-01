@@ -90,8 +90,9 @@ end
 
 patch '/projects/:project_id/clusters/:id' do |project_id, id|
   found_project = Hailstorm::Model::Project.find(project_id)
-  project_config = ProjectConfiguration.find_by_project_id!(found_project.id)
+  return 422 unless found_project.current_execution_cycle.nil?
 
+  project_config = ProjectConfiguration.find_by_project_id!(found_project.id)
   # @type [Hailstorm::Support::Configuration] hailstorm_config
   hailstorm_config = deep_decode(project_config.stringified_config)
   matched_cluster_cfg = find_cluster_cfg(hailstorm_config, id)
@@ -103,12 +104,11 @@ patch '/projects/:project_id/clusters/:id' do |project_id, id|
   is_project_live = !found_project.load_agents.empty?
   data.each_pair do |key, value|
     field_name = key.underscore.to_sym
-    return 422 if matched_cluster_cfg.active == false && field_name != :active
-    return 422 if field_name == :region
-    return 422 if field_name == :base_ami && matched_cluster_cfg.base_ami.blank?
     return 422 if is_project_live && field_name != :max_threads_per_agent
+    return 422 unless patch_request_valid?(matched_cluster_cfg, field_name)
 
-    matched_cluster_cfg.send("#{field_name}=", value)
+    field_value = query_field_value(matched_cluster_cfg, field_name: field_name, value: value)
+    matched_cluster_cfg.send("#{field_name}=", field_value)
   end
 
   project_config.update!(stringified_config: deep_encode(hailstorm_config))

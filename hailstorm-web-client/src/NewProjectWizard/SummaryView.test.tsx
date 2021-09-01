@@ -7,7 +7,7 @@ import { SummaryView } from './SummaryView';
 import { mount } from 'enzyme';
 import { ReviewCompletedAction } from './actions';
 import { AppNotificationProvider } from '../AppNotificationProvider';
-import { AppStateProviderWithProps } from '../AppStateProvider/AppStateProvider';
+import { AppStateProviderWithProps } from '../AppStateProvider';
 
 describe('<SummaryView />', () => {
   const appState: AppState = {

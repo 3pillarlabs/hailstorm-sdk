@@ -114,7 +114,7 @@ describe('<TerminateProject />', () => {
   });
 
   describe('when modal is confirmed', () => {
-    it('should set interim state before api invocation', async () => {
+    it('should set interim state before api invocation', async (done) => {
       const apiUpdateSpy = jest.spyOn(ProjectService.prototype, 'update').mockResolvedValue(204);
       const apiGetPromise = Promise.resolve<Project>(project);
       const apiGetSpy = jest.spyOn(ProjectService.prototype, 'get').mockResolvedValueOnce(apiGetPromise);
@@ -129,7 +129,10 @@ describe('<TerminateProject />', () => {
       expect(dispatch).toBeCalled();
       expect(apiUpdateSpy).toBeCalled();
       await apiGetPromise;
-      expect(apiGetSpy).toBeCalled();
+      setTimeout(() => {
+        done();
+        expect(apiGetSpy).toBeCalled();
+      }, 0);
     });
 
     it('should notify of an error', (done) => {
