@@ -225,6 +225,7 @@ jobs:
       env:
         - TAG_VALUE="Hailstorm Site - cli"
       before_install:
+        - pyenv global 3.7.1
         - make cli_integration_before_install
       install:
         - make COMPOSE=cli-verify cli_integration_install
@@ -247,6 +248,7 @@ jobs:
       addons:
         firefox: latest
       before_install:
+        - pyenv global 3.7.1
         - nvm install ${NODE_VERSION}
         - rvm install ${JRUBY}
         - make web_integration_before_install
