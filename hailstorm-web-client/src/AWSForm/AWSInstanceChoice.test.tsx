@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, mount } from 'enzyme';
 import { AWSInstanceChoice, InstanceTypeMeter } from './AWSInstanceChoice';
-import { AWSInstanceChoiceOption } from './domain';
+import { AWSInstanceChoiceOption } from '../ClusterConfiguration/domain';
 import { render as renderComponent, fireEvent } from '@testing-library/react';
 import { Form, Formik } from 'formik';
 import { AppNotificationProviderWithProps } from '../AppNotificationProvider';

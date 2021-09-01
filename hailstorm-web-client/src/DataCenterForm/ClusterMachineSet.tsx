@@ -1,5 +1,5 @@
 import React from "react";
-import { MachineSet } from "../ClusterConfiguration/MachineSet";
+import { MachineSet } from "./MachineSet";
 import { ReadOnlyField } from "../ClusterConfiguration/ReadOnlyField";
 
 export function ClusterMachineSet({

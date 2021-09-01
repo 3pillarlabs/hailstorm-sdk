@@ -6,7 +6,7 @@ import { ClusterService } from '../services/ClusterService';
 import { EditDataCenter } from './EditDataCenter';
 import _ from 'lodash';
 import { AppNotificationContextProps } from '../app-notifications';
-import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider';
 
 describe('<EditDataCenter.tsx />', () => {
   const dataCenterCluster: DataCenterCluster = {

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { mount } from 'enzyme';
 import { fireEvent, render } from '@testing-library/react';
 import { MachineSet } from './MachineSet';
 

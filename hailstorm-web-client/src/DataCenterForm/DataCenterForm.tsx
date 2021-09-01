@@ -3,7 +3,6 @@ import {Formik, Form, FormikActions} from "formik";
 import { DataCenterCluster, Project, DataCenterClusterInputs } from "../domain";
 import { ClusterFormFooter } from "../ClusterConfiguration/ClusterFormFooter";
 import styles from '../NewProjectWizard/NewProjectWizard.module.scss';
-import { RemoveCluster } from "../ClusterConfiguration/RemoveCluster";
 import { useNotifications } from "../app-notifications";
 import { ClusterTitle } from "./ClusterTitle";
 import { ClusterUser } from "./ClusterUser";
@@ -182,27 +181,12 @@ export function DataCenterForm({
               readOnlyValue={readOnlyMode && cluster ? cluster.sshPort || DEFAULT_SSH_PORT : undefined}
             />
           </div>
-          {formMode === 'new' && dispatch ? (
+          {dispatch && (
           <ClusterFormFooter
-            {...{ dispatch }}
+            {...{ dispatch, activeProject, cluster }}
             disabled={isSubmitting || !isValid}
-          />) : (activeProject && cluster && dispatch && (
-          <div className="card-footer">
-            <RemoveCluster {...{activeProject, cluster, dispatch}} />
-            {!cluster.disabled && (
-              <div className="card-footer-item">
-                <button
-                  type="submit"
-                  className="button is-primary"
-                  role="Update Cluster"
-                  disabled={isSubmitting || !isValid}
-                >
-                  Update
-                </button>
-              </div>
-            )}
-          </div>
-          ))}
+            newCluster={formMode === 'new'}
+          />)}
         </Form>
       )}
     </Formik>

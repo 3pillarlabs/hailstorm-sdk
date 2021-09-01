@@ -1,5 +1,5 @@
 import { computeChoice } from './AWSInstanceCalculator';
-import { AWSInstanceChoiceOption } from './domain';
+import { AWSInstanceChoiceOption } from '../ClusterConfiguration/domain';
 
 describe('AWSInstanceCalculator', () => {
   for (const dataPoint of [

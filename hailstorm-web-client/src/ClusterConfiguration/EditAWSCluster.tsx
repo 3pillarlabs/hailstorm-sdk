@@ -7,7 +7,7 @@ import { FormikActionsHandler } from '../JMeterConfiguration/domain';
 import { useNotifications } from '../app-notifications';
 import _ from 'lodash';
 import { AWSInstanceChoiceOption } from './domain';
-import { AWSForm } from './AWSForm';
+import { AWSForm } from '../AWSForm';
 
 export function EditAWSCluster({ cluster, dispatch, activeProject }: {
   cluster: AmazonCluster;
