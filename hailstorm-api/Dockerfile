@@ -1,7 +1,8 @@
 FROM jruby:9.2.11.1-jre8
 
 # throw errors if Gemfile has been modified since Gemfile.lock
-RUN bundle config --global frozen 1
+RUN gem update bundler \
+    && bundle config --global frozen 1
 
 WORKDIR /usr/local/lib/hailstorm-api
 
