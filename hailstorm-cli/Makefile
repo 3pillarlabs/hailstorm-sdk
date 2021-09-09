@@ -4,7 +4,9 @@ IMAGE_DESC = $(shell ruby -e 'puts Gem::Specification.load("hailstorm-cli.gemspe
 RELEASE_VERSION = $(shell grep VERSION lib/hailstorm/cli/version.rb | perl -ne "/\'([^\']+)\'/; print \$$1")
 
 install:
+	set -ev
 	bundle config set --local frozen 'true'
+	bundle install
 
 test: create_mysql_user
 	JRUBY_OPTS="--debug" bundle exec rspec -f Croaky::RSpec::CroakyFormatter

@@ -3,7 +3,9 @@ TAG_FLAGS = @smoke
 endif
 
 install:
+	set -ev
 	bundle config set --local frozen 'true'
+	bundle install
 
 test: create_mysql_user setup_db
 	JRUBY_OPTS="--debug" bundle exec rspec -f Croaky::RSpec::CroakyFormatter
