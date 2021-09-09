@@ -1,22 +1,24 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 export function MachineSet({
   disabled,
   machineErrors,
   onChange,
+  machines
 }: {
+  onChange: (machines: string[]) => void;
+  machines: string[];
   name?: string;
   disabled?: boolean;
-  onChange: (machines: string[]) => void;
   machineErrors?: {[K: string]: string};
 }) {
-  const [machines, setMachines] = useState<string[]>(['', '']);
+  const [inputFields, setInputFields] = useState<string[]>(['', '']);
 
   const handleChange: (
     value: string,
     index: number
   ) => void = (value, index) => {
-    let nextMachines: string[] = [...machines.filter((value) => value !== '')];
+    let nextMachines: string[] = [...inputFields.filter((value) => value !== '')];
     if (value !== '') {
       const multiple = value.split(/[\s]/);
       if (multiple.length === 1) {
@@ -30,17 +32,24 @@ export function MachineSet({
     }
 
     if (nextMachines.length === 0) {
-      setMachines(['', '']);
+      setInputFields(['', '']);
     } else {
-      setMachines([...nextMachines, '']);
+      setInputFields([...nextMachines, '']);
     }
 
     onChange(nextMachines);
   };
 
+  useEffect(() => {
+    console.debug("MachineSet#useEffect(machines)");
+    if (machines.length > 0) {
+      setInputFields([...machines, '']);
+    }
+  }, [machines]);
+
   return (
    <>
-   {machines.map((machine, index) => (
+   {inputFields.map((machine, index) => (
      <div className="field" key={index}>
       <div className="control">
         <input
@@ -49,6 +58,7 @@ export function MachineSet({
           type="text"
           disabled={disabled}
           value={machine}
+          data-testid="dc-machine"
           onChange={(event: {target: {value: string}}) => handleChange(event.target.value.trim(), index)}
         />
       </div>

@@ -7,6 +7,8 @@ import styles from './DangerProjectSettings.module.scss';
 import { Redirect } from 'react-router';
 import { AppStateContext } from '../appStateContext';
 import { SetProjectDeletedAction } from '../NewProjectWizard/actions';
+import { ModalConfirmation } from '../Modal/ModalConfirmation';
+import { ModalPrompt } from '../Modal/ModalPrompt';
 
 const REDIRECT_DELAY_MS: number = 3000;
 
@@ -68,42 +70,39 @@ export const DeleteProject: React.FC = () => {
       </div>
       {doRedirect && <Redirect to='/' />}
       <Modal isActive={showModal}>
-        <div className={`modal${showModal ? " is-active" : ""} ${styles.modal}`}>
-          <div className="modal-background"></div>
-          <div className="modal-content">
-            <article className={`message ${showRedirectNotice ? 'is-success' : 'is-danger'}`}>
-              <div className="message-body">
-                {!showRedirectNotice ? (
-                <>
-                <p>
-                  <strong>
-                    This will permanently delete all configuration and data from the application.
-                  </strong>
-                </p>
-                <p>
-                  Are you sure you want to delete the project?
-                </p>
-                <div className="field is-grouped is-grouped-centered">
-                  <p className="control">
-                    <a className="button is-primary" onClick={() => setShowModal(false)}>No, Cancel</a>
-                  </p>
-                  <p className="control">
-                    <button className="button is-danger" onClick={handleDelete}>Yes, Delete</button>
-                  </p>
-                </div>
-                </>
-                ) : (
-                <div className="notification is-success">
-                  <p className="is-size-5">
-                    <i className="fas fa-check-circle"></i>
-                    Project was successfully deleted, redirecting to project list...
-                  </p>
-                </div>
-                )}
-              </div>
-            </article>
+      {!showRedirectNotice ? (
+        <ModalConfirmation
+          cancelHandler={() => setShowModal(false)}
+          confirmHandler={handleDelete}
+          isActive={showModal}
+          cancelButtonLabel="No, Cancel"
+          confirmButtonLabel="Yes, Delete"
+          classModifiers={styles.modal}
+        >
+        <>
+          <p>
+            <strong>
+              This will permanently delete all configuration and data from the application.
+            </strong>
+          </p>
+          <p>
+            Are you sure you want to delete the project?
+          </p>
+        </>
+        </ModalConfirmation>
+      ) : (
+        <ModalPrompt
+          isActive={showModal}
+          classModifiers={styles.modal}
+        >
+          <div className="notification is-success">
+            <p className="is-size-5">
+              <i className="fas fa-check-circle"></i>
+              Project was successfully deleted, redirecting to project list...
+            </p>
           </div>
-        </div>
+        </ModalPrompt>
+      )}
       </Modal>
     </div>
   )

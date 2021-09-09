@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LoadingMessage } from '../Loader';
 import { ModalProps } from '../Modal';
+import { ModalPrompt } from '../Modal/ModalPrompt';
 import styles from './JtlDownloadModal.module.scss';
 
 export interface JtlDownloadContentProps {
@@ -13,23 +14,29 @@ export interface JtlDownloadModalProps extends ModalProps, JtlDownloadContentPro
   contentActive?: boolean;
 }
 
-export const JtlDownloadModal: React.FC<JtlDownloadModalProps> = (props) => {
+export const JtlDownloadModal: React.FC<JtlDownloadModalProps> = ({
+  contentActive,
+  isActive,
+  setActive,
+  url,
+  title
+}) => {
   const [isUnderstood, setUnderstood] = useState(false);
-
+  const messageType = contentActive ? 'success' : 'warning';
   return (
-    <div className={`modal${props.isActive ? " is-active" : ""}`}>
-      <div className="modal-background"></div>
-      <div className="modal-content">
-        {props.contentActive ? (
-          <SuccessMessage
-            {...props}
-            {...{isUnderstood, setUnderstood}}
-          />
-        ):(
-          <WaitingMessage />
-        )}
-      </div>
-    </div>
+    <ModalPrompt
+      {...{messageType}}
+      isActive={isActive}
+      classModifiers={styles.modal}
+      closeHandler={() => setActive(!isActive)}
+      isCloseDisabled={!isUnderstood}
+    >
+    {contentActive ? (
+      <SuccessMessage {...{isUnderstood, setUnderstood, url, title}} />
+    ):(
+      <WaitingMessage />
+    )}
+    </ModalPrompt>
   )
 }
 
@@ -37,59 +44,44 @@ function SuccessMessage({
   url,
   title,
   isUnderstood,
-  setUnderstood,
-  setActive,
-  isActive
+  setUnderstood
 }: {
   url?: string;
   title?: string;
   isUnderstood: boolean;
   setUnderstood: React.Dispatch<React.SetStateAction<boolean>>;
-  setActive: React.Dispatch<React.SetStateAction<boolean>>;
-  isActive: boolean;
 }) {
   return (
-    <article className="message is-success">
-      <div className={`message-body ${styles.modal}`}>
-        <p>
-          Exported results are ready for download.
-          This link will <strong>not</strong> be available after you close this window.
-        </p>
-        <div className="field">
-          <div className="control has-text-centered">
-            <a className="button is-link is-large" href={url} title={title} target="_blank">
-              Download
-            </a>
-          </div>
-        </div>
-        <div className="field">
-          <div className="control">
-            <label className="checkbox">
-              <input type="checkbox" checked={isUnderstood} onChange={() => setUnderstood(!isUnderstood)} />
-              I understand that this download link will no longer be available after this window is closed.
-            </label>
-          </div>
-        </div>
-        <div className="field">
-          <div className="control">
-            <button className="button" disabled={!isUnderstood} onClick={() => setActive(!isActive)}>Close</button>
-          </div>
+    <>
+      <p>
+        Exported results are ready for download.
+        This link will <strong>not</strong> be available after you close this window.
+      </p>
+      <div className="field">
+        <div className="control has-text-centered">
+          <a className="button is-link is-large" href={url} title={title} target="_blank">
+            Download
+          </a>
         </div>
       </div>
-    </article>
+      <div className="field">
+        <div className="control">
+          <label className="checkbox">
+            <input type="checkbox" checked={isUnderstood} onChange={() => setUnderstood(!isUnderstood)} />
+            I understand that this download link will no longer be available after this window is closed.
+          </label>
+        </div>
+      </div>
+    </>
   );
 }
 
 function WaitingMessage() {
   return (
-    <article className="message is-warning">
-      <div className={`message-body ${styles.modal}`}>
-        <p>
-          <LoadingMessage>
-            Waiting for results to be exported...
-          </LoadingMessage>
-        </p>
-      </div>
-    </article>
+    <p>
+      <LoadingMessage>
+        Waiting for results to be exported...
+      </LoadingMessage>
+    </p>
   )
 }

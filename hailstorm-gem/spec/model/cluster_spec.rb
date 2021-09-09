@@ -244,14 +244,17 @@ describe Hailstorm::Model::Cluster do
           aws.ssh_identity = 'insecure'
           aws.ssh_port = 8022
           aws.active = false
+          aws.base_ami = 'ami-123'
         end
         cluster = Hailstorm::Model::Cluster.new(cluster_type: Hailstorm::Model::AmazonCloud.to_s)
         cluster.project = Hailstorm::Model::Project.where(project_code: 'cluster_spec').first_or_create!
         cluster.save!
         cluster.configure(config.clusters.first)
-        amz_cloud = Hailstorm::Model::AmazonCloud.where(project_id: cluster.project.id)
-        expect(amz_cloud.first).to_not be_nil
-        expect(amz_cloud.first.ssh_port).to eql(8022)
+        amz_cloud_query = Hailstorm::Model::AmazonCloud.where(project_id: cluster.project.id)
+        amz_cloud = amz_cloud_query.first
+        expect(amz_cloud).to_not be_nil
+        expect(amz_cloud.ssh_port).to eql(8022)
+        expect(amz_cloud.base_ami).to be == 'ami-123'
       end
     end
     context ':data_center' do

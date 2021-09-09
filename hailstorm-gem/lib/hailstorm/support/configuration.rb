@@ -178,6 +178,9 @@ class Hailstorm::Support::Configuration
     # Set the VPC Subnet ID to launch Hailstorm instance inside a VPC
     attr_accessor :vpc_subnet_id
 
+    # Set the Base AMI when using an unsupported region
+    attr_accessor :base_ami
+
     def aws_required?
       true
     end

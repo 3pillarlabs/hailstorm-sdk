@@ -8,8 +8,8 @@ import { AWSInstanceChoiceOption, AWSRegionList } from './domain';
 import { ClusterService } from "../services/ClusterService";
 import { AWSRegionService } from "../services/AWSRegionService";
 import { AWSEC2PricingService } from "../services/AWSEC2PricingService";
-import { render as renderComponent, fireEvent, wait} from '@testing-library/react';
-import { AmazonCluster, Cluster, DataCenterCluster, ExecutionCycleStatus } from '../domain';
+import { render as renderComponent, fireEvent} from '@testing-library/react';
+import { AmazonCluster, Cluster, DataCenterCluster } from '../domain';
 import { ClusterSetupCompletedAction } from '../NewProjectWizard/actions';
 import { RemoveClusterAction, ActivateClusterAction } from './actions';
 import { AppNotificationContextProps } from '../app-notifications';
@@ -175,7 +175,7 @@ describe('<ClusterConfiguration />', () => {
       appState.wizardState!.activeCluster = {title: '', type: 'DataCenter'};
       component.setProps({value: {appState, dispatch}});
       component.update();
-      expect(component).toContainExactlyOneMatchingElement('DataCenterForm');
+      expect(component).toContainExactlyOneMatchingElement('NewDataCenter');
     });
   });
 
@@ -320,9 +320,9 @@ describe('<ClusterConfiguration />', () => {
       expect(dispatch.mock.calls[0][0]).toBeInstanceOf(ActivateClusterAction);
     });
 
-    it('should show the cluster in view mode', () => {
+    it('should show the cluster in edit mode', () => {
       const component = mount(createComponent());
-      expect(component).toContainExactlyOneMatchingElement('AWSView');
+      expect(component).toContainExactlyOneMatchingElement('EditAWSCluster');
     });
   });
 
@@ -333,7 +333,7 @@ describe('<ClusterConfiguration />', () => {
 
     it('should show DataCenterForm', () => {
       const component = mount(createComponent());
-      expect(component).toContainExactlyOneMatchingElement('DataCenterForm');
+      expect(component).toContainExactlyOneMatchingElement('NewDataCenter');
     });
   });
 
@@ -353,7 +353,7 @@ describe('<ClusterConfiguration />', () => {
 
     it('should show a created cluster', () => {
       const component = mount(createComponent());
-      expect(component).toContainExactlyOneMatchingElement('DataCenterView');
+      expect(component).toContainExactlyOneMatchingElement('EditDataCenter');
     });
   });
 });

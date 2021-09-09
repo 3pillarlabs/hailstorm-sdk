@@ -2,15 +2,15 @@ import { fireEvent, render, wait } from '@testing-library/react';
 import { mount } from 'enzyme';
 import React from 'react';
 import { AppNotificationContextProps } from '../app-notifications';
-import { AppNotificationProviderWithProps } from '../AppNotificationProvider';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
 import { DataCenterCluster } from '../domain';
 import { FileServer, FileUploadSaga } from '../FileUpload/fileServer';
 import { WizardTabTypes } from '../NewProjectWizard/domain';
 import { ClusterService } from '../services/ClusterService';
 import { AppState } from '../store';
-import { DataCenterForm } from './DataCenterForm';
+import { NewDataCenter } from './NewDataCenter';
 
-describe('<DataCenterForm />', () => {
+describe('<NewDataCenter />', () => {
   let appState: AppState;
   const dispatch = jest.fn();
 
@@ -60,7 +60,7 @@ describe('<DataCenterForm />', () => {
 
     return (
       <AppNotificationProviderWithProps {...{...props}}>
-        <DataCenterForm
+        <NewDataCenter
           {...{dispatch}}
           activeProject={appState.activeProject!}
         />

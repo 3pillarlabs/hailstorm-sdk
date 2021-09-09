@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, mount } from 'enzyme';
 import { AWSInstanceChoice, InstanceTypeMeter } from './AWSInstanceChoice';
-import { AWSInstanceChoiceOption } from './domain';
+import { AWSInstanceChoiceOption } from '../ClusterConfiguration/domain';
 import { render as renderComponent, fireEvent } from '@testing-library/react';
 import { Form, Formik } from 'formik';
 import { AppNotificationProviderWithProps } from '../AppNotificationProvider';
@@ -10,6 +10,13 @@ jest.mock('./NonLinearSlider', () => ({
   __esModule: true,
   NonLinearSlider: () => (
     <div id="NonLinearSlider"></div>
+  )
+}));
+
+jest.mock('../Modal', () => ({
+  __esModule: true,
+  Modal: ({isActive, children}: React.PropsWithChildren<{isActive: boolean}>) => (
+    isActive ? <div id="modal">{children}</div> : null
   )
 }));
 
@@ -155,6 +162,8 @@ describe('<AWSInstanceChoice />', () => {
 
       switchLink = await findByText(/by usage/i);
       fireEvent.click(switchLink);
+      const confirmYes = await findByText(/Yes/i);
+      fireEvent.click(confirmYes);
       awsInstanceType = await findByTestId('AWS Instance Type');
       maxThreadsPerInstance = await findByTestId('Max. Users / Instance');
       expect(awsInstanceType.textContent).toMatch(/m5a\.large/);

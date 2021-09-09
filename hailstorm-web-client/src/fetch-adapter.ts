@@ -24,6 +24,19 @@ export async function fetchGuard<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
+export function extractGuardError(error: Error): Error {
+  const jsonText = `[${error.message}]`;
+  const jsonAry = JSON.parse(jsonText);
+  if (typeof(jsonAry[0]) === 'object') {
+    const errorResponse = jsonAry[0];
+    if (Object.keys(errorResponse).includes('text')) {
+      return JSON.parse(errorResponse.text);
+    }
+  }
+
+  return error;
+}
+
 function $e(reason: any): Error {
   return reason instanceof Error ? reason : new Error(reason);
 }

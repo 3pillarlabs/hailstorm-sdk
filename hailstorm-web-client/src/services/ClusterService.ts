@@ -60,7 +60,7 @@ export class ClusterService {
           }
 
           return s;
-        }, {} as any)),
+        }, {} as {[K: string]: any})),
         method: 'PATCH'
       });
 

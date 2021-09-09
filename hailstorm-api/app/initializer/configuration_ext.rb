@@ -37,6 +37,8 @@ class Hailstorm::Support::Configuration
     # All test plans that are not disabled. Does not include data files
     # @return [Array<String>]
     def enabled_test_plans
+      return [] if self.test_plans.blank?
+
       self.test_plans.reject { |plan| self.disabled_test_plans.include?(plan) }
     end
   end

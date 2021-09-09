@@ -58,11 +58,13 @@ delete '/projects/:project_id/jmeter_plans/:id' do |project_id, id|
   return not_found unless project_config
 
   hailstorm_config = deep_decode(project_config.stringified_config)
-  test_plan_name = hailstorm_config.jmeter.test_plans.find { |e| e.to_java_string.hash_code == id.to_i }
-  if test_plan_name
-    return 402 if client_stats?(project_id, File.basename(test_plan_name))
+  unless hailstorm_config.jmeter.test_plans.blank?
+    test_plan_name = hailstorm_config.jmeter.test_plans.find { |e| e.to_java_string.hash_code == id.to_i }
+    if test_plan_name
+      return 402 if client_stats?(project_id, File.basename(test_plan_name))
 
-    hailstorm_config.jmeter.test_plans.reject! { |e| e == test_plan_name }
+      hailstorm_config.jmeter.test_plans.reject! { |e| e == test_plan_name }
+    end
   end
 
   unless hailstorm_config.jmeter.data_files.blank?

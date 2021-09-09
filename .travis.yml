@@ -99,6 +99,7 @@ jobs:
       env:
         - CI_NODE_INDEX=0
       before_install:
+        - pyenv global 3.7.1
         - make install_aws
       install:
         - make PROJECT=gem FORCE=yes install
@@ -115,6 +116,7 @@ jobs:
       env:
         - CI_NODE_INDEX=1
       before_install:
+        - pyenv global 3.7.1
         - make install_aws
         - make PROJECT=gem FORCE=yes install build local_publish
       install:
@@ -132,6 +134,7 @@ jobs:
       env:
         - CI_NODE_INDEX=2
       before_install:
+        - pyenv global 3.7.1
         - make install_aws
         - make PROJECT=gem FORCE=yes install build local_publish
       install:
@@ -148,6 +151,7 @@ jobs:
       env:
         - CI_NODE_INDEX=3
       before_install:
+        - pyenv global 3.7.1
         - make install_aws
       install:
         - make PROJECT=file-server FORCE=yes install
@@ -163,6 +167,7 @@ jobs:
       env:
         - CI_NODE_INDEX=4
       before_install:
+        - pyenv global 3.7.1
         - make install_aws
       install:
         - make PROJECT=client-exchange FORCE=yes install
@@ -178,6 +183,7 @@ jobs:
       env:
         - CI_NODE_INDEX=5
       before_install:
+        - pyenv global 3.7.1
         - make install_aws
       install:
         - make PROJECT=web-client FORCE=yes install
@@ -219,6 +225,7 @@ jobs:
       env:
         - TAG_VALUE="Hailstorm Site - cli"
       before_install:
+        - pyenv global 3.7.1
         - make cli_integration_before_install
       install:
         - make COMPOSE=cli-verify cli_integration_install
@@ -241,6 +248,7 @@ jobs:
       addons:
         firefox: latest
       before_install:
+        - pyenv global 3.7.1
         - nvm install ${NODE_VERSION}
         - rvm install ${JRUBY}
         - make web_integration_before_install

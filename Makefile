@@ -100,7 +100,7 @@ endef
 
 RELEASE_VERSION = $(shell ${TRAVIS_BUILD_DIR}/.travis/calc_next_rel_version.sh)
 
-GIT_RELEASE_TAG := releases/${RELEASE_VERSION}
+GIT_RELEASE_TAG = releases/${RELEASE_VERSION}
 
 PUSHED_RELEASE_TAG = $(shell git tag --list '${GIT_RELEASE_TAG}')
 

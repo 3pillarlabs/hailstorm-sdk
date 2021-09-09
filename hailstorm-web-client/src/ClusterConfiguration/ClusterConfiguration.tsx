@@ -9,10 +9,10 @@ import { Project, Cluster, AmazonCluster, DataCenterCluster } from '../domain';
 import clusterStyles from './ClusterConfiguration.module.scss';
 import { ClusterList } from '../ClusterList';
 import { ActivateClusterAction, ChooseClusterOptionAction, SetClusterConfigurationAction } from './actions';
-import { AWSForm } from './AWSForm';
-import { AWSView } from './AWSView';
-import { DataCenterForm } from './DataCenterForm';
-import { DataCenterView } from './DataCenterView';
+import { NewAWSCluster } from './NewAWSCluster';
+import { EditAWSCluster } from './EditAWSCluster';
+import { NewDataCenter } from './NewDataCenter';
+import { EditDataCenter } from './EditDataCenter';
 import { ApiFactory } from '../api';
 import { Loader, LoaderSize } from '../Loader/Loader';
 
@@ -111,24 +111,20 @@ function StepContent({
         </>)}
         {wizardState.activeCluster && wizardState.activeCluster.type === 'AWS' && (
         (wizardState.activeCluster.id === undefined ? (
-        <AWSForm {...{dispatch, activeProject}} />
+        <NewAWSCluster {...{dispatch, activeProject}} />
         ): (
-        <AWSView
+        <EditAWSCluster
           cluster={wizardState.activeCluster! as AmazonCluster}
           {...{dispatch, activeProject}}
-        />
-        ))
-        )}
+        />)))}
         {wizardState.activeCluster && wizardState.activeCluster.type === 'DataCenter' && (
         (wizardState.activeCluster.id === undefined ? (
-        <DataCenterForm {...{dispatch, activeProject}} />
+        <NewDataCenter {...{dispatch, activeProject}} />
         ) : (
-        <DataCenterView
+        <EditDataCenter
           cluster={wizardState.activeCluster! as DataCenterCluster}
           {...{dispatch, activeProject}}
-        />
-        ))
-        )}
+        />)))}
       </div>
     </div>
   );

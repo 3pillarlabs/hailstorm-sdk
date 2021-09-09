@@ -1,4 +1,4 @@
-import { AWSInstanceChoiceOption } from "./domain";
+import { AWSInstanceChoiceOption } from "../ClusterConfiguration/domain";
 
 export function computeChoice(
   numThreads: number,

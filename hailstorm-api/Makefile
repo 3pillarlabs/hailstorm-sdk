@@ -4,7 +4,9 @@ API_PORT := 4567
 TIMEOUT = 300
 
 install:
-	bundle install --frozen
+	set -ev
+	bundle config set --local frozen 'true'
+	bundle install
 
 test: create_mysql_user
 	JRUBY_OPTS="--debug" bundle exec rspec -f Croaky::RSpec::CroakyFormatter

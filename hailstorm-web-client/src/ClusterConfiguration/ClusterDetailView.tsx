@@ -1,7 +1,7 @@
 import React from 'react';
 import { Cluster, AmazonCluster, DataCenterCluster } from '../domain';
-import { AWSView } from './AWSView';
-import { DataCenterView } from './DataCenterView';
+import { EditAWSCluster } from './EditAWSCluster';
+import { EditDataCenter } from './EditDataCenter';
 
 export function ClusterDetailView({
   cluster
@@ -10,11 +10,11 @@ export function ClusterDetailView({
 }) {
 
   if (cluster.type === 'AWS') {
-    return (<AWSView cluster={cluster as AmazonCluster} />);
+    return (<EditAWSCluster cluster={cluster as AmazonCluster} />);
   }
 
   if (cluster.type === 'DataCenter') {
-    return (<DataCenterView cluster={cluster as DataCenterCluster} />);
+    return (<EditDataCenter cluster={cluster as DataCenterCluster} />);
   }
 
   return null;
