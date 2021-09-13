@@ -45,7 +45,7 @@ class Hailstorm::Support::AwsAdapter::SecurityGroupClient < Hailstorm::Support::
 
   def list
     ec2.describe_security_groups.security_groups.lazy.map do |sg|
-      Hailstorm::Behavior::AwsAdaptable::SecurityGroup.new(sg.to_h)
+      Hailstorm::Behavior::AwsAdaptable::SecurityGroup.new(sg.to_h.slice(:group_name, :group_id, :vpc_id))
     end
   end
 end

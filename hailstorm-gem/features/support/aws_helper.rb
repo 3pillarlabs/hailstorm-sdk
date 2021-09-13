@@ -25,14 +25,23 @@ module AwsHelper
   end
 
   def select_public_subnets(region:)
-    ec2_resource(region: region)
-      .vpcs
-      .flat_map { |vpc| vpc.route_tables.to_a }
-      .select { |route_table| route_table_contains_igw?(route_table) }
-      .flat_map { |route_table| route_table.associations.to_a }
-      .select(&:subnet_id)
-      .map(&:subnet)
-      .select(&:map_public_ip_on_launch)
+    route_tables = ec2_resource(region: region).vpcs
+                                               .flat_map { |vpc| vpc.route_tables.to_a }
+
+    subnets = route_tables.select { |route_table| route_table_contains_igw?(route_table) }
+                          .flat_map { |route_table| route_table.associations.to_a }
+                          .select(&:subnet_id)
+                          .map(&:subnet)
+
+    if subnets.empty?
+      subnets = route_tables.flat_map { |route_table| route_table.associations.to_a }
+                            .select(&:main)
+                            .map(&:route_table)
+                            .map(&:vpc)
+                            .flat_map { |vpc| vpc.subnets.to_a }
+    end
+
+    subnets.select(&:map_public_ip_on_launch)
   end
 
   def route_table_contains_igw?(route_table)
