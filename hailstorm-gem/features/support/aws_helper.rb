@@ -28,19 +28,8 @@ module AwsHelper
     route_tables = ec2_resource(region: region).vpcs
                                                .flat_map { |vpc| vpc.route_tables.to_a }
 
-    subnets = route_tables.select { |route_table| route_table_contains_igw?(route_table) }
-                          .flat_map { |route_table| route_table.associations.to_a }
-                          .select(&:subnet_id)
-                          .map(&:subnet)
-
-    if subnets.empty?
-      subnets = route_tables.flat_map { |route_table| route_table.associations.to_a }
-                            .select(&:main)
-                            .map(&:route_table)
-                            .map(&:vpc)
-                            .flat_map { |vpc| vpc.subnets.to_a }
-    end
-
+    subnets = find_igw_subnets(route_tables)
+    subnets = find_main_rtb_subnets(route_tables) if subnets.empty?
     subnets.select(&:map_public_ip_on_launch)
   end
 
@@ -60,5 +49,20 @@ module AwsHelper
       ec2_instance = ec2.instances(instance_ids: [agent.identifier]).first
       ec2_instance&.terminate
     end
+  end
+
+  def find_main_rtb_subnets(route_tables)
+    route_tables.flat_map { |route_table| route_table.associations.to_a }
+                .select(&:main)
+                .map(&:route_table)
+                .map(&:vpc)
+                .flat_map { |vpc| vpc.subnets.to_a }
+  end
+
+  def find_igw_subnets(route_tables)
+    route_tables.select { |route_table| route_table_contains_igw?(route_table) }
+                .flat_map { |route_table| route_table.associations.to_a }
+                .select(&:subnet_id)
+                .map(&:subnet)
   end
 end
