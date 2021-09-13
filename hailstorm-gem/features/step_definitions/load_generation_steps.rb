@@ -150,3 +150,9 @@ Then(/^other agents should be configured and saved$/) do
     expect(@project.load_agents.count).to be == 2
   end
 end
+
+When(/^I (?:create|start) a new load agent$/) do
+  expect(@aws).to be_valid
+  @load_agent = Hailstorm::Model::MasterAgent.new
+  @aws.start_agent(@load_agent)
+end
