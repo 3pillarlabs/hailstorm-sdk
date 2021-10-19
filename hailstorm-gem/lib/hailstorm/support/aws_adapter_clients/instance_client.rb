@@ -90,7 +90,7 @@ class Hailstorm::Support::AwsAdapter::InstanceClient < Hailstorm::Support::AwsAd
     req_attrs[:min_count] = min_count
     req_attrs[:max_count] = max_count
     req_attrs[:placement] = instance_attrs.slice(:availability_zone) if instance_attrs.key?(:availability_zone)
-    instance = ec2.run_instances(req_attrs).instances[0]
+    instance = ec2.run_instances(created_tag_specifications('instance', req_attrs)).instances[0]
     decorate(instance: instance)
   end
 
@@ -113,7 +113,11 @@ class Hailstorm::Support::AwsAdapter::InstanceClient < Hailstorm::Support::AwsAd
   end
   private :systems_ok
 
-  def list
-    ec2.describe_instances.reservations.flat_map(&:instances).lazy.map { |instance| decorate(instance: instance) }
+  def list(instance_ids: nil)
+    params = {}
+    params[:instance_ids] = instance_ids unless instance_ids.nil?
+    ec2.describe_instances(params).reservations.flat_map(&:instances).lazy.map do |instance|
+      decorate(instance: instance)
+    end
   end
 end

@@ -11,11 +11,19 @@ class Hailstorm::Model::Helper::VpcHelper
 
   attr_reader :vpc_client, :subnet_client, :internet_gateway_client, :route_table_client
 
-  def initialize(vpc_client:, subnet_client:, internet_gateway_client:, route_table_client:)
+  # @param [Hailstorm::Behavior::AwsAdaptable::VpcClient] vpc_client
+  # @param [Hailstorm::Behavior::AwsAdaptable::SubnetClient] subnet_client
+  # @param [Hailstorm::Behavior::AwsAdaptable::InternetGatewayClient] internet_gateway_client
+  # @param [Hailstorm::Behavior::AwsAdaptable::RouteTableClient] route_table_client
+  def initialize(vpc_client: nil, subnet_client: nil, internet_gateway_client: nil, route_table_client: nil)
     @vpc_client = vpc_client
     @subnet_client = subnet_client
     @internet_gateway_client = internet_gateway_client
     @route_table_client = route_table_client
+  end
+
+  def find_vpc_from_subnet(subnet_id:)
+    subnet_client.find_vpc(subnet_id: subnet_id)
   end
 
   # @param [String] subnet_name_tag

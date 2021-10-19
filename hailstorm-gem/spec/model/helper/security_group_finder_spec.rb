@@ -20,10 +20,10 @@ describe Hailstorm::Model::Helper::SecurityGroupFinder do
 
   it 'should find the security group if vpc_subnet_id is provided' do
     @mock_aws.vpc_subnet_id = 'subnet-123'
-    mock_ec2_client = instance_double(Hailstorm::Behavior::AwsAdaptable::Ec2Client)
-    allow(mock_ec2_client).to receive(:find_vpc).and_return('vpc-123')
+    mock_subnet_client = instance_double(Hailstorm::Behavior::AwsAdaptable::SubnetClient)
+    allow(mock_subnet_client).to receive(:find_vpc).and_return('vpc-123')
     finder = Hailstorm::Model::Helper::SecurityGroupFinder.new(security_group_client: @mock_sg_client,
-                                                               ec2_client: mock_ec2_client,
+                                                               subnet_client: mock_subnet_client,
                                                                aws_clusterable: @mock_aws)
     expect(finder.find_security_group).to be == @mock_sec_group
   end

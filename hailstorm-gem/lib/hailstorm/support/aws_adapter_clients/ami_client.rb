@@ -15,10 +15,13 @@ class Hailstorm::Support::AwsAdapter::AmiClient < Hailstorm::Support::AwsAdapter
                      Hailstorm::Behavior::AwsAdaptable::StateReason.new(code: ami.state_reason.code,
                                                                         message: ami.state_reason.message)
                    end
+    ebs_mapping = ami.block_device_mappings.select { |device| device.ebs&.snapshot_id }.first
+    snapshot_id = ebs_mapping.ebs.snapshot_id if ebs_mapping
     Hailstorm::Behavior::AwsAdaptable::Ami.new(image_id: ami.image_id,
                                                name: ami.name,
                                                state: ami.state,
-                                               state_reason: state_reason)
+                                               state_reason: state_reason,
+                                               snapshot_id: snapshot_id)
   end
   private :decorate
 
@@ -30,7 +33,9 @@ class Hailstorm::Support::AwsAdapter::AmiClient < Hailstorm::Support::AwsAdapter
 
   # @see Hailstorm::Behavior::AwsAdaptable::AmiClient#register_ami
   def register_ami(name:, instance_id:, description:)
-    resp = ec2.create_image(name: name, instance_id: instance_id, description: description)
+    params = { name: name, instance_id: instance_id, description: description }
+    resp = ec2.create_image(params)
+    tag_resource(resp.image_id, created_tag)
     resp.image_id
   end
 
@@ -38,8 +43,10 @@ class Hailstorm::Support::AwsAdapter::AmiClient < Hailstorm::Support::AwsAdapter
     ec2.deregister_image(image_id: ami_id)
   end
 
-  def find(ami_id:)
-    resp = ec2.describe_images(image_ids: [ami_id])
+  def find(ami_id:, filters: [])
+    params = { image_ids: [ami_id] }
+    add_filters_to_params(filters, params)
+    resp = ec2.describe_images(params)
     return nil if resp.images.empty?
 
     decorate(resp.images[0])

@@ -4,10 +4,12 @@
 class Hailstorm::Support::AwsAdapter::SecurityGroupClient < Hailstorm::Support::AwsAdapter::AbstractClient
   include Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient
 
-  def find(name:, vpc_id: nil)
-    filters = [{ name: 'group-name', values: [name] }]
-    filters.push(name: 'vpc-id', values: [vpc_id]) if vpc_id
-    resp = ec2.describe_security_groups(filters: filters)
+  def find(name:, vpc_id: nil, filters: [])
+    sg_filters = [{ name: 'group-name', values: [name] }]
+    sg_filters.push(name: 'vpc-id', values: [vpc_id]) if vpc_id
+    params = { filters: sg_filters }
+    add_filters_to_params(filters, params)
+    resp = ec2.describe_security_groups(params)
     return if resp.security_groups.empty?
 
     security_group = resp.security_groups[0]
@@ -17,7 +19,8 @@ class Hailstorm::Support::AwsAdapter::SecurityGroupClient < Hailstorm::Support::
   end
 
   def create(name:, description:, vpc_id: nil)
-    resp = ec2.create_security_group(group_name: name, description: description, vpc_id: vpc_id)
+    params = { group_name: name, description: description, vpc_id: vpc_id }
+    resp = ec2.create_security_group(created_tag_specifications('security-group', params))
     Hailstorm::Behavior::AwsAdaptable::SecurityGroup.new(group_id: resp.group_id)
   end
 

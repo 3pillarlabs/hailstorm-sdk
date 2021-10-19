@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-include ModelHelper
-
 When(/^the JMeter version for the project is '(.+?)'$/) do |jmeter_version|
   @project.jmeter_version = jmeter_version
 end
