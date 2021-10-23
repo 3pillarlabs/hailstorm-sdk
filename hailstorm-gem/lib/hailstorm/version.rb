@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 module Hailstorm
-  VERSION = '5.1.14'
+  VERSION = '5.1.16'
 end

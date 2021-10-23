@@ -19,7 +19,7 @@ class Hailstorm::Support::AwsAdapter::KeyPairClient < Hailstorm::Support::AwsAda
   end
 
   def create(name:)
-    resp = ec2.create_key_pair(key_name: name)
+    resp = ec2.create_key_pair(created_tag_specifications('key-pair', key_name: name))
     attribute_keys = %i[key_fingerprint key_material key_name key_pair_id]
     Hailstorm::Behavior::AwsAdaptable::KeyPair.new(resp.to_h.slice(*attribute_keys))
   end

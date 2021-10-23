@@ -1,0 +1,5 @@
+# Copy me to feature-parameters.yml
+---
+clean_aws_account:
+  region_with_public_subnet: ap-south-1
+  clean_region: ap-south-1

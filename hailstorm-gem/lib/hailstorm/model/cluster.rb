@@ -256,7 +256,7 @@ class Hailstorm::Model::Cluster < ActiveRecord::Base
   end
 
   def purge
-    cluster_instance.purge if cluster_instance.active
+    cluster_instance.purge
   end
 
   def set_cluster_code

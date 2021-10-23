@@ -8,7 +8,7 @@ describe Hailstorm::Support::AwsAdapter do
   include DeepHashStruct
 
   before(:each) do
-    @mock_ec2 = instance_double(Aws::EC2::Client)
+    @mock_ec2 = instance_double(Aws::EC2::Client, 'mock_ec2')
   end
 
   context Hailstorm::Support::AwsAdapter::KeyPairClient do
@@ -45,7 +45,7 @@ describe Hailstorm::Support::AwsAdapter do
 
     it 'should create a key_pair' do
       resp = deep_struct(key_fingerprint: 'AA:00', key_material: 'A', key_name: 'hailstorm', key_pair_id: 'kp-1')
-      expect(@mock_ec2).to receive(:create_key_pair).with(key_name: 'hailstorm').and_return(resp)
+      expect(@mock_ec2).to receive(:create_key_pair).with(hash_including(key_name: 'hailstorm')).and_return(resp)
       key_pair = @client.create(name: 'hailstorm')
       expect(key_pair.private_key).to be == resp.key_material
       expect(key_pair.key_pair_id).to be == resp.key_pair_id
@@ -176,13 +176,13 @@ describe Hailstorm::Support::AwsAdapter do
         instance_id: 'i-123456', state: { name: 'pending', code: 10 }, public_ip_address: nil, private_ip_address: nil
       }
 
-      expect(@mock_ec2).to receive(:run_instances).with(image_id: 'ami-1',
-                                                        key_name: 's',
-                                                        security_group_ids: %w[sg-1],
-                                                        instance_type: 't3.small',
-                                                        placement: { availability_zone: 'us-east-1a' },
-                                                        min_count: 1,
-                                                        max_count: 1)
+      expect(@mock_ec2).to receive(:run_instances).with(hash_including(image_id: 'ami-1',
+                                                                       key_name: 's',
+                                                                       security_group_ids: %w[sg-1],
+                                                                       instance_type: 't3.small',
+                                                                       placement: { availability_zone: 'us-east-1a' },
+                                                                       min_count: 1,
+                                                                       max_count: 1))
                                                   .and_return(deep_struct(instances: [instance_attrs]))
 
       resp = deep_struct({ reservations: [{ instances: [instance_attrs] }] })
@@ -409,12 +409,6 @@ describe Hailstorm::Support::AwsAdapter do
       expect(@client.first_available_zone).to eq('us-east-1b')
     end
 
-    it 'should find vpc from subnet_id' do
-      resp = deep_struct(subnets: [{ vpc_id: 'vpc-123' }])
-      expect(@mock_ec2).to receive(:describe_subnets).with(subnet_ids: ['subnet-123']).and_return(resp)
-      expect(@client.find_vpc(subnet_id: 'subnet-123')).to be == resp.subnets[0].vpc_id
-    end
-
     it 'should find self owned snapshots' do
       resp = deep_struct(snapshots: [
                            { snapshot_id: 'snap-12345def0', state: 'pending' },
@@ -440,6 +434,18 @@ describe Hailstorm::Support::AwsAdapter do
   end
 
   context Hailstorm::Support::AwsAdapter::AmiClient do
+    def fixture_method(name:, image_id:)
+      {
+        state: :available,
+        name: name,
+        image_id: image_id,
+        state_reason: { code: '12', message: '' },
+        block_device_mappings: [
+          { ebs: { snapshot_id: "snap-#{image_id}" } }
+        ]
+      }
+    end
+
     before(:each) do
       @client = Hailstorm::Support::AwsAdapter::AmiClient.new(ec2_client: @mock_ec2)
     end
@@ -447,15 +453,9 @@ describe Hailstorm::Support::AwsAdapter do
     it 'should find the first instance of a self owned ami that matches a given pattern' do
       resp = deep_struct(
         images: [
-          {
-            state: :available, name: 'hailstorm/vulcan', image_id: 'ami-123', state_reason: { code: '12', message: '' }
-          },
-          {
-            state: :available, name: 'hailstorm/vulcan-2', image_id: 'ami-2', state_reason: { code: '12', message: '' }
-          },
-          {
-            state: :available, name: 'hailstorm/romulan-1', image_id: 'ami-3', state_reason: { code: '12', message: '' }
-          }
+          fixture_method(name: 'hailstorm/vulcan', image_id: 'ami-123'),
+          fixture_method(name: 'hailstorm/vulcan-2', image_id: 'ami-2'),
+          fixture_method(name: 'hailstorm/romulan-1', image_id: 'ami-3')
         ]
       )
 
@@ -467,15 +467,9 @@ describe Hailstorm::Support::AwsAdapter do
     it 'should select all AMIs matching a given pattern' do
       resp = deep_struct(
         images: [
-          {
-            state: :available, name: 'hailstorm/vulcan-1', image_id: 'ami-1', state_reason: { code: '12', message: '' }
-          },
-          {
-            state: :available, name: 'hailstorm/vulcan-2', image_id: 'ami-2', state_reason: { code: '12', message: '' }
-          },
-          {
-            state: :available, name: 'hailstorm/romulan-1', image_id: 'ami-3', state_reason: { code: '12', message: '' }
-          }
+          fixture_method(name: 'hailstorm/vulcan-1', image_id: 'ami-1'),
+          fixture_method(name: 'hailstorm/vulcan-2', image_id: 'ami-2'),
+          fixture_method(name: 'hailstorm/romulan-1', image_id: 'ami-3')
         ]
       )
 
@@ -486,7 +480,9 @@ describe Hailstorm::Support::AwsAdapter do
 
     it 'should register an instance as a new AMI' do
       image_id = 'ami-123'
-      allow(@mock_ec2).to receive(:create_image).and_return(deep_struct(image_id: image_id))
+      expect(@mock_ec2).to receive(:create_image).and_return(deep_struct(image_id: image_id))
+      create_tags_params = { resources: ['ami-123'], tags: [{ key: 'hailstorm:created', value: true.to_s }] }
+      expect(@mock_ec2).to receive(:create_tags).with(create_tags_params)
       actual_ami_id = @client.register_ami(
         name: 'hailstorm/brave',
         instance_id: 'i-67678',
@@ -499,7 +495,7 @@ describe Hailstorm::Support::AwsAdapter do
     it 'should query for image availability' do
       resp = {
         images: [
-          { image_id: 'ami-123', state: 'available', state_reason: { code: '12', message: '' }, name: 'hailstorm' }
+          fixture_method(image_id: 'ami-123', name: 'hailstorm')
         ]
       }
 
@@ -517,7 +513,7 @@ describe Hailstorm::Support::AwsAdapter do
     it 'should find an AMI by ami_id' do
       resp = {
         images: [
-          { image_id: 'ami-123', state: 'available', name: 'hailstorm', state_reason: { code: '12', message: '' } }
+          fixture_method(image_id: 'ami-123', name: 'hailstorm')
         ]
       }
       expect(@mock_ec2).to receive(:describe_images).with(image_ids: ['ami-123'])
@@ -549,10 +545,15 @@ describe Hailstorm::Support::AwsAdapter do
     end
 
     it 'should create a Subnet' do
-      expect(@mock_ec2).to receive(:create_subnet).with(cidr_block: '10.0.0.0/16', vpc_id: 'vpc-a01106c2')
-                                                  .and_return(deep_struct(subnet: { subnet_id: 'subnet-9d4a7b6c' }))
+      resp = deep_struct(subnet: { subnet_id: 'subnet-9d4a7b6c' })
+      create_subnet_params = { cidr_block: '10.0.0.0/16',
+                               vpc_id: 'vpc-a01106c2',
+                               tag_specifications: [{ resource_type: 'subnet', tags: [{ key: 'hailstorm:created',
+                                                                                        value: true.to_s }] }] }
+      expect(@mock_ec2).to receive(:create_subnet).with(create_subnet_params)
+                                                  .and_return(resp)
 
-      expect(@client.create(vpc_id: 'vpc-a01106c2', cidr: '10.0.0.0/16')).to be == 'subnet-9d4a7b6c'
+      expect(@client.create(vpc_id: 'vpc-a01106c2', cidr: '10.0.0.0/16')).to be == resp.subnet.subnet_id
     end
 
     it 'should modify subnet attribute' do
@@ -568,6 +569,17 @@ describe Hailstorm::Support::AwsAdapter do
         map_public_ip_on_launch: true,
         map_customer_owned_ip_on_launch: false
       )
+    end
+
+    it 'should delete a subnet' do
+      expect(@mock_ec2).to receive(:delete_subnet).with(subnet_id: 'subnet-123')
+      @client.delete(subnet_id: 'subnet-123')
+    end
+
+    it 'should find vpc from subnet_id' do
+      resp = deep_struct(subnets: [{ vpc_id: 'vpc-123' }])
+      expect(@mock_ec2).to receive(:describe_subnets).with(subnet_ids: ['subnet-123']).and_return(resp)
+      expect(@client.find_vpc(subnet_id: 'subnet-123')).to be == resp.subnets[0].vpc_id
     end
   end
 
@@ -591,17 +603,32 @@ describe Hailstorm::Support::AwsAdapter do
     it 'should query its status' do
       expect(@mock_ec2).to receive(:describe_vpcs)
         .with(vpc_ids: ['vpc-a01106c2'])
-        .and_return(deep_struct(vpcs: [{ state: 'available' }]))
+        .and_return(deep_struct(vpcs: [{ state: 'available', vpc_id: 'vpc-123' }]))
 
       expect(@client.available?(vpc_id: 'vpc-a01106c2')).to be true
     end
 
     it 'should create a VPC' do
+      resp = deep_struct(vpc: { vpc_id: 'vpc-a01106c2', state: 'pending' })
+      create_vpc_params = { cidr_block: '10.0.0.0/16',
+                            tag_specifications: [{ resource_type: 'vpc', tags: [{ key: 'hailstorm:created',
+                                                                                  value: true.to_s }] }] }
       expect(@mock_ec2).to receive(:create_vpc)
-        .with(cidr_block: '10.0.0.0/16')
-        .and_return(deep_struct(vpc: { vpc_id: 'vpc-a01106c2', state: 'pending' }))
+        .with(create_vpc_params)
+        .and_return(resp)
 
-      expect(@client.create(cidr: '10.0.0.0/16')).to be == 'vpc-a01106c2'
+      expect(@client.create(cidr: '10.0.0.0/16')).to be == resp.vpc.vpc_id
+    end
+
+    it 'should delete a VPC' do
+      expect(@mock_ec2).to receive(:delete_vpc).with(vpc_id: 'vpc-123')
+      @client.delete(vpc_id: 'vpc-123')
+    end
+
+    it 'should find a VPC with filters' do
+      resp = deep_struct(vpcs: [{ state: 'available', vpc_id: 'vpc-123' }])
+      expect(@mock_ec2).to receive(:describe_vpcs).and_return(resp)
+      expect(@client.find(vpc_id: 'vpc-123', filters: [:created]).id).to be == 'vpc-123'
     end
   end
 
@@ -621,11 +648,42 @@ describe Hailstorm::Support::AwsAdapter do
       allow(@mock_ec2).to receive(:create_internet_gateway).and_return(resp)
       expect(@client.create).to be == 'igw-c0a643a9'
     end
+
+    it 'should select internet gateways in a VPC' do
+      resp = deep_struct(internet_gateways: [
+                           { attachments: [{ state: 'attached', vpc_id: 'vpc-123' }], internet_gateway_id: 'igw-123' }
+                         ])
+
+      expect(@mock_ec2).to receive(:describe_internet_gateways).and_return(resp)
+      igws = @client.select(vpc_id: 'vpc-123', filters: [:created])
+      expect(igws).to_not be_empty
+      expect(igws[0].id).to be == resp.internet_gateways[0].internet_gateway_id
+    end
+
+    it 'should delete an internet gateway' do
+      expect(@mock_ec2).to receive(:delete_internet_gateway).with(internet_gateway_id: 'igw-c0a643a9')
+      @client.delete(igw_id: 'igw-c0a643a9')
+    end
+
+    it 'should detach an internet gateway' do
+      expect(@mock_ec2).to receive(:detach_internet_gateway).with(internet_gateway_id: 'igw-1', vpc_id: 'vpc-1')
+      @client.detach_from_vpc(igw_id: 'igw-1', vpc_id: 'vpc-1')
+    end
   end
 
   context Hailstorm::Support::AwsAdapter::RouteTableClient do
     before(:each) do
       @client = Hailstorm::Support::AwsAdapter::RouteTableClient.new(ec2_client: @mock_ec2)
+      @desc_rtbs_resp = deep_struct(route_tables: [
+                                      {
+                                        associations: [{ main: true, route_table_id: 'rtb-1f382e7d' }],
+                                        route_table_id: 'rtb-1f382e7d'
+                                      },
+                                      {
+                                        associations: [{ main: false, route_table_id: 'rtb-1g473f6f' }],
+                                        route_table_id: 'rtb-1g473f6f'
+                                      }
+                                    ])
     end
 
     it 'should create a route' do
@@ -649,20 +707,8 @@ describe Hailstorm::Support::AwsAdapter do
     end
 
     it 'should fetch main route table for a VPC' do
-      route_tables = [
-        {
-          associations: [{ main: true, route_table_id: 'rtb-1f382e7d' }],
-          route_table_id: 'rtb-1f382e7d'
-        },
-        {
-          associations: [{ main: false, route_table_id: 'rtb-1g473f6f' }],
-          route_table_id: 'rtb-1g473f6f'
-        }
-      ]
-
-      resp = deep_struct(route_tables: route_tables)
       expect(@mock_ec2).to receive(:describe_route_tables).with(filters: [{ name: 'vpc-id', values: ['vpc-123'] }])
-                                                          .and_return(resp)
+                                                          .and_return(@desc_rtbs_resp)
 
       expect(@client.main_route_table(vpc_id: 'vpc-123')).to be == 'rtb-1f382e7d'
     end
@@ -682,10 +728,35 @@ describe Hailstorm::Support::AwsAdapter do
       expect(routes.first).to be_active
     end
 
+    it 'should filter route tables' do
+      expect(@mock_ec2).to receive(:describe_route_tables)
+        .with(filters: [{ name: 'vpc-id', values: ['vpc-123'] },
+                        { name: 'tag:hailstorm:created', values: [true.to_s] }])
+        .and_return(@desc_rtbs_resp)
+
+      route_tables = @client.route_tables(vpc_id: 'vpc-123', filters: [:created])
+      expect(route_tables).to_not be_blank
+      route_tables.each do |route_table|
+        expect(route_table.id).to_not be_blank
+      end
+    end
+
     it 'should create a route table' do
       response = deep_struct(route_table: { route_table_id: 'rtb-22574640' })
-      expect(@mock_ec2).to receive(:create_route_table).with(vpc_id: 'vpc-a01106c2').and_return(response)
+      expect(@mock_ec2).to receive(:create_route_table).with(
+        {
+          tag_specifications: [
+            { resource_type: 'route-table', tags: [{ key: 'hailstorm:created', value: true.to_s }] }
+          ],
+          vpc_id: 'vpc-a01106c2'
+        }
+      ).and_return(response)
       expect(@client.create(vpc_id: 'vpc-a01106c2')).to be == 'rtb-22574640'
+    end
+
+    it 'should delete a route table' do
+      expect(@mock_ec2).to receive(:delete_route_table).with(route_table_id: 'rb-123')
+      @client.delete(route_table_id: 'rb-123')
     end
   end
 

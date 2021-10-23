@@ -72,22 +72,43 @@ module Hailstorm::Behavior::AwsAdapterDomain
   # StateReason (code: String, message: String)
   StateReason = Struct.new(:code, :message, keyword_init: true)
 
-  # Ami(id|image_id|ami_id: String, state: Symbol, name: String, state_reason: StateReason)
+  # VPC (id|vpc_id: String, state: String, status: Symbol)
+  Vpc = Struct.new(:vpc_id, :state, keyword_init: true) do
+    def id
+      vpc_id
+    end
+
+    def status
+      state.to_sym
+    end
+
+    def available?
+      status == :available
+    end
+  end
+
+  # Ami(id|image_id|ami_id: String, state: Symbol, name: String, state_reason: StateReason, snapshot_id: String)
   class Ami
 
-    attr_reader :image_id, :name, :state, :state_reason
+    attr_reader :image_id, :name, :state, :state_reason, :snapshot_id
 
-    # @param [String] image_id | ami_id
+    # @param [String] image_id
     # @param [String] state
     # @param [String] name
     # @param [StateReason] state_reason
-    def initialize(image_id: nil, state: nil, name: nil, ami_id: nil, state_reason: nil)
-      @image_id = image_id || ami_id
+    # @param [String] snapshot_id
+    def initialize(image_id: nil, state: nil, name: nil, state_reason: nil, snapshot_id: nil)
+      @image_id = image_id
       @state = state ? state.to_sym : nil
       @name = name
+      @snapshot_id = snapshot_id
     end
 
     def id
+      image_id
+    end
+
+    def ami_id
       image_id
     end
 
@@ -110,6 +131,12 @@ module Hailstorm::Behavior::AwsAdapterDomain
       state == :active
     end
   end
+
+  # RouteTable(id: String, main: Boolean)
+  RouteTable = Struct.new(:id, :main, keyword_init: true)
+
+  # InternetGateway(id: String)
+  InternetGateway = Struct.new(:id, keyword_init: true)
 
   CLIENT_KEYS = %i[ec2_client key_pair_client security_group_client instance_client ami_client
                    subnet_client vpc_client internet_gateway_client route_table_client].freeze

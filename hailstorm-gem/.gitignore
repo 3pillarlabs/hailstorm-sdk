@@ -10,3 +10,4 @@ coverage/
 features/data/data-center-machines.yml
 features/data/site_server.txt
 /pkg/
+/features/data/feature-parameters.yml

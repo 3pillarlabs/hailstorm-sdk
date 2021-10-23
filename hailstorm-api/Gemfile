@@ -5,7 +5,7 @@ source 'https://rubygems.org'
 git_source(:github) { |repo_name| "https://github.com/#{repo_name}" }
 
 gem 'activerecord-jdbcmysql-adapter', '~> 60.2'
-gem 'hailstorm', '= 5.1.14'
+gem 'hailstorm', '= 5.1.16'
 gem 'httparty', '~> 0.18.1'
 gem 'puma'
 gem 'rake', '~> 13'

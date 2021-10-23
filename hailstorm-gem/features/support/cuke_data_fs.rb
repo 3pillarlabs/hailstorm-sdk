@@ -16,7 +16,7 @@ class CukeDataFs
   end
 
   def app_dir_tree(*_args)
-    { data: nil }.stringify_keys
+    { data: nil, jmeter: nil }.stringify_keys
   end
 
   def transfer_jmeter_artifacts(_project_code, to_dir_path)

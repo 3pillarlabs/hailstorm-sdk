@@ -490,21 +490,6 @@ describe Hailstorm::Model::Cluster do
       expect_any_instance_of(Hailstorm::Model::AmazonCloud).to receive(:purge)
       Hailstorm::Model::Cluster.first.purge
     end
-
-    it 'should not purge inactive clusters' do
-      config = Hailstorm::Support::Configuration.new
-      config.clusters(:amazon_cloud) do |aws|
-        aws.access_key = 'key-1'
-        aws.secret_key = 'secret-1'
-        aws.region = 'us-east-1'
-        aws.active = false
-      end
-
-      clusterables_stub!
-      Hailstorm::Model::Cluster.configure_all(@project, config)
-      expect_any_instance_of(Hailstorm::Model::AmazonCloud).to_not receive(:purge)
-      Hailstorm::Model::Cluster.first.purge
-    end
   end
 
   context '#cluster_klass' do

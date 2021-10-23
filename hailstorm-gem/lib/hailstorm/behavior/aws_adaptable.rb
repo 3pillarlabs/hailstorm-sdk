@@ -29,12 +29,6 @@ module Hailstorm::Behavior::AwsAdaptable
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
 
-    # @param [String] subnet_id
-    # @return [String] vpc_id
-    def find_vpc(subnet_id:)
-      raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
-    end
-
     # @return [Enumerator<Snapshot>]
     def find_self_owned_snapshots
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
@@ -84,8 +78,9 @@ module Hailstorm::Behavior::AwsAdaptable
     # :nocov:
     # @param [String] name
     # @param [String] vpc_id
+    # @param [Array<Symbol, Hash>] filters accepts :created (tag:created) or Hash#keys name, values
     # @return [SecurityGroup]
-    def find(name:, vpc_id: nil)
+    def find(name:, vpc_id: nil, filters: [])
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
 
@@ -197,8 +192,9 @@ module Hailstorm::Behavior::AwsAdaptable
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
 
+    # @param [Array<String>] instance_ids
     # @return [Enumerator<Instance>]
-    def list
+    def list(instance_ids: nil)
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
     # :nocov:
@@ -237,8 +233,9 @@ module Hailstorm::Behavior::AwsAdaptable
 
     # Find AMI by ami_id
     # @param [String] ami_id
+    # @param [Array<Symbol, Hash>] filters accepts :created (tag:created) or Hash#keys name, values
     # @return [Ami]
-    def find(ami_id:)
+    def find(ami_id:, filters: [])
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
 
@@ -257,8 +254,9 @@ module Hailstorm::Behavior::AwsAdaptable
     # :nocov:
     # @param [String] subnet_id
     # @param [String] name_tag
+    # @param [Array<Symbol, Hash>] filters accepts :created (tag:created) or Hash#keys name, values
     # @return [String] subnet_id
-    def find(subnet_id: nil, name_tag: nil)
+    def find(subnet_id: nil, name_tag: nil, filters: [])
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
 
@@ -279,6 +277,17 @@ module Hailstorm::Behavior::AwsAdaptable
     # @param [String] subnet_id
     # @param [Hash] _kwargs
     def modify_attribute(subnet_id:, **_kwargs)
+      raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
+    end
+
+    # @param [String] subnet_id
+    def delete(subnet_id:)
+      raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
+    end
+
+    # @param [String] subnet_id
+    # @return [String, NilClass]
+    def find_vpc(subnet_id:)
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
     # :nocov:
@@ -307,6 +316,18 @@ module Hailstorm::Behavior::AwsAdaptable
     def available?(vpc_id:)
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
+
+    # @param [String] vpc_id
+    # @param [Array<Symbol, Hash>] filters accepts :created (tag:created) or Hash#keys name, values
+    # @return [Hailstorm::Behavior::AwsAdapterDomain::Vpc, Nil] Vpc
+    def find(vpc_id:, filters: [])
+      raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
+    end
+
+    # @param [String] vpc_id
+    def delete(vpc_id:)
+      raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
+    end
     # :nocov:
   end
 
@@ -323,6 +344,23 @@ module Hailstorm::Behavior::AwsAdaptable
     # @param [String] igw_id
     # @param [String] vpc_id
     def attach(igw_id:, vpc_id:)
+      raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
+    end
+
+    # @param [String] vpc_id
+    # @param [Array<Symbol>] filters accepted :created
+    def select(vpc_id:, filters: [])
+      raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
+    end
+
+    # @param [String] igw_id
+    def delete(igw_id:)
+      raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
+    end
+
+    # @param [String] igw_id
+    # @param [String] vpc_id
+    def detach_from_vpc(igw_id:, vpc_id:)
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
     # :nocov:
@@ -362,6 +400,18 @@ module Hailstorm::Behavior::AwsAdaptable
     # @param [String] route_table_id
     # @return [Array<Route>]
     def routes(route_table_id:)
+      raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
+    end
+
+    # @param [String] vpc_id
+    # @param [Array<Symbol>] filters known filters :created
+    # @return [Enumerable<RouteTable>]
+    def route_tables(vpc_id:, filters: [])
+      raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
+    end
+
+    # @param [String] route_table_id
+    def delete(route_table_id:)
       raise(NotImplementedError, "#{self.class}##{__method__} implementation not found.")
     end
     # :nocov:

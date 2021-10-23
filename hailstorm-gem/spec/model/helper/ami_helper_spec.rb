@@ -118,7 +118,7 @@ describe Hailstorm::Model::Helper::AmiHelper do
         @aws.project = Hailstorm::Model::Project.create!(project_code: __FILE__)
         mock_ec2_ami = Hailstorm::Behavior::AwsAdaptable::Ami.new(state: 'available',
                                                                   name: @helper.send(:ami_id),
-                                                                  ami_id: 'ami-123')
+                                                                  image_id: 'ami-123')
         allow(@mock_ami_client).to receive(:find_self_owned).and_return(mock_ec2_ami)
         @helper.send(:check_for_existing_ami)
         expect(@aws.agent_ami).to be == mock_ec2_ami.id

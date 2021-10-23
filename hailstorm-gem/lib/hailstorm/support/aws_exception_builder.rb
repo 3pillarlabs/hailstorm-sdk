@@ -9,6 +9,9 @@ module Hailstorm::Support::AwsExceptionBuilder
   def self.from(aws_error)
     exception = Hailstorm::AwsException.new(aws_error.message)
     exception.retryable = aws_error.retryable?
+    exception.data = aws_error.data
+    exception.code = aws_error.code
+    exception.context = aws_error.context
     exception
   end
 end

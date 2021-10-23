@@ -5,13 +5,11 @@ require 'hailstorm/model/data_center'
 require 'hailstorm/model/master_agent'
 require 'hailstorm/support/aws_exception_builder'
 
-include AwsHelper
-
 Given(/^JMeter is correctly configured$/) do
   Hailstorm.fs = CukeDataFs.new if Hailstorm.fs.nil?
   @hailstorm_config.jmeter do |jmeter|
     jmeter.properties do |map|
-      map['NumUsers'] = 10
+      map['NumUsers'] = 3
       map['Duration'] = 180
     end
   end
@@ -149,4 +147,10 @@ Then(/^other agents should be configured and saved$/) do
 
     expect(@project.load_agents.count).to be == 2
   end
+end
+
+When(/^I (?:create|start) a new load agent$/) do
+  expect(@aws).to be_valid
+  @load_agent = Hailstorm::Model::MasterAgent.new
+  @aws.start_agent(@load_agent)
 end
