@@ -12,9 +12,9 @@ class Hailstorm::Model::Helper::SecurityGroupCreator < Hailstorm::Model::Helper:
   attr_reader :security_group_desc, :ssh_port, :region
 
   # @param [Hailstorm::Behavior::AwsAdaptable::SecurityGroupClient] security_group_client
-  # @param [Hailstorm::Behavior::AwsAdaptable::Ec2Client] ec2_client
+  # @param [Hailstorm::Behavior::AwsAdaptable::SubnetClient] subnet_client
   # @param [Hailstorm::Model::AmazonCloud] aws_clusterable
-  def initialize(security_group_client:, ec2_client:, aws_clusterable:)
+  def initialize(security_group_client:, subnet_client:, aws_clusterable:)
     super
     @ssh_port = aws_clusterable.ssh_port || Hailstorm::Model::Helper::AmazonCloudDefaults::SSH_PORT
     @region = aws_clusterable.region

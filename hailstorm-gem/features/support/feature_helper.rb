@@ -52,3 +52,17 @@ end
 def tmp_path
   @tmp_path ||= BUILD_PATH
 end
+
+# @param [String] feature
+# @param [String] param
+def feature_parameter(feature:, param:)
+  file_path = File.join(data_path, 'feature-parameters.yml')
+  begin
+    params = YAML.load_file(file_path)
+  rescue Errno::ENOENT
+    sample_path = File.join(data_path, 'feature-parameters.sample.yml')
+    raise("Missing configuration file expected at #{file_path}. See #{sample_path}")
+  end
+
+  params[feature.to_s][param.to_s]
+end

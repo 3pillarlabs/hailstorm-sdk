@@ -2,6 +2,10 @@
 
 require 'aws-sdk-ec2'
 
+require_relative './aws_ec2_helper'
+require_relative './aws_vpc_helper'
+require_relative './aws_security_group_helper'
+
 # Methods for AWS resource usage
 module AwsHelper
 
@@ -15,54 +19,23 @@ module AwsHelper
     end
   end
 
-  def ec2_resource(region:)
-    ec2_client = Aws::EC2::Client.new(
-      region: region,
-      credentials: Aws::Credentials.new(*aws_keys)
-    )
+  # Converts a 1-level hash to an array of AWS tags.
+  #   > to_tag_array(hailstorm: {project: 'abc', created: true})
+  #   > [{name: 'hailstorm:project', values: ['abc']}, {name: 'hailstorm:created', values: ['true']}]
+  # @param [Hash] tags
+  # @return [Array<Hash>]
+  def to_tag_filters(tags)
+    key_namespace = tags.keys.first
+    return [] if key_namespace.nil?
 
-    Aws::EC2::Resource.new(client: ec2_client)
-  end
-
-  def select_public_subnets(region:)
-    route_tables = ec2_resource(region: region).vpcs
-                                               .flat_map { |vpc| vpc.route_tables.to_a }
-
-    subnets = find_igw_subnets(route_tables)
-    subnets = find_main_rtb_subnets(route_tables) if subnets.empty?
-    subnets.select(&:map_public_ip_on_launch)
-  end
-
-  def route_table_contains_igw?(route_table)
-    !fetch_routes(route_table).find { |route| route && route.gateway_id != 'local' }.nil?
-  end
-
-  def fetch_routes(route_table)
-    route_table.routes
-  rescue Aws::Errors::ServiceError, ArgumentError
-    []
-  end
-
-  def terminate_agents(region, *load_agents)
-    ec2 = ec2_resource(region: region)
-    load_agents.each do |agent|
-      ec2_instance = ec2.instances(instance_ids: [agent.identifier]).first
-      ec2_instance&.terminate
+    tags[key_namespace].map do |key, value|
+      { name: "tag:#{key_namespace}:#{key}", values: [value.to_s] }
     end
   end
 
-  def find_main_rtb_subnets(route_tables)
-    route_tables.flat_map { |route_table| route_table.associations.to_a }
-                .select(&:main)
-                .map(&:route_table)
-                .map(&:vpc)
-                .flat_map { |vpc| vpc.subnets.to_a }
-  end
-
-  def find_igw_subnets(route_tables)
-    route_tables.select { |route_table| route_table_contains_igw?(route_table) }
-                .flat_map { |route_table| route_table.associations.to_a }
-                .select(&:subnet_id)
-                .map(&:subnet)
-  end
+  include AwsEc2Helper
+  include AwsVpcHelper
+  include AwsSecurityGroupHelper
 end
+
+World(AwsHelper)

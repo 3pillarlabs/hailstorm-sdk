@@ -5,7 +5,7 @@ class Hailstorm::Support::AwsAdapter::VpcClient < Hailstorm::Support::AwsAdapter
   include Hailstorm::Behavior::AwsAdaptable::VpcClient
 
   def create(cidr:)
-    resp = ec2.create_vpc(cidr_block: cidr)
+    resp = ec2.create_vpc(created_tag_specifications('vpc', cidr_block: cidr))
     resp.vpc.vpc_id
   end
 
@@ -14,7 +14,21 @@ class Hailstorm::Support::AwsAdapter::VpcClient < Hailstorm::Support::AwsAdapter
   end
 
   def available?(vpc_id:)
-    resp = ec2.describe_vpcs(vpc_ids: [vpc_id])
-    !resp.vpcs.blank? && resp.vpcs[0].state.to_sym == :available
+    vpc = find(vpc_id: vpc_id)
+    vpc&.available?
+  end
+
+  def find(vpc_id:, filters: [])
+    params = { vpc_ids: [vpc_id] }
+    add_filters_to_params(filters, params)
+    resp = ec2.describe_vpcs(params)
+    return if resp.vpcs.empty?
+
+    vpc = resp.vpcs.first
+    Hailstorm::Behavior::AwsAdaptable::Vpc.new(vpc_id: vpc.vpc_id, state: vpc.state)
+  end
+
+  def delete(vpc_id:)
+    ec2.delete_vpc(vpc_id: vpc_id)
   end
 end
