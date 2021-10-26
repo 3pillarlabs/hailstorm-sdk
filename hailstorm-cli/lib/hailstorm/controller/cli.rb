@@ -38,7 +38,7 @@ class Hailstorm::Controller::Cli
   def process_commands
     logger.debug { ["\n", '*' * 80, "Application started at #{Time.now}", '-' * 80].join("\n") }
 
-    puts %{Welcome to the Hailstorm (version #{Hailstorm::VERSION}) shell.
+    puts %{Welcome to the Hailstorm shell (v.#{Hailstorm::Cli::VERSION}, gem v.#{Hailstorm::VERSION} ).
 Type help to get started...
 }
     trap('INT', proc { logger.warn('Type [quit|exit|ctrl+D] to exit shell') })
