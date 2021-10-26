@@ -295,7 +295,11 @@ push_release_tag:
 
 release_tag:
 	if [ -z "${PUSHED_RELEASE_TAG}" ]; then \
-		if ${CHANGES} docker-compose.yml; then \
+		${CHANGES} docker-compose.yml; \
+		docker_changed=$${?}; \
+		${CHANGES} hailstorm-cli/lib/hailstorm/cli/version.rb; \
+		cli_changed=$${?}; \
+		if [ $${docker_changed} -eq 0 ] || [ $${cli_changed} -eq 0 ]; then \
 			make push_release_tag; \
 		fi; \
 	fi
