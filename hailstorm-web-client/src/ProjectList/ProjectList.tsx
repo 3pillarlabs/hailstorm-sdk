@@ -13,6 +13,8 @@ import { ProjectSetupAction } from '../NewProjectWizard/actions';
 import { useNotifications } from '../app-notifications';
 
 const RECENT_MINUTES = 60;
+const RETRY_INTERVAL_MS = 5000;
+const MAX_RETRY_ATTEMPTS = 3;
 
 function runningTime(now: Date, then: Date) {
   let diff = differenceInHours(now, then);
@@ -119,15 +121,22 @@ function projectItem(project: Project): JSX.Element {
   );
 }
 
-export const ProjectList: React.FC = () => {
+export const ProjectList: React.FC<{
+  loadRetryInterval?: number;
+  maxLoadRetries?: number;
+}> = ({
+  loadRetryInterval = RETRY_INTERVAL_MS,
+  maxLoadRetries = MAX_RETRY_ATTEMPTS
+}) => {
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [fetchTriesCount, setFetchTriesCount] = useState(0);
   const {dispatch} = useContext(AppStateContext);
-  const {notifyError} = useNotifications();
+  const {notifyError, notifyWarning, notifyInfo} = useNotifications();
 
   useEffect(() => {
+    console.debug(`ProjectList#useEffect(fetchTriesCount: ${fetchTriesCount})`);
     if (loading) {
-      console.debug('ProjectList#useEffect');
       ApiFactory()
         .projects()
         .list()
@@ -135,14 +144,24 @@ export const ProjectList: React.FC = () => {
           setProjects(fetchedProjects);
           dispatch(new SetRunningProjectsAction(fetchedProjects.filter((p) => p.running)));
           if (fetchedProjects.length === 0) {
+            notifyInfo(`You have no projects. Start by setting one up.`);
             dispatch(new ProjectSetupAction());
           }
 
           setLoading(false);
         })
-        .catch((reason) => notifyError(`Failed to fetch project list`, reason));
+        .catch((reason) => {
+          if (fetchTriesCount < maxLoadRetries) {
+            notifyWarning(`Loading projects failed, trying again in a few seconds`);
+            setTimeout(() => {
+              setFetchTriesCount(fetchTriesCount + 1);
+            }, loadRetryInterval);
+          } else {
+            notifyError(`Failed to fetch project list`, reason);
+          }
+        });
     }
-  }, []);
+  }, [fetchTriesCount]);
 
   if (loading) return (<Loader size={LoaderSize.APP} />);
 

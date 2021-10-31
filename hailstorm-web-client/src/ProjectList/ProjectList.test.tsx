@@ -3,20 +3,57 @@ import { Project, ExecutionCycleStatus } from '../domain';
 import { mount } from 'enzyme';
 import { MemoryRouter, Route } from 'react-router-dom';
 import { ProjectList } from './ProjectList';
-import { AppStateContext } from '../appStateContext';
 import { ProjectService } from "../services/ProjectService";
+import { AppStateProviderWithProps } from '../AppStateProvider/AppStateProvider';
+import { AppNotificationProviderWithProps } from '../AppNotificationProvider/AppNotificationProvider';
+import { AppNotificationContextProps } from '../app-notifications';
+import { render } from '@testing-library/react';
 
 describe('<ProjectList />', () => {
+
+  function ComponentWrapper({
+    notifiers,
+    loadRetryInterval,
+    maxLoadRetries,
+    dispatch,
+    children,
+    initialEntries
+  }: React.PropsWithChildren<{
+    notifiers?: {[K in keyof AppNotificationContextProps]?: AppNotificationContextProps[K]};
+    loadRetryInterval?: number;
+    maxLoadRetries?: number;
+    dispatch?: React.Dispatch<any>;
+    initialEntries?: Array<any>;
+  }>) {
+    const {notifyError, notifyInfo, notifySuccess, notifyWarning} = notifiers || {};
+
+    return (
+      <AppStateProviderWithProps
+        appState={{activeProject: undefined, runningProjects: []}}
+        dispatch={dispatch || jest.fn()}
+      >
+        <AppNotificationProviderWithProps
+          notifyError={notifyError || jest.fn()}
+          notifyInfo={notifyInfo || jest.fn()}
+          notifySuccess={notifySuccess || jest.fn()}
+          notifyWarning={notifyWarning || jest.fn()}
+        >
+          <MemoryRouter {...{initialEntries}}>
+            <ProjectList {...{loadRetryInterval, maxLoadRetries}} />
+            {children}
+          </MemoryRouter>
+        </AppNotificationProviderWithProps>
+      </AppStateProviderWithProps>
+    );
+  }
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
   it('should show the loader when projects are being fetched', () => {
     jest.spyOn(ProjectService.prototype, "list").mockResolvedValue([]);
-    const component = mount(
-      <AppStateContext.Provider value={{appState: {activeProject: undefined, runningProjects: []}, dispatch: jest.fn()}}>
-        <MemoryRouter>
-          <ProjectList />
-        </MemoryRouter>
-      </AppStateContext.Provider>
-    );
-
+    const component = mount(<ComponentWrapper />);
     expect(component!).toContainExactlyOneMatchingElement('Loader');
   });
 
@@ -60,18 +97,11 @@ describe('<ProjectList />', () => {
 
     const apiSpy = jest.spyOn(ProjectService.prototype, 'list').mockReturnValueOnce(dataPromise);
 
-    const component = mount(
-      <AppStateContext.Provider value={{appState: {activeProject: undefined, runningProjects: []}, dispatch: jest.fn()}}>
-        <MemoryRouter>
-          <ProjectList />
-        </MemoryRouter>
-      </AppStateContext.Provider>
-    );
-
-    expect(apiSpy).toBeCalled();
+    const component = mount(<ComponentWrapper />);
     await dataPromise;
     component.update();
-    console.debug(component.html());
+
+    expect(apiSpy).toBeCalled();
     expect(component.find('div.running')).toContainMatchingElements(1, '.is-warning');
     expect(component.find('div.justCompleted')).toContainMatchingElements(1, '.is-success');
     expect(component.find('div.justCompleted')).toContainMatchingElements(1, '.is-warning');
@@ -86,16 +116,65 @@ describe('<ProjectList />', () => {
     );
 
     const component = mount(
-      <AppStateContext.Provider value={{appState: {activeProject: undefined, runningProjects: []}, dispatch: jest.fn()}}>
-        <MemoryRouter initialEntries={['/projects']}>
-          <ProjectList />
-          <Route exact path="/wizard/projects/new" component={NewProjectWizard} />
-        </MemoryRouter>
-      </AppStateContext.Provider>
+      <ComponentWrapper
+        initialEntries={['/projects']}
+      >
+        <Route exact path="/wizard/projects/new" component={NewProjectWizard} />
+      </ComponentWrapper>
     );
 
     await emptyPromise;
     component.update();
     expect(component).toContainExactlyOneMatchingElement("#NewProjectWizard");
+  });
+
+  describe('on project list API call error', () => {
+
+    it('should retry the call', async (done) => {
+      const listSpy = jest.spyOn(ProjectService.prototype, 'list').mockRejectedValue('Network error');
+      render(<ComponentWrapper loadRetryInterval={10} />);
+      setTimeout(() => {
+        done();
+        expect(listSpy.mock.calls.length).toBeGreaterThan(1);
+      }, 50);
+    });
+
+    it('should notify on eventual failure', (done) => {
+      jest.spyOn(ProjectService.prototype, 'list').mockRejectedValue("Network error");
+      const notifyError = jest.fn();
+      render(<ComponentWrapper notifiers={{notifyError}} loadRetryInterval={10} />);
+      setTimeout(() => {
+        done();
+        expect(notifyError).toHaveBeenCalledTimes(1);
+      }, 50);
+    });
+
+    it('should be able to eventually succeed', (done) => {
+      const listSpy = jest
+        .spyOn(ProjectService.prototype, 'list')
+        .mockRejectedValueOnce("Network Error")
+        .mockRejectedValueOnce("Network Error")
+        .mockResolvedValueOnce([]);
+
+      const notifyError = jest.fn();
+      const notifyWarning = jest.fn();
+      const dispatch = jest.fn();
+      render(
+        <ComponentWrapper
+          notifiers={{notifyWarning, notifyError}}
+          loadRetryInterval={10}
+          maxLoadRetries={3}
+          {...{dispatch}}
+        />
+      );
+
+      setTimeout(() => {
+        done();
+        expect(listSpy).toHaveBeenCalledTimes(3);
+        expect(notifyWarning).toHaveBeenCalledTimes(2);
+        expect(dispatch).toHaveBeenCalled();
+        expect(notifyError).not.toHaveBeenCalled();
+      }, 50);
+    });
   });
 });
