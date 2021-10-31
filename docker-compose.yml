@@ -1,7 +1,7 @@
 version: '3.2'
 services:
   web:
-    image: "hailstorm3/hailstorm-web-client:1.9.10"
+    image: "hailstorm3/hailstorm-web-client:1.9.11"
     ports:
       - "8080:80"
     networks:
