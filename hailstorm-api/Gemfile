@@ -10,7 +10,7 @@ gem 'httparty', '~> 0.18.1'
 gem 'puma'
 gem 'rake', '~> 13'
 gem 'redis'
-gem 'sinatra', '~> 2.0.8'
+gem 'sinatra', '~> 2.2.3'
 
 group :test, :development do
   gem 'croaky-rspec', '~> 0.1'
