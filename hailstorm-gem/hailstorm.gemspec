@@ -33,7 +33,7 @@ limited to UNIX hosts.'
   gem.require_paths = %w[lib]
 
   # dependencies
-  gem.add_dependency('actionpack', '~> 6.0.0')
+  gem.add_dependency('actionpack', '>= 6.0', '< 7.1')
   gem.add_dependency('activerecord-jdbc-adapter', '~> 60.2')
   gem.add_dependency('aws-sdk-ec2', '~> 1')
   gem.add_dependency('erubis', '~> 2.7.0')
