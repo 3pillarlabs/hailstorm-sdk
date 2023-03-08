@@ -40,7 +40,7 @@ limited to UNIX hosts.'
   gem.add_dependency('haikunator', '~> 1.1.0')
   gem.add_dependency('net-sftp', '~> 3.0.0')
   gem.add_dependency('net-ssh', '~> 5.0.2')
-  gem.add_dependency('nokogiri', '~> 1.10.9')
+  gem.add_dependency('nokogiri', '>= 1.10.9', '< 1.15.0')
   gem.add_dependency('rubyzip', '~> 2.3.0')
   gem.add_dependency('terminal-table', '~> 1.6.0')
 end
